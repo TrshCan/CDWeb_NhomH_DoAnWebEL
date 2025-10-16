@@ -18,7 +18,7 @@ services:
   backend:
     build:
       context: ./be
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: project-be
     restart: unless-stopped
     ports:
