@@ -21,7 +21,8 @@ function App() {
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
         </button>
-        <h1 className='text-3xl font-bold text-red-900g'>Nguyên đẹp trai</h1>
+        <h1 className='text-3xl font-bold text-red-900'>Nguyên đẹp trai</h1>
+        <h2 className='bg-blue-300'>Con cawcj</h2>
         <p>
           Edit <code>src/App.jsx</code> and save to test HMR
         </p>
