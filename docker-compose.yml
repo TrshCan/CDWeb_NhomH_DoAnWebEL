@@ -10,6 +10,8 @@ services:
       MYSQL_DATABASE: projectdb
       MYSQL_USER: user
       MYSQL_PASSWORD: password
+      TZ: Asia/Ho_Chi_Minh
+    command: --default-time-zone='+07:00'
     ports:
       - "3306:3306"
     volumes:
@@ -31,6 +33,7 @@ services:
       DB_DATABASE: projectdb
       DB_USERNAME: user
       DB_PASSWORD: password
+      TZ: Asia/Ho_Chi_Minh
     depends_on:
       - db
 
