@@ -10,6 +10,8 @@ services:
       MYSQL_DATABASE: projectdb
       MYSQL_USER: user
       MYSQL_PASSWORD: password
+      TZ: Asia/Ho_Chi_Minh # ← thêm
+    command: --default-time-zone='+07:00' # ← thêm
     ports:
       - "3306:3306"
     volumes:
@@ -18,7 +20,7 @@ services:
   backend:
     build:
       context: ./be
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: project-be
     restart: unless-stopped
     ports:
@@ -31,13 +33,13 @@ services:
       DB_DATABASE: projectdb
       DB_USERNAME: user
       DB_PASSWORD: password
+      TZ: Asia/Ho_Chi_Minh # ← thêm
     depends_on:
       - db
 
   nginx:
     image: nginx:alpine
     container_name: project-nginx
-    restart: unless-stopped
     ports:
       - "8000:80"
     volumes:
@@ -49,20 +51,13 @@ services:
   frontend:
     build:
       context: ./fe
-      dockerfile: Dockerfile.dev   # ⚠️ dùng file dev
+      dockerfile: Dockerfile
     container_name: project-fe
     restart: unless-stopped
     ports:
       - "5173:5173"
-    volumes:
-      - ./fe:/app
-      - /app/node_modules
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - WATCHPACK_POLLING=true
     depends_on:
       - backend
-    command: npm run dev -- --host
 
   phpmyadmin:
     image: phpmyadmin:latest
