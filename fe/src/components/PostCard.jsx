@@ -1,3 +1,4 @@
+import React from "react";
 export default function PostCard({ post }) {
   return (
     <div className="post bg-white rounded-lg shadow p-4">

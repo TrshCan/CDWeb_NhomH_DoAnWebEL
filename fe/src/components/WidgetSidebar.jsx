@@ -1,3 +1,4 @@
+import React from "react";
 export default function WidgetSidebar() {
   return (
     <aside className="w-full lg:w-1/3 space-y-4">
