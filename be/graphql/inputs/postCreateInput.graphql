@@ -1,0 +1,9 @@
+# Input Type for Creating Posts
+input CreatePostInput {
+  user_id: ID!
+  group_id: ID
+  parent_id: ID
+  type: String
+  content: String
+  media_url: String
+}

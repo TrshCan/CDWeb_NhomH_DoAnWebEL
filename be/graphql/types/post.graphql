@@ -1,0 +1,22 @@
+# Post Type Definition
+type Post {
+  id: ID!
+  user_id: ID!
+  group_id: ID
+  parent_id: ID
+  type: String
+  content: String
+  media_url: String
+  created_at: DateTime!
+  updated_at: DateTime
+  deleted_at: DateTime
+
+  # Relationships
+  user: User
+  group: Group
+  parent: Post
+  children: [Post!]!
+  likes: [PostLike!]!
+  shares: [PostShare!]!
+  groups: [Group!]!
+}

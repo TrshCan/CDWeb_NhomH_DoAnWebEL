@@ -1,0 +1,7 @@
+# Input Type for Updating Posts
+input UpdatePostInput {
+  id: ID!
+  type: String
+  content: String
+  media_url: String
+}

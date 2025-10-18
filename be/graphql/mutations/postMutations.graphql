@@ -1,0 +1,5 @@
+extend type Mutation {
+  createPost(input: CreatePostInput!): Post @field(resolver: "PostResolver@create")
+  updatePost(input: UpdatePostInput!): Post @field(resolver: "PostResolver@update")
+  deletePost(id: ID!): Boolean @field(resolver: "PostResolver@delete")
+}
