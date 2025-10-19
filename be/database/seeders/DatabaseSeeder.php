@@ -206,26 +206,31 @@ class DatabaseSeeder extends Seeder
         // ===== Post Images =====
         $postImages = [];
 
-        // Let's create 20 images and assign them to the 10 posts
+        $realImages = [
+            "https://images.unsplash.com/photo-1518791841217-8f162f1e1131",
+            "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d",
+            "https://images.unsplash.com/photo-1494790108377-be9c29b29330",
+            "https://images.unsplash.com/photo-1472214103451-9374bd1c798e",
+            "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e",
+            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+            "https://images.unsplash.com/photo-1544005313-94ddf0286df2",
+            "https://images.unsplash.com/photo-1517841905240-472988babdf9",
+            "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df",
+            "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91"
+        ];
+
         for ($i = 1; $i <= 20; $i++) {
-
-            // Get a random past date
             $pastDate = fake()->dateTimeBetween('-1 year', 'now');
-
             $postImages[] = [
-                // Assumes posts with IDs 1-10 exist
                 'post_id' => rand(1, 10),
-
-                // Get a realistic placeholder image URL
-                'url' => fake()->imageUrl(1024, 768, 'animals', true),
-
+                'url' => $realImages[array_rand($realImages)] . "?auto=format&fit=crop&w=1024&q=80",
                 'created_at' => $pastDate,
                 'updated_at' => $pastDate,
             ];
         }
 
-        // Insert all 20 images in one database query
         DB::table('post_images')->insert($postImages);
+
 
     }
 }
