@@ -40,6 +40,7 @@ export default function Feed() {
           time: timeAgo(p.created_at),
           content: p.content,
           media: p.media_url || "",
+          images: p.images || [],
         }));
         setPosts(formatted);
       } catch (err) {

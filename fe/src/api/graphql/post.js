@@ -46,6 +46,10 @@ export const getPostsByType = async (type) => {
           id
           name 
         }
+        images {
+          id
+          url
+        }
       }
     }
   `;

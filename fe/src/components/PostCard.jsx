@@ -1,4 +1,5 @@
 import React from "react";
+
 export default function PostCard({ post }) {
   return (
     <div className="post bg-white rounded-lg shadow p-4">
@@ -12,9 +13,67 @@ export default function PostCard({ post }) {
       </div>
 
       {/* Content */}
-      <p className="mt-2">{post.content}</p>
+      <p className="mt-2 text-gray-800 whitespace-pre-wrap">{post.content}</p>
 
-      {/* Optional Media */}
+      {/* 🖼️ Image Grid */}
+      {/* 🖼️ Twitter-style Image Layout */}
+      {post.images && post.images.length > 0 && (
+        <div className="mt-3 rounded-xl overflow-hidden border border-gray-200">
+          {post.images.length === 1 && (
+            <img
+              src={post.images[0].url}
+              alt=""
+              className="w-full h-auto max-h-[600px] object-cover"
+            />
+          )}
+
+          {post.images.length === 2 && (
+            <div className="grid grid-cols-2 gap-px bg-gray-200">
+              {post.images.map((img, i) => (
+                <img
+                  key={i}
+                  src={img.url}
+                  alt=""
+                  className="w-full h-80 object-cover"
+                />
+              ))}
+            </div>
+          )}
+
+          {post.images.length === 3 && (
+            <div className="grid grid-cols-2 gap-px bg-gray-200">
+              <img
+                src={post.images[0].url}
+                alt=""
+                className="col-span-2 w-full h-72 object-cover"
+              />
+              {post.images.slice(1).map((img, i) => (
+                <img
+                  key={i}
+                  src={img.url}
+                  alt=""
+                  className="w-full h-64 object-cover"
+                />
+              ))}
+            </div>
+          )}
+
+          {post.images.length >= 4 && (
+            <div className="grid grid-cols-2 gap-px bg-gray-200">
+              {post.images.slice(0, 4).map((img, i) => (
+                <img
+                  key={i}
+                  src={img.url}
+                  alt=""
+                  className="w-full h-64 object-cover"
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Optional Media (for legacy HTML posts) */}
       {post.media && (
         <div
           className="mt-2"
@@ -23,14 +82,13 @@ export default function PostCard({ post }) {
       )}
 
       {/* Action Buttons */}
-      <div className="flex space-x-4 mt-2 text-gray-500">
+      <div className="flex space-x-4 mt-3 text-gray-500">
         <button title="Like" className="hover:text-cyan-600">
           <svg
             className="w-5 h-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
             <path
               strokeLinecap="round"
@@ -47,7 +105,6 @@ export default function PostCard({ post }) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
             <path
               strokeLinecap="round"
@@ -64,7 +121,6 @@ export default function PostCard({ post }) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
             <path
               strokeLinecap="round"
