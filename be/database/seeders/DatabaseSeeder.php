@@ -179,32 +179,53 @@ class DatabaseSeeder extends Seeder
 
         // ===== Posts Seeder =====
 
-        $contents = [
-            'Just finished a great meeting!',
-            'Check out this cool photo!',
-            'Anyone up for a group hike?',
-            'Reminder: project deadline is tomorrow.',
-            'Feeling grateful today.',
-            'Here’s a quick update on our progress.',
-            'Funny thing happened at work today...',
-            'Sharing some thoughts on leadership.',
-            'New announcement coming soon!',
-            'Let’s celebrate our recent success!'
-        ];
+        $posts = [];
+        $types = ['announcement', 'group_post', 'comment', 'normal_post'];
 
         for ($i = 1; $i <= 10; $i++) {
-            $createdAt = Carbon::now()->subDays(rand(1, 30))->subMinutes(rand(1, 1440));
+            // Generate a random date and time from the past year
+            $pastDate = fake()->dateTimeBetween('-1 year', 'now');
 
-            DB::table('posts')->insert([
+            $posts[] = [
                 'user_id' => rand(1, 10),
                 'group_id' => rand(1, 10),
-                'type' => ['announcement', 'group_post', 'comment', 'normal_post'][rand(0, 3)],
-                'content' => $contents[array_rand($contents)],
-                'media_url' => rand(0, 1) ? 'https://example.com/media/' . rand(100, 999) . '.jpg' : null,
-                'created_at' => $createdAt,
-                'updated_at' => $createdAt,
-            ]);
+                'type' => $types[array_rand($types)],
+                'content' => fake()->realText(200), // Generates realistic-looking text
+                'media_url' => null,
+                'created_at' => $pastDate,
+                'updated_at' => $pastDate, // Set updated_at to the same time
+            ];
         }
+
+        // Insert all 10 posts in a single, efficient query
+        DB::table('posts')->insert($posts);
+
+
+
+
+        // ===== Post Images =====
+        $postImages = [];
+
+        // Let's create 20 images and assign them to the 10 posts
+        for ($i = 1; $i <= 20; $i++) {
+
+            // Get a random past date
+            $pastDate = fake()->dateTimeBetween('-1 year', 'now');
+
+            $postImages[] = [
+                // Assumes posts with IDs 1-10 exist
+                'post_id' => rand(1, 10),
+
+                // Get a realistic placeholder image URL
+                'url' => fake()->imageUrl(1024, 768, 'animals', true),
+
+                'created_at' => $pastDate,
+                'updated_at' => $pastDate,
+            ];
+        }
+
+        // Insert all 20 images in one database query
+        DB::table('post_images')->insert($postImages);
 
     }
 }

@@ -130,7 +130,7 @@ return new class extends Migration {
                 ->constrained('groups')->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('parent_id')->nullable()
                 ->constrained('posts')->cascadeOnUpdate()->nullOnDelete();
-            $table->enum('type', ['announcement','group_post','comment', 'normal_post'])->default('announcement');
+            $table->enum('type', ['announcement', 'group_post', 'comment', 'normal_post'])->default('announcement');
             $table->text('content')->nullable();
             $table->string('media_url', 255)->nullable();
             $table->timestamp('created_at')->nullable();
@@ -177,12 +177,12 @@ return new class extends Migration {
                 ->references('id')->on('categories')
                 ->cascadeOnUpdate()->restrictOnDelete();
 
-            $table->enum('type', ['survey','quiz'])->default('survey');
+            $table->enum('type', ['survey', 'quiz'])->default('survey');
             $table->timestamp('start_at')->nullable();
             $table->timestamp('end_at')->nullable();
             $table->integer('time_limit')->nullable();
             $table->integer('points')->default(0);
-            $table->enum('object', ['public','students','lecturers'])->default('public');
+            $table->enum('object', ['public', 'students', 'lecturers'])->default('public');
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
@@ -194,7 +194,7 @@ return new class extends Migration {
             $table->bigIncrements('id');
             $table->foreignId('survey_id')->constrained('surveys')->cascadeOnUpdate()->cascadeOnDelete();
             $table->text('question_text');
-            $table->enum('question_type', ['text','single_choice','multiple_choice']);
+            $table->enum('question_type', ['text', 'single_choice', 'multiple_choice']);
             $table->integer('points')->default(0);
         });
 
@@ -235,9 +235,9 @@ return new class extends Migration {
             $table->bigIncrements('id');
             $table->foreignId('follower_id')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->foreignId('followed_id')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
-            $table->enum('status', ['active','blocked'])->default('active');
+            $table->enum('status', ['active', 'blocked'])->default('active');
             $table->timestamp('created_at')->nullable();
-            $table->unique(['follower_id','followed_id']);
+            $table->unique(['follower_id', 'followed_id']);
         });
 
         // 17) Events
@@ -282,6 +282,15 @@ return new class extends Migration {
             $table->timestamp('assigned_at')->useCurrent();
             $table->timestamp('revoked_at')->nullable();
         });
+
+        // 21) PostImages
+        Schema::create('post_images', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('post_id')->constrained()->onDelete('cascade');
+            $table->string('url');
+            $table->timestamps();
+        });
+
     }
 
     public function down(): void
@@ -308,5 +317,6 @@ return new class extends Migration {
         Schema::dropIfExists('classes');
         Schema::dropIfExists('statuses');
         Schema::dropIfExists('faculties');
+        Schema::dropIfExists('post_images');
     }
 };
