@@ -11,10 +11,9 @@ export default function Feed() {
     const fetchPosts = async () => {
       try {
         const data = await getAllPosts();
-        // GraphQL returns { id, content }, so let's normalize
         const formatted = data.map((p) => ({
-          user: "Anonymous", // until you connect user data
-          time: "Just now",
+          user: p.user?.name || "Anonymous",
+          time: new Date(p.created_at).toLocaleString(),
           content: p.content,
           media: "",
         }));

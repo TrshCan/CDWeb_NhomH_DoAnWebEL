@@ -1,8 +1,11 @@
+#import scalars.graphql
+
 type Query {
   hello: String! @field(resolver: "App\\GraphQL\\Queries\\HelloResolver")
 }
 
 #import types/post.graphql
+#import types/user.graphql
 
 #import inputs/postCreateInput.graphql
 #import inputs/postUpdateInput.graphql

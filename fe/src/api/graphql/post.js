@@ -6,6 +6,11 @@ export const getAllPosts = async () => {
       posts {
         id
         content
+        created_at
+        user {
+          id
+          name
+        }
       }
     }
   `;
@@ -13,6 +18,7 @@ export const getAllPosts = async () => {
   const response = await graphqlClient.post("", { query });
   return response.data.data.posts;
 };
+
 
 export const getPostById = async (id) => {
   const query = `

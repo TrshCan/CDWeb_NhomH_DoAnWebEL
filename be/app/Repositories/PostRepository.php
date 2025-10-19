@@ -8,18 +8,21 @@ class PostRepository
 {
     public function all()
     {
-        return Post::with(['user', 'group', 'likes', 'shares', 'children'])->latest()->get();
+        return Post::with(['user', 'group', 'likes', 'shares', 'children'])
+            ->latest()
+            ->get();
     }
 
     public function find($id)
     {
-        return Post::with(['user', 'group', 'likes', 'shares', 'children'])->findOrFail($id);
+        return Post::with(['user', 'group', 'likes', 'shares', 'children'])
+            ->findOrFail($id);
     }
 
     public function byUser($userId)
     {
         return Post::where('user_id', $userId)
-            ->with(['group', 'likes', 'shares', 'children'])
+            ->with(['user', 'group', 'likes', 'shares', 'children'])
             ->latest()
             ->get();
     }
@@ -31,6 +34,7 @@ class PostRepository
             ->latest()
             ->get();
     }
+
 
     public function create(array $data)
     {
