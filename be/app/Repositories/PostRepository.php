@@ -27,6 +27,15 @@ class PostRepository
             ->get();
     }
 
+    public function byType($type)
+    {
+        return Post::with(['user'])
+            ->where('type', $type)
+            ->latest()
+            ->get();
+    }
+
+
     public function byGroup($groupId)
     {
         return Post::where('group_id', $groupId)

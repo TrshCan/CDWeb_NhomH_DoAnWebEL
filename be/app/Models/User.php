@@ -39,10 +39,10 @@ class User extends Authenticatable
     // 🔹 RELATIONSHIPS
     // ============================
 
-    public function class()
-    {
-        return $this->belongsTo(ClassModel::class, 'class_id');
-    }
+    // public function class()
+    // {
+    //     return $this->belongsTo(ClassModel::class, 'class_id');
+    // }
 
     public function faculty()
     {

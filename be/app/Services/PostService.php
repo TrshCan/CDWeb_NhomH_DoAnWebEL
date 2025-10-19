@@ -30,6 +30,12 @@ class PostService
         return $this->repository->byUser($userId);
     }
 
+    public function byType($type)
+    {
+        return $this->repository->byType($type);
+    }
+
+
     public function byGroup($groupId)
     {
         return $this->repository->byGroup($groupId);

@@ -28,6 +28,12 @@ class PostResolver
         return $this->service->byUser($args['user_id']);
     }
 
+    public function byType($root, array $args)
+    {
+        return $this->service->byType($args['type']);
+    }
+
+
     public function byGroup($root, array $args)
     {
         return $this->service->byGroup($args['group_id']);

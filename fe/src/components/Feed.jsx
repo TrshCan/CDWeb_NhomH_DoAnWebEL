@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import PostCard from "../components/PostCard";
-import { getAllPosts } from "../api/graphql/post";
+import { getAllPosts, getPostsByType } from "../api/graphql/post";
 
 // 🧠 helper to format time difference
 function timeAgo(createdAt) {
@@ -24,27 +24,35 @@ export default function Feed() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-   useEffect(() => {
+  // Fetch posts when activeTab changes
+  useEffect(() => {
     const fetchPosts = async () => {
+      setLoading(true);
       try {
-        const data = await getAllPosts();
+        const data =
+          activeTab === "forYou"
+            ? await getPostsByType("announcement") //fetch announcements for "For You"
+            : await getPostsByType("normal_post"); //fetch normal posts for "Following"
         const formatted = data.map((p) => ({
+          id: p.id,
+          type: p.type,
           user: p.user?.name || "Anonymous",
-          time: timeAgo(p.created_at), // ⏰ Use helper
+          time: timeAgo(p.created_at),
           content: p.content,
           media: p.media_url || "",
         }));
         setPosts(formatted);
       } catch (err) {
-        console.error("Error fetching posts:", err);
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchPosts();
-  }, []);
+  }, [activeTab]);
 
+  // Handler to add a new post (mock implementation)
   const addPost = () => {
     const text = document.getElementById("postInput").value;
     if (!text.trim()) return;
@@ -60,6 +68,7 @@ export default function Feed() {
     document.getElementById("postInput").value = "";
   };
 
+  // Render
   return (
     <main className="w-full lg:w-2/3">
       {/* Sticky Navigation */}
