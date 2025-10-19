@@ -2,20 +2,37 @@ import React, { useState, useEffect } from "react";
 import PostCard from "../components/PostCard";
 import { getAllPosts } from "../api/graphql/post";
 
+// 🧠 helper to format time difference
+function timeAgo(createdAt) {
+  const created = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now - created;
+
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffDay >= 1) return `${diffDay} day(s) ago`;
+  if (diffHr >= 1) return `${diffHr} hour(s) ago`;
+  if (diffMin >= 1) return `${diffMin} minute(s) ago`;
+  return "Just now";
+}
+
 export default function Feed() {
   const [activeTab, setActiveTab] = useState("forYou");
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+   useEffect(() => {
     const fetchPosts = async () => {
       try {
         const data = await getAllPosts();
         const formatted = data.map((p) => ({
           user: p.user?.name || "Anonymous",
-          time: new Date(p.created_at).toLocaleString(),
+          time: timeAgo(p.created_at), // ⏰ Use helper
           content: p.content,
-          media: "",
+          media: p.media_url || "",
         }));
         setPosts(formatted);
       } catch (err) {
