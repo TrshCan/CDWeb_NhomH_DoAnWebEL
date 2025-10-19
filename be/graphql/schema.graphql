@@ -1,12 +1,13 @@
-#import types/post.graphql
-#import inputs/postInput.graphql
-#import queries/postQuery.graphql
-#import mutations/postMutation.graphql
-
-
-
 type Query {
   hello: String! @field(resolver: "App\\GraphQL\\Queries\\HelloResolver")
 }
 
-type Mutation
+#import types/post.graphql
+
+#import inputs/postCreateInput.graphql
+#import inputs/postUpdateInput.graphql
+
+#import queries/postQueries.graphql
+
+#import mutations/postMutations.graphql
+
