@@ -130,7 +130,7 @@ return new class extends Migration {
                 ->constrained('groups')->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('parent_id')->nullable()
                 ->constrained('posts')->cascadeOnUpdate()->nullOnDelete();
-            $table->enum('type', ['announcement','group_post','comment'])->default('announcement');
+            $table->enum('type', ['announcement','group_post','comment', 'normal_post'])->default('announcement');
             $table->text('content')->nullable();
             $table->string('media_url', 255)->nullable();
             $table->timestamp('created_at')->nullable();
