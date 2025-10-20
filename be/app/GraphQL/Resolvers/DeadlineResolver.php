@@ -27,4 +27,9 @@ class DeadlineResolver
     {
         return $this->service->getDeadlinesByUser($args['user_id']);
     }
+
+     public function upcoming($_, array $args)
+    {
+        return $this->service->upcoming();
+    }
 }

@@ -3,6 +3,23 @@ import graphqlClient from "./client";
 // =======================
 // 🗓️ EVENT QUERIES
 // =======================
+export const getTodayEvents = async () => {
+  const query = `
+    query {
+      eventsToday {
+        id
+        title
+        event_date
+        location
+        user { id name }
+        group { id name }
+      }
+    }
+  `;
+  const res = await graphqlClient.post("", { query });
+  return res.data.data?.eventsToday || [];
+};
+
 export const getAllEvents = async () => {
   const query = `
     query {
@@ -70,6 +87,22 @@ export const getAllEvents = async () => {
 // =======================
 // ⏰ DEADLINE QUERIES
 // =======================
+export const getUpcomingDeadlines = async () => {
+  const query = `
+    query {
+      upcomingDeadlines {
+        id
+        title
+        deadline_date
+        details
+        user { id name }
+        group { id name }
+      }
+    }
+  `;
+  const res = await graphqlClient.post("", { query });
+  return res.data.data?.upcomingDeadlines || [];
+};
 export const getAllDeadlines = async () => {
   const query = `
     query {

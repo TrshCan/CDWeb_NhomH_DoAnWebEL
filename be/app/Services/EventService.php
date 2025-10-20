@@ -27,4 +27,9 @@ class EventService
     {
         return $this->repo->findByUser($userId);
     }
+
+    public function today()
+    {
+        return $this->repo->today();
+    }
 }

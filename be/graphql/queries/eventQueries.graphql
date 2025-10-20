@@ -7,4 +7,7 @@ extend type Query {
 
   eventsByUser(user_id: ID!): [Event!]!
     @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@byUser")
+
+  eventsToday: [Event!]!
+     @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@today")
 }

@@ -27,4 +27,9 @@ class EventResolver
     {
         return $this->service->getEventsByUser($args['user_id']);
     }
+
+    public function today($_, array $args)
+    {
+        return $this->service->today();
+    }
 }

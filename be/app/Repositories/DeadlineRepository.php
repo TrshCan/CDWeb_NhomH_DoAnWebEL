@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Repositories;
-
+use Carbon\Carbon;
 use App\Models\Deadline;
 
 class DeadlineRepository
@@ -19,5 +19,12 @@ class DeadlineRepository
     public function findByUser($userId)
     {
         return Deadline::with('createdBy')->where('created_by', $userId)->get();
+    }
+
+    public function upcoming()
+    {
+        return Deadline::whereDate('deadline_date', '>=', Carbon::today())
+            ->with(['user', 'group'])
+            ->get();
     }
 }

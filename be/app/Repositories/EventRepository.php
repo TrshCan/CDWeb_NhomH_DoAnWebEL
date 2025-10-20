@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Repositories;
-
+use Carbon\Carbon;
 use App\Models\Event;
 
 class EventRepository
@@ -19,5 +19,12 @@ class EventRepository
     public function findByUser($userId)
     {
         return Event::with('createdBy')->where('created_by', $userId)->get();
+    }
+
+    public function today()
+    {
+        return Event::whereDate('event_date', Carbon::today())
+            ->with(['user', 'group'])
+            ->get();
     }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getAllEvents, getAllDeadlines } from "../api/graphql/widget";
+import { getTodayEvents, getUpcomingDeadlines } from "../api/graphql/widget";
 
 export default function WidgetSidebar() {
   const [events, setEvents] = useState([]);
@@ -10,8 +10,8 @@ export default function WidgetSidebar() {
     const fetchData = async () => {
       try {
         const [eventsData, deadlinesData] = await Promise.all([
-          getAllEvents(),
-          getAllDeadlines(),
+          getTodayEvents(),
+          getUpcomingDeadlines(),
         ]);
         setEvents(eventsData);
         setDeadlines(deadlinesData);

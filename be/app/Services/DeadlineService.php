@@ -27,4 +27,9 @@ class DeadlineService
     {
         return $this->repo->findByUser($userId);
     }
+
+    public function upcoming()
+    {
+        return $this->repo->upcoming();
+    }
 }
