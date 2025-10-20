@@ -9,5 +9,5 @@ extend type Query {
     @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@byUser")
 
   eventsToday: [Event!]!
-     @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@today")
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@today")
 }

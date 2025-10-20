@@ -11,8 +11,8 @@ export const getTodayEvents = async () => {
         title
         event_date
         location
-        user { id name }
-        group { id name }
+        created_at
+        created_by
       }
     }
   `;
@@ -95,8 +95,6 @@ export const getUpcomingDeadlines = async () => {
         title
         deadline_date
         details
-        user { id name }
-        group { id name }
       }
     }
   `;

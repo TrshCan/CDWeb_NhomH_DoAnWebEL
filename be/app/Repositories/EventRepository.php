@@ -23,8 +23,8 @@ class EventRepository
 
     public function today()
     {
-        return Event::whereDate('event_date', Carbon::today())
-            ->with(['user', 'group'])
+        return Event::whereDate('event_date', Carbon::today()->toDateString())
+            ->with(['createdBy']) // Updated to match other methods
             ->get();
     }
 }
