@@ -1,0 +1,10 @@
+extend type Query {
+  events: [Event!]!
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@all")
+
+  event(id: ID!): Event
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@find")
+
+  eventsByUser(user_id: ID!): [Event!]!
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@byUser")
+}

@@ -7,11 +7,15 @@ type Query {
 #import types/post.graphql
 #import types/user.graphql
 #import types/postImage.graphql
+#import types/deadline.graphql
+#import types/event.graphql
 
 #import inputs/postCreateInput.graphql
 #import inputs/postUpdateInput.graphql
 
 #import queries/postQueries.graphql
+#import queries/eventQueries.graphql
+#import queries/deadlineQueries.graphql
 
 #import mutations/postMutations.graphql
 

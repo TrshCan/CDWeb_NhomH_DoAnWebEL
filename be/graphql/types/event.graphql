@@ -1,3 +1,14 @@
-#import posts.graphql
-#import events.graphql
-#import deadlines.graphql
+# Event Type Definition
+type Event {
+    id: ID!
+    title: String
+    event_date: Date
+    location: String
+    created_at: DateTime
+    created_by: ID!
+    deleted_at: DateTime
+
+    # Relationships (mirrors Post structure)
+    user: User
+    group: Group
+}

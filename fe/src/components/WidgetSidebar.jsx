@@ -1,5 +1,38 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { getAllEvents, getAllDeadlines } from "../api/graphql/widget";
+
 export default function WidgetSidebar() {
+  const [events, setEvents] = useState([]);
+  const [deadlines, setDeadlines] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [eventsData, deadlinesData] = await Promise.all([
+          getAllEvents(),
+          getAllDeadlines(),
+        ]);
+        setEvents(eventsData);
+        setDeadlines(deadlinesData);
+      } catch (err) {
+        console.error("Failed fetching widget data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <aside className="w-full lg:w-1/3">
+        <p className="text-center text-gray-500 py-10">Loading widgets...</p>
+      </aside>
+    );
+  }
+
   return (
     <aside className="w-full lg:w-1/3 space-y-4">
       {/* Search Box */}
@@ -11,10 +44,15 @@ export default function WidgetSidebar() {
         />
       </div>
 
-      {/* Today on Campus */}
+      {/* Events */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center mb-3">
-          <svg className="w-6 h-6 text-cyan-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="w-6 h-6 text-cyan-600 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -25,34 +63,41 @@ export default function WidgetSidebar() {
           <h2 className="text-lg font-bold text-cyan-800">Today on Campus 📅</h2>
         </div>
 
-        <ul className="space-y-3">
-          {[
-            { icon: "📚", title: "Guest Lecture: AI Ethics", time: "1:00 PM - Engleman Hall A120", color: "cyan" },
-            { icon: "🎭", title: "Theater Dept. Auditions", time: "4:00 PM - Fine Arts Center", color: "yellow" },
-            { icon: "🏐", title: "Volleyball Game vs. State U", time: "6:00 PM - Gymnasium", color: "red" },
-          ].map((event, i) => (
-            <li
-              key={i}
-              className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-            >
-              <div
-                className={`flex-shrink-0 bg-${event.color}-100 text-${event.color}-700 rounded-full h-8 w-8 flex items-center justify-center`}
+        {events.length > 0 ? (
+          <ul className="space-y-3">
+            {events.map((event) => (
+              <li
+                key={event.id}
+                className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
               >
-                {event.icon}
-              </div>
-              <div>
-                <p className="font-semibold text-gray-800 text-sm">{event.title}</p>
-                <p className="text-gray-500 text-xs">{event.time}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+                <div className="flex-shrink-0 bg-cyan-100 text-cyan-700 rounded-full h-8 w-8 flex items-center justify-center">
+                  📍
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">
+                    {event.title}
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    {event.event_date} {event.location ? `• ${event.location}` : ""}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-400 text-sm text-center">No events today</p>
+        )}
       </div>
 
-      {/* Upcoming Deadlines */}
+      {/* Deadlines */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center mb-3">
-          <svg className="w-6 h-6 text-cyan-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="w-6 h-6 text-cyan-600 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -63,35 +108,30 @@ export default function WidgetSidebar() {
           <h2 className="text-lg font-bold text-cyan-800">Upcoming Deadlines 🎓</h2>
         </div>
 
-        <div className="space-y-3">
-          {[
-            {
-              month: "Oct",
-              day: "15",
-              title: "Last Day to Drop a Class",
-              detail: "Submit forms by 5 PM",
-              color: "red",
-            },
-            {
-              month: "Oct",
-              day: "22",
-              title: "Spring '26 Registration Opens",
-              detail: "Opens at 8 AM for Seniors",
-              color: "cyan",
-            },
-          ].map((d, i) => (
-            <div key={i} className="flex items-center">
-              <div className="text-center w-14 flex-shrink-0 mr-3">
-                <p className={`text-xs text-${d.color}-500 uppercase font-bold`}>{d.month}</p>
-                <p className="text-xl font-bold text-gray-700">{d.day}</p>
+        {deadlines.length > 0 ? (
+          <div className="space-y-3">
+            {deadlines.map((d) => (
+              <div key={d.id} className="flex items-center">
+                <div className="text-center w-14 flex-shrink-0 mr-3">
+                  <p className="text-xs text-cyan-500 uppercase font-bold">
+                    {new Date(d.deadline_date).toLocaleString("default", { month: "short" })}
+                  </p>
+                  <p className="text-xl font-bold text-gray-700">
+                    {new Date(d.deadline_date).getDate()}
+                  </p>
+                </div>
+                <div className="border-l-2 border-cyan-400 pl-3">
+                  <p className="font-semibold text-gray-800 text-sm">{d.title}</p>
+                  {d.details && (
+                    <p className="text-xs text-gray-500">{d.details}</p>
+                  )}
+                </div>
               </div>
-              <div className={`border-l-2 border-${d.color}-400 pl-3`}>
-                <p className="font-semibold text-gray-800 text-sm">{d.title}</p>
-                <p className="text-xs text-gray-500">{d.detail}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-400 text-sm text-center">No deadlines soon</p>
+        )}
       </div>
     </aside>
   );
