@@ -5,8 +5,9 @@ export default function WidgetSidebar() {
   const [events, setEvents] = useState([]);
   const [deadlines, setDeadlines] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedItem, setSelectedItem] = useState(null); // modal item
-  const [modalType, setModalType] = useState(null); // 'event' or 'deadline'
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [modalType, setModalType] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -23,14 +24,13 @@ export default function WidgetSidebar() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
   // Disable scroll when modal is open
   useEffect(() => {
-    document.body.style.overflow = selectedItem ? "hidden" : "auto";
-  }, [selectedItem]);
+    document.body.style.overflow = showModal ? "hidden" : "auto";
+  }, [showModal]);
 
   const getDeadlineColor = (deadlineDate) => {
     const today = new Date();
@@ -45,6 +45,17 @@ export default function WidgetSidebar() {
 
   const truncateText = (text, length) =>
     text.length > length ? text.slice(0, length) + "..." : text;
+
+  const openModal = (item, type) => {
+    setSelectedItem(item);
+    setModalType(type);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setTimeout(() => setSelectedItem(null), 200); // small delay for fade-out
+  };
 
   if (loading) {
     return (
@@ -92,10 +103,7 @@ export default function WidgetSidebar() {
             {events.map((event) => (
               <li
                 key={event.id}
-                onClick={() => {
-                  setSelectedItem(event);
-                  setModalType("event");
-                }}
+                onClick={() => openModal(event, "event")}
                 className="flex items-center space-x-3 p-3 rounded-lg cursor-pointer hover:bg-cyan-50 hover:scale-[1.02] transition-all"
               >
                 <div className="flex-shrink-0 bg-cyan-100 text-cyan-700 rounded-full h-9 w-9 flex items-center justify-center text-lg">
@@ -147,10 +155,7 @@ export default function WidgetSidebar() {
             {deadlines.map((d) => (
               <div
                 key={d.id}
-                onClick={() => {
-                  setSelectedItem(d);
-                  setModalType("deadline");
-                }}
+                onClick={() => openModal(d, "deadline")}
                 className="flex items-start cursor-pointer hover:bg-cyan-50 p-2 rounded-lg hover:scale-[1.02] transition-all"
               >
                 <div className="text-center w-14 flex-shrink-0 mr-4">
@@ -177,7 +182,7 @@ export default function WidgetSidebar() {
                   </p>
                   {d.details && (
                     <p className="text-xs text-gray-500">
-                      {truncateText(d.details, 50)}
+                      {truncateText(d.details, 10)}
                     </p>
                   )}
                 </div>
@@ -194,26 +199,38 @@ export default function WidgetSidebar() {
       {/* Modal */}
       {selectedItem && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedItem(null)}
+          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${
+            showModal ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
         >
+          {/* Backdrop */}
           <div
-            className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full relative"
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={closeModal}
+          ></div>
+
+          {/* Modal content */}
+          <div
+            className={`bg-white rounded-xl shadow-2xl p-6 max-w-md w-full relative transform transition-all duration-300 ${
+              showModal ? "scale-100 opacity-100" : "scale-95 opacity-0"
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              onClick={() => setSelectedItem(null)}
+              onClick={closeModal}
               className="absolute top-3 right-3 text-cyan-600 hover:text-cyan-800 text-xl font-bold"
             >
               ✕
             </button>
+
             <h2 className="text-lg font-bold text-gray-800 mb-3">
               {selectedItem.title}
             </h2>
+
             {modalType === "event" ? (
               <>
                 <p className="text-gray-600 text-sm mb-1">
-                  📅 Date: {" "}
+                  📅{" "}
                   {new Date(selectedItem.event_date).toLocaleString([], {
                     dateStyle: "medium",
                     timeStyle: "short",
@@ -221,7 +238,7 @@ export default function WidgetSidebar() {
                 </p>
                 {selectedItem.location && (
                   <p className="text-gray-600 text-sm mb-1">
-                    📍Location: {selectedItem.location}
+                    📍 {selectedItem.location}
                   </p>
                 )}
                 {selectedItem.description && (
