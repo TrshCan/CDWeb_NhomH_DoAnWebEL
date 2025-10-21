@@ -1,4 +1,4 @@
-# Input Type for Creating Posts
+# inputs/postCreateInput.graphql
 input CreatePostInput {
   user_id: ID!
   group_id: ID

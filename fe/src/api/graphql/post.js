@@ -56,3 +56,24 @@ export const getPostsByType = async (type) => {
   const response = await graphqlClient.post("", { query, variables: { type } });
   return response.data.data.postsByType;
 };
+
+export const createPost = async (input) => {
+  const query = `
+    mutation ($input: CreatePostInput!) {
+      createPost(input: $input) {
+        id
+        type
+        content
+        media_url
+        created_at
+        user {
+          id
+          name
+        }
+      }
+    }
+  `;
+  const response = await graphqlClient.post("", { query, variables: { input } });
+  return response.data.data.createPost;
+};
+

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import PostCard from "../components/PostCard";
 import { getAllPosts, getPostsByType } from "../api/graphql/post";
+import { createPost } from "../api/graphql/post";
 
 // 🧠 helper to format time difference
 function timeAgo(createdAt) {
@@ -54,19 +55,36 @@ export default function Feed() {
   }, [activeTab]);
 
   // Handler to add a new post (mock implementation)
-  const addPost = () => {
-    const text = document.getElementById("postInput").value;
-    if (!text.trim()) return;
-    setPosts([
-      {
-        user: "You",
-        time: new Date().toLocaleString(),
+  const addPost = async () => {
+    const text = document.getElementById("postInput").value.trim();
+    if (!text) return;
+
+    try {
+      // 🔥 you can swap user_id with your logged-in user id from session or auth
+      const newPost = await createPost({
+        user_id: 1,
+        type: "normal_post",
         content: text,
-        media: "",
-      },
-      ...posts,
-    ]);
-    document.getElementById("postInput").value = "";
+        media_url: "",
+      });
+
+      setPosts((prev) => [
+        {
+          id: newPost.id,
+          type: newPost.type,
+          user: newPost.user?.name || "You",
+          time: timeAgo(newPost.created_at),
+          content: newPost.content,
+          media: newPost.media_url,
+          images: [],
+        },
+        ...prev,
+      ]);
+
+      document.getElementById("postInput").value = "";
+    } catch (err) {
+      console.error("Failed to create post:", err);
+    }
   };
 
   // Render

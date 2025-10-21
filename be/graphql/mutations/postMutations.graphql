@@ -1,5 +1,5 @@
 extend type Mutation {
-  createPost(input: CreatePostInput!): Post @field(resolver: "PostResolver@create")
-  updatePost(input: UpdatePostInput!): Post @field(resolver: "PostResolver@update")
-  deletePost(id: ID!): Boolean @field(resolver: "PostResolver@delete")
+  createPost(input: CreatePostInput!): Post @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@create")
+  updatePost(input: UpdatePostInput!): Post @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@update")
+  deletePost(id: ID!): Boolean @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@delete")
 }
