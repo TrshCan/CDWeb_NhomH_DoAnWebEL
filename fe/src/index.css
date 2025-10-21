@@ -28,3 +28,33 @@
 .animate-zoomIn {
   animation: zoomIn 0.25s ease-out;
 }
+
+/* Add this to your index.css or globals.css file
+*/
+
+/* --- Custom Scrollbar --- */
+
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 transparent; /* thumb color track color */
+}
+
+/* For WebKit browsers (Chrome, Safari, Edge) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 1px; /*
+  height: 6px; /* For horizontal scrollbars */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent; /* Make track invisible */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8; /* Tailwind gray-400 */
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b; /* Tailwind gray-500 */
+}

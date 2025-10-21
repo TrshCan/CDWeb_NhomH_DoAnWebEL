@@ -67,7 +67,7 @@ export default function WidgetSidebar() {
   }
 
   return (
-    <aside className="w-full lg:w-1/3 space-y-6 p-4">
+    <aside className="w-full lg:w-1/3 space-y-6 p-4 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
       {/* Search Box */}
       <div className="bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-all">
         <input

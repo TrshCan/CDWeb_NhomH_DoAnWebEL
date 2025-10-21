@@ -4,6 +4,7 @@ import WidgetSidebar from "../components/WidgetSidebar";
 import Feed from "../components/Feed";
 
 export default function MainPage() {
+
   return (
     <div className="font-sans">
       <div className="flex min-h-screen">
