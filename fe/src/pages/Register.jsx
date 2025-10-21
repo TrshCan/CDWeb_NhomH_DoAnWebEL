@@ -77,7 +77,7 @@ function RegisterForm() {
             className="w-full max-w-sm mx-auto p-8"
             onSubmit={handleSubmit}
         >
-            <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">
+            <h2 className="text-3xl font-bold mb-8 text-center text-white">
                 Đăng ký tài khoản
             </h2>
 
@@ -90,7 +90,7 @@ function RegisterForm() {
             
             {/* Trường Họ Tên */}
             <div className="mb-5">
-                <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-700 text-left">Nhập Họ Tên:</label>
+                <label htmlFor="name" className="block mb-2 text-sm font-medium text-white text-left">Nhập Họ Tên:</label>
                 <input 
                     type="text" 
                     id="name" 
@@ -104,7 +104,7 @@ function RegisterForm() {
             
             {/* Trường Email */}
             <div className="mb-5">
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-700 text-left">Nhập Email:</label>
+                <label htmlFor="email" className="block mb-2 text-sm font-medium text-white text-left">Nhập Email:</label>
                 <input 
                     type="email" 
                     id="email" 
@@ -118,7 +118,7 @@ function RegisterForm() {
             
             {/* Trường Mật khẩu */}
             <div className="mb-6">
-                <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-700 text-left">Nhập mật khẩu:</label>
+                <label htmlFor="password" className="block mb-2 text-sm font-medium text-white text-left">Nhập mật khẩu:</label>
                 <input 
                     type="password" 
                     id="password" 
@@ -141,7 +141,7 @@ function RegisterForm() {
                         onChange={handleChange}
                     />
                 </div>
-                <label htmlFor="remember" className="ms-2 text-sm font-medium text-gray-700">
+                <label htmlFor="remember" className="ms-2 text-sm font-medium text-white">
                     Tôi đồng ý với điều khoản sử dụng
                 </label>
             </div>
@@ -175,7 +175,7 @@ function App() {
                 </div>
                 
                 {/* 2. Phần Form Đăng Ký (Phải, Chiếm 1/2 trên Desktop, Full trên Mobile) */}
-                <div className="w-full md:w-1/2 flex items-center justify-center">
+                <div className="w-full md:w-1/2 flex items-center bg-gray-900 justify-center">
                     <RegisterForm />
                 </div>
                 
