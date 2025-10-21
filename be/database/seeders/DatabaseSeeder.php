@@ -299,7 +299,6 @@ class DatabaseSeeder extends Seeder
 
 
 
-
         // ===== Post Images =====
         $postImages = [];
 
