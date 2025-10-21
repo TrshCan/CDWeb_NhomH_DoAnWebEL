@@ -1,4 +1,30 @@
+# ----------------------------------
+# Query (bắt buộc, có thể để trống)
+# ----------------------------------
 type Query {
-  hello: String! @field(resolver: "App\\GraphQL\\Queries\\HelloResolver")
+  _empty: String
 }
 
+# ----------------------------------
+# Event type & mutation
+# ----------------------------------
+type Event {
+  id: ID!
+  title: String!
+  event_date: String!      # date lưu dạng string
+  location: String
+  created_by: ID!
+  created_at: String
+  deleted_at: String
+}
+
+input CreateEventInput {
+  title: String!
+  event_date: String!
+  location: String
+}
+
+type Mutation {
+  createEvent(input: CreateEventInput!): Event 
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@createEvent")
+}
