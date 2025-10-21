@@ -34,15 +34,17 @@ export default function Feed() {
           activeTab === "forYou"
             ? await getPostsByType("announcement") //fetch announcements for "For You"
             : await getPostsByType("normal_post"); //fetch normal posts for "Following"
-        const formatted = data.map((p) => ({
-          id: p.id,
-          type: p.type,
-          user: p.user?.name || "Anonymous",
-          time: timeAgo(p.created_at),
-          content: p.content,
-          media: p.media_url || "",
-          images: p.images || [],
-        }));
+        const formatted = data.map((p) => {
+          console.log("Media:", p.media); // Debug the media field
+          return {
+            id: p.id,
+            type: p.type,
+            user: p.user?.name || "Anonymous",
+            time: timeAgo(p.created_at),
+            content: p.content,
+            media: p.media || [],
+          };
+        });
         setPosts(formatted);
       } catch (err) {
         console.error(err);
@@ -65,7 +67,6 @@ export default function Feed() {
         user_id: 1,
         type: "normal_post",
         content: text,
-        media_url: "",
       });
 
       setPosts((prev) => [

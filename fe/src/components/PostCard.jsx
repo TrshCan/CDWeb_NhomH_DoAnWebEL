@@ -1,9 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 
 export default function PostCard({ post }) {
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  const maxVisible = 4;
+  const hasExtra = post.media?.length > maxVisible;
+  const visibleMedia = hasExtra
+    ? post.media.slice(0, maxVisible)
+    : post.media || [];
+
   return (
-    <div className="post bg-white rounded-lg shadow p-4">
-      {/* Header (avatar + user info) */}
+    <div className="post bg-white rounded-lg shadow p-4 relative">
+      {/* Header */}
       <div className="flex items-center space-x-2">
         <div className="w-10 h-10 bg-cyan-600 rounded-full"></div>
         <div>
@@ -15,119 +23,133 @@ export default function PostCard({ post }) {
       {/* Content */}
       <p className="mt-2 text-gray-800 whitespace-pre-wrap">{post.content}</p>
 
-      {/* 🖼️ Image Grid */}
-      {/* 🖼️ Twitter-style Image Layout */}
-      {post.images && post.images.length > 0 && (
+      {/* Media */}
+      {visibleMedia.length > 0 && (
         <div className="mt-3 rounded-xl overflow-hidden border border-gray-200">
-          {post.images.length === 1 && (
+          {visibleMedia.length === 1 && (
             <img
-              src={post.images[0].url}
+              src={visibleMedia[0].url}
               alt=""
-              className="w-full h-auto max-h-[600px] object-cover"
+              onClick={() => setSelectedImage(visibleMedia[0].url)}
+              className="w-full h-auto max-h-[600px] object-cover cursor-pointer"
             />
           )}
 
-          {post.images.length === 2 && (
+          {visibleMedia.length === 2 && (
             <div className="grid grid-cols-2 gap-px bg-gray-200">
-              {post.images.map((img, i) => (
+              {visibleMedia.map((img, i) => (
                 <img
                   key={i}
                   src={img.url}
                   alt=""
-                  className="w-full h-80 object-cover"
+                  onClick={() => setSelectedImage(img.url)}
+                  className="w-full h-80 object-cover cursor-pointer"
                 />
               ))}
             </div>
           )}
 
-          {post.images.length === 3 && (
+          {visibleMedia.length === 3 && (
             <div className="grid grid-cols-2 gap-px bg-gray-200">
               <img
-                src={post.images[0].url}
+                src={visibleMedia[0].url}
                 alt=""
-                className="col-span-2 w-full h-72 object-cover"
+                onClick={() => setSelectedImage(visibleMedia[0].url)}
+                className="col-span-2 w-full h-72 object-cover cursor-pointer"
               />
-              {post.images.slice(1).map((img, i) => (
+              {visibleMedia.slice(1).map((img, i) => (
                 <img
                   key={i}
                   src={img.url}
                   alt=""
-                  className="w-full h-64 object-cover"
+                  onClick={() => setSelectedImage(img.url)}
+                  className="w-full h-64 object-cover cursor-pointer"
                 />
               ))}
             </div>
           )}
 
-          {post.images.length >= 4 && (
-            <div className="grid grid-cols-2 gap-px bg-gray-200">
-              {post.images.slice(0, 4).map((img, i) => (
-                <img
-                  key={i}
-                  src={img.url}
-                  alt=""
-                  className="w-full h-64 object-cover"
-                />
-              ))}
+          {visibleMedia.length === 4 && (
+            <div className="grid grid-cols-2 gap-px bg-gray-200 relative">
+              {visibleMedia.map((img, i) => {
+                const isLast = i === 3 && hasExtra;
+                return (
+                  <div key={i} className="relative">
+                    <img
+                      src={img.url}
+                      alt=""
+                      onClick={() => setSelectedImage(img.url)}
+                      className="w-full h-64 object-cover cursor-pointer"
+                    />
+                    {isLast && (
+                      <div
+                        className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-xl font-semibold cursor-pointer"
+                        onClick={() => setSelectedImage(img.url)}
+                      >
+                        +{post.media.length - maxVisible} more
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* Optional Media (for legacy HTML posts) */}
-      {post.media && (
+      {/* Modal for full-size image */}
+      {selectedImage && (
         <div
-          className="mt-2"
-          dangerouslySetInnerHTML={{ __html: post.media }}
-        />
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img
+            src={selectedImage}
+            alt="Full size"
+            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()} // Prevent close when clicking image
+          />
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-6 right-8 text-white text-3xl font-bold"
+          >
+            ×
+          </button>
+        </div>
       )}
 
-      {/* Action Buttons */}
+      {/* Actions */}
       <div className="flex space-x-4 mt-3 text-gray-500">
         <button title="Like" className="hover:text-cyan-600">
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2"
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-            ></path>
+            />
           </svg>
         </button>
 
         <button title="Comment" className="hover:text-cyan-600">
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2"
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            ></path>
+            />
           </svg>
         </button>
 
         <button title="Share" className="hover:text-cyan-600">
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2"
               d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-            ></path>
+            />
           </svg>
         </button>
       </div>

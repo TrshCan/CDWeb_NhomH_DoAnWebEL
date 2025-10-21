@@ -6,18 +6,16 @@ type Post {
     parent_id: ID
     type: String
     content: String
-    media_url: String
     created_at: DateTime!
     updated_at: DateTime
     deleted_at: DateTime
 
     # Relationships
     user: User
-    group: Group
     parent: Post
     children: [Post!]!
     likes: [PostLike!]! @hasMany
     shares: [PostShare!]!
     groups: [Group!]!
-    images: [PostImage!]! @hasMany
+    media: [PostMedia!]! @hasMany
 }

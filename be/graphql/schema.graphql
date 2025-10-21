@@ -6,7 +6,7 @@ type Query {
 
 #import types/post.graphql
 #import types/user.graphql
-#import types/postImage.graphql
+#import types/postMedia.graphql
 #import types/deadline.graphql
 #import types/event.graphql
 

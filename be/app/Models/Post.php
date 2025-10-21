@@ -59,9 +59,9 @@ class Post extends Model
             ->withPivot(['sender_id', 'sent_at']);
     }
 
-    public function images()
+    public function media()
     {
-        return $this->hasMany(PostImage::class);
+        return $this->hasMany(PostMedia::class);
     }
 
 }
