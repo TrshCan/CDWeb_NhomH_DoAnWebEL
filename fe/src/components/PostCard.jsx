@@ -1,13 +1,26 @@
 import React, { useState } from "react";
 
 export default function PostCard({ post }) {
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(null);
 
   const maxVisible = 4;
   const hasExtra = post.media?.length > maxVisible;
   const visibleMedia = hasExtra
     ? post.media.slice(0, maxVisible)
     : post.media || [];
+
+  const handleOpen = (index) => setSelectedIndex(index);
+  const handleClose = () => setSelectedIndex(null);
+  const handlePrev = (e) => {
+    e.stopPropagation();
+    setSelectedIndex(
+      (prev) => (prev - 1 + post.media.length) % post.media.length
+    );
+  };
+  const handleNext = (e) => {
+    e.stopPropagation();
+    setSelectedIndex((prev) => (prev + 1) % post.media.length);
+  };
 
   return (
     <div className="post bg-white rounded-lg shadow p-4 relative">
@@ -23,14 +36,14 @@ export default function PostCard({ post }) {
       {/* Content */}
       <p className="mt-2 text-gray-800 whitespace-pre-wrap">{post.content}</p>
 
-      {/* Media */}
+      {/* Media grid */}
       {visibleMedia.length > 0 && (
         <div className="mt-3 rounded-xl overflow-hidden border border-gray-200">
           {visibleMedia.length === 1 && (
             <img
               src={visibleMedia[0].url}
               alt=""
-              onClick={() => setSelectedImage(visibleMedia[0].url)}
+              onClick={() => handleOpen(0)}
               className="w-full h-auto max-h-[600px] object-cover cursor-pointer"
             />
           )}
@@ -42,7 +55,7 @@ export default function PostCard({ post }) {
                   key={i}
                   src={img.url}
                   alt=""
-                  onClick={() => setSelectedImage(img.url)}
+                  onClick={() => handleOpen(i)}
                   className="w-full h-80 object-cover cursor-pointer"
                 />
               ))}
@@ -54,15 +67,15 @@ export default function PostCard({ post }) {
               <img
                 src={visibleMedia[0].url}
                 alt=""
-                onClick={() => setSelectedImage(visibleMedia[0].url)}
+                onClick={() => handleOpen(0)}
                 className="col-span-2 w-full h-72 object-cover cursor-pointer"
               />
               {visibleMedia.slice(1).map((img, i) => (
                 <img
-                  key={i}
+                  key={i + 1}
                   src={img.url}
                   alt=""
-                  onClick={() => setSelectedImage(img.url)}
+                  onClick={() => handleOpen(i + 1)}
                   className="w-full h-64 object-cover cursor-pointer"
                 />
               ))}
@@ -78,13 +91,13 @@ export default function PostCard({ post }) {
                     <img
                       src={img.url}
                       alt=""
-                      onClick={() => setSelectedImage(img.url)}
+                      onClick={() => handleOpen(i)}
                       className="w-full h-64 object-cover cursor-pointer"
                     />
                     {isLast && (
                       <div
                         className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-xl font-semibold cursor-pointer"
-                        onClick={() => setSelectedImage(img.url)}
+                        onClick={() => handleOpen(i)}
                       >
                         +{post.media.length - maxVisible} more
                       </div>
@@ -97,21 +110,44 @@ export default function PostCard({ post }) {
         </div>
       )}
 
-      {/* Modal for full-size image */}
-      {selectedImage && (
+      {/* Modal viewer */}
+      {selectedIndex !== null && (
         <div
           className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
-          onClick={() => setSelectedImage(null)}
+          onClick={handleClose}
         >
+          {/* Left button */}
+          {post.media.length > 1 && (
+            <button
+              onClick={handlePrev}
+              className="absolute left-6 text-white text-4xl font-bold px-3 py-1 bg-black bg-opacity-30 rounded-full hover:bg-opacity-60"
+            >
+              ‹
+            </button>
+          )}
+
+          {/* Image */}
           <img
-            src={selectedImage}
-            alt="Full size"
+            src={post.media[selectedIndex].url}
+            alt="Full view"
             className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()} // Prevent close when clicking image
+            onClick={(e) => e.stopPropagation()}
           />
+
+          {/* Right button */}
+          {post.media.length > 1 && (
+            <button
+              onClick={handleNext}
+              className="absolute right-6 text-white text-4xl font-bold px-3 py-1 bg-black bg-opacity-30 rounded-full hover:bg-opacity-60"
+            >
+              ›
+            </button>
+          )}
+
+          {/* Close button */}
           <button
-            onClick={() => setSelectedImage(null)}
-            className="absolute top-6 right-8 text-white text-3xl font-bold"
+            onClick={handleClose}
+            className="absolute top-6 right-8 text-white text-3xl font-bold hover:text-gray-300"
           >
             ×
           </button>
