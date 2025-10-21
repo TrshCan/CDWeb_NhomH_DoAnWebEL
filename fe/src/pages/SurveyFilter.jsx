@@ -47,6 +47,7 @@ const types = ['', 'Survey', 'Quiz'];
 const statuses = ['', 'pending', 'active', 'paused', 'closed'];
 
 const SurveyFilter = () => {
+  const [surveysList, setSurveysList] = useState(surveys);
   const [filters, setFilters] = useState({
     category: '',
     type: '',
@@ -57,6 +58,14 @@ const SurveyFilter = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    title: '',
+    category: '',
+    type: '',
+    status: '',
+    time: '',
+  });
   const [editForm, setEditForm] = useState({
     title: '',
     category: '',
@@ -66,7 +75,7 @@ const SurveyFilter = () => {
   });
   const itemsPerPage = 3;
 
-  const filteredSurveys = surveys.filter((survey) => {
+  const filteredSurveys = surveysList.filter((survey) => {
     return (
       (!filters.category || survey.category === filters.category) &&
       (!filters.type || survey.type === filters.type) &&
@@ -85,7 +94,7 @@ const SurveyFilter = () => {
       ...filters,
       [e.target.name]: e.target.value,
     });
-    setCurrentPage(1); // Reset to first page on filter
+    setCurrentPage(1);
   };
 
   const handlePageChange = (page) => {
@@ -114,6 +123,17 @@ const SurveyFilter = () => {
     setShowDeleteModal(true);
   };
 
+  const handleAddClick = () => {
+    setAddForm({
+      title: '',
+      category: '',
+      type: '',
+      status: '',
+      time: '',
+    });
+    setShowAddModal(true);
+  };
+
   const closeViewModal = () => {
     setShowViewModal(false);
     setSelectedSurvey(null);
@@ -136,27 +156,42 @@ const SurveyFilter = () => {
     setSelectedSurvey(null);
   };
 
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setAddForm({
+      title: '',
+      category: '',
+      type: '',
+      status: '',
+      time: '',
+    });
+  };
+
   const handleEditSubmit = (e) => {
     e.preventDefault();
     if (selectedSurvey) {
-      const updatedSurveys = surveys.map((s) =>
-        s.id === selectedSurvey.id
-          ? { ...s, ...editForm }
-          : s
+      const updatedSurveys = surveysList.map((s) =>
+        s.id === selectedSurvey.id ? { ...s, ...editForm } : s
       );
-      // In a real app, you'd update via API
-      // surveys = updatedSurveys; // But since it's const, you'd need to make it state
-      console.log('Updated surveys:', updatedSurveys); // Placeholder
+      setSurveysList(updatedSurveys);
     }
     closeEditModal();
   };
 
+  const handleAddSubmit = (e) => {
+    e.preventDefault();
+    const newSurvey = {
+      id: surveysList.length + 1,
+      ...addForm,
+    };
+    setSurveysList([...surveysList, newSurvey]);
+    closeAddModal();
+  };
+
   const handleDelete = () => {
     if (selectedSurvey) {
-      const updatedSurveys = surveys.filter((s) => s.id !== selectedSurvey.id);
-      // In a real app, you'd delete via API
-      console.log('Deleted survey:', selectedSurvey);
-      console.log('Updated surveys:', updatedSurveys); // Placeholder
+      const updatedSurveys = surveysList.filter((s) => s.id !== selectedSurvey.id);
+      setSurveysList(updatedSurveys);
     }
     closeDeleteModal();
   };
@@ -197,57 +232,43 @@ const SurveyFilter = () => {
     </svg>
   );
 
-  // Modal Components
-  const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-md' }) => (
+  const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-lg' }) => (
     isOpen && (
-      <>
-        {/* Backdrop */}
+      <div className="fixed inset-0 z-50 flex min-h-full items-center justify-center p-4 text-center sm:p-0">
         <div 
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-50 backdrop-blur-md overflow-y-auto" 
-          aria-modal="true" 
-          role="dialog"
-          onClick={onClose}
-        />
-        {/* Modal */}
-        <div className="fixed inset-0 z-50 flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-          <div 
-            className={`transform transition-all relative ${size} mx-auto max-w-2xl rounded-lg text-left shadow-xl ring-1 ring-black ring-opacity-5 overflow-hidden bg-white max-h-full`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-900 flex-1 text-left">
-                {title}
-              </h3>
-              <button 
-                type="button" 
-                className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center"
-                onClick={onClose}
-              >
-                <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                </svg>
-                <span className="sr-only">Close modal</span>
-              </button>
-            </div>
-            {/* Modal body */}
-            <div className="p-4 md:p-5 space-y-4">
-              {children}
-            </div>
-            {/* Modal footer */}
-            {footer && (
-              <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b">
-                {footer}
-              </div>
-            )}
+          className={`transform transition-all relative ${size} mx-auto max-w-2xl rounded-lg text-left shadow-2xl ring-1 ring-black ring-opacity-5 overflow-hidden bg-white max-h-[90vh] overflow-y-auto`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between p-6 border-b rounded-t border-gray-200">
+            <h3 className="text-2xl font-semibold text-gray-900 flex-1 text-left">
+              {title}
+            </h3>
+            <button 
+              type="button" 
+              className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center"
+              onClick={onClose}
+            >
+              <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+              </svg>
+              <span className="sr-only">Close modal</span>
+            </button>
           </div>
+          <div className="p-6 space-y-6">
+            {children}
+          </div>
+          {footer && (
+            <div className="flex items-center justify-end p-6 border-t border-gray-200 rounded-b gap-4">
+              {footer}
+            </div>
+          )}
         </div>
-      </>
+      </div>
     )
   );
 
   const ViewModalBody = () => (
-    <div className="space-y-2 text-sm">
+    <div className="space-y-4 text-base">
       {selectedSurvey && (
         <>
           <p><span className="font-semibold text-gray-700">Tiêu đề:</span> <span className="text-gray-900">{selectedSurvey.title}</span></p>
@@ -255,7 +276,7 @@ const SurveyFilter = () => {
           <p><span className="font-semibold text-gray-700">Loại:</span> <span className="text-gray-900">{selectedSurvey.type}</span></p>
           <p className="flex items-center gap-2">
             <span className="font-semibold text-gray-700">Trạng thái:</span> 
-            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${statusConfig[selectedSurvey.status].class}`}>
+            <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${statusConfig[selectedSurvey.status].class}`}>
               {statusConfig[selectedSurvey.status].label}
             </span>
           </p>
@@ -269,14 +290,14 @@ const SurveyFilter = () => {
     <button 
       onClick={closeViewModal} 
       type="button" 
-      className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+      className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-6 py-3 text-center"
     >
       Đóng
     </button>
   );
 
   const EditModalBody = () => (
-    <form onSubmit={handleEditSubmit} className="space-y-4">
+    <form onSubmit={handleEditSubmit} className="grid grid-cols-1 gap-6">
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Tiêu đề khảo sát</label>
         <input
@@ -284,62 +305,66 @@ const SurveyFilter = () => {
           value={editForm.title}
           onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
           placeholder="Nhập tiêu đề khảo sát"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-300 bg-white text-base"
           required
         />
       </div>
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Danh mục</label>
-        <select
-          value={editForm.category}
-          onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white"
-          required
-        >
-          <option value="">Chọn danh mục</option>
-          {categories.filter(c => c).map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Danh mục</label>
+          <select
+            value={editForm.category}
+            onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-300 bg-white text-base"
+            required
+          >
+            <option value="">Chọn danh mục</option>
+            {categories.filter(c => c).map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Loại khảo sát</label>
+          <select
+            value={editForm.type}
+            onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-300 bg-white text-base"
+            required
+          >
+            <option value="">Chọn loại</option>
+            {types.filter(t => t).map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
       </div>
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Loại khảo sát</label>
-        <select
-          value={editForm.type}
-          onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white"
-          required
-        >
-          <option value="">Chọn loại</option>
-          {types.filter(t => t).map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Trạng thái</label>
-        <select
-          value={editForm.status}
-          onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 bg-white"
-          required
-        >
-          <option value="">Chọn trạng thái</option>
-          {statuses.filter(s => s).map((s) => (
-            <option key={s} value={s}>{statusConfig[s]?.label}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Thời gian</label>
-        <input
-          type="text"
-          value={editForm.time}
-          onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-          placeholder="Ví dụ: 01/10 - 30/10/2025"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
-          required
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Trạng thái</label>
+          <select
+            value={editForm.status}
+            onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-300 bg-white text-base"
+            required
+          >
+            <option value="">Chọn trạng thái</option>
+            {statuses.filter(s => s).map((s) => (
+              <option key={s} value={s}>{statusConfig[s]?.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Thời gian</label>
+          <input
+            type="text"
+            value={editForm.time}
+            onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+            placeholder="Ví dụ: 01/10 - 30/10/2025"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-300 bg-white text-base"
+            required
+          />
+        </div>
       </div>
     </form>
   );
@@ -349,16 +374,108 @@ const SurveyFilter = () => {
       <button 
         type="button" 
         onClick={closeEditModal}
-        className="py-2.5 px-5 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100"
+        className="py-3 px-6 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-4 focus:ring-gray-100 transition-all duration-300"
       >
         Hủy
       </button>
       <button 
         type="button" 
         onClick={handleEditSubmit}
-        className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center ms-auto"
+        className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-6 py-3 text-center"
       >
         Lưu thay đổi
+      </button>
+    </>
+  );
+
+  const AddModalBody = () => (
+    <form onSubmit={handleAddSubmit} className="grid grid-cols-1 gap-6">
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Tiêu đề khảo sát</label>
+        <input
+          type="text"
+          value={addForm.title}
+          onChange={(e) => setAddForm({ ...addForm, title: e.target.value })}
+          placeholder="Nhập tiêu đề khảo sát"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-300 bg-white text-base"
+          required
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Danh mục</label>
+          <select
+            value={addForm.category}
+            onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-300 bg-white text-base"
+            required
+          >
+            <option value="">Chọn danh mục</option>
+            {categories.filter(c => c).map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Loại khảo sát</label>
+          <select
+            value={addForm.type}
+            onChange={(e) => setAddForm({ ...addForm, type: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-300 bg-white text-base"
+            required
+          >
+            <option value="">Chọn loại</option>
+            {types.filter(t => t).map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Trạng thái</label>
+          <select
+            value={addForm.status}
+            onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-300 bg-white text-base"
+            required
+          >
+            <option value="">Chọn trạng thái</option>
+            {statuses.filter(s => s).map((s) => (
+              <option key={s} value={s}>{statusConfig[s]?.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 text-left">Thời gian</label>
+          <input
+            type="text"
+            value={addForm.time}
+            onChange={(e) => setAddForm({ ...addForm, time: e.target.value })}
+            placeholder="Ví dụ: 01/10 - 30/10/2025"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-300 bg-white text-base"
+            required
+          />
+        </div>
+      </div>
+    </form>
+  );
+
+  const AddModalFooter = () => (
+    <>
+      <button 
+        type="button" 
+        onClick={closeAddModal}
+        className="py-3 px-6 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-4 focus:ring-gray-100 transition-all duration-300"
+      >
+        Hủy
+      </button>
+      <button 
+        type="button" 
+        onClick={handleAddSubmit}
+        className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-6 py-3 text-center"
+      >
+        Thêm khảo sát
       </button>
     </>
   );
@@ -371,7 +488,7 @@ const SurveyFilter = () => {
         </svg>
       </div>
       <p className="text-lg font-medium text-gray-900">Xác nhận xóa</p>
-      <p className="text-sm text-gray-500">Bạn có chắc chắn muốn xóa khảo sát <span className="font-semibold text-gray-900">"{selectedSurvey?.title}"</span> không? Hành động này không thể hoàn tác.</p>
+      <p className="text-base text-gray-500">Bạn có chắc chắn muốn xóa khảo sát <span className="font-semibold text-gray-900">"{selectedSurvey?.title}"</span> không? Hành động này không thể hoàn tác.</p>
     </div>
   );
 
@@ -380,14 +497,14 @@ const SurveyFilter = () => {
       <button 
         onClick={closeDeleteModal} 
         type="button" 
-        className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100"
+        className="py-3 px-6 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-4 focus:ring-gray-100 transition-all duration-300"
       >
         Hủy
       </button>
       <button 
         onClick={handleDelete} 
         type="button" 
-        className="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center ms-auto"
+        className="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-6 py-3 text-center"
       >
         Xóa
       </button>
@@ -397,7 +514,15 @@ const SurveyFilter = () => {
   return (
     <div className="bg-gray-50 p-8 font-inter">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Danh sách Khảo sát</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Danh sách Khảo sát</h1>
+          <button
+            onClick={handleAddClick}
+            className="px-6 py-3 text-white bg-green-500 hover:bg-green-600 rounded-lg font-semibold shadow-sm transition-colors duration-300"
+          >
+            Thêm khảo sát
+          </button>
+        </div>
 
         {/* Filter Card */}
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
@@ -412,7 +537,7 @@ const SurveyFilter = () => {
                 name="category"
                 value={filters.category}
                 onChange={handleFilterChange}
-                className="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-white text-base focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-white text-base focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all duration-300"
               >
                 {categories.map((cat) => (
                   <option key={cat} value={cat}>
@@ -431,7 +556,7 @@ const SurveyFilter = () => {
                 name="type"
                 value={filters.type}
                 onChange={handleFilterChange}
-                className="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-white text-base focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-white text-base focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all duration-300"
               >
                 {types.map((t) => (
                   <option key={t} value={t}>
@@ -450,7 +575,7 @@ const SurveyFilter = () => {
                 name="status"
                 value={filters.status}
                 onChange={handleFilterChange}
-                className="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-white text-base focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-white text-base focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all duration-300"
               >
                 {statuses.map((s) => (
                   <option key={s} value={s}>
@@ -463,7 +588,7 @@ const SurveyFilter = () => {
             <button
               type="button"
               onClick={() => setCurrentPage(1)}
-              className="px-6 py-3 text-white bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold shadow-sm transition-colors"
+              className="px-6 py-3 text-white bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold shadow-sm transition-colors duration-300"
             >
               Lọc
             </button>
@@ -497,7 +622,7 @@ const SurveyFilter = () => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {paginatedSurveys.map((survey) => (
-                <tr key={survey.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={survey.id} className="hover:bg-gray-50 transition-colors duration-200">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {survey.title}
                   </td>
@@ -546,7 +671,7 @@ const SurveyFilter = () => {
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
               >
                 Trước
               </button>
@@ -558,7 +683,7 @@ const SurveyFilter = () => {
                     currentPage === page
                       ? 'bg-blue-500 text-white'
                       : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                  }`}
+                  } transition-all duration-300`}
                 >
                   {page}
                 </button>
@@ -566,7 +691,7 @@ const SurveyFilter = () => {
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
               >
                 Sau
               </button>
@@ -579,7 +704,7 @@ const SurveyFilter = () => {
           isOpen={showViewModal} 
           onClose={closeViewModal} 
           title="Xem chi tiết khảo sát"
-          size="max-w-md"
+          size="max-w-lg"
           footer={<ViewModalFooter />}
         >
           <ViewModalBody />
@@ -589,10 +714,20 @@ const SurveyFilter = () => {
           isOpen={showEditModal} 
           onClose={closeEditModal} 
           title="Chỉnh sửa khảo sát"
-          size="max-w-md"
+          size="max-w-lg"
           footer={<EditModalFooter />}
         >
           <EditModalBody />
+        </Modal>
+
+        <Modal 
+          isOpen={showAddModal} 
+          onClose={closeAddModal} 
+          title="Thêm khảo sát mới"
+          size="max-w-lg"
+          footer={<AddModalFooter />}
+        >
+          <AddModalBody />
         </Modal>
 
         <Modal 
