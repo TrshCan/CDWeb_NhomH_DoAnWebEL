@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function PostCard({ post }) {
   const [selectedIndex, setSelectedIndex] = useState(null);
@@ -9,18 +9,41 @@ export default function PostCard({ post }) {
     ? post.media.slice(0, maxVisible)
     : post.media || [];
 
-  const handleOpen = (index) => setSelectedIndex(index);
-  const handleClose = () => setSelectedIndex(null);
+  const handleOpen = (index) => {
+    setSelectedIndex(index);
+    document.body.style.overflow = "hidden"; // prevent scroll
+  };
+
+  const handleClose = () => {
+    setSelectedIndex(null);
+    document.body.style.overflow = "auto"; // restore scroll
+  };
+
   const handlePrev = (e) => {
     e.stopPropagation();
     setSelectedIndex(
       (prev) => (prev - 1 + post.media.length) % post.media.length
     );
   };
+
   const handleNext = (e) => {
     e.stopPropagation();
     setSelectedIndex((prev) => (prev + 1) % post.media.length);
   };
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (selectedIndex === null) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowLeft") handlePrev(e);
+      else if (e.key === "ArrowRight") handleNext(e);
+      else if (e.key === "Escape") handleClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedIndex]);
 
   return (
     <div className="post bg-white rounded-lg shadow p-4 relative">
@@ -44,7 +67,7 @@ export default function PostCard({ post }) {
               src={visibleMedia[0].url}
               alt=""
               onClick={() => handleOpen(0)}
-              className="w-full h-auto max-h-[600px] object-cover cursor-pointer"
+              className="w-full h-auto max-h-[600px] object-cover cursor-pointer hover:opacity-90 transition"
             />
           )}
 
@@ -56,7 +79,7 @@ export default function PostCard({ post }) {
                   src={img.url}
                   alt=""
                   onClick={() => handleOpen(i)}
-                  className="w-full h-80 object-cover cursor-pointer"
+                  className="w-full h-80 object-cover cursor-pointer hover:opacity-90 transition"
                 />
               ))}
             </div>
@@ -68,7 +91,7 @@ export default function PostCard({ post }) {
                 src={visibleMedia[0].url}
                 alt=""
                 onClick={() => handleOpen(0)}
-                className="col-span-2 w-full h-72 object-cover cursor-pointer"
+                className="col-span-2 w-full h-72 object-cover cursor-pointer hover:opacity-90 transition"
               />
               {visibleMedia.slice(1).map((img, i) => (
                 <img
@@ -76,7 +99,7 @@ export default function PostCard({ post }) {
                   src={img.url}
                   alt=""
                   onClick={() => handleOpen(i + 1)}
-                  className="w-full h-64 object-cover cursor-pointer"
+                  className="w-full h-64 object-cover cursor-pointer hover:opacity-90 transition"
                 />
               ))}
             </div>
@@ -92,11 +115,12 @@ export default function PostCard({ post }) {
                       src={img.url}
                       alt=""
                       onClick={() => handleOpen(i)}
-                      className="w-full h-64 object-cover cursor-pointer"
+                      className="w-full h-64 object-cover cursor-pointer hover:opacity-90 transition"
                     />
                     {isLast && (
                       <div
-                        className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-xl font-semibold cursor-pointer"
+                        className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center 
+                                   text-white text-xl font-semibold cursor-pointer hover:bg-opacity-70"
                         onClick={() => handleOpen(i)}
                       >
                         +{post.media.length - maxVisible} more
@@ -113,14 +137,16 @@ export default function PostCard({ post }) {
       {/* Modal viewer */}
       {selectedIndex !== null && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 animate-fadeIn"
           onClick={handleClose}
         >
           {/* Left button */}
           {post.media.length > 1 && (
             <button
               onClick={handlePrev}
-              className="absolute left-6 text-white text-4xl font-bold px-3 py-1 bg-black bg-opacity-30 rounded-full hover:bg-opacity-60"
+              className="absolute left-6 text-cyan-400 text-5xl font-bold px-3 py-1 
+                         bg-black/40 rounded-full hover:bg-black/70 hover:scale-110 
+                         transition-transform duration-200"
             >
               ‹
             </button>
@@ -130,7 +156,7 @@ export default function PostCard({ post }) {
           <img
             src={post.media[selectedIndex].url}
             alt="Full view"
-            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
+            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-lg animate-zoomIn"
             onClick={(e) => e.stopPropagation()}
           />
 
@@ -138,7 +164,9 @@ export default function PostCard({ post }) {
           {post.media.length > 1 && (
             <button
               onClick={handleNext}
-              className="absolute right-6 text-white text-4xl font-bold px-3 py-1 bg-black bg-opacity-30 rounded-full hover:bg-opacity-60"
+              className="absolute right-6 text-cyan-400 text-5xl font-bold px-3 py-1 
+                         bg-black/40 rounded-full hover:bg-black/70 hover:scale-110 
+                         transition-transform duration-200"
             >
               ›
             </button>
@@ -147,7 +175,8 @@ export default function PostCard({ post }) {
           {/* Close button */}
           <button
             onClick={handleClose}
-            className="absolute top-6 right-8 text-white text-3xl font-bold hover:text-gray-300"
+            className="absolute top-6 right-8 text-cyan-400 text-4xl font-bold 
+                       hover:text-cyan-300 hover:scale-110 transition-transform duration-200"
           >
             ×
           </button>
