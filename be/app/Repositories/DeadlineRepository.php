@@ -23,7 +23,7 @@ class DeadlineRepository
 
     public function upcoming()
     {
-        return Deadline::whereDate('deadline_date', '>', Carbon::today()->toDateString())
+        return Deadline::whereDate('deadline_date', '>=', Carbon::today()->toDateString())
             ->with(['createdBy']) // Updated for consistency
             ->orderBy('deadline_date', 'asc') // Optional: sort by date
             ->get();

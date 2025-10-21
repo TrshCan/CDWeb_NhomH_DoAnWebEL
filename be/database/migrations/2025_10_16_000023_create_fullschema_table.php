@@ -295,6 +295,7 @@ return new class extends Migration {
 
     public function down(): void
     {
+        Schema::dropIfExists('post_images');
         Schema::dropIfExists('user_badges');
         Schema::dropIfExists('badges');
         Schema::dropIfExists('deadlines');
@@ -317,6 +318,5 @@ return new class extends Migration {
         Schema::dropIfExists('classes');
         Schema::dropIfExists('statuses');
         Schema::dropIfExists('faculties');
-        Schema::dropIfExists('post_images');
     }
 };

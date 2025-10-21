@@ -6,11 +6,13 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Faker\Factory as Faker;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $faker = Faker::create();
         $now = Carbon::now();
 
         // ===== Faculties =====
@@ -119,27 +121,122 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // ===== Events =====
-        for ($i = 1; $i <= 10; $i++) {
-            DB::table('events')->insert([
-                'title' => "Event $i",
-                'event_date' => $now->copy()->addDays($i),
-                'location' => "Location $i",
-                'created_at' => $now,
-                'created_by' => rand(1, 10),
-            ]);
+        // ===== Events Seeder =====
+        $events = [];
+        $eventTitles = [
+            'Career Fair {year}',
+            '{club} Club Meeting',
+            'Guest Lecture: {topic}',
+            'Campus {event_type} Workshop',
+            'Student Council Election',
+            'Hackathon {year}',
+            'Cultural Festival: {culture}',
+            '{sport} Team Tryouts',
+            'Charity Fundraiser',
+            'Tech Talk: {tech_topic}',
+            'Art Exhibition',
+            'Resume Building Session',
+            'Environmental Awareness Rally',
+            'Coding Bootcamp',
+            'Music Club Jam Session',
+        ];
+        $locations = [
+            'Lecture Hall A', 'Campus Quad', 'Library Seminar Room', 'Student Union',
+            'Science Building B-101', 'Sports Complex', 'Auditorium', 'Cafeteria',
+            'Online (Zoom)', null, // Include some null locations
+        ];
+
+        for ($i = 1; $i <= 20; $i++) {
+            $pastDate = $faker->dateTimeBetween('-15 days', '+15 days');
+            $club = $faker->randomElement(['Robotics', 'Photography', 'Debate', 'Chess', 'Drama']);
+            $eventType = $faker->randomElement(['Networking', 'Coding', 'Leadership', 'Creative Writing']);
+            $culture = $faker->randomElement(['Vietnamese', 'International', 'Asian', 'Western']);
+            $sport = $faker->randomElement(['Soccer', 'Basketball', 'Volleyball']);
+            $topic = $faker->randomElement(['AI in 2025', 'Sustainable Development', 'Blockchain Basics']);
+            $techTopic = $faker->randomElement(['Cloud Computing', 'Machine Learning', 'Web Development']);
+            $year = Carbon::today()->year;
+
+            $title = $faker->randomElement($eventTitles);
+            $title = str_replace(
+                ['{club}', '{event_type}', '{culture}', '{sport}', '{topic}', '{tech_topic}', '{year}'],
+                [$club, $eventType, $culture, $sport, $topic, $techTopic, $year],
+                $title
+            );
+
+            $events[] = [
+                'title' => $title,
+                'event_date' => $pastDate->format('Y-m-d'),
+                'location' => $faker->randomElement($locations),
+                'created_by' => rand(1, 10), // Use rand(1, 10) for created_by
+                'created_at' => $pastDate,
+            ];
         }
 
-        // ===== Deadlines =====
-        for ($i = 1; $i <= 10; $i++) {
-            DB::table('deadlines')->insert([
-                'title' => "Deadline $i",
-                'deadline_date' => $now->copy()->addDays($i + 10),
-                'details' => "Details for deadline $i",
-                'created_at' => $now,
-                'created_by' => rand(1, 10),
-            ]);
+        // Insert all 20 events in a single query
+        DB::table('events')->insert($events);
+
+        // ===== Deadlines Seeder =====
+        $deadlines = [];
+        $deadlineTitles = [
+            'Submit {course} Assignment {number}',
+            'Register for {event_type} Workshop',
+            '{club} Club Membership Deadline',
+            'Apply for {program} Scholarship',
+            'Project Proposal for {topic}',
+            'Sign-up for {sport} Team',
+            'Submit {event} Feedback Form',
+            'Abstract Submission for {conference}',
+            'Internship Application Deadline',
+            'Poster Submission for {event}',
+            'Funding Request for {club} Event',
+            'Exam Registration for {course}',
+        ];
+        $details = [
+            'Submit via Google Classroom by 11:59 PM.',
+            'Email your application to {email}.',
+            'Register online at campus.edu/{event}.',
+            'Include a 500-word essay and CV.',
+            'Upload your project to GitHub.',
+            'Contact the club president for details.',
+            'Submit to the student portal.',
+            null, // Include some null details
+        ];
+
+        for ($i = 1; $i <= 20; $i++) {
+            $futureDate = $faker->dateTimeBetween('now', '+60 days');
+            $course = $faker->randomElement(['CS101', 'MATH201', 'ENG301', 'PHY102']);
+            $club = $faker->randomElement(['Robotics', 'Photography', 'Debate', 'Chess']);
+            $eventType = $faker->randomElement(['Coding', 'Leadership', 'Networking']);
+            $program = $faker->randomElement(['STEM', 'Arts', 'Global Studies']);
+            $sport = $faker->randomElement(['Soccer', 'Basketball', 'Volleyball']);
+            $topic = $faker->randomElement(['AI', 'Sustainability', 'Blockchain']);
+            $conference = $faker->randomElement(['Tech Summit', 'Research Expo', 'Student Conference']);
+            $event = $faker->randomElement(['Hackathon', 'Career Fair', 'Cultural Fest']);
+            $email = $faker->randomElement(['club@campus.com', 'events@campus.com']);
+            $number = $faker->numberBetween(1, 5);
+
+            $title = $faker->randomElement($deadlineTitles);
+            $title = str_replace(
+                ['{course}', '{number}', '{event_type}', '{club}', '{program}', '{sport}', '{topic}', '{conference}', '{event}'],
+                [$course, $number, $eventType, $club, $program, $sport, $topic, $conference, $event],
+                $title
+            );
+
+            $detail = $faker->randomElement($details);
+            $detail = $detail ? str_replace('{email}', $email, $detail) : null;
+            $detail = $detail ? str_replace('{event}', $event, $detail) : null;
+
+            $deadlines[] = [
+                'title' => $title,
+                'deadline_date' => $futureDate->format('Y-m-d'),
+                'details' => $detail,
+                'created_by' => rand(1, 10), // Use rand(1, 10) for created_by
+                'created_at' => $futureDate,
+            ];
         }
+
+        // Insert all 20 deadlines in a single query
+        DB::table('deadlines')->insert($deadlines);
 
         // ===== Follows (đảm bảo 10 cặp unique, không tự follow)
         $pairs = [];
