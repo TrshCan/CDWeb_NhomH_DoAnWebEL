@@ -51,10 +51,10 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #94a3b8; /* Tailwind gray-400 */
-  border-radius: 10px;
+  background: #aed0ff; 
+  border-radius: 1px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #64748b; /* Tailwind gray-500 */
+  background: #9dc5fd;
 }
