@@ -1,4 +1,17 @@
 type Query {
-  hello: String! @field(resolver: "App\\GraphQL\\Queries\\HelloResolver")
+    _empty: String
 }
 
+type Mutation {
+  registerUser(
+    name: String!
+    email: String!
+    password: String!
+  ): User @field(resolver: "App\\GraphQL\\Mutations\\UserMutation@registerUser")
+}
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+}

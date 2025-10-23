@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-
+import { graphqlRequest } from '../api/graphql';
 function SocialSphereHeader() {
   return (
     <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-white rounded-l-xl">
@@ -41,6 +41,15 @@ function SocialSphereHeader() {
   );
 }
 function RegisterForm() {
+    const REGISTER_USER = `
+  mutation($name: String!, $email: String!, $password: String!) {
+    registerUser(name: $name, email: $email, password: $password) {
+      id
+      name
+      email
+    }
+  }
+`;
     // Quản lý State
     const [formData, setFormData] = useState({
         name: '',
@@ -60,17 +69,37 @@ function RegisterForm() {
     };
 
     // Xử lý Submit
-    const handleSubmit = (e) => {
-        e.preventDefault(); 
-        console.log('Dữ liệu đăng ký:', formData);
-        setMessage('Đăng ký thành công! Vui lòng kiểm tra email xác nhận.');
-        
-        // Reset form sau 3 giây
-        setTimeout(() => {
-            setFormData({ name: '', email: '', password: '', remember: false });
-            setMessage('');
-        }, 3000);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const variables = {
+                name: formData.name,
+                email: formData.email,
+                password: formData.password
+            };
+    
+            const response = await graphqlRequest(REGISTER_USER, variables);
+            console.log("Full response:", response); // log để debug
+    
+            if (response.data && response.data.registerUser) {
+                // Mutation thành công
+                setMessage(`Đăng ký thành công: ${response.data.registerUser.name}`);
+                setFormData({ name: '', email: '', password: '', remember: false });
+            } else if (response.errors) {
+                // Mutation bị lỗi
+                console.error("GraphQL errors:", response.errors);
+                setMessage(response.errors[0].message);
+            } else {
+                // Network error hoặc response không mong muốn
+                setMessage("Có lỗi xảy ra, vui lòng thử lại");
+            }
+    
+        } catch (err) {
+            console.error(err);
+            setMessage("Network hoặc server error");
+        }
     };
+    
 
     return (
         <form 
