@@ -1,12 +1,13 @@
 type Query {
     _empty: String
 }
-Login
+
+
 type Mutation {
   loginUser(
     email: String!
     password: String!
-  ): AuthPayload @field(resolver: "App\\GraphQL\\Mutations\\UserMutation@loginUser")
+  ): AuthPayload @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@loginUser")
 }
 
 type AuthPayload {
@@ -21,17 +22,4 @@ type User {
 }
 
 
-Register
-type Mutation {
-  registerUser(
-    name: String!
-    email: String!
-    password: String!
-  ): User @field(resolver: "App\\GraphQL\\Mutations\\UserMutation@registerUser")
-}
 
-type User {
-  id: ID!
-  name: String!
-  email: String!
-}

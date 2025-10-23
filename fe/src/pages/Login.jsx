@@ -56,9 +56,9 @@ function LoginForm() {
     `;
     // Quản lý State
     const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: '',
+        name: "",
+        email: "",
+        password: "",
         remember: false,
     });
     const [message, setMessage] = useState('');
@@ -89,7 +89,12 @@ function LoginForm() {
             // Mutation thành công
             const { token, user } = response.data.loginUser;
             setMessage(`Đăng nhập thành công: ${user.name}`);
-            setFormData({ email: "", password: "" });
+            setFormData({
+              name: "",
+              email: "",
+              password: "",
+              remember: false,
+            });
     
             // Lưu token vào localStorage để dùng cho request sau này
             localStorage.setItem("token", token);
