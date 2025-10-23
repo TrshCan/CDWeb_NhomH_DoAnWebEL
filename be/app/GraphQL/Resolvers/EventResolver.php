@@ -4,6 +4,7 @@ namespace App\GraphQL\Resolvers;
 
 use App\Services\EventService;
 use App\Models\User;
+use Illuminate\Validation\ValidationException;
 
 class EventResolver
 {
@@ -14,38 +15,54 @@ class EventResolver
         $this->eventService = $eventService;
     }
 
-    /** 🟢 Tạo mới event */
     public function createEvent($_, array $args)
     {
-        $input = $args['input'];
-        $user = User::find(1); // giả lập user đăng nhập
-        return $this->eventService->createEvent($input, $user);
+        $user = User::find(1); // giả lập user admin
+        try {
+            return $this->eventService->createEvent($args['input'], $user);
+        } catch (ValidationException $e) {
+            throw new \Exception(json_encode($e->errors()));
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
     }
 
-    /** 🟡 Cập nhật event */
     public function updateEvent($_, array $args)
     {
-        $id = $args['id'];
-        $input = $args['input'];
         $user = User::find(1);
-
-        return $this->eventService->updateEvent($id, $input, $user);
+        try {
+            return $this->eventService->updateEvent($args['id'], $args['input'], $user);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
     }
 
-    /** 🔴 Xóa event */
     public function deleteEvent($_, array $args)
     {
-        $id = $args['id'];
-        return $this->eventService->deleteEvent($id);
+        return $this->eventService->deleteEvent($args['id']);
     }
 
-    /** 🔍 Lấy danh sách tất cả event */
-    public function getAllEvents($_, array $args)
+    public function restoreEvent($_, array $args)
     {
-        return $this->eventService->getAllEvents();
+        return $this->eventService->restoreEvent($args['id']);
     }
 
-    /** 🔍 Lấy chi tiết event theo ID */
+    public function getPaginatedEvents($_, array $args)
+    {
+        $perPage = $args['perPage'] ?? 5;
+        $page = $args['page'] ?? 1;
+        $includeDeleted = $args['includeDeleted'] ?? false;
+        return $this->eventService->getPaginatedEvents($perPage, $page, $includeDeleted);
+    }
+
+    public function searchEvents($_, array $args)
+    {
+        $filters = $args['filter'] ?? [];
+        $perPage = $args['perPage'] ?? 5;
+        $page = $args['page'] ?? 1;
+        return $this->eventService->searchEvents($filters, $perPage, $page);
+    }
+
     public function getEventById($_, array $args)
     {
         return $this->eventService->getEventById($args['id']);

@@ -3,16 +3,52 @@ type Event {
   title: String!
   event_date: String!
   location: String
-  created_by: ID!
+  created_by: Int!
   created_at: String
+  deleted_at: String
 }
 
-input CreateEventInput {
+input EventInput {
   title: String!
   event_date: String!
   location: String
 }
 
+input EventFilterInput {
+  title: String
+  event_date: String
+  location: String
+  include_deleted: Boolean
+}
+
+type PaginatedEvents {
+  data: [Event!]!
+  current_page: Int!
+  last_page: Int!
+  total: Int!
+}
+
+type Query {
+  getPaginatedEvents(perPage: Int, page: Int, includeDeleted: Boolean): PaginatedEvents
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@getPaginatedEvents")
+
+  searchEvents(filter: EventFilterInput, perPage: Int, page: Int): PaginatedEvents
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@searchEvents")
+
+  getEventById(id: ID!): Event
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@getEventById")
+}
+
 type Mutation {
-  createEvent(input: CreateEventInput!): Event @field(resolver: "App\\GraphQL\\Mutations\\EventMutation@create")
+  createEvent(input: EventInput!): Event
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@createEvent")
+
+  updateEvent(id: ID!, input: EventInput!): Event
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@updateEvent")
+
+  deleteEvent(id: ID!): Boolean
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@deleteEvent")
+
+  restoreEvent(id: ID!): Boolean
+    @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@restoreEvent")
 }

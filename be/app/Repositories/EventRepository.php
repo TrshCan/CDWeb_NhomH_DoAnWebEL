@@ -6,48 +6,74 @@ use App\Models\Event;
 
 class EventRepository
 {
-    /** 🟢 Tạo mới */
     public function create(array $data): Event
     {
-        return Event::create([
-            'title' => $data['title'],
-            'event_date' => $data['event_date'],
-            'location' => $data['location'] ?? null,
-            'created_by' => $data['created_by'],
-            'created_at' => now(),
-        ]);
+        return Event::create($data);
     }
 
-    /** 🟡 Cập nhật */
     public function update(int $id, array $data): Event
     {
         $event = Event::findOrFail($id);
-
-        $event->update([
-            'title' => $data['title'] ?? $event->title,
-            'event_date' => $data['event_date'] ?? $event->event_date,
-            'location' => $data['location'] ?? $event->location,
-        ]);
-
+        $event->update($data);
         return $event;
     }
 
-    /** 🔴 Xóa (soft delete) */
-    public function delete(int $id): bool
+    public function softDelete(int $id): bool
     {
         $event = Event::findOrFail($id);
         return $event->delete();
     }
 
-    /** 🔍 Lấy tất cả */
-    public function getAll()
+    public function restore(int $id): bool
     {
-        return Event::orderByDesc('created_at')->get();
+        return Event::withTrashed()->where('id', $id)->restore();
     }
 
-    /** 🔍 Tìm theo ID */
     public function findById(int $id): ?Event
     {
-        return Event::find($id);
+        return Event::whereNull('deleted_at')->find($id);
+    }
+
+    public function findDeletedById(int $id): ?Event
+    {
+        return Event::onlyTrashed()->find($id);
+    }
+
+    public function checkConflict(string $title, string $time, ?int $ignoreId = null): bool
+    {
+        $query = Event::whereNull('deleted_at')
+            ->where(function ($q) use ($title, $time) {
+                $q->where('title', $title)
+                  ->orWhere('event_date', $time);
+            });
+
+        if ($ignoreId) {
+            $query->where('id', '!=', $ignoreId);
+        }
+
+        return $query->exists();
+    }
+
+    public function getAllPaginated(?string $title, ?string $time, ?string $location, bool $includeDeleted, int $perPage, int $page = 1)
+    {
+        $query = Event::query();
+
+        if ($includeDeleted) {
+            $query->onlyTrashed(); // Only fetch deleted events
+        } else {
+            $query->whereNull('deleted_at'); // Only fetch active events
+        }
+
+        if ($title) {
+            $query->where('title', 'like', "%$title%");
+        }
+        if ($time) {
+            $query->where('event_date', 'like', "%$time%");
+        }
+        if ($location) {
+            $query->where('location', 'like', "%$location%");
+        }
+
+        return $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
     }
 }
