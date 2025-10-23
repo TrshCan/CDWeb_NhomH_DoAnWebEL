@@ -2,28 +2,52 @@
 
 namespace App\GraphQL\Resolvers;
 
-use App\Models\Event;
+use App\Services\EventService;
 use App\Models\User;
 
 class EventResolver
 {
+    protected EventService $eventService;
+
+    public function __construct(EventService $eventService)
+    {
+        $this->eventService = $eventService;
+    }
+
+    /** 🟢 Tạo mới event */
     public function createEvent($_, array $args)
     {
-        // Lấy input
         $input = $args['input'];
+        $user = User::find(1); // giả lập user đăng nhập
+        return $this->eventService->createEvent($input, $user);
+    }
 
-        // User mặc định = 1
+    /** 🟡 Cập nhật event */
+    public function updateEvent($_, array $args)
+    {
+        $id = $args['id'];
+        $input = $args['input'];
         $user = User::find(1);
 
-        // Tạo event mới
-        $event = Event::create([
-            'title' => $input['title'],
-            'event_date' => $input['event_date'],
-            'location' => $input['location'] ?? null,
-            'created_by' => $user->id,
-            'created_at' => now()
-        ]);
+        return $this->eventService->updateEvent($id, $input, $user);
+    }
 
-        return $event;
+    /** 🔴 Xóa event */
+    public function deleteEvent($_, array $args)
+    {
+        $id = $args['id'];
+        return $this->eventService->deleteEvent($id);
+    }
+
+    /** 🔍 Lấy danh sách tất cả event */
+    public function getAllEvents($_, array $args)
+    {
+        return $this->eventService->getAllEvents();
+    }
+
+    /** 🔍 Lấy chi tiết event theo ID */
+    public function getEventById($_, array $args)
+    {
+        return $this->eventService->getEventById($args['id']);
     }
 }

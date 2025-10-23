@@ -1,0 +1,18 @@
+type Event {
+  id: ID!
+  title: String!
+  event_date: String!
+  location: String
+  created_by: ID!
+  created_at: String
+}
+
+input CreateEventInput {
+  title: String!
+  event_date: String!
+  location: String
+}
+
+type Mutation {
+  createEvent(input: CreateEventInput!): Event @field(resolver: "App\\GraphQL\\Mutations\\EventMutation@create")
+}
