@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import PostCard from "../components/PostCard";
-import { getAllPosts, getPostsByType } from "../api/graphql/post";
-import { createPost } from "../api/graphql/post";
+import { getAllPosts, getPostsByType, createPost } from "../api/graphql/post";
 
-// 🧠 helper to format time difference
+// Helper to format time difference
 function timeAgo(createdAt) {
   const created = new Date(createdAt);
   const now = new Date();
@@ -24,6 +23,7 @@ export default function Feed() {
   const [activeTab, setActiveTab] = useState("forYou");
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [files, setFiles] = useState([]); // State for selected files
 
   // Fetch posts when activeTab changes
   useEffect(() => {
@@ -32,19 +32,16 @@ export default function Feed() {
       try {
         const data =
           activeTab === "forYou"
-            ? await getPostsByType("announcement") //fetch announcements for "For You"
-            : await getPostsByType("normal_post"); //fetch normal posts for "Following"
-        const formatted = data.map((p) => {
-          console.log("Media:", p.media); // Debug the media field
-          return {
-            id: p.id,
-            type: p.type,
-            user: p.user?.name || "Anonymous",
-            time: timeAgo(p.created_at),
-            content: p.content,
-            media: p.media || [],
-          };
-        });
+            ? await getPostsByType("announcement")
+            : await getPostsByType("normal_post");
+        const formatted = data.map((p) => ({
+          id: p.id,
+          type: p.type,
+          user: p.user?.name || "Anonymous",
+          time: timeAgo(p.created_at),
+          content: p.content,
+          media: p.media || [], // Include media
+        }));
         setPosts(formatted);
       } catch (err) {
         console.error(err);
@@ -56,18 +53,24 @@ export default function Feed() {
     fetchPosts();
   }, [activeTab]);
 
-  // Handler to add a new post (mock implementation)
+  // Handle file selection
+  const handleFileChange = (e) => {
+    setFiles(Array.from(e.target.files)); // Convert FileList to array
+  };
+
+  // Handler to add a new post with files
   const addPost = async () => {
     const text = document.getElementById("postInput").value.trim();
-    if (!text) return;
+    if (!text && files.length === 0) return; // Require text or files
 
     try {
-      // 🔥 you can swap user_id with your logged-in user id from session or auth
-      const newPost = await createPost({
-        user_id: 1,
+      const input = {
+        user_id: "1", // Replace with authenticated user ID
         type: "normal_post",
         content: text,
-      });
+      };
+
+      const newPost = await createPost(input, files);
 
       setPosts((prev) => [
         {
@@ -76,13 +79,15 @@ export default function Feed() {
           user: newPost.user?.name || "You",
           time: timeAgo(newPost.created_at),
           content: newPost.content,
-          media: newPost.media_url,
-          images: [],
+          media: newPost.media || [], // Include media
         },
         ...prev,
       ]);
 
+      // Reset form
       document.getElementById("postInput").value = "";
+      setFiles([]);
+      document.getElementById("mediaInput").value = "";
     } catch (err) {
       console.error("Failed to create post:", err);
     }
@@ -126,6 +131,14 @@ export default function Feed() {
             rows="4"
             placeholder="What's on your mind?"
           ></textarea>
+          <input
+            id="mediaInput"
+            type="file"
+            accept="image/jpeg,image/png,video/mp4"
+            multiple
+            className="mt-2"
+            onChange={handleFileChange}
+          />
           <div className="flex justify-end mt-2">
             <button
               onClick={addPost}

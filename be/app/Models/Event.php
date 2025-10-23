@@ -13,7 +13,7 @@ class Event extends Model
 
     protected $fillable = ['title', 'event_date', 'location', 'created_at', 'created_by'];
     protected $casts = [
-        'event_date' => 'date',
+        'event_date' => 'datetime',
         'created_at' => 'datetime',
     ];
 

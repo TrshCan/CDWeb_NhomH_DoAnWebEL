@@ -244,7 +244,7 @@ return new class extends Migration {
         Schema::create('events', function (Blueprint $table) {
             $table->increments('id'); // int auto-increment
             $table->text('title');
-            $table->date('event_date');
+            $table->datetime('event_date');
             $table->text('location')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();

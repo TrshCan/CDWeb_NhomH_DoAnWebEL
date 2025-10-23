@@ -41,7 +41,8 @@ class PostResolver
 
     public function create($root, array $args)
     {
-        return $this->service->create($args['input']);
+        \Log::debug('PostResolver create args:', $args);
+        return $this->service->create($args['input'], $args['media'] ?? []);
     }
 
     public function update($root, array $args)

@@ -1,9 +1,9 @@
-# inputs/postCreateInput.graphql
+ # be/graphql/inputs/postCreateInput.graphql
 input CreatePostInput {
   user_id: ID!
   group_id: ID
   parent_id: ID
   type: String
   content: String
-  media_url: String
+  media: [Upload]
 }

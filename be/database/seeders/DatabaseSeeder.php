@@ -165,7 +165,7 @@ class DatabaseSeeder extends Seeder
 
             $events[] = [
                 'title' => $title,
-                'event_date' => $pastDate->format('Y-m-d'),
+                'event_date' => $pastDate,
                 'location' => $faker->randomElement($locations),
                 'created_by' => rand(1, 10), // Use rand(1, 10) for created_by
                 'created_at' => $pastDate,

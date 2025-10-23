@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Repositories\PostRepository;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-
+use Illuminate\Support\Facades\Storage;
 class PostService
 {
     protected $repository;
@@ -41,22 +41,55 @@ class PostService
         return $this->repository->byGroup($groupId);
     }
 
-    public function create(array $data)
+    public function create(array $input, array $media = [])
     {
-        $validator = Validator::make($data, [
+        \Log::debug('PostService create input:', $input);
+        \Log::debug('PostService create media:', $media);
+
+        $validator = Validator::make($input, [
             'user_id' => 'required|exists:users,id',
             'group_id' => 'nullable|exists:groups,id',
             'parent_id' => 'nullable|exists:posts,id',
             'type' => 'nullable|string|max:50',
             'content' => 'nullable|string',
-            'media_url' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
+            \Log::error('PostService validation failed:', $validator->errors()->toArray());
             throw new ValidationException($validator);
         }
 
-        return $this->repository->create($data);
+        // Validate media files
+        foreach ($media as $index => $file) {
+            if ($file && !$file instanceof \Illuminate\Http\UploadedFile) {
+                \Log::error("Invalid file at index $index:", ['file' => $file]);
+                throw new ValidationException(Validator::make([], []), "Invalid file at index $index");
+            }
+            $validator = Validator::make(['file' => $file], [
+                'file' => 'nullable|file|mimes:jpg,jpeg,png,mp4|max:10240', // 10MB max
+            ]);
+            if ($validator->fails()) {
+                \Log::error("Media validation failed at index $index:", $validator->errors()->toArray());
+                throw new ValidationException($validator);
+            }
+        }
+
+        // Create the post
+        $post = $this->repository->create($input);
+
+        // Handle media uploads
+        foreach ($media as $file) {
+            if ($file instanceof \Illuminate\Http\UploadedFile) {
+                $path = $file->store('media', 'public');
+                \Log::debug('Media stored:', ['path' => $path, 'url' => Storage::url($path)]);
+                $post->media()->create([
+                    'url' => Storage::url($path),
+                ]);
+            }
+        }
+
+        // Reload post with media relationship
+        return $post->load('media');
     }
 
     public function update(array $data)
