@@ -42,11 +42,13 @@ function SocialSphereHeader() {
 }
 function RegisterForm() {
     const REGISTER_USER = `
-  mutation($name: String!, $email: String!, $password: String!) {
-    registerUser(name: $name, email: $email, password: $password) {
+  mutation($name: String!, $email: String!, $password: String!,$phone: String,$address: String) {
+    registerUser(name: $name, email: $email, password: $password,phone: $phone, address: $address) {
       id
       name
       email
+      phone
+      address
     }
   }
 `;
@@ -54,6 +56,8 @@ function RegisterForm() {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        phone:'',
+        address:'',
         password: '',
         remember: false,
     });
@@ -75,6 +79,8 @@ function RegisterForm() {
             const variables = {
                 name: formData.name,
                 email: formData.email,
+                phone: formData.phone,
+                address: formData.address,
                 password: formData.password
             };
     
@@ -84,7 +90,7 @@ function RegisterForm() {
             if (response.data && response.data.registerUser) {
                 // Mutation thành công
                 setMessage(`Đăng ký thành công: ${response.data.registerUser.name}`);
-                setFormData({ name: '', email: '', password: '', remember: false });
+                setFormData({ name: '', email: '',phone:'',address:'', password: '', remember: false });
             } else if (response.errors) {
                 // Mutation bị lỗi
                 console.error("GraphQL errors:", response.errors);
@@ -144,6 +150,30 @@ function RegisterForm() {
                     onChange={handleChange}
                 />
             </div>
+            <div className="mb-5">
+                <label htmlFor="phone" className="block mb-2 text-sm font-medium text-white text-left">Nhập SĐT:</label>
+                <input 
+                    type="text" 
+                    id="phone" 
+                    className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-3 shadow-sm" 
+                    placeholder="08666xxxxx" 
+                    required 
+                    value={formData.phone}
+                    onChange={handleChange}
+                />
+            </div>
+            <div className="mb-5">
+                <label htmlFor="address" className="block mb-2 text-sm font-medium text-white text-left">Nhập Địa chỉ:</label>
+                <input 
+                    type="text" 
+                    id="address" 
+                    className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-3 shadow-sm" 
+                    placeholder="34 Vũ Tùng,TP Hồ Chí Minh" 
+                    required 
+                    value={formData.address}
+                    onChange={handleChange}
+                />
+            </div>
             
             {/* Trường Mật khẩu */}
             <div className="mb-6">
@@ -195,7 +225,7 @@ function RegisterForm() {
 
 function App() {
     return (
-        <div className="h-screen flex items-center justify-center">
+        <div className="h-50% flex items-center justify-center">
             <div className="flex  w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden">
                 
                 {/* 1. Phần SocialSphere Header (Trái, Ẩn trên Mobile) */}

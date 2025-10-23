@@ -6,12 +6,16 @@ type Mutation {
   registerUser(
     name: String!
     email: String!
+    phone: String
+    address: String
     password: String!
-  ): User @field(resolver: "App\\GraphQL\\Mutations\\UserMutation@registerUser")
+  ): User @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@registerUser")
 }
 
 type User {
   id: ID!
   name: String!
   email: String!
+  phone: String
+  address: String
 }
