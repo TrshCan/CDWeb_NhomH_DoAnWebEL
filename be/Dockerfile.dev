@@ -21,6 +21,13 @@ RUN composer install --no-scripts --no-autoloader
 # --- Copy source code ---
 COPY . .
 
+# --- Install Xdebug ---
+RUN pecl install xdebug-3.3.1 \
+    && docker-php-ext-enable xdebug
+
+# --- Add Xdebug config ---
+COPY ./docker/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+
 # --- Give write permission for Laravel ---
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 

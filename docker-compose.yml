@@ -23,6 +23,7 @@ services:
     restart: unless-stopped
     ports:
       - "9000:9000"
+      - "9003:9003"   # Xdebug
     volumes:
       - ./be:/var/www
     environment:
@@ -31,6 +32,7 @@ services:
       DB_DATABASE: projectdb
       DB_USERNAME: user
       DB_PASSWORD: password
+      XDEBUG_CONFIG: "client_host=host.docker.internal client_port=9003 idekey=VSCODE"
     depends_on:
       - db
 
@@ -49,7 +51,7 @@ services:
   frontend:
     build:
       context: ./fe
-      dockerfile: Dockerfile.dev   # ⚠️ dùng file dev
+      dockerfile: Dockerfile.dev
     container_name: project-fe
     restart: unless-stopped
     ports:
