@@ -20,6 +20,7 @@ class EventRepository
 
     public function softDelete(int $id): bool
     {
+       
         $event = Event::findOrFail($id);
         return $event->delete();
     }

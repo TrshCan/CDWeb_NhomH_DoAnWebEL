@@ -5,7 +5,7 @@ import { graphqlRequest } from '../api/graphql';
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" /></svg>;
 const SearchIcon = () => <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
-const DeleteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 ７h16" /></svg>;
+const DeleteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 const RestoreIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 4l16 16" /></svg>;
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
 
@@ -92,10 +92,13 @@ const RESTORE_EVENT = `
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  });
+  if (isNaN(date)) return 'N/A';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
 };
 
 // --- Toast Component ---
@@ -113,7 +116,10 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
 
   useEffect(() => {
     if (modalData.type === 'edit' && modalData.event) {
-      const eventDate = modalData.event.event_date.split('T')[0]; // Convert to Y-m-d
+      // Convert event_date to datetime-local format (YYYY-MM-DDTHH:mm)
+      const eventDate = modalData.event.event_date
+        ? new Date(modalData.event.event_date).toISOString().slice(0, 16)
+        : '';
       setFormData({
         title: modalData.event.title,
         event_date: eventDate,
@@ -128,8 +134,13 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
   const validate = () => {
     const newErrors = {};
     if (!formData.title.trim()) newErrors.title = "Tiêu đề sự kiện không được để trống.";
-    if (!formData.event_date) newErrors.event_date = "Ngày diễn ra không hợp lệ.";
+    if (!formData.event_date) newErrors.event_date = "Ngày giờ diễn ra không được để trống.";
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(formData.event_date)) {
+      newErrors.event_date = "Ngày giờ diễn ra không hợp lệ. Định dạng hợp lệ: DD/MM/YYYY HH:mm.";
+    }
     if (formData.location.length > 255) newErrors.location = "Địa điểm không được vượt quá 255 ký tự.";
+    if (!/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/.test(formData.title)) newErrors.title = "Tiêu đề chứa ký tự không hợp lệ.";
+    if (formData.location && !/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/.test(formData.location)) newErrors.location = "Địa điểm chứa ký tự không hợp lệ.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -137,11 +148,9 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      const formattedData = {
-        ...formData,
-        event_date: formData.event_date.split('T')[0] // Strip time if present
-      };
-      handleSave(formattedData);
+      // Convert event_date to backend-compatible format (e.g., YYYY-MM-DD HH:mm:ss)
+      const formattedEventDate = new Date(formData.event_date).toISOString().replace('T', ' ').slice(0, 19);
+      handleSave({ ...formData, event_date: formattedEventDate });
     }
   };
 
@@ -158,17 +167,32 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">Tiêu đề sự kiện <span className="text-red-500">*</span></label>
-            <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className={`bg-gray-50 border ${errors.title ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2.5`} />
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className={`bg-gray-50 border ${errors.title ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2.5`}
+            />
             {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">Ngày diễn ra <span className="text-red-500">*</span></label>
-            <input type="date" value={formData.event_date} onChange={(e) => setFormData({ ...formData, event_date: e.target.value })} className={`bg-gray-50 border ${errors.event_date ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2.5`} />
+            <label className="block mb-2 text-sm font-medium text-gray-700">Ngày giờ diễn ra <span className="text-red-500">*</span></label>
+            <input
+              type="datetime-local"
+              value={formData.event_date}
+              onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+              className={`bg-gray-50 border ${errors.event_date ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2.5`}
+            />
             {errors.event_date && <p className="text-red-500 text-xs mt-1">{errors.event_date}</p>}
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">Địa điểm</label>
-            <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className={`bg-gray-50 border ${errors.location ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2.5`} />
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              className={`bg-gray-50 border ${errors.location ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2.5`}
+            />
             {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
           </div>
           <div className="flex justify-end gap-3 border-t pt-4">
@@ -191,7 +215,7 @@ const DeleteModal = ({ modalData, closeModal, confirmDelete }) => {
           <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
         </svg>
         <h3 className="text-lg font-semibold text-gray-800 mb-2">Bạn có chắc chắn muốn xóa?</h3>
-        <p className="text-sm text-gray-500 mb-6">Bạn có thể khôi phục sự kiện này sau.</p>
+        <p className="text-sm text-gray-500 mb-6">Hành động này sẽ ẩn sự kiện khỏi danh sách, nhưng bạn có thể khôi phục lại sau.</p>
         <div className="flex justify-center gap-4">
           <button onClick={closeModal} className="text-gray-700 bg-white border px-5 py-2 rounded-lg">Hủy</button>
           <button onClick={confirmDelete} className="text-white bg-red-600 hover:bg-red-700 px-5 py-2 rounded-lg">Vâng, xóa</button>
@@ -210,13 +234,13 @@ export default function EventManager() {
   const [totalPages, setTotalPages] = useState(1);
   const [modalData, setModalData] = useState({ type: null, event: null });
   const [toast, setToast] = useState({ message: '', type: 'success', visible: false });
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 5;
 
   const showToast = (msg, type = 'success') => setToast({ message: msg, type, visible: true });
 
   const handleShowDeletedChange = (e) => {
     setShowDeleted(e.target.checked);
-    setCurrentPage(1); // Reset to first page when toggling showDeleted
+    setCurrentPage(1);
   };
 
   // Fetch events
@@ -230,15 +254,21 @@ export default function EventManager() {
             : { perPage: ITEMS_PER_PAGE, page: currentPage, includeDeleted: showDeleted }
         );
         const paginated = response.data.getPaginatedEvents || response.data.searchEvents;
-        if (paginated) {
-          setEvents(paginated.data);
-          setCurrentPage(paginated.current_page);
-          setTotalPages(paginated.last_page);
-        } else {
-          showToast('Không tìm thấy sự kiện', 'error');
+        if (!paginated || !Array.isArray(paginated.data)) {
+          showToast('Dữ liệu phản hồi không hợp lệ.', 'error');
+          return;
         }
+        setEvents(paginated.data);
+        setCurrentPage(paginated.current_page);
+        setTotalPages(paginated.last_page);
       } catch (error) {
-        showToast(`Lỗi khi tải danh sách sự kiện: ${error.message}`, 'error');
+        if (error.message.includes('Failed to fetch')) {
+          showToast('Kết nối máy chủ bị gián đoạn. Vui lòng kiểm tra đường truyền.', 'error');
+        } else if (error.message.includes('Không tìm thấy sự kiện')) {
+          showToast('Không tìm thấy sự kiện. Vui lòng làm mới danh sách.', 'error');
+        } else {
+          showToast('Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.', 'error');
+        }
       }
     };
     fetchEvents();
@@ -254,7 +284,7 @@ export default function EventManager() {
         const res = await graphqlRequest(UPDATE_EVENT, { id: modalData.event.id, input: formData });
         if (res.data.updateEvent) {
           setEvents(events.map((e) => (e.id === modalData.event.id ? res.data.updateEvent : e)));
-          showToast('Cập nhật sự kiện thành công');
+          showToast('Cập nhật thông tin sự kiện thành công');
         } else {
           throw new Error('Cập nhật thất bại: Không nhận được dữ liệu từ server');
         }
@@ -269,7 +299,25 @@ export default function EventManager() {
       }
       closeModal();
     } catch (error) {
-      showToast(`Lỗi khi lưu sự kiện: ${error.message}`, 'error');
+      let errorMessage = 'Không thể lưu dữ liệu. Vui lòng thử lại sau.';
+      if (error.message.includes('validation')) {
+        const backendErrors = JSON.parse(error.message);
+        setErrors({
+          title: backendErrors.title?.[0] || '',
+          event_date: backendErrors.event_date?.[0] || '',
+          location: backendErrors.location?.[0] || '',
+        });
+      } else if (error.message.includes('Xung đột với sự kiện')) {
+        errorMessage = 'Xung đột với sự kiện khác. Vui lòng chọn giờ hoặc tiêu đề khác.';
+      } else if (error.message.includes('Không tìm thấy sự kiện')) {
+        errorMessage = 'Không tìm thấy sự kiện. Vui lòng làm mới danh sách.';
+      } else if (error.message.includes('Phiên đăng nhập')) {
+        errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        setTimeout(() => window.location.href = '/login', 5000);
+      } else if (error.message.includes('Bạn không có quyền')) {
+        errorMessage = error.message;
+      }
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -284,7 +332,16 @@ export default function EventManager() {
       }
       closeModal();
     } catch (error) {
-      showToast(`Lỗi khi xóa sự kiện: ${error.message}`, 'error');
+      let errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.';
+      if (error.message.includes('Không tìm thấy sự kiện')) {
+        errorMessage = 'Không tìm thấy sự kiện. Vui lòng làm mới danh sách.';
+      } else if (error.message.includes('Bạn không có quyền')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('Phiên đăng nhập')) {
+        errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        setTimeout(() => window.location.href = '/login', 5000);
+      }
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -292,15 +349,23 @@ export default function EventManager() {
     try {
       const res = await graphqlRequest(RESTORE_EVENT, { id });
       if (res.data.restoreEvent) {
-        setEvents(events.filter((e) => e.id !== id)); // Remove from list since only deleted events are shown
+        setEvents(events.filter((e) => e.id !== id));
         showToast('Khôi phục sự kiện thành công');
       } else {
         throw new Error('Khôi phục thất bại: Không nhận được dữ liệu từ server');
       }
     } catch (error) {
-      const errorMessage = error.message.includes('trùng ngày hoặc tiêu đề')
-        ? 'Không thể khôi phục: Sự kiện trùng tiêu đề hoặc ngày với sự kiện hiện có.'
-        : `Lỗi khi khôi phục sự kiện: ${error.message}`;
+      let errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.';
+      if (error.message.includes('Kiểm tra dữ liệu hoặc xung đột')) {
+        errorMessage = 'Không thể khôi phục sự kiện. Kiểm tra dữ liệu hoặc xung đột với sự kiện khác.';
+      } else if (error.message.includes('Không tìm thấy sự kiện')) {
+        errorMessage = 'Không tìm thấy sự kiện. Vui lòng làm mới danh sách.';
+      } else if (error.message.includes('Bạn không có quyền')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('Phiên đăng nhập')) {
+        errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        setTimeout(() => window.location.href = '/login', 5000);
+      }
       showToast(errorMessage, 'error');
     }
   };
@@ -339,7 +404,7 @@ export default function EventManager() {
             <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
               <tr>
                 <th className="px-6 py-3">Tiêu đề</th>
-                <th className="px-6 py-3">Ngày giờ</th>
+                <th className="px-6 py-3">Ngày giờ diễn ra</th>
                 <th className="px-6 py-3">Địa điểm</th>
                 <th className="px-6 py-3">Người tạo</th>
                 <th className="px-6 py-3">Ngày tạo</th>

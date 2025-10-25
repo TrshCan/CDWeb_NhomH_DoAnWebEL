@@ -21,7 +21,7 @@ class EventService
     {
         $validator = Validator::make($data, [
             'title' => 'required|string|max:255',
-            'event_date' => ['required', 'date', 'date_format:Y-m-d'],
+            'event_date' => ['required', 'date', 'date_format:Y-m-d H:i:s'],
             'location' => 'nullable|string|max:255',
         ]);
 
@@ -30,7 +30,7 @@ class EventService
         }
 
         if ($this->repository->checkConflict($data['title'], $data['event_date'])) {
-            throw new \Exception("Đã tồn tại sự kiện khác vào cùng ngày hoặc cùng tiêu đề.");
+            throw new \Exception("Đã tồn tại sự kiện khác vào cùng thời điểm hoặc cùng tiêu đề.");
         }
 
         $data['created_by'] = $user->id;
@@ -52,7 +52,7 @@ class EventService
 
         $validator = Validator::make($data, [
             'title' => 'sometimes|required|string|max:255',
-            'event_date' => 'sometimes|required|date_format:Y-m-d',
+            'event_date' => 'sometimes|required|date_format:Y-m-d H:i:s',
             'location' => 'nullable|string|max:255',
         ]);
 
@@ -65,7 +65,7 @@ class EventService
             $data['event_date'] ?? $event->event_date,
             $id
         )) {
-            throw new \Exception("Xung đột với sự kiện khác. Vui lòng chọn ngày hoặc tiêu đề khác.");
+            throw new \Exception("Xung đột với sự kiện khác. Vui lòng chọn thời điểm hoặc tiêu đề khác.");
         }
 
         return $this->repository->update($id, $data);
@@ -89,7 +89,7 @@ class EventService
         }
 
         if ($this->repository->checkConflict($event->title, $event->event_date)) {
-            throw new \Exception("Không thể khôi phục sự kiện. Dữ liệu bị trùng ngày hoặc tiêu đề.");
+            throw new \Exception("Không thể khôi phục sự kiện. Dữ liệu bị trùng thời điểm hoặc tiêu đề.");
         }
 
         return $this->repository->restore($id);
@@ -110,11 +110,11 @@ class EventService
     public function searchEvents(array $filters = [], int $perPage = 5, int $page = 1)
     {
         $title = $filters['title'] ?? null;
-        $date = $filters['event_date'] ?? null;
+        $event_date = $filters['event_date'] ?? null;
         $location = $filters['location'] ?? null;
         $includeDeleted = $filters['include_deleted'] ?? false;
 
-        $paginator = $this->repository->getAllPaginated($title, $date, $location, $includeDeleted, $perPage, $page);
+        $paginator = $this->repository->getAllPaginated($title, $event_date, $location, $includeDeleted, $perPage, $page);
 
         return [
             'data' => $paginator->items(),

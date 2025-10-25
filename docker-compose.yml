@@ -25,6 +25,7 @@ services:
       - "9000:9000"
     volumes:
       - ./be:/var/www
+      - ./be/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
     environment:
       DB_HOST: db
       DB_PORT: 3306
