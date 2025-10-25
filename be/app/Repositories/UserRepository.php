@@ -6,8 +6,7 @@ class UserRepository {
  /**
      * Tìm user theo email.
      */
-use Illuminate\Support\Facades\DB;
-class UserRepository {
+
     public function findByEmail(string $email): ?User
     {
         return User::where('email', $email)->first();
@@ -31,7 +30,7 @@ class UserRepository {
         $user->email = $data['email'];
         $user->phone =$data['phone'];
         $user->address =$data['address'];
-        $user->password = Hash::make($data['password']);
+        $user->password = $data['password'];
         $user->status_id   = $data['status_id'] ?? 1;
         $user->role        = $data['role']        ?? 'student';
         $user->class_id    = $data['class_id']    ?? null;

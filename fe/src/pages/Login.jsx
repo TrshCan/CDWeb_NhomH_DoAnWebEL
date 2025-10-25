@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { graphqlRequest } from '../api/graphql';
+import {useNavigate} from 'react-router-dom';
 
 function SocialSphereHeader() {
   return (
@@ -42,6 +43,7 @@ function SocialSphereHeader() {
   );
 }
 function LoginForm() {
+    const navigate = useNavigate()
     const LOGIN_USER = `
     mutation LoginUser($email: String!, $password: String!) {
         loginUser(email: $email, password: $password) {
@@ -59,7 +61,7 @@ function LoginForm() {
         name: "",
         email: "",
         password: "",
-        remember: false,
+        remember: true,
     });
     const [message, setMessage] = useState('');
 
@@ -167,7 +169,7 @@ function LoginForm() {
                         onChange={handleChange}
                     />
                 </div>
-                <label htmlFor="remember" className="ms-2 text-sm font-medium text-white">
+                <label  htmlFor="remember" className=" ms-2 text-sm font-medium text-white">
                     Tôi đồng ý với điều khoản sử dụng
                 </label>
             </div>
@@ -181,10 +183,10 @@ function LoginForm() {
             </button>
 
             <p className="mt-4 text-center text-sm text-gray-500">
-                Chưa có tài khoản? 
-                <a href="/register" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500 ml-1">
-                    Đăng ký ngay
-                </a>
+                Chưa có tài khoản?
+                <button onClick={()=>navigate('/register')} className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500 ml-1">
+                    Đăng ký
+                </button>
             </p>
         </form>
     );

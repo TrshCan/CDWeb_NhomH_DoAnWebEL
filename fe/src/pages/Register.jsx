@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { graphqlRequest } from '../api/graphql';
+import  {useNavigate} from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 function SocialSphereHeader() {
   return (
     <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-white rounded-l-xl">
@@ -41,6 +43,9 @@ function SocialSphereHeader() {
   );
 }
 function RegisterForm() {
+    const navigate = useNavigate();
+    const [countdown, setCountdown] = useState(0);
+    const [showPassword, setShowPassword] = useState(false);
     const REGISTER_USER = `
   mutation($name: String!, $email: String!, $password: String!,$phone: String,$address: String) {
     registerUser(name: $name, email: $email, password: $password,phone: $phone, address: $address) {
@@ -59,7 +64,7 @@ function RegisterForm() {
         phone:'',
         address:'',
         password: '',
-        remember: false,
+        remember: true,
     });
     const [message, setMessage] = useState('');
 
@@ -73,6 +78,7 @@ function RegisterForm() {
     };
 
     // Xử lý Submit
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -86,20 +92,34 @@ function RegisterForm() {
     
             const response = await graphqlRequest(REGISTER_USER, variables);
             console.log("Full response:", response); // log để debug
-    
+
             if (response.data && response.data.registerUser) {
                 // Mutation thành công
-                setMessage(`Đăng ký thành công: ${response.data.registerUser.name}`);
-                setFormData({ name: '', email: '',phone:'',address:'', password: '', remember: false });
+                let second = 3;
+                setCountdown(second);
+                setMessage(`Đăng ký thành công! Bạn sẽ được chuyển trang trong vòng ${second} giây...`);
+
+                const interval = setInterval(() => {
+                    second -= 1;
+                    setCountdown(second);
+                    setMessage(`Đăng ký thành công! Bạn sẽ được chuyển trang trong vòng ${second} giây...`);
+
+                    if (second === 0) {
+                        clearInterval(interval);
+                        navigate('/login');
+                    }
+                }, 1000);
+
+                // Reset form
+                setFormData({ name: '', email: '', phone: '', address: '', password: '', remember: false });
             } else if (response.errors) {
-                // Mutation bị lỗi
                 console.error("GraphQL errors:", response.errors);
                 setMessage(response.errors[0].message);
             } else {
-                // Network error hoặc response không mong muốn
                 setMessage("Có lỗi xảy ra, vui lòng thử lại");
             }
-    
+
+
         } catch (err) {
             console.error(err);
             setMessage("Network hoặc server error");
@@ -174,19 +194,28 @@ function RegisterForm() {
                     onChange={handleChange}
                 />
             </div>
-            
-            {/* Trường Mật khẩu */}
-            <div className="mb-6">
-                <label htmlFor="password" className="block mb-2 text-sm font-medium text-white text-left">Nhập mật khẩu:</label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-3 shadow-sm" 
-                    placeholder='•••••••••' 
-                    required 
+
+            {/* Mật khẩu + icon 👁️ */}
+            <div className="mb-6 relative">
+                <label htmlFor="password" className="block mb-2 text-sm font-medium text-white text-left">
+                    Nhập mật khẩu:
+                </label>
+                <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-3 pr-10 shadow-sm"
+                    placeholder="•••••••••"
+                    required
                     value={formData.password}
                     onChange={handleChange}
                 />
+                <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-10 text-gray-500 hover:text-gray-700"
+                >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
             </div>
             
             {/* Checkbox */}

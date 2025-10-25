@@ -19,7 +19,30 @@ class UserServices
         $this->userRepo = $userRepo;
     }
 
+    public function loginUser(string $email, string $password): array
+    {
+        $user = $this->userRepo->findByEmail($email);
 
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => 'Email không tồn tại.',
+            ]);
+        }
+
+        if (!Hash::check($password, $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => 'Mật khẩu không đúng.',
+            ]);
+        }
+
+        // Tạo token ngẫu nhiên (ví dụ token tạm, chưa phải JWT)
+        $token = Str::random(60);
+
+        return [
+            'token' => $token,
+            'user' => $user,
+        ];
+    }
     public function registerUser(array $data)
     {
         try {
