@@ -299,7 +299,7 @@ class DatabaseSeeder extends Seeder
 
 
 
-        // ===== Post Images =====
+        // ===== Post Media =====
         $postImages = [];
 
         $realImages = [
@@ -325,7 +325,7 @@ class DatabaseSeeder extends Seeder
             ];
         }
 
-        DB::table('post_images')->insert($postImages);
+        DB::table('post_media')->insert($postImages);
 
 
     }

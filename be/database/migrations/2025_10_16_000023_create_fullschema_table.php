@@ -284,7 +284,7 @@ return new class extends Migration {
         });
 
         // 21) PostImages
-        Schema::create('post_images', function (Blueprint $table) {
+        Schema::create('post_media', function (Blueprint $table) {
             $table->id();
             $table->foreignId('post_id')->constrained()->onDelete('cascade');
             $table->string('url');
