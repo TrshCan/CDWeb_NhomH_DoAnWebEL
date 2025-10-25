@@ -1,4 +1,10 @@
 type Query {
-  hello: String! @field(resolver: "App\\GraphQL\\Queries\\HelloResolver")
+  publicProfile(id: Int!): User @field(resolver: "App\\GraphQL\\Resolvers\\UserProfileResolver@publicProfile")
 }
 
+
+type User {
+  name: String!
+  address: String
+  created_at: String
+}
