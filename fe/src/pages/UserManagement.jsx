@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { graphqlRequest } from "../api/graphql.js";
 
 // ================== VALIDATION HELPERS ==================
 const specialCharRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
@@ -69,9 +70,8 @@ const InputField = ({ id, label, type = "text", value, onChange, placeholder, er
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      className={`w-full p-3 rounded-lg bg-gray-700 text-white border ${
-        error ? "border-red-500" : "border-gray-600"
-      } focus:ring-blue-500 focus:border-blue-500 transition duration-150`}
+      className={`w-full p-3 rounded-lg bg-gray-700 text-white border ${error ? "border-red-500" : "border-gray-600"
+        } focus:ring-blue-500 focus:border-blue-500 transition duration-150`}
     />
     {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
   </div>
@@ -190,9 +190,8 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
           {/* Thông báo */}
           {message && (
             <div
-              className={`p-3 mb-4 rounded-lg font-medium ${
-                message.type === "success" ? "bg-green-600" : "bg-red-600"
-              } text-white`}
+              className={`p-3 mb-4 rounded-lg font-medium ${message.type === "success" ? "bg-green-600" : "bg-red-600"
+                } text-white`}
             >
               {message.text}
             </div>
@@ -267,11 +266,10 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
                       setErrors({});
                     }
                   }}
-                  className={`px-3 py-1 text-sm font-bold rounded-full transition duration-200 ${
-                    isPasswordChange
+                  className={`px-3 py-1 text-sm font-bold rounded-full transition duration-200 ${isPasswordChange
                       ? "bg-red-500 hover:bg-red-600"
                       : "bg-blue-600 hover:bg-blue-700"
-                  } text-white`}
+                    } text-white`}
                 >
                   {isPasswordChange ? "Hủy đổi mật khẩu" : "Đổi mật khẩu"}
                 </button>
@@ -316,11 +314,10 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
               </button>
               <button
                 type="submit"
-                className={`px-6 py-2 font-bold rounded-lg text-white transition duration-200 ${
-                  isLoading
+                className={`px-6 py-2 font-bold rounded-lg text-white transition duration-200 ${isLoading
                     ? "bg-blue-800 opacity-70 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"
-                }`}
+                  }`}
                 disabled={isLoading}
               >
                 {isLoading ? "Đang cập nhật..." : "Cập nhật"}
