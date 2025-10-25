@@ -1,15 +1,16 @@
 type Query {
-    _empty: String
+  _empty: String
 }
 
 type Mutation {
   registerUser(
     name: String!
     email: String!
+    password: String!
     phone: String
     address: String
-    password: String!
-  ): User @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@registerUser")
+  ): User
+    @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@registerUser")
 }
 
 type User {
@@ -18,4 +19,6 @@ type User {
   email: String!
   phone: String
   address: String
+  role: String
+  avatar: String
 }
