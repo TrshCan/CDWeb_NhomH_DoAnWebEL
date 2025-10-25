@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   db:
     image: mysql:8
@@ -22,9 +24,9 @@ services:
     container_name: project-be
     restart: unless-stopped
     ports:
-      - "9000:9000"       # PHP-FPM (Nginx upstream)
+      - "9000:9000"
     volumes:
-      - ./be:/var/www     # đồng bộ mã nguồn
+      - ./be:/var/www
     environment:
       DB_HOST: db
       DB_PORT: 3306
@@ -32,12 +34,8 @@ services:
       DB_USERNAME: user
       DB_PASSWORD: password
       TZ: Asia/Ho_Chi_Minh
-    env_file:
-      - ./be/.env
     depends_on:
       - db
-    extra_hosts:
-      - "host.docker.internal:host-gateway"   # cho Xdebug gọi về host Windows
 
   nginx:
     image: nginx:alpine
@@ -54,7 +52,7 @@ services:
   frontend:
     build:
       context: ./fe
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.dev   # ⚠️ dùng file dev
     container_name: project-fe
     restart: unless-stopped
     ports:
