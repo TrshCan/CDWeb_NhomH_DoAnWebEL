@@ -153,7 +153,7 @@ const WelcomeSection = ({ isActive, onClick }) => {
  */
 const QuestionItem = ({ isActive, onClick, question, index, totalQuestions, moveQuestionItem }) => {
     return (
-        <div className="relative mb-2"> {/* THAY ĐỔI: Giảm mb-4 thành mb-2 để các item gần nhau hơn */}
+        <div className="relative mb-1">
             <div onClick={onClick} className={`bg-white border-2 rounded-lg shadow-lg p-6 pb-12 transition-colors duration-300 cursor-pointer ${isActive ? 'border-violet-600' : 'border-transparent'} hover:border-violet-600`}> {/* THAY ĐỔI: Bỏ group-hover, thêm hover:border-violet-600 */}
                 <div className="flex items-baseline">
                     <span className="text-violet-600 font-semibold mr-2 whitespace-nowrap">{question.id} →</span>
