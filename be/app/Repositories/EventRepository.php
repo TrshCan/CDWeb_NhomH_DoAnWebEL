@@ -23,8 +23,12 @@ class EventRepository
 
     public function today()
     {
-        return Event::whereDate('event_date', Carbon::today()->toDateString())
-            ->with(['createdBy']) // Updated to match other methods
+        return Event::whereBetween('event_date', [
+            Carbon::today()->startOfDay(),
+            Carbon::today()->endOfDay()
+        ])
+            ->with(['createdBy'])
             ->get();
     }
+
 }
