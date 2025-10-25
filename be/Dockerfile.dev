@@ -25,8 +25,9 @@ COPY . .
 RUN pecl install xdebug-3.3.1 \
     && docker-php-ext-enable xdebug
 
-# --- Add Xdebug config ---
+# --- Add Xdebug and PHP configs ---
 COPY ./docker/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
+COPY ./docker/php.ini /usr/local/etc/php/conf.d/custom.ini
 
 # --- Give write permission for Laravel ---
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache

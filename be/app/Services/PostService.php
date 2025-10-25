@@ -59,25 +59,34 @@ class PostService
             throw new ValidationException($validator);
         }
 
-        // Validate media files
+        // ✅ Limit media count to 4
+        if (count($media) > 4) {
+            \Log::error('Too many media files in request:', ['count' => count($media)]);
+            $validator = Validator::make([], []); // empty validator just to throw
+            throw new ValidationException($validator, 'You can only upload up to 4 media files.');
+        }
+
+        // ✅ Validate each media file
         foreach ($media as $index => $file) {
             if ($file && !$file instanceof \Illuminate\Http\UploadedFile) {
                 \Log::error("Invalid file at index $index:", ['file' => $file]);
                 throw new ValidationException(Validator::make([], []), "Invalid file at index $index");
             }
+
             $validator = Validator::make(['file' => $file], [
                 'file' => 'nullable|file|mimes:jpg,jpeg,png,mp4|max:10240', // 10MB max
             ]);
+
             if ($validator->fails()) {
                 \Log::error("Media validation failed at index $index:", $validator->errors()->toArray());
                 throw new ValidationException($validator);
             }
         }
 
-        // Create the post
+        // ✅ Create post
         $post = $this->repository->create($input);
 
-        // Handle media uploads
+        // ✅ Handle media uploads
         foreach ($media as $file) {
             if ($file instanceof \Illuminate\Http\UploadedFile) {
                 $path = $file->store('media', 'public');
@@ -88,9 +97,10 @@ class PostService
             }
         }
 
-        // Reload post with media relationship
+        // ✅ Reload post with media
         return $post->load('media');
     }
+
 
     public function update(array $data)
     {
