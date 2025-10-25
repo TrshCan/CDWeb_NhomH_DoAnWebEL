@@ -40,11 +40,19 @@ export default function Feed() {
             user: p.user?.name || "Anonymous",
             time: timeAgo(p.created_at),
             content: p.content,
-            media: p.media || [],
+            media: p.media
+              ? p.media.map((m) =>
+                  typeof m === "string"
+                    ? { filename: m }
+                    : m.url
+                    ? { url: m.url }
+                    : { filename: m.filename }
+                )
+              : [],
           }))
         );
       } catch (err) {
-        console.error(err);
+        console.error("Failed to fetch posts:", err);
         toast.error("Failed to load posts.");
       } finally {
         setLoading(false);
@@ -54,7 +62,7 @@ export default function Feed() {
     fetchPosts();
   }, [activeTab]);
 
-  // ✅ File validation
+  // File validation
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files);
     const MAX_FILES = 4;
@@ -85,7 +93,7 @@ export default function Feed() {
 
     try {
       const input = {
-        user_id: "1", // Replace this with actual logged-in user ID
+        user_id: "1", // Replace with actual logged-in user ID
         type: "normal_post",
         content: text,
       };
@@ -100,7 +108,15 @@ export default function Feed() {
           user: newPost.user?.name || "You",
           time: timeAgo(newPost.created_at),
           content: newPost.content,
-          media: newPost.media || [],
+          media: newPost.media
+            ? newPost.media.map((m) =>
+                typeof m === "string"
+                  ? { filename: m }
+                  : m.url
+                  ? { url: m.url }
+                  : { filename: m.filename }
+              )
+            : [],
         },
         ...prev,
       ]);
@@ -109,7 +125,7 @@ export default function Feed() {
       document.getElementById("mediaInput").value = "";
       setFiles([]);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to create post:", err);
       toast.error("Failed to create post.");
     }
   };

@@ -9,6 +9,54 @@ export default function PostCard({ post }) {
     ? post.media.slice(0, maxVisible)
     : post.media || [];
 
+  // Log media data for debugging
+  useEffect(() => {
+    console.log("PostCard media:", post.media);
+  }, [post.media]);
+
+  // Helper function to get the correct media URL
+  const getMediaUrl = (media) => {
+    if (media.url) {
+      return media.url;
+    } else if (media.filename) {
+      return `/storage/media/${media.filename}`;
+    } else if (typeof media === "string") {
+      return `/storage/media/${media}`;
+    }
+    console.warn("Invalid media format:", media);
+    return "https://via.placeholder.com/150"; // Fallback placeholder
+  };
+
+  // Helper function to render media (image or video)
+  const getMediaElement = (media, index, className, onClick) => {
+    const url = getMediaUrl(media);
+    const isVideo = url.endsWith(".mp4");
+
+    if (isVideo) {
+      return (
+        <video
+          key={index}
+          src={url}
+          controls
+          className={className}
+          onClick={onClick}
+          onError={(e) => console.error("Failed to load video:", e.target.src)}
+        />
+      );
+    }
+
+    return (
+      <img
+        key={index}
+        src={url}
+        alt=""
+        className={className}
+        onClick={onClick}
+        onError={(e) => console.error("Failed to load image:", e.target.src)}
+      />
+    );
+  };
+
   const handleOpen = (index) => {
     setSelectedIndex(index);
     document.body.style.overflow = "hidden"; // prevent scroll
@@ -62,61 +110,32 @@ export default function PostCard({ post }) {
       {/* Media grid */}
       {visibleMedia.length > 0 && (
         <div className="mt-3 rounded-xl overflow-hidden border border-gray-200">
-          {visibleMedia.length === 1 && (
-            <img
-              src={visibleMedia[0].url}
-              alt=""
-              onClick={() => handleOpen(0)}
-              className="w-full h-auto max-h-[600px] object-cover cursor-pointer hover:opacity-90 transition"
-            />
-          )}
+          {visibleMedia.length === 1 && getMediaElement(visibleMedia[0], 0, "w-full h-auto max-h-[600px] object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(0))}
 
           {visibleMedia.length === 2 && (
             <div className="grid grid-cols-2 gap-px bg-gray-200">
-              {visibleMedia.map((img, i) => (
-                <img
-                  key={i}
-                  src={img.url}
-                  alt=""
-                  onClick={() => handleOpen(i)}
-                  className="w-full h-80 object-cover cursor-pointer hover:opacity-90 transition"
-                />
-              ))}
+              {visibleMedia.map((media, i) =>
+                getMediaElement(media, i, "w-full h-80 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(i))
+              )}
             </div>
           )}
 
           {visibleMedia.length === 3 && (
             <div className="grid grid-cols-2 gap-px bg-gray-200">
-              <img
-                src={visibleMedia[0].url}
-                alt=""
-                onClick={() => handleOpen(0)}
-                className="col-span-2 w-full h-72 object-cover cursor-pointer hover:opacity-90 transition"
-              />
-              {visibleMedia.slice(1).map((img, i) => (
-                <img
-                  key={i + 1}
-                  src={img.url}
-                  alt=""
-                  onClick={() => handleOpen(i + 1)}
-                  className="w-full h-64 object-cover cursor-pointer hover:opacity-90 transition"
-                />
-              ))}
+              {getMediaElement(visibleMedia[0], 0, "col-span-2 w-full h-72 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(0))}
+              {visibleMedia.slice(1).map((media, i) =>
+                getMediaElement(media, i + 1, "w-full h-64 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(i + 1))
+              )}
             </div>
           )}
 
           {visibleMedia.length === 4 && (
             <div className="grid grid-cols-2 gap-px bg-gray-200 relative">
-              {visibleMedia.map((img, i) => {
+              {visibleMedia.map((media, i) => {
                 const isLast = i === 3 && hasExtra;
                 return (
                   <div key={i} className="relative">
-                    <img
-                      src={img.url}
-                      alt=""
-                      onClick={() => handleOpen(i)}
-                      className="w-full h-64 object-cover cursor-pointer hover:opacity-90 transition"
-                    />
+                    {getMediaElement(media, i, "w-full h-64 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(i))}
                     {isLast && (
                       <div
                         className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center 
@@ -152,13 +171,8 @@ export default function PostCard({ post }) {
             </button>
           )}
 
-          {/* Image */}
-          <img
-            src={post.media[selectedIndex].url}
-            alt="Full view"
-            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-lg animate-zoomIn"
-            onClick={(e) => e.stopPropagation()}
-          />
+          {/* Media */}
+          {getMediaElement(post.media[selectedIndex], selectedIndex, "max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-lg animate-zoomIn", (e) => e.stopPropagation())}
 
           {/* Right button */}
           {post.media.length > 1 && (

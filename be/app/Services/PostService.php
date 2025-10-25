@@ -90,9 +90,14 @@ class PostService
         foreach ($media as $file) {
             if ($file instanceof \Illuminate\Http\UploadedFile) {
                 $path = $file->store('media', 'public');
-                \Log::debug('Media stored:', ['path' => $path, 'url' => Storage::url($path)]);
+
+                // Make absolute URL
+                $url = asset(Storage::url($path));
+
+                \Log::debug('Media stored:', ['path' => $path, 'url' => $url]);
+
                 $post->media()->create([
-                    'url' => Storage::url($path),
+                    'url' => $url, // Full URL, not relative anymore
                 ]);
             }
         }
