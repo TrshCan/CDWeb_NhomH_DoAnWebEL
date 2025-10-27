@@ -107,6 +107,7 @@ return new class extends Migration {
             $table->text('description')->nullable();
             $table->foreignId('created_by')->nullable()
                 ->constrained('users')->cascadeOnUpdate()->nullOnDelete();
+            $table->string('code', 6)->unique();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
             $table->softDeletes();
@@ -291,6 +292,19 @@ return new class extends Migration {
             $table->string('url');
             $table->timestamps();
         });
+
+        // 22) JoinRequests
+        Schema::create('join_requests', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('group_id')->constrained('groups')->cascadeOnDelete();
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
+            $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
+            $table->timestamps();
+        });
+
 
     }
 
