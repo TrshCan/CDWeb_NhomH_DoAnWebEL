@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import PostCard from "../components/PostCard";
 import { getPostsByType, createPost } from "../api/graphql/post";
-
+import "../assets/css/feed.css"; // 👈 import the shimmer + fade css
 function timeAgo(createdAt) {
   const created = new Date(createdAt);
   const now = new Date();
@@ -282,7 +282,23 @@ export default function Feed() {
       {/* Posts */}
       <div className="space-y-4">
         {loading ? (
-          <p className="text-gray-500 text-center">Loading posts...</p>
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="post bg-white rounded-lg shadow p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="skeleton skeleton-avatar"></div>
+                  <div className="flex-1">
+                    <div className="skeleton skeleton-text w-1/3"></div>
+                    <div className="skeleton skeleton-text w-1/4"></div>
+                  </div>
+                </div>
+                <div className="skeleton skeleton-text w-full mt-3"></div>
+                <div className="skeleton skeleton-text w-5/6"></div>
+                <div className="skeleton skeleton-text w-4/6"></div>
+                <div className="skeleton skeleton-image"></div>
+              </div>
+            ))}
+          </div>
         ) : posts.length === 0 ? (
           <p className="text-gray-500 text-center">No posts yet.</p>
         ) : (
