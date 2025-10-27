@@ -1,0 +1,4 @@
+type SearchResult {
+  posts: [Post]
+  users: [User]
+}
