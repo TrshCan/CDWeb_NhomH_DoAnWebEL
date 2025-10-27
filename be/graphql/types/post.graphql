@@ -1,0 +1,20 @@
+# be/graphql/types/post.graphql
+# Post Type Definition
+type Post {
+    id: ID!
+    user_id: ID!
+    group_id: ID
+    parent_id: ID
+    type: String
+    content: String
+    created_at: DateTime!
+    updated_at: DateTime
+    deleted_at: DateTime
+    user: User
+    parent: Post
+    children: [Post!]!
+    likes: [PostLike!]! @hasMany
+    shares: [PostShare!]!
+    groups: [Group!]!
+    media: [PostMedia!]! @hasMany
+}

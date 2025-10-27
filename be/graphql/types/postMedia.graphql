@@ -1,0 +1,7 @@
+type PostMedia {
+    id: ID!
+    post_id: ID
+    url: String
+    created_at: DateTime
+    updated_at: DateTime
+}

@@ -9,6 +9,10 @@
             "type": "php",
             "request": "launch",
             "port": 9003
+            "pathMappings": {
+        "/var/www": "C:/Repositories/CDWeb_NhomH_DoAnWebEL/be"
+      },
+      "log": true
         },
         {
             "name": "Launch currently open script",
@@ -45,4 +49,3 @@
             }
         }
     ]
-}
