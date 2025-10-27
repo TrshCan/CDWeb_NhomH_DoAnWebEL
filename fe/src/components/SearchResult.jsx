@@ -1,20 +1,42 @@
 import React, { useState, useEffect } from "react";
-import { searchAll } from "../api/graphql/search";
+import { searchAll, fetchSuggestions } from "../api/graphql/search";
 import PostCard from "./PostCard";
 
 export default function SearchResult() {
-  const [searchQuery, setSearchQuery] = useState(""); // no default query
+  const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [results, setResults] = useState({ posts: [], users: [] });
   const [loading, setLoading] = useState(false);
 
+  // 👇 new states for suggestions
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // --- fetch suggestions while typing ---
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      const data = await fetchSuggestions(searchQuery);
+      setSuggestions(data);
+      setShowSuggestions(true);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  // --- fetch actual search results ---
   useEffect(() => {
     if (!searchQuery.trim()) {
       setResults({ posts: [], users: [] });
       return;
     }
 
-    const fetchResults = async () => {
+    const timeout = setTimeout(async () => {
       setLoading(true);
       try {
         const data = await searchAll(searchQuery);
@@ -24,9 +46,8 @@ export default function SearchResult() {
       } finally {
         setLoading(false);
       }
-    };
+    }, 400);
 
-    const timeout = setTimeout(fetchResults, 400); // debounce
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
@@ -45,14 +66,38 @@ export default function SearchResult() {
   return (
     <main className="w-full lg:w-2/3">
       {/* Search Bar */}
-      <div className="bg-white rounded-lg shadow p-4 mb-4">
+      <div className="bg-white rounded-lg shadow p-4 mb-4 relative">
         <input
           type="text"
           placeholder="Search posts or users..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setShowSuggestions(true);
+          }}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} // 👈 small delay so click works
           className="w-full bg-gray-100 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900"
         />
+
+        {/* 👇 Suggestion dropdown */}
+        {showSuggestions && suggestions.length > 0 && (
+          <ul className="absolute bg-white border border-gray-200 rounded-lg shadow-md w-full mt-1 z-50 max-h-48 overflow-y-auto">
+            {suggestions.map((item, i) => (
+              <li
+                key={i}
+                onClick={() => {
+                  setSearchQuery(item);
+                  setShowSuggestions(false);
+                }}
+                className="px-4 py-2 hover:bg-cyan-50 cursor-pointer text-gray-700"
+              >
+                {item.length > 60 ? item.slice(0, 60) + "..." : item}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Filters and info */}
         <div className="flex justify-between items-center mt-2">
           {searchQuery && (
             <p className="text-sm text-gray-600">
@@ -96,7 +141,6 @@ export default function SearchResult() {
       ) : (
         <div className="space-y-6">
           {filteredResults.map((item) =>
-            // Post result
             "content" in item ? (
               <PostCard
                 key={item.id}
@@ -109,7 +153,6 @@ export default function SearchResult() {
                 }}
               />
             ) : (
-              // User result
               <div
                 key={item.id}
                 className="bg-white rounded-lg shadow p-4 flex items-center space-x-4 hover:bg-gray-50 transition"
