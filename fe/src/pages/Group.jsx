@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import WidgetSidebar from "../components/WidgetSidebar";
 import Group from "../components/Group";
+import "../assets/css/group.css";
 
-export default function MainPage() {
+export default function GroupPage() {
+  useEffect(() => {
+    // Add "group-page" class to body to override global background
+    document.body.classList.add("group-page");
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove("group-page");
+    };
+  }, []);
 
   return (
     <div className="font-sans">

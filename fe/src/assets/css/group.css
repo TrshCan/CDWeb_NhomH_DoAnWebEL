@@ -1,0 +1,17 @@
+/* src/assets/css/group.css */
+body.group-page {
+  background: #fff !important;
+  color: #111;
+}
+
+.group-page {
+  background-color: #fff !important;
+}
+
+.group-page .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #ccc;
+}
+
+.group-page .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
