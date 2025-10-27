@@ -2,61 +2,77 @@
 :root {
     background: linear-gradient(90deg, #1F0A95 0%, #3C0273 100%);
 
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
-}
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+    ::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 4px;
+    }
 
-@keyframes zoomIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
+    ::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
 
-.animate-fadeIn {
-  animation: fadeIn 0.25s ease-out;
-}
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
 
-.animate-zoomIn {
-  animation: zoomIn 0.25s ease-out;
-}
+    @keyframes zoomIn {
+        from {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
 
-/* Add this to your index.css or globals.css file
-*/
+    .animate-fadeIn {
+        animation: fadeIn 0.25s ease-out;
+    }
 
-/* --- Custom Scrollbar --- */
+    .animate-zoomIn {
+        animation: zoomIn 0.25s ease-out;
+    }
 
-/* For Firefox */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #94a3b8 transparent; /* thumb color track color */
-}
+    /* Add this to your index.css or globals.css file
+    */
 
-/* For WebKit browsers (Chrome, Safari, Edge) */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 1px; /*
-  height: 6px; /* For horizontal scrollbars */
-}
+    /* --- Custom Scrollbar --- */
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent; /* Make track invisible */
-}
+    /* For Firefox */
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #aed0ff; 
-  border-radius: 1px;
-}
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #94a3b8 transparent; /* thumb color track color */
+    }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #9dc5fd;
+    /* For WebKit browsers (Chrome, Safari, Edge) */
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 1px;
+        /*
+         height: 6px; /* For horizontal scrollbars */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent; /* Make track invisible */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #aed0ff;
+        border-radius: 1px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #9dc5fd;
+    }
 }
