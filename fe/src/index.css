@@ -1,3 +1,4 @@
+
 @import "tailwindcss";
 :root {
     background: linear-gradient(90deg, #1F0A95 0%, #3C0273 100%);
@@ -75,4 +76,3 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #9dc5fd;
     }
-}
