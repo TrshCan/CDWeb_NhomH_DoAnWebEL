@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { searchAll, fetchSuggestions } from "../api/graphql/search";
 import PostCard from "./PostCard";
+import "../assets/css/search.css"; // 👈 import the shimmer + fade css
 
 export default function SearchResult() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [results, setResults] = useState({ posts: [], users: [] });
   const [loading, setLoading] = useState(false);
+  const [fadeIn, setFadeIn] = useState(false); // 👈 for smooth fade
 
-  // 👇 new states for suggestions
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // --- fetch suggestions while typing ---
+  // Fetch suggestions
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSuggestions([]);
@@ -29,7 +30,7 @@ export default function SearchResult() {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
-  // --- fetch actual search results ---
+  // Fetch search results
   useEffect(() => {
     if (!searchQuery.trim()) {
       setResults({ posts: [], users: [] });
@@ -38,6 +39,7 @@ export default function SearchResult() {
 
     const timeout = setTimeout(async () => {
       setLoading(true);
+      setFadeIn(false);
       try {
         const data = await searchAll(searchQuery);
         setResults(data);
@@ -45,13 +47,13 @@ export default function SearchResult() {
         console.error("Search failed:", err);
       } finally {
         setLoading(false);
+        setTimeout(() => setFadeIn(true), 100); // 👈 small delay for fade-in
       }
     }, 400);
 
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
-  // Filtering logic
   const filteredResults = (() => {
     switch (filter) {
       case "Post":
@@ -62,6 +64,29 @@ export default function SearchResult() {
         return [...results.posts, ...results.users];
     }
   })();
+
+  // Skeleton Loader
+  const Skeleton = ({ type }) => {
+    if (type === "post") {
+      return (
+        <div className="skeleton-card animate-shimmer">
+          <div className="skeleton-title shimmer"></div>
+          <div className="skeleton-line shimmer"></div>
+          <div className="skeleton-line shimmer"></div>
+          <div className="skeleton-img shimmer"></div>
+        </div>
+      );
+    }
+    return (
+      <div className="skeleton-user animate-shimmer">
+        <div className="skeleton-avatar shimmer"></div>
+        <div className="skeleton-info">
+          <div className="skeleton-line shimmer"></div>
+          <div className="skeleton-line short shimmer"></div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <main className="w-full lg:w-2/3">
@@ -79,7 +104,6 @@ export default function SearchResult() {
           className="w-full bg-gray-100 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900"
         />
 
-        {/* 👇 Suggestion dropdown */}
         {showSuggestions && suggestions.length > 0 && (
           <ul className="absolute bg-white border border-gray-200 rounded-lg shadow-md w-full mt-1 z-50 max-h-48 overflow-y-auto">
             {suggestions.map((item, i) => (
@@ -97,7 +121,7 @@ export default function SearchResult() {
           </ul>
         )}
 
-        {/* Filters and info */}
+        {/* Filters */}
         <div className="flex justify-between items-center mt-2">
           {searchQuery && (
             <p className="text-sm text-gray-600">
@@ -131,7 +155,11 @@ export default function SearchResult() {
 
       {/* Search Results */}
       {loading ? (
-        <p className="text-gray-500 text-center">Loading...</p>
+        <div className="space-y-6">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} type={filter === "User" ? "user" : "post"} />
+          ))}
+        </div>
       ) : !searchQuery ? (
         <p className="text-gray-400 text-center italic">
           Start typing to search 🔍
@@ -139,7 +167,7 @@ export default function SearchResult() {
       ) : filteredResults.length === 0 ? (
         <p className="text-gray-500 text-center">No results found.</p>
       ) : (
-        <div className="space-y-6">
+        <div className={`space-y-6 fade-in ${fadeIn ? "visible" : ""}`}>
           {filteredResults.map((item) =>
             "content" in item ? (
               <PostCard
