@@ -1,0 +1,41 @@
+type Query {
+    _empty: String
+}
+
+
+type Mutation {
+  loginUser(
+    email: String!
+    password: String!
+  ): AuthPayload @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@loginUser")
+
+  registerUser(
+      name: String!
+      email: String!
+      password: String!
+      phone: String
+      address: String
+    ): User
+      @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@registerUser")
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+  _empty: String
+}
+
+
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  phone: String
+  address: String
+  role: String
+  avatar: String
+}
+
+
+
