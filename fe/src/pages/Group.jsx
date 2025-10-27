@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import WidgetSidebar from "../components/WidgetSidebar";
 import Group from "../components/Group";
-import "../assets/css/group.css";
+import "../assets/css/group-page.css";
 
 export default function GroupPage() {
   useEffect(() => {

@@ -1,15 +1,15 @@
 import React, { useState } from "react";
+import "../assets/css/group-component.css"; // import the new CSS
 
 export default function Groups() {
   const [activeTab, setActiveTab] = useState("pending");
-  const [groupPosts, setGroupPosts] = useState([]);
-  const [postText, setPostText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [pendingGroups, setPendingGroups] = useState([]);
 
-  const handlePost = () => {
-    if (!postText.trim()) return;
-    setGroupPosts([{ content: postText, id: Date.now() }, ...groupPosts]);
-    setPostText("");
-  };
+  // Simulate loading for demo
+  React.useEffect(() => {
+    setTimeout(() => setLoading(false), 1500);
+  }, []);
 
   return (
     <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col space-y-4">
@@ -24,7 +24,7 @@ export default function Groups() {
         <div className="flex space-x-4">
           <button
             onClick={() => setActiveTab("pending")}
-            className={`flex-1 text-center py-2 font-semibold rounded-md ${
+            className={`flex-1 text-center py-2 font-semibold rounded-md tab-btn ${
               activeTab === "pending"
                 ? "bg-cyan-100 text-cyan-600"
                 : "text-cyan-600 hover:bg-cyan-50"
@@ -34,7 +34,7 @@ export default function Groups() {
           </button>
           <button
             onClick={() => setActiveTab("yourGroups")}
-            className={`flex-1 text-center py-2 font-semibold rounded-md ${
+            className={`flex-1 text-center py-2 font-semibold rounded-md tab-btn ${
               activeTab === "yourGroups"
                 ? "bg-cyan-100 text-cyan-600"
                 : "text-cyan-600 hover:bg-cyan-50"
@@ -47,12 +47,12 @@ export default function Groups() {
 
       {/* Pending Groups */}
       {activeTab === "pending" && (
-        <section id="pending" className="space-y-4">
+        <section id="pending" className="space-y-4 tab-slide">
           <div className="flex space-x-2 mb-4">
-            <button className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700">
+            <button className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition">
               Join Group
             </button>
-            <button className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700">
+            <button className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition">
               Create Group
             </button>
           </div>
@@ -61,94 +61,61 @@ export default function Groups() {
             Pending / Waiting Groups
           </h2>
 
-          {[
-            {
-              icon: "💻",
-              title: "CS101 - Intro to Programming",
-              members: 12,
-              desc: "Learn the basics of programming with Python.",
-            },
-            {
-              icon: "📊",
-              title: "Data Structures",
-              members: 80,
-              desc: "Dive into algorithms and data structures.",
-            },
-            {
-              icon: "🌐",
-              title: "Web Development",
-              members: 60,
-              desc: "Build modern web applications with HTML, CSS, and JS.",
-            },
-          ].map((group, i) => (
-            <div
-              key={i}
-              className="bg-white rounded-lg shadow p-4 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0 bg-cyan-100 text-cyan-700 rounded-full h-10 w-10 flex items-center justify-center">
-                  {group.icon}
+          {/* Loading Skeletons */}
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((s) => (
+                <div key={s} className="bg-white rounded-lg shadow p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="skeleton rounded-full h-10 w-10"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="skeleton h-4 rounded w-1/3"></div>
+                      <div className="skeleton h-3 rounded w-1/2"></div>
+                    </div>
+                    <div className="skeleton h-8 rounded-full w-32"></div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-800">{group.title}</p>
-                  <p className="text-sm text-gray-500">{group.members} members</p>
-                  <p className="text-sm text-gray-600 mt-1">{group.desc}</p>
-                </div>
-                <button className="bg-gray-600 text-white px-4 py-2 rounded-full cursor-default">
-                  Awaiting Approval
-                </button>
-              </div>
+              ))}
             </div>
-          ))}
+          ) : pendingGroups.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+              Haven’t sent any requests 😴
+            </div>
+          ) : (
+            pendingGroups.map((group) => (
+              <div
+                key={group.id}
+                className="bg-white rounded-lg shadow p-4 hover:bg-gray-50 transition"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0 bg-cyan-100 text-cyan-700 rounded-full h-10 w-10 flex items-center justify-center">
+                    💬
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-800">{group.title}</p>
+                    <p className="text-sm text-gray-500">
+                      {group.members} members
+                    </p>
+                  </div>
+                  <button className="bg-gray-600 text-white px-4 py-2 rounded-full cursor-default">
+                    Awaiting Approval
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </section>
       )}
 
       {/* Your Groups */}
       {activeTab === "yourGroups" && (
-        <section id="yourGroups" className="space-y-4">
+        <section id="yourGroups" className="space-y-4 tab-slide">
           <h2 className="text-lg font-bold text-cyan-800">Your Groups</h2>
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-gray-500 text-center">No groups joined yet 😔</p>
           </div>
         </section>
       )}
-
-      {/* Group Feed Example */}
-      <section id="groupFeed" className="space-y-4">
-        <h2 className="text-lg font-bold text-cyan-800">Group Posts</h2>
-        <div className="bg-white rounded-lg shadow p-4">
-          <textarea
-            value={postText}
-            onChange={(e) => setPostText(e.target.value)}
-            className="w-full bg-gray-100 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900"
-            rows="4"
-            placeholder="Share something with the group..."
-          />
-          <div className="flex justify-end mt-2">
-            <button
-              onClick={handlePost}
-              className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700"
-            >
-              Post
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {groupPosts.length === 0 ? (
-            <p className="text-gray-500 text-center">No posts yet 💤</p>
-          ) : (
-            groupPosts.map((post) => (
-              <div
-                key={post.id}
-                className="bg-white rounded-lg shadow p-4 hover:bg-gray-50 transition"
-              >
-                <p className="text-gray-800">{post.content}</p>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
     </main>
   );
 }
