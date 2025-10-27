@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { searchAll } from "../api/graphql/search"; // import the API
+import { searchAll } from "../api/graphql/search";
+import PostCard from "./PostCard"; // import your PostCard component
 
 export default function SearchResult() {
   const [searchQuery, setSearchQuery] = useState("AI Ethics");
@@ -22,7 +23,7 @@ export default function SearchResult() {
       }
     };
 
-    const timeout = setTimeout(fetchResults, 500); // debounce a bit
+    const timeout = setTimeout(fetchResults, 400); // debounce
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
@@ -79,44 +80,38 @@ export default function SearchResult() {
       ) : filteredResults.length === 0 ? (
         <p className="text-gray-500 text-center">No results found.</p>
       ) : (
-        <div className="space-y-4">
-          {filteredResults.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-lg shadow p-4 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  {"content" in item ? (
-                    <div className="bg-cyan-100 text-cyan-700 rounded-full h-10 w-10 flex items-center justify-center">
-                      📝
-                    </div>
-                  ) : (
-                    <img
-                      src={`https://api.dicebear.com/8.x/identicon/svg?seed=${item.name}`}
-                      alt={item.name}
-                      className="rounded-full h-10 w-10"
-                    />
-                  )}
-                </div>
+        <div className="space-y-6">
+          {filteredResults.map((item) =>
+            // if it's a Post
+            "content" in item ? (
+              <PostCard
+                key={item.id}
+                post={{
+                  id: item.id,
+                  user: item.user?.name ?? "Anonymous",
+                  time: new Date(item.created_at).toLocaleString(),
+                  content: item.content,
+                  media: item.media ?? [],
+                }}
+              />
+            ) : (
+              // if it's a User
+              <div
+                key={item.id}
+                className="bg-white rounded-lg shadow p-4 flex items-center space-x-4 hover:bg-gray-50 transition"
+              >
+                <img
+                  src={`https://api.dicebear.com/8.x/identicon/svg?seed=${item.name}`}
+                  alt={item.name}
+                  className="rounded-full h-12 w-12"
+                />
                 <div>
-                  <p className="font-semibold text-gray-800">
-                    {"content" in item ? item.content : item.name}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {"content" in item
-                      ? item.user?.name
-                      : item.email ?? "User"}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {"content" in item
-                      ? new Date(item.created_at).toLocaleString()
-                      : ""}
-                  </p>
+                  <p className="font-semibold text-gray-800">{item.name}</p>
+                  <p className="text-sm text-gray-500">{item.email}</p>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
       )}
     </main>
