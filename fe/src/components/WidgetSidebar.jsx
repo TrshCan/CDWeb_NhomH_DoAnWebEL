@@ -27,7 +27,6 @@ export default function WidgetSidebar() {
     fetchData();
   }, []);
 
-  // Disable scroll when modal is open
   useEffect(() => {
     document.body.style.overflow = showModal ? "hidden" : "auto";
   }, [showModal]);
@@ -54,18 +53,50 @@ export default function WidgetSidebar() {
 
   const closeModal = () => {
     setShowModal(false);
-    setTimeout(() => setSelectedItem(null), 200); // small delay for fade-out
+    setTimeout(() => setSelectedItem(null), 200);
   };
 
+  // 🧱 Skeleton Loader
   if (loading) {
     return (
-      <aside className="w-full lg:w-1/3 space-y-4">
-        <div className="bg-white rounded-lg shadow p-4 animate-pulse h-20"></div>
-        <div className="bg-white rounded-lg shadow p-4 animate-pulse h-32"></div>
+      <aside className="w-full lg:w-1/3 space-y-6 p-4">
+        {/* Search Skeleton */}
+        <div className="bg-white rounded-xl shadow-md p-5 animate-pulse">
+          <div className="h-9 bg-gray-200 rounded-full w-full"></div>
+        </div>
+
+        {/* Events Skeleton */}
+        <div className="bg-white rounded-xl shadow-md p-5 animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 w-1/2 rounded"></div>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center space-x-3">
+              <div className="h-9 w-9 bg-gray-200 rounded-full"></div>
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Deadlines Skeleton */}
+        <div className="bg-white rounded-xl shadow-md p-5 animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 w-1/2 rounded"></div>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-start space-x-4">
+              <div className="h-10 w-10 bg-gray-200 rounded"></div>
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </div>
+          ))}
+        </div>
       </aside>
     );
   }
 
+  // ✅ Actual Widget
   return (
     <aside className="w-full lg:w-1/3 space-y-6 p-4 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
       {/* Search Box */}
@@ -203,13 +234,11 @@ export default function WidgetSidebar() {
             showModal ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         >
-          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black bg-opacity-50"
             onClick={closeModal}
           ></div>
 
-          {/* Modal content */}
           <div
             className={`bg-white rounded-xl shadow-2xl p-6 max-w-md w-full relative transform transition-all duration-300 ${
               showModal ? "scale-100 opacity-100" : "scale-95 opacity-0"
