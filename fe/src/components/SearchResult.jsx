@@ -65,8 +65,8 @@ export default function SearchResult() {
 
   return (
     <main className="w-full lg:w-2/3">
-      {/* Search Bar */}
-      <div className="bg-white rounded-lg shadow p-4 mb-4 relative">
+      {/* Sticky Search Bar */}
+      <div className="sticky top-0 z-50 bg-white rounded-lg shadow p-4 mb-4">
         <input
           type="text"
           placeholder="Search posts or users..."
@@ -75,7 +75,7 @@ export default function SearchResult() {
             setSearchQuery(e.target.value);
             setShowSuggestions(true);
           }}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} // 👈 small delay so click works
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           className="w-full bg-gray-100 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900"
         />
 
