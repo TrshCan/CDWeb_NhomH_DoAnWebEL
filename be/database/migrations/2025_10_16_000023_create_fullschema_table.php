@@ -301,8 +301,7 @@ return new class extends Migration {
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
-            $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
-            $table->timestamps();
+            $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate();
         });
 
 
@@ -310,6 +309,7 @@ return new class extends Migration {
 
     public function down(): void
     {
+        Schema::dropIfExists('join_requests');
         Schema::dropIfExists('post_media');
         Schema::dropIfExists('user_badges');
         Schema::dropIfExists('badges');

@@ -50,14 +50,14 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => $now,
                 'password' => bcrypt('password'),
                 'remember_token' => Str::random(10),
-                'phone' => '090'.rand(1000000,9999999),
+                'phone' => '090' . rand(1000000, 9999999),
                 'address' => "Address $i",
-                'role' => ['student','lecturer','admin'][rand(0,2)],
-                'class_id' => rand(1,10),
-                'faculty_id' => rand(1,10),
+                'role' => ['student', 'lecturer', 'admin'][rand(0, 2)],
+                'class_id' => rand(1, 10),
+                'faculty_id' => rand(1, 10),
                 'status_id' => 1,
                 'ban_reason' => null,
-                'point' => rand(0,100),
+                'point' => rand(0, 100),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -78,7 +78,8 @@ class DatabaseSeeder extends Seeder
             DB::table('groups')->insert([
                 'name' => "Group $i",
                 'description' => "Group description $i",
-                'created_by' => rand(1,10),
+                'code' => strtoupper(Str::random(6)),
+                'created_by' => rand(1, 10),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -109,13 +110,13 @@ class DatabaseSeeder extends Seeder
             DB::table('surveys')->insert([
                 'title' => "Survey $i",
                 'description' => "Survey description $i",
-                'categories_id' => rand(1,10),
-                'type' => ['survey','quiz'][rand(0,1)],
+                'categories_id' => rand(1, 10),
+                'type' => ['survey', 'quiz'][rand(0, 1)],
                 'start_at' => $now,
                 'end_at' => $now->copy()->addDays(7),
-                'points' => rand(0,10),
-                'object' => ['public','students','lecturers'][rand(0,2)],
-                'created_by' => rand(1,10),
+                'points' => rand(0, 10),
+                'object' => ['public', 'students', 'lecturers'][rand(0, 2)],
+                'created_by' => rand(1, 10),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -141,9 +142,16 @@ class DatabaseSeeder extends Seeder
             'Music Club Jam Session',
         ];
         $locations = [
-            'Lecture Hall A', 'Campus Quad', 'Library Seminar Room', 'Student Union',
-            'Science Building B-101', 'Sports Complex', 'Auditorium', 'Cafeteria',
-            'Online (Zoom)', null, // Include some null locations
+            'Lecture Hall A',
+            'Campus Quad',
+            'Library Seminar Room',
+            'Student Union',
+            'Science Building B-101',
+            'Sports Complex',
+            'Auditorium',
+            'Cafeteria',
+            'Online (Zoom)',
+            null, // Include some null locations
         ];
 
         for ($i = 1; $i <= 20; $i++) {
@@ -242,8 +250,8 @@ class DatabaseSeeder extends Seeder
         $pairs = [];
         $followRows = [];
         while (count($followRows) < 10) {
-            $follower = rand(1,10);
-            $followed = rand(1,10);
+            $follower = rand(1, 10);
+            $followed = rand(1, 10);
 
             if ($follower === $followed) {
                 continue; // không tự follow
@@ -258,8 +266,8 @@ class DatabaseSeeder extends Seeder
             $followRows[] = [
                 'follower_id' => $follower,
                 'followed_id' => $followed,
-                'status'      => 'active',
-                'created_at'  => $now,
+                'status' => 'active',
+                'created_at' => $now,
             ];
         }
         DB::table('follows')->insert($followRows);
@@ -267,9 +275,9 @@ class DatabaseSeeder extends Seeder
         // ===== UserBadges =====
         for ($i = 1; $i <= 10; $i++) {
             DB::table('user_badges')->insert([
-                'user_id' => rand(1,10),
-                'badge_id' => rand(1,10),
-                'assigned_by' => rand(1,10),
+                'user_id' => rand(1, 10),
+                'badge_id' => rand(1, 10),
+                'assigned_by' => rand(1, 10),
                 'assigned_at' => $now,
             ]);
         }
@@ -328,5 +336,18 @@ class DatabaseSeeder extends Seeder
         DB::table('post_media')->insert($postImages);
 
 
+        // ===== Join Requests =====
+        $statuses = ['pending', 'approved', 'rejected'];
+
+        for ($i = 0; $i < 20; $i++) {
+            DB::table('join_requests')->insert([
+                'user_id' => rand(1, 10),
+                'group_id' => rand(1, 10),
+                'status' => $statuses[array_rand($statuses)],
+                'created_by' => rand(1, 10),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 }
