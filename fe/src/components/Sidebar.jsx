@@ -16,7 +16,7 @@ export default function Sidebar() {
     {
       label: "Groups",
       icon: "M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6 5.87v-2a4 4 0 00-3-3.87m6 0A4 4 0 0112 9a4 4 0 013 3.13m6 0A4 4 0 0015 9m0 0a4 4 0 00-3 3.13", // multiple users icon
-      path: "/groups",
+      path: "/group",
     },
     {
       label: "Explore",
