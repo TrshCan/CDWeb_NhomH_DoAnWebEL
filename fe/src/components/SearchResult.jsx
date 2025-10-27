@@ -57,7 +57,13 @@ export default function SearchResult() {
           {searchQuery && (
             <p className="text-sm text-gray-600">
               Showing results for{" "}
-              <span className="font-semibold">"{searchQuery}"</span>
+              <span className="font-semibold">
+                "
+                {searchQuery.length > 50
+                  ? `${searchQuery.slice(0, 50)}...`
+                  : searchQuery}
+                "
+              </span>
             </p>
           )}
           <div className="flex space-x-2">
