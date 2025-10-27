@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { searchAll } from "../api/graphql/search";
-import PostCard from "./PostCard"; // import your PostCard component
+import PostCard from "./PostCard";
 
 export default function SearchResult() {
-  const [searchQuery, setSearchQuery] = useState("AI Ethics");
+  const [searchQuery, setSearchQuery] = useState(""); // no default query
   const [filter, setFilter] = useState("All");
   const [results, setResults] = useState({ posts: [], users: [] });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      setResults({ posts: [], users: [] });
+      return;
+    }
 
     const fetchResults = async () => {
       setLoading(true);
@@ -27,18 +30,17 @@ export default function SearchResult() {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
-  const filtered = () => {
-    if (filter === "All") return [...results.posts, ...results.users];
-    if (filter === "Events" || filter === "Clubs") {
-      return results.posts.filter(
-        (p) => p.type?.toLowerCase() === filter.toLowerCase()
-      );
+  // Filtering logic
+  const filteredResults = (() => {
+    switch (filter) {
+      case "Post":
+        return results.posts;
+      case "User":
+        return results.users;
+      default:
+        return [...results.posts, ...results.users];
     }
-    if (filter === "People") return results.users;
-    return [];
-  };
-
-  const filteredResults = filtered();
+  })();
 
   return (
     <main className="w-full lg:w-2/3">
@@ -46,18 +48,20 @@ export default function SearchResult() {
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <input
           type="text"
-          placeholder="Search events, clubs, people..."
+          placeholder="Search posts or users..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-gray-100 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900"
         />
         <div className="flex justify-between items-center mt-2">
-          <p className="text-sm text-gray-600">
-            Showing results for{" "}
-            <span className="font-semibold">"{searchQuery}"</span>
-          </p>
+          {searchQuery && (
+            <p className="text-sm text-gray-600">
+              Showing results for{" "}
+              <span className="font-semibold">"{searchQuery}"</span>
+            </p>
+          )}
           <div className="flex space-x-2">
-            {["All", "Events", "Clubs", "People"].map((tab) => (
+            {["All", "Post", "User"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
@@ -77,12 +81,16 @@ export default function SearchResult() {
       {/* Search Results */}
       {loading ? (
         <p className="text-gray-500 text-center">Loading...</p>
+      ) : !searchQuery ? (
+        <p className="text-gray-400 text-center italic">
+          Start typing to search 🔍
+        </p>
       ) : filteredResults.length === 0 ? (
         <p className="text-gray-500 text-center">No results found.</p>
       ) : (
         <div className="space-y-6">
           {filteredResults.map((item) =>
-            // if it's a Post
+            // Post result
             "content" in item ? (
               <PostCard
                 key={item.id}
@@ -95,7 +103,7 @@ export default function SearchResult() {
                 }}
               />
             ) : (
-              // if it's a User
+              // User result
               <div
                 key={item.id}
                 className="bg-white rounded-lg shadow p-4 flex items-center space-x-4 hover:bg-gray-50 transition"
