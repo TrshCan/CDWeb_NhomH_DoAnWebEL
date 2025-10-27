@@ -1,15 +1,26 @@
-import React, { useState } from "react";
-import "../assets/css/group-component.css"; // import the new CSS
+import React, { useState, useEffect } from "react";
+import "../assets/css/group-component.css";
 
 export default function Groups() {
   const [activeTab, setActiveTab] = useState("pending");
   const [loading, setLoading] = useState(true);
   const [pendingGroups, setPendingGroups] = useState([]);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [groupCode, setGroupCode] = useState("");
 
-  // Simulate loading for demo
-  React.useEffect(() => {
+  // 👇 simulate getting user role (replace with actual user data later)
+  const userRole = "student"; // "lecturer" | "admin" | "student"
+
+  useEffect(() => {
     setTimeout(() => setLoading(false), 1500);
   }, []);
+
+  const handleJoinSubmit = (e) => {
+    e.preventDefault();
+    console.log("Joining group with code:", groupCode);
+    setShowJoinModal(false);
+    setGroupCode("");
+  };
 
   return (
     <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col space-y-4">
@@ -49,12 +60,19 @@ export default function Groups() {
       {activeTab === "pending" && (
         <section id="pending" className="space-y-4 tab-slide">
           <div className="flex space-x-2 mb-4">
-            <button className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition">
+            {/* 🔥 Conditional button rendering */}
+            <button
+              className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition"
+              onClick={() => setShowJoinModal(true)}
+            >
               Join Group
             </button>
-            <button className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition">
-              Create Group
-            </button>
+
+            {(userRole === "lecturer" || userRole === "admin") && (
+              <button className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition">
+                Create Group
+              </button>
+            )}
           </div>
 
           <h2 className="text-lg font-bold text-cyan-800">
@@ -115,6 +133,42 @@ export default function Groups() {
             <p className="text-gray-500 text-center">No groups joined yet 😔</p>
           </div>
         </section>
+      )}
+
+      {/* 🔥 Join Group Modal */}
+      {showJoinModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-80">
+            <h2 className="text-lg font-semibold text-cyan-700 mb-4 text-center">
+              Enter Group Code
+            </h2>
+            <form onSubmit={handleJoinSubmit} className="flex flex-col space-y-4">
+              <input
+                type="text"
+                placeholder="Group Code"
+                value={groupCode}
+                onChange={(e) => setGroupCode(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                required
+              />
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowJoinModal(false)}
+                  className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-md bg-cyan-600 text-white hover:bg-cyan-700"
+                >
+                  Join
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </main>
   );
