@@ -13,6 +13,10 @@ export const searchAll = async (query) => {
             id
             name
           }
+          media {
+            id
+            url
+          }
         }
         users {
           id
