@@ -1,39 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { graphqlRequest } from '../api/graphql';
 
-const surveys = [
-  {
-    id: 1,
-    title: 'Đánh giá chất lượng giảng dạy Học kỳ 1',
-    category: 'Giáo dục',
-    type: 'Survey',
-    status: 'active',
-    time: '01/10 - 30/10/2025',
-  },
-  {
-    id: 2,
-    title: 'Bài kiểm tra giữa kỳ môn Kinh tế Vĩ mô',
-    category: 'Kinh tế',
-    type: 'Quiz',
-    status: 'closed',
-    time: '15/09 - 16/09/2025',
-  },
-  {
-    id: 3,
-    title: 'Khảo sát nhu cầu học Lập trình AI',
-    category: 'Công nghệ Thông tin',
-    type: 'Survey',
-    status: 'pending',
-    time: '15/11 - 30/11/2025',
-  },
-  {
-    id: 4,
-    title: 'Đánh giá cơ sở vật chất thư viện',
-    category: 'Giáo dục',
-    type: 'Survey',
-    status: 'paused',
-    time: '01/10 - 30/10/2025',
-  },
-];
+// Mapping categories_id to category names (adjust based on your backend data)
+const categoryMap = {
+  1: 'Khoa học',
+  2: 'Kinh tế',
+  3: 'Giáo dục',
+  4: 'Công nghệ Thông tin',
+};
+const categories = ['', 'Khoa học', 'Kinh tế', 'Giáo dục', 'Công nghệ Thông tin'];
+const types = ['', 'Survey', 'Quiz'];
+const statuses = ['', 'pending', 'active', 'paused', 'closed'];
 
 const statusConfig = {
   active: { label: 'Đang hoạt động', class: 'bg-green-100 text-green-800' },
@@ -42,12 +19,8 @@ const statusConfig = {
   paused: { label: 'Tạm dừng', class: 'bg-amber-100 text-amber-800' },
 };
 
-const categories = ['', 'Khoa học', 'Kinh tế', 'Giáo dục', 'Công nghệ Thông tin'];
-const types = ['', 'Survey', 'Quiz'];
-const statuses = ['', 'pending', 'active', 'paused', 'closed'];
-
 const SurveyFilter = () => {
-  const [surveysList, setSurveysList] = useState(surveys);
+  const [surveysList, setSurveysList] = useState([]);
   const [filters, setFilters] = useState({
     category: '',
     type: '',
@@ -73,21 +46,53 @@ const SurveyFilter = () => {
     status: '',
     time: '',
   });
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 3;
 
-  const filteredSurveys = surveysList.filter((survey) => {
-    return (
-      (!filters.category || survey.category === filters.category) &&
-      (!filters.type || survey.type === filters.type) &&
-      (!filters.status || survey.status === filters.status)
-    );
-  });
+  // Fetch surveys from GraphQL
+  useEffect(() => {
+    const fetchSurveys = async () => {
+      try {
+        const query = `
+          query GetSurveys($perPage: Int, $category: Int, $type: String, $status: String) {
+            surveys(per_page: $perPage) {
+              id
+              title
+              category {
+                name
+              }
+              type
+              status
+              start_at
+              end_at
+            }
+          }
+        `;
+        const variables = {
+          perPage: itemsPerPage,
+          category: filters.category ? Object.keys(categoryMap).find((key) => categoryMap[key] === filters.category) : null,
+          type: filters.type || null,
+          status: filters.status || null,
+        };
 
-  const totalPages = Math.ceil(filteredSurveys.length / itemsPerPage);
-  const paginatedSurveys = filteredSurveys.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+        const response = await graphqlRequest(query, variables);
+        const surveys = response.surveys.map((survey) => ({
+          id: survey.id,
+          title: survey.title,
+          category: survey.category.name,
+          type: survey.type,
+          status: survey.status,
+          time: `${new Date(survey.start_at).toLocaleDateString('vi-VN')} - ${new Date(survey.end_at).toLocaleDateString('vi-VN')}`,
+        }));
+        setSurveysList(surveys);
+        setTotalPages(Math.ceil(surveys.length / itemsPerPage)); // Adjust based on backend pagination
+      } catch (error) {
+        console.error('Error fetching surveys:', error);
+      }
+    };
+
+    fetchSurveys();
+  }, [filters, currentPage]);
 
   const handleFilterChange = (e) => {
     setFilters({
@@ -101,21 +106,65 @@ const SurveyFilter = () => {
     setCurrentPage(page);
   };
 
-  const handleView = (survey) => {
-    setSelectedSurvey(survey);
-    setShowViewModal(true);
+  const handleView = async (survey) => {
+    try {
+      const query = `
+        query GetSurveyById($id: Int!) {
+          getSurveyById(id: $id) {
+            id
+            title
+            category {
+              name
+            }
+            type
+            status
+            start_at
+            end_at
+          }
+        }
+      `;
+      const response = await graphqlRequest(query, { id: survey.id });
+      const surveyData = response.getSurveyById;
+      setSelectedSurvey({
+        ...surveyData,
+        category: surveyData.category.name,
+        time: `${new Date(surveyData.start_at).toLocaleDateString('vi-VN')} - ${new Date(surveyData.end_at).toLocaleDateString('vi-VN')}`,
+      });
+      setShowViewModal(true);
+    } catch (error) {
+      console.error('Error fetching survey:', error);
+    }
   };
 
-  const handleEdit = (survey) => {
-    setSelectedSurvey(survey);
-    setEditForm({
-      title: survey.title,
-      category: survey.category,
-      type: survey.type,
-      status: survey.status,
-      time: survey.time,
-    });
-    setShowEditModal(true);
+  const handleEdit = async (survey) => {
+    try {
+      const query = `
+        query GetSurveyById($id: Int!) {
+          getSurveyById(id: $id) {
+            id
+            title
+            categories_id
+            type
+            status
+            start_at
+            end_at
+          }
+        }
+      `;
+      const response = await graphqlRequest(query, { id: survey.id });
+      const surveyData = response.getSurveyById;
+      setSelectedSurvey(surveyData);
+      setEditForm({
+        title: surveyData.title,
+        category: categoryMap[surveyData.categories_id] || '',
+        type: surveyData.type || '',
+        status: surveyData.status || '',
+        time: `${new Date(surveyData.start_at).toLocaleDateString('vi-VN')} - ${new Date(surveyData.end_at).toLocaleDateString('vi-VN')}`,
+      });
+      setShowEditModal(true);
+    } catch (error) {
+      console.error('Error fetching survey for edit:', error);
+    }
   };
 
   const handleDeleteConfirm = (survey) => {
@@ -167,35 +216,157 @@ const SurveyFilter = () => {
     });
   };
 
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (selectedSurvey) {
-      const updatedSurveys = surveysList.map((s) =>
-        s.id === selectedSurvey.id ? { ...s, ...editForm } : s
-      );
-      setSurveysList(updatedSurveys);
+      try {
+        const [start_at, end_at] = editForm.time.split(' - ').map((date) => new Date(date.split('/').reverse().join('-')).toISOString());
+        const mutation = `
+          mutation UpdateSurvey($id: Int!, $input: UpdateSurveyInput!) {
+            updateSurvey(id: $id, input: $input) {
+              id
+              title
+              category {
+                name
+              }
+              type
+              status
+              start_at
+              end_at
+            }
+          }
+        `;
+        const variables = {
+          id: selectedSurvey.id,
+          input: {
+            title: editForm.title,
+            categories_id: parseInt(Object.keys(categoryMap).find((key) => categoryMap[key] === editForm.category)),
+            type: editForm.type,
+            status: editForm.status,
+            start_at,
+            end_at,
+          },
+        };
+        const response = await graphqlRequest(mutation, variables);
+        const updatedSurvey = response.updateSurvey;
+        setSurveysList((prev) =>
+          prev.map((s) =>
+            s.id === updatedSurvey.id
+              ? {
+                  ...updatedSurvey,
+                  category: updatedSurvey.category.name,
+                  time: `${new Date(updatedSurvey.start_at).toLocaleDateString('vi-VN')} - ${new Date(updatedSurvey.end_at).toLocaleDateString('vi-VN')}`,
+                }
+              : s
+          )
+        );
+        closeEditModal();
+      } catch (error) {
+        console.error('Error updating survey:', error);
+      }
     }
-    closeEditModal();
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    const newSurvey = {
-      id: surveysList.length + 1,
-      ...addForm,
-    };
-    setSurveysList([...surveysList, newSurvey]);
-    closeAddModal();
-  };
-
-  const handleDelete = () => {
-    if (selectedSurvey) {
-      const updatedSurveys = surveysList.filter((s) => s.id !== selectedSurvey.id);
-      setSurveysList(updatedSurveys);
+    try {
+      const [start_at, end_at] = addForm.time.split(' - ').map((date) => new Date(date.split('/').reverse().join('-')).toISOString());
+      const mutation = `
+        mutation CreateSurvey($input: SurveyInput!) {
+          createSurvey(input: $input) {
+            id
+            title
+            category {
+              name
+            }
+            type
+            status
+            start_at
+            end_at
+          }
+        }
+      `;
+      const variables = {
+        input: {
+          title: addForm.title,
+          categories_id: parseInt(Object.keys(categoryMap).find((key) => categoryMap[key] === addForm.category)),
+          type: addForm.type,
+          status: addForm.status,
+          start_at,
+          end_at,
+          created_by: 1, // Replace with actual user ID from auth context
+        },
+      };
+      const response = await graphqlRequest(mutation, variables);
+      const newSurvey = response.createSurvey;
+      setSurveysList((prev) => [
+        ...prev,
+        {
+          ...newSurvey,
+          category: newSurvey.category.name,
+          time: `${new Date(newSurvey.start_at).toLocaleDateString('vi-VN')} - ${new Date(newSurvey.end_at).toLocaleDateString('vi-VN')}`,
+        },
+      ]);
+      closeAddModal();
+    } catch (error) {
+      console.error('Error creating survey:', error);
     }
-    closeDeleteModal();
   };
 
+  const handleDelete = async () => {
+    if (selectedSurvey) {
+      try {
+        const mutation = `
+          mutation DeleteSurvey($id: Int!) {
+            deleteSurvey(id: $id)
+          }
+        `;
+        await graphqlRequest(mutation, { id: selectedSurvey.id });
+        setSurveysList((prev) => prev.filter((s) => s.id !== selectedSurvey.id));
+        closeDeleteModal();
+      } catch (error) {
+        console.error('Error deleting survey:', error);
+      }
+    }
+  };
+
+  // Modal Component (Restored from original code)
+  const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-lg' }) => (
+    isOpen && (
+      <div className="fixed inset-0 z-50 flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+        <div 
+          className={`transform transition-all relative ${size} mx-auto max-w-2xl rounded-lg text-left shadow-2xl ring-1 ring-black ring-opacity-5 overflow-hidden bg-white max-h-[90vh] overflow-y-auto`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between p-6 border-b rounded-t border-gray-200">
+            <h3 className="text-2xl font-semibold text-gray-900 flex-1 text-left">
+              {title}
+            </h3>
+            <button 
+              type="button" 
+              className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center"
+              onClick={onClose}
+            >
+              <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+              </svg>
+              <span className="sr-only">Close modal</span>
+            </button>
+          </div>
+          <div className="p-6 space-y-6">
+            {children}
+          </div>
+          {footer && (
+            <div className="flex items-center justify-end p-6 border-t border-gray-200 rounded-b gap-4">
+              {footer}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  );
+
+  // Icon Components (Copy from your original code)
   const ViewIcon = () => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -232,41 +403,7 @@ const SurveyFilter = () => {
     </svg>
   );
 
-  const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-lg' }) => (
-    isOpen && (
-      <div className="fixed inset-0 z-50 flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-        <div 
-          className={`transform transition-all relative ${size} mx-auto max-w-2xl rounded-lg text-left shadow-2xl ring-1 ring-black ring-opacity-5 overflow-hidden bg-white max-h-[90vh] overflow-y-auto`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between p-6 border-b rounded-t border-gray-200">
-            <h3 className="text-2xl font-semibold text-gray-900 flex-1 text-left">
-              {title}
-            </h3>
-            <button 
-              type="button" 
-              className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center"
-              onClick={onClose}
-            >
-              <svg className="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-              </svg>
-              <span className="sr-only">Close modal</span>
-            </button>
-          </div>
-          <div className="p-6 space-y-6">
-            {children}
-          </div>
-          {footer && (
-            <div className="flex items-center justify-end p-6 border-t border-gray-200 rounded-b gap-4">
-              {footer}
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  );
-
+  // Modal Bodies and Footers (Restored from original code)
   const ViewModalBody = () => (
     <div className="space-y-4 text-base">
       {selectedSurvey && (
@@ -509,6 +646,12 @@ const SurveyFilter = () => {
         Xóa
       </button>
     </>
+  );
+
+  const filteredSurveys = surveysList; // Filtering is handled in the GraphQL query
+  const paginatedSurveys = filteredSurveys.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   return (

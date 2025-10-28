@@ -21,7 +21,9 @@ class Survey extends Model
         'points',
         'object',
         'created_by',
+        'status', // ✅ thêm dòng này
     ];
+
 
     protected $casts = [
         'start_at' => 'datetime',

@@ -20,39 +20,39 @@ class SurveyResolver
         $perPage = $args['per_page'] ?? 5;
         return $this->service->getAllSurveys($perPage);
     }
-     /**
+    /**
      * ✏️ Cập nhật khảo sát
      */
-   /**
- * ✏️ Cập nhật khảo sát
- */
-public function updateSurvey($root, array $args)
-{
-    try {
-        $id = $args['id'];
-        $input = $args['input'];
+    /**
+     * ✏️ Cập nhật khảo sát
+     */
+    public function updateSurvey($root, array $args)
+    {
+        try {
+            $id = $args['id'];
+            $input = $args['input'];
 
-        // Gọi service để xử lý cập nhật
-        $updatedSurvey = $this->service->updateSurvey($id, $input);
+            // Gọi service để xử lý cập nhật
+            $updatedSurvey = $this->service->updateSurvey($id, $input);
 
-        return $updatedSurvey;
-    } catch (ValidationException $e) {
-        throw new \Nuwave\Lighthouse\Exceptions\ValidationException(
-            'Validation failed.',
-            $e->validator
-        );
-    } catch (\Exception $e) {
-        throw new \GraphQL\Error\Error(
-            $e->getMessage(),
-            null,
-            null,
-            [],
-            null,
-            $e,
-            ['category' => $e->getCode() === 404 ? 'NOT_FOUND' : 'INTERNAL_SERVER_ERROR']
-        );
+            return $updatedSurvey;
+        } catch (ValidationException $e) {
+            throw new \Nuwave\Lighthouse\Exceptions\ValidationException(
+                'Validation failed.',
+                $e->validator
+            );
+        } catch (\Exception $e) {
+            throw new \GraphQL\Error\Error(
+                $e->getMessage(),
+                null,
+                null,
+                [],
+                null,
+                $e,
+                ['category' => $e->getCode() === 404 ? 'NOT_FOUND' : 'INTERNAL_SERVER_ERROR']
+            );
+        }
     }
-}
 
 
 
@@ -70,7 +70,9 @@ public function updateSurvey($root, array $args)
                 'points' => $args['input']['points'] ?? null,
                 'object' => $args['input']['object'] ?? null,
                 'created_by' => $args['input']['created_by'],
+                'status' => $args['input']['status'] ?? 'active', // ✅ thêm dòng này
             ];
+
 
             return $this->service->createSurvey($data);
         } catch (ValidationException $e) {
@@ -94,5 +96,24 @@ public function updateSurvey($root, array $args)
     {
         return $this->service->deleteSurvey($args['id']);
     }
-    
+    /**
+     * 🔍 Xem chi tiết khảo sát theo ID
+     */
+    public function getSurveyById($root, array $args)
+    {
+        try {
+            $id = $args['id'];
+            return $this->service->getSurveyById($id);
+        } catch (\Exception $e) {
+            throw new \GraphQL\Error\Error(
+                $e->getMessage(),
+                null,
+                null,
+                [],
+                null,
+                $e,
+                ['category' => $e->getCode() === 404 ? 'NOT_FOUND' : 'INTERNAL_SERVER_ERROR']
+            );
+        }
+    }
 }

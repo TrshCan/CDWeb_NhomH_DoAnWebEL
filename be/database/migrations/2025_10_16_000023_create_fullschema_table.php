@@ -183,6 +183,7 @@ return new class extends Migration {
             $table->integer('time_limit')->nullable();
             $table->integer('points')->default(0);
             $table->enum('object', ['public', 'students', 'lecturers'])->default('public');
+            $table->enum('status', ['paused', 'active', 'closed'])->default('active'); // 🆕 Thêm dòng này
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();

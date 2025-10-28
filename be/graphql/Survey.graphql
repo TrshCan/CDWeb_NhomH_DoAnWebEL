@@ -3,18 +3,16 @@ type Survey {
     title: String!
     description: String
     categories_id: Int!
-    category: Category @belongsTo
-    type: String!
+    type: String
     start_at: String
     end_at: String
     time_limit: Int
-    points: Int!
-    object: String!
-    created_by: ID!
-    creator: User @belongsTo
+    points: Int
+    object: String
+    created_by: Int!
+    status: String! # ✅ thêm trạng thái
     created_at: String
     updated_at: String
-    deleted_at: String
 }
 
 input SurveyInput {
@@ -27,8 +25,10 @@ input SurveyInput {
     time_limit: Int
     points: Int
     object: String
-    created_by: ID!
+    created_by: Int!
+    status: String # ✅ không bắt buộc
 }
+
 input UpdateSurveyInput {
     title: String
     description: String
@@ -39,11 +39,14 @@ input UpdateSurveyInput {
     time_limit: Int
     points: Int
     object: String
+    status: String # ✅ cho phép cập nhật trạng thái
 }
 
 extend type Query {
     surveys(per_page: Int): [Survey!]!
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@list")
+    getSurveyById(id: Int!): Survey
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@getSurveyById")
 }
 
 extend type Mutation {
