@@ -1,0 +1,40 @@
+
+
+type Survey {
+    id: ID!
+    title: String!
+    description: String
+    categories_id: Int!
+    category: Category @belongsTo
+    type: String!
+    start_at: String
+    end_at: String
+    time_limit: Int
+    points: Int!
+    object: String!
+    created_by: ID!
+    creator: User @belongsTo
+    created_at: String
+    updated_at: String
+    deleted_at: String
+}
+
+input SurveyInput {
+    title: String!
+    description: String
+    categories_id: Int!
+    type: String
+    start_at: String
+    end_at: String
+    time_limit: Int
+    points: Int
+    object: String
+    created_by: ID!
+}
+type Query {
+    dummy: String @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@dummyQuery")
+}
+extend type Mutation {
+  createSurvey(input: SurveyInput!): Survey!
+      @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@createSurvey")
+}

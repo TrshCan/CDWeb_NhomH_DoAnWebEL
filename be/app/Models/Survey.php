@@ -28,13 +28,11 @@ class Survey extends Model
         'end_at' => 'datetime',
     ];
 
-    // // Quan hệ với Category
-    // public function category()
-    // {
-    //     return $this->belongsTo(Category::class, 'categories_id');
-    // }
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'categories_id');
+    }
 
-    // Quan hệ với User (người tạo)
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
