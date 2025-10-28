@@ -105,6 +105,48 @@ class SurveyService
         }
     }
 
+     // 🆕 Cập nhật khảo sát
+    public function updateSurvey(int $id, array $data): Survey
+    {
+        $validator = Validator::make($data, [
+            'title' => 'sometimes|string|max:255',
+            'description' => 'nullable|string',
+            'categories_id' => 'sometimes|integer|exists:categories,id',
+            'type' => 'sometimes|in:survey,quiz',
+            'start_at' => 'nullable|date',
+            'end_at' => 'nullable|date|after_or_equal:start_at',
+            'time_limit' => 'nullable|integer|min:0',
+            'points' => 'sometimes|integer|min:0',
+            'object' => 'sometimes|in:public,students,lecturers',
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $survey = $this->repository->findById($id);
+            if (!$survey) {
+                throw new ModelNotFoundException("Không tìm thấy khảo sát có ID {$id}");
+            }
+
+            $updatedSurvey = $this->repository->update($survey, $data);
+
+            DB::commit();
+            return $updatedSurvey;
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            Log::warning("Cập nhật khảo sát thất bại: không tìm thấy ID {$id}");
+            throw new Exception("Không tìm thấy khảo sát để cập nhật.", 404);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating survey: ' . $e->getMessage(), ['id' => $id, 'data' => $data]);
+            throw new Exception('Không thể cập nhật khảo sát.', 500, $e);
+        }
+    }
+
     // 🆕 Thêm chức năng hiển thị tất cả khảo sát (có phân trang)
     public function getAllSurveys(int $perPage = 10)
     {

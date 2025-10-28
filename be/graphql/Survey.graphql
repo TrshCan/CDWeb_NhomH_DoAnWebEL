@@ -29,6 +29,18 @@ input SurveyInput {
     object: String
     created_by: ID!
 }
+input UpdateSurveyInput {
+    title: String
+    description: String
+    categories_id: Int
+    type: String
+    start_at: String
+    end_at: String
+    time_limit: Int
+    points: Int
+    object: String
+}
+
 extend type Query {
     surveys(per_page: Int): [Survey!]!
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@list")
@@ -39,4 +51,6 @@ extend type Mutation {
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@deleteSurvey")
     createSurvey(input: SurveyInput!): Survey!
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@createSurvey")
+    updateSurvey(id: Int!, input: UpdateSurveyInput!): Survey
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@updateSurvey")
 }

@@ -20,6 +20,41 @@ class SurveyResolver
         $perPage = $args['per_page'] ?? 5;
         return $this->service->getAllSurveys($perPage);
     }
+     /**
+     * ✏️ Cập nhật khảo sát
+     */
+   /**
+ * ✏️ Cập nhật khảo sát
+ */
+public function updateSurvey($root, array $args)
+{
+    try {
+        $id = $args['id'];
+        $input = $args['input'];
+
+        // Gọi service để xử lý cập nhật
+        $updatedSurvey = $this->service->updateSurvey($id, $input);
+
+        return $updatedSurvey;
+    } catch (ValidationException $e) {
+        throw new \Nuwave\Lighthouse\Exceptions\ValidationException(
+            'Validation failed.',
+            $e->validator
+        );
+    } catch (\Exception $e) {
+        throw new \GraphQL\Error\Error(
+            $e->getMessage(),
+            null,
+            null,
+            [],
+            null,
+            $e,
+            ['category' => $e->getCode() === 404 ? 'NOT_FOUND' : 'INTERNAL_SERVER_ERROR']
+        );
+    }
+}
+
+
 
     public function createSurvey($root, array $args, GraphQLContext $context): Survey
     {
@@ -59,4 +94,5 @@ class SurveyResolver
     {
         return $this->service->deleteSurvey($args['id']);
     }
+    
 }

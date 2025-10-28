@@ -18,6 +18,12 @@ class SurveyRepository
         // Validation đã được xử lý ở SurveyService, nên chỉ tạo record
         return $this->model->create($data);
     }
+        // 🆕 Cập nhật khảo sát
+      public function update(Survey $survey, array $data): Survey
+    {
+        $survey->update($data);
+        return $survey->fresh(); // đảm bảo return bản ghi mới nhất
+    }
     
     // 🆕 Thêm hàm lấy danh sách khảo sát (có phân trang)
     public function getAllPaginated(int $perPage = 10)
