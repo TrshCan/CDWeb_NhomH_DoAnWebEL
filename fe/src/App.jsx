@@ -4,15 +4,19 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MainPage from './pages/MainPage';
 import Register from './pages/Register';
 import Login from './pages/Login.jsx';
+import Feed from "./components/Feed.jsx";
 
 export default function App() {
   return (
-
-      <Routes>
-        <Route path="/" element={<MainPage />} />
-        <Route path="/register" element={<Register />} />
+    <Routes>
+        {/* Layout chính */}
+        <Route path="/" element={<MainPage />} >
+            {/* các route con  */}
+          <Route index element={<Feed />} /> {/* mặc định là Feed */}
+            {/* sau này sẽ thêm các route như profile expole v.v*/}
+      </Route>
+          <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
-      </Routes>
-
+    </Routes>
   );
 }

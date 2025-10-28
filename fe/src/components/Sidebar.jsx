@@ -1,4 +1,5 @@
 import React from "react";
+import  Link from "react-router-dom";
 export default function Sidebar() {
   const links = [
     { label: "Home", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
@@ -12,9 +13,9 @@ export default function Sidebar() {
     <aside className="w-16 lg:w-1/4 bg-white rounded-r-lg shadow p-4 flex flex-col space-y-2 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
       <nav className="flex flex-col space-y-2">
         {links.map((item, index) => (
-          <a
+          <Link
             key={index}
-            href="#"
+            to={item.path}
             className="flex items-center space-x-2 text-cyan-600 hover:bg-cyan-50 p-2 rounded-lg"
           >
             <svg
@@ -32,7 +33,7 @@ export default function Sidebar() {
               ></path>
             </svg>
             <span className="hidden lg:inline">{item.label}</span>
-          </a>
+          </Link>
         ))}
       </nav>
     </aside>

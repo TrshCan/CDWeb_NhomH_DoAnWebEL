@@ -2,7 +2,7 @@ import React from 'react';
 import Sidebar from "../components/Sidebar";
 import WidgetSidebar from "../components/WidgetSidebar";
 import Feed from "../components/Feed";
-
+import {Outlet} from "react-router-dom";
 export default function MainPage() {
 
   return (
@@ -13,8 +13,8 @@ export default function MainPage() {
 
         {/* Main Content Wrapper */}
         <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-4">
-          {/* Feed */}
-          <Feed />
+          {/* Thay thanh outlet để chuyển thành trang động */}
+          <Outlet />
 
           {/* Right Sidebar */}
           <WidgetSidebar />
