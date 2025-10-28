@@ -1,17 +1,39 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom"; // ✅ add these
 import { searchAll, fetchSuggestions } from "../api/graphql/search";
 import PostCard from "./PostCard";
-import "../assets/css/search.css"; // 👈 import the shimmer + fade css
+import "../assets/css/search.css";
 
 export default function SearchResult() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate(); // optional (for pressing Enter to update URL)
+
+  // ✅ read "q" from URL
+  const queryParam = new URLSearchParams(location.search).get("q") || "";
+
+  const [searchQuery, setSearchQuery] = useState(queryParam);
   const [filter, setFilter] = useState("All");
   const [results, setResults] = useState({ posts: [], users: [] });
   const [loading, setLoading] = useState(false);
-  const [fadeIn, setFadeIn] = useState(false); // 👈 for smooth fade
+  const [fadeIn, setFadeIn] = useState(false);
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // ✅ whenever URL changes, update searchQuery
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get("q") || "";
+    setSearchQuery(q);
+  }, [location.search]);
+
+  // 🔍 handle Enter to update URL (so it’s shareable + consistent)
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (!searchQuery.trim()) return;
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   // Fetch suggestions
   useEffect(() => {
@@ -47,7 +69,7 @@ export default function SearchResult() {
         console.error("Search failed:", err);
       } finally {
         setLoading(false);
-        setTimeout(() => setFadeIn(true), 100); // 👈 small delay for fade-in
+        setTimeout(() => setFadeIn(true), 100);
       }
     }, 400);
 
@@ -65,19 +87,15 @@ export default function SearchResult() {
     }
   })();
 
-  // Skeleton Loader
-  const Skeleton = ({ type }) => {
-    if (type === "post") {
-      return (
-        <div className="skeleton-card animate-shimmer">
-          <div className="skeleton-title shimmer"></div>
-          <div className="skeleton-line shimmer"></div>
-          <div className="skeleton-line shimmer"></div>
-          <div className="skeleton-img shimmer"></div>
-        </div>
-      );
-    }
-    return (
+  const Skeleton = ({ type }) =>
+    type === "post" ? (
+      <div className="skeleton-card animate-shimmer">
+        <div className="skeleton-title shimmer"></div>
+        <div className="skeleton-line shimmer"></div>
+        <div className="skeleton-line shimmer"></div>
+        <div className="skeleton-img shimmer"></div>
+      </div>
+    ) : (
       <div className="skeleton-user animate-shimmer">
         <div className="skeleton-avatar shimmer"></div>
         <div className="skeleton-info">
@@ -86,7 +104,6 @@ export default function SearchResult() {
         </div>
       </div>
     );
-  };
 
   return (
     <main className="w-full lg:w-2/3">
@@ -100,6 +117,7 @@ export default function SearchResult() {
             setSearchQuery(e.target.value);
             setShowSuggestions(true);
           }}
+          onKeyDown={handleKeyDown} // ✅ press Enter updates URL
           onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           className="w-full bg-gray-100 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900"
         />
@@ -110,7 +128,7 @@ export default function SearchResult() {
               <li
                 key={i}
                 onClick={() => {
-                  setSearchQuery(item);
+                  navigate(`/search?q=${encodeURIComponent(item)}`); // ✅ suggestion click navigates
                   setShowSuggestions(false);
                 }}
                 className="px-4 py-2 hover:bg-cyan-50 cursor-pointer text-gray-700"
