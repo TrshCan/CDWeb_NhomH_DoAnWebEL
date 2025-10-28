@@ -1,31 +1,43 @@
 {
-  "hash": "13aacfcb",
-  "configHash": "fd159028",
-  "lockfileHash": "20513a63",
-  "browserHash": "d38711fb",
+  "hash": "d48f40b3",
+  "configHash": "135df27c",
+  "lockfileHash": "aad7e09f",
+  "browserHash": "fd139d07",
   "optimized": {
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "54cdeec3",
+      "fileHash": "c6298516",
       "needsInterop": true
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "2a018d7a",
+      "fileHash": "571f6100",
       "needsInterop": true
     },
     "react-router-dom": {
       "src": "../../node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "da5b2352",
+      "fileHash": "5b8c0ee1",
+      "needsInterop": false
+    },
+    "lucide-react": {
+      "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "a0725878",
       "needsInterop": false
     },
     "axios": {
       "src": "../../node_modules/axios/index.js",
       "file": "axios.js",
-      "fileHash": "6a21d0ad",
+      "fileHash": "8f3175bd",
+      "needsInterop": false
+    },
+    "react-hot-toast": {
+      "src": "../../node_modules/react-hot-toast/dist/index.mjs",
+      "file": "react-hot-toast.js",
+      "fileHash": "fecb856a",
       "needsInterop": false
     }
   },
