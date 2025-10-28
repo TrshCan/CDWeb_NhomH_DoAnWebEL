@@ -1,6 +1,8 @@
 // src/components/ProfilePage.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { graphqlRequest } from '../api/graphql.js';
+import PostCard from '../components/PostCard.jsx';
 
 // --- QUERY GRAPHQL ---
 const PROFILE_QUERY = `
@@ -90,10 +92,109 @@ const BadgeCard = ({ badge }) => {
     );
 };
 
+// --- QUERY GRAPHQL CHO POSTS ---
+const USER_POSTS_QUERY = `
+  query getUserPosts($user_id: ID!) {
+    postsByUser(user_id: $user_id) {
+      id
+      content
+      type
+      created_at
+      user {
+        id
+        name
+      }
+      media {
+        id
+        url
+        filename
+      }
+    }
+  }
+`;
+
+// Helper function để format thời gian
+function timeAgo(createdAt) {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffMs = now - created;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    if (diffDay >= 1) return `${diffDay} ngày trước`;
+    if (diffHr >= 1) return `${diffHr} giờ trước`;
+    if (diffMin >= 1) return `${diffMin} phút trước`;
+    return "Vừa xong";
+}
+
 // --- COMPONENT CON: VÙNG NỘI DUNG TAB ---
-const ContentTab = ({ activeTab }) => {
+const ContentTab = ({ activeTab, userId }) => {
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (activeTab === 'Bài viết' && userId) {
+            const fetchPosts = async () => {
+                setLoading(true);
+                try {
+                    const data = await graphqlRequest(USER_POSTS_QUERY, { user_id: userId });
+
+                    if (data && data.data && data.data.postsByUser) {
+                        const formattedPosts = data.data.postsByUser.map((p) => ({
+                            id: p.id,
+                            type: p.type,
+                            user: p.user?.name || "Unknown",
+                            time: timeAgo(p.created_at),
+                            content: p.content,
+                            media: p.media
+                                ? p.media.map((m) =>
+                                    m.url
+                                        ? { url: m.url }
+                                        : { filename: m.filename || m }
+                                )
+                                : [],
+                        }));
+                        setPosts(formattedPosts);
+                    }
+                } catch (err) {
+                    console.error('Lỗi khi lấy posts:', err);
+                    setPosts([]);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchPosts();
+        } else {
+            // Reset posts khi chuyển tab
+            setPosts([]);
+        }
+    }, [activeTab, userId]);
+
+    if (activeTab === 'Bài viết') {
+        return (
+            <div className="mt-4 min-h-[300px] bg-gray-900">
+                {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="text-gray-400 text-lg">Đang tải bài viết...</div>
+                    </div>
+                ) : posts.length === 0 ? (
+                    <div className="flex items-center justify-center py-12">
+                        <p className="text-gray-400 text-lg italic">Chưa có bài viết nào.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {posts.map((post) => (
+                            <PostCard key={post.id} post={post} />
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     const contentMap = {
-        'Bài viết': 'Đây là danh sách các Bài viết (Posts) của người dùng.',
         'Trả lời': 'Đây là danh sách các Trả lời (Replies) và bình luận của người dùng.',
         'Likes': 'Đây là danh sách các bài viết mà người dùng đã Likes.',
     };
@@ -106,17 +207,35 @@ const ContentTab = ({ activeTab }) => {
 };
 
 // --- COMPONENT CHÍNH: PROFILE PAGE ---
-function ProfilePage({ userId }) {
+function ProfilePage() {
+    const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [activeTab, setActiveTab] = useState('Bài viết');
     const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false); // State mới
+    const [loading, setLoading] = useState(true);
     const TABS = ['Bài viết', 'Trả lời', 'Likes'];
     const twitterBlue = '#1DA1F2';
 
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const data = await graphqlRequest(PROFILE_QUERY, { id: userId });
+                // Lấy user ID từ localStorage
+                const userId = localStorage.getItem('userId');
+
+                if (!userId) {
+                    // Nếu chưa đăng nhập, chuyển hướng về trang đăng nhập
+                    navigate('/login');
+                    return;
+                }
+
+                const data = await graphqlRequest(PROFILE_QUERY, { id: parseInt(userId) });
+
+                if (!data || !data.data || !data.data.publicProfile) {
+                    console.error('Không tìm thấy profile');
+                    navigate('/login');
+                    return;
+                }
+
                 const profile = data.data.publicProfile;
 
                 // Format avatar URL - nếu có avatar từ backend
@@ -152,6 +271,7 @@ function ProfilePage({ userId }) {
                 }));
 
                 setUser({
+                    id: profile.id,
                     displayName: profile.name || 'Chưa có tên',
                     username: profile.name
                         ? profile.name.toLowerCase().replace(/\s/g, '')
@@ -165,16 +285,25 @@ function ProfilePage({ userId }) {
                         joined: new Date(profile.created_at).toLocaleDateString('vi-VN'),
                     },
                     badges: formattedBadges,
-                    isOwner: true, // TODO: Kiểm tra với user hiện tại đang đăng nhập
+                    isOwner: true, // Luôn là owner vì đây là profile của user đang đăng nhập
                 });
             } catch (err) {
                 console.error('Lỗi khi lấy profile:', err);
+                navigate('/login');
+            } finally {
+                setLoading(false);
             }
         };
         fetchProfile();
-    }, [userId]);
+    }, [navigate]);
 
-    if (!user) return <p className="text-white p-4">Loading...</p>;
+    if (loading || !user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-900">
+                <div className="text-white text-xl">Đang tải thông tin profile...</div>
+            </div>
+        );
+    }
 
     const renderStat = (value, label) => (
         <div className="text-center">
@@ -271,7 +400,7 @@ function ProfilePage({ userId }) {
 
                 {/* CONTENT */}
                 <div className="p-6 bg-gray-800">
-                    <ContentTab activeTab={activeTab} />
+                    <ContentTab activeTab={activeTab} userId={user?.id?.toString() || localStorage.getItem('userId')} />
                 </div>
 
             </div>
@@ -288,9 +417,4 @@ function ProfilePage({ userId }) {
     );
 }
 
-// --- APP ---
-function App() {
-    return <ProfilePage userId={10} />;
-}
-
-export default App;
+export default ProfilePage;
