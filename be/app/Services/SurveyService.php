@@ -77,4 +77,14 @@ class SurveyService
             throw new Exception('Không thể tạo khảo sát.', 500, $e);
         }
     }
+     // 🆕 Thêm chức năng hiển thị tất cả khảo sát (có phân trang)
+    public function getAllSurveys(int $perPage = 10)
+    {
+        try {
+            return $this->repository->getAllPaginated($perPage);
+        } catch (Exception $e) {
+            Log::error('Error fetching surveys: ' . $e->getMessage());
+            throw new Exception('Không thể tải danh sách khảo sát.', 500, $e);
+        }
+    }
 }

@@ -31,9 +31,11 @@ input SurveyInput {
     object: String
     created_by: ID!
 }
-type Query {
-    dummy: String @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@dummyQuery")
+extend type Query {
+  surveys(per_page: Int): [Survey!]!
+    @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@list")
 }
+
 extend type Mutation {
   createSurvey(input: SurveyInput!): Survey!
       @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@createSurvey")

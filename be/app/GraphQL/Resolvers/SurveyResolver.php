@@ -15,6 +15,11 @@ class SurveyResolver
     {
         $this->service = $service;
     }
+      public function list($_, array $args)
+    {
+        $perPage = $args['per_page'] ?? 5;
+        return $this->service->getAllSurveys($perPage);
+    }
 
     public function createSurvey($root, array $args, GraphQLContext $context): Survey
     {
