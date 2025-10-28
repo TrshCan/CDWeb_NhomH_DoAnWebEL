@@ -41,7 +41,7 @@ export default function Groups() {
                 : "text-cyan-600 hover:bg-cyan-50"
             }`}
           >
-            Pending / Waiting
+            Pending
           </button>
           <button
             onClick={() => setActiveTab("yourGroups")}
@@ -75,8 +75,8 @@ export default function Groups() {
             )}
           </div>
 
-          <h2 className="text-lg font-bold text-cyan-800">
-            Pending / Waiting Groups
+          <h2 className="text-lg font-bold text-cyan-200">
+            Pending Requests
           </h2>
 
           {/* Loading Skeletons */}

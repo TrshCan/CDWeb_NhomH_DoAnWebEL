@@ -10,7 +10,18 @@ class Group extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'description', 'created_by'];
+    protected $fillable = [
+        'name',
+        'description',
+        'created_by',
+        'code',
+    ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+    ];
 
     public function creator()
     {
@@ -34,5 +45,10 @@ class Group extends Model
         return $this->belongsToMany(User::class, 'group_members')
             ->withPivot(['role', 'joined_at'])
             ->withTimestamps(); // group_members có softDeletes nhưng không có created/updated; nếu không muốn timestamps thì bỏ dòng này.
+    }
+
+    public function isCreatedBy(User $user): bool
+    {
+        return $this->created_by === $user->id;
     }
 }

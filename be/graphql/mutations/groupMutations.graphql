@@ -1,0 +1,5 @@
+extend type Mutation {
+  createGroup(name: String!, description: String): Group @field(resolver: "GroupResolver@create")
+  updateGroup(id: ID!, name: String, description: String): Group @field(resolver: "GroupResolver@update")
+  deleteGroup(id: ID!): Boolean @field(resolver: "GroupResolver@delete")
+}

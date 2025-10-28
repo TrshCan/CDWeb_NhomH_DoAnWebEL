@@ -1,0 +1,6 @@
+extend type Query {
+  groups: [Group!] @field(resolver: "GroupResolver@all")
+  group(id: ID!): Group @field(resolver: "GroupResolver@find")
+  groupByCode(code: String!): Group @field(resolver: "GroupResolver@findByCode")
+  searchGroups(keyword: String!): [Group!] @field(resolver: "GroupResolver@search")
+}

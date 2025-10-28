@@ -1,0 +1,5 @@
+type JoinGroupResponse {
+  success: Boolean!
+  message: String
+  group: Group
+}
