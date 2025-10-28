@@ -26,5 +26,10 @@ class SurveyRepository
             ->orderByDesc('created_at')
             ->paginate($perPage);
     }
+    public function findById(int $id): ?Survey
+{
+    return Survey::find($id);
+}
+
     
 }

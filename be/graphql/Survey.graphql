@@ -1,5 +1,3 @@
-
-
 type Survey {
     id: ID!
     title: String!
@@ -32,11 +30,13 @@ input SurveyInput {
     created_by: ID!
 }
 extend type Query {
-  surveys(per_page: Int): [Survey!]!
-    @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@list")
+    surveys(per_page: Int): [Survey!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@list")
 }
 
 extend type Mutation {
-  createSurvey(input: SurveyInput!): Survey!
-      @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@createSurvey")
+    deleteSurvey(id: Int!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@deleteSurvey")
+    createSurvey(input: SurveyInput!): Survey!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@createSurvey")
 }

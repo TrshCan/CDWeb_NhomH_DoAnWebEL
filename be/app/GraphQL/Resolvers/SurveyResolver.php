@@ -15,7 +15,7 @@ class SurveyResolver
     {
         $this->service = $service;
     }
-      public function list($_, array $args)
+    public function list($_, array $args)
     {
         $perPage = $args['per_page'] ?? 5;
         return $this->service->getAllSurveys($perPage);
@@ -54,5 +54,9 @@ class SurveyResolver
                 ['category' => $e->getCode() === 404 ? 'NOT_FOUND' : 'INTERNAL_SERVER_ERROR']
             );
         }
+    }
+    public function deleteSurvey($_, array $args)
+    {
+        return $this->service->deleteSurvey($args['id']);
     }
 }

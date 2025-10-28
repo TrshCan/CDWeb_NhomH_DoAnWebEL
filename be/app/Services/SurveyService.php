@@ -77,7 +77,35 @@ class SurveyService
             throw new Exception('Không thể tạo khảo sát.', 500, $e);
         }
     }
-     // 🆕 Thêm chức năng hiển thị tất cả khảo sát (có phân trang)
+    public function deleteSurvey(int $id): bool
+    {
+        try {
+            DB::beginTransaction();
+
+            // Tìm khảo sát
+            $survey = $this->repository->findById($id);
+
+            if (!$survey) {
+                throw new ModelNotFoundException("Không tìm thấy khảo sát có ID {$id}");
+            }
+
+            // Xóa mềm (Soft Delete)
+            $survey->delete();
+
+            DB::commit();
+            return true;
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            Log::warning("Xóa khảo sát thất bại: không tìm thấy ID {$id}");
+            throw new Exception("Không tìm thấy khảo sát để xóa.", 404);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting survey: ' . $e->getMessage(), ['id' => $id]);
+            throw new Exception('Không thể xóa khảo sát.', 500, $e);
+        }
+    }
+
+    // 🆕 Thêm chức năng hiển thị tất cả khảo sát (có phân trang)
     public function getAllSurveys(int $perPage = 10)
     {
         try {
