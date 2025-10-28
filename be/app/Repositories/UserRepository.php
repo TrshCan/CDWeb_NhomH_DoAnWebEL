@@ -23,6 +23,12 @@ class UserRepository {
     {
         return User::where('phone', $phone)->first();
     }
+
+    public function findById(int $id): ?User
+    {
+        return User::find($id);
+    }
+
     public function registerUser(array $data): User
     {
         $user = new User($data);

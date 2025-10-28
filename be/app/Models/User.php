@@ -60,6 +60,28 @@ class User extends Authenticatable
         return $this->hasMany(Post::class, 'user_id');
     }
 
+    // Followers: những người theo dõi user này
+    public function followers()
+    {
+        return $this->hasMany(Follow::class, 'followed_id')
+            ->where('status', 'active');
+    }
+
+    // Following: những người mà user này đang theo dõi
+    public function following()
+    {
+        return $this->hasMany(Follow::class, 'follower_id')
+            ->where('status', 'active');
+    }
+
+    // Badges của user
+    public function userBadges()
+    {
+        return $this->hasMany(UserBadge::class, 'user_id')
+            ->whereNull('revoked_at')
+            ->with('badge');
+    }
+
     // ============================
     // 🔹 HELPER / LOGIC METHODS
     // ============================

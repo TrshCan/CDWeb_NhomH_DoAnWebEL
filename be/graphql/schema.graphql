@@ -16,7 +16,7 @@ type Query {
 #import queries/postQueries.graphql
 #import queries/eventQueries.graphql
 #import queries/deadlineQueries.graphql
-
+#import queries/getProfileQueries.graphql
 #import mutations/postMutations.graphql
 
 type Mutation {
@@ -49,8 +49,24 @@ type User {
   email: String!
   phone: String
   address: String
+  created_at: DateTime!
   role: String
   avatar: String
+  stats: UserStats @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@stats")
+  badges: [UserBadge!]! @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@badges")
+}
+
+type UserStats {
+  posts: Int!
+  followers: Int!
+  following: Int!
+}
+
+type UserBadge {
+  name: String!
+  description: String
+  created_at: DateTime
+  assigned_at: DateTime
 }
 
 

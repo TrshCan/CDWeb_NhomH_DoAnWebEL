@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Database\QueryException;
+use App\Models\User;
 use Illuminate\Validation\ValidationException;
 use Exception;
 
@@ -18,7 +19,16 @@ class UserServices
     {
         $this->userRepo = $userRepo;
     }
+    public function getUserProfile(int $id): ?User
+    {
+        $user = $this->userRepo->findById($id);
 
+        if (!$user) {
+            throw new \Exception("Không tìm thấy người dùng với ID: {$id}");
+        }
+
+        return $user;
+    }
     public function loginUser(string $email, string $password): array
     {
         $user = $this->userRepo->findByEmail($email);

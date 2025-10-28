@@ -4,14 +4,59 @@ import { graphqlRequest } from '../api/graphql.js';
 
 // --- QUERY GRAPHQL ---
 const PROFILE_QUERY = `
-  query GetPublicProfile($id: Int!) {
+  query getProfileQueries($id: Int!) {
     publicProfile(id: $id) {
+      id
       name
+      email
+      phone
       address
+      avatar
+      role
       created_at
+      stats {
+        posts
+        followers
+        following
+      }
+      badges {
+        name
+        description
+        created_at
+        assigned_at
+      }
     }
   }
 `;
+
+// --- COMPONENT CON: MODAL XEM AVATAR ---
+const AvatarModal = ({ avatarUrl, onClose }) => {
+    if (!avatarUrl) return null;
+
+    return (
+        <div
+            className="fixed inset-0 z-[100] bg-black bg-opacity-75 flex items-center justify-center p-4 transition-opacity duration-300"
+            onClick={onClose} // Đóng modal khi click ra ngoài
+        >
+            <div className="max-w-3xl max-h-full overflow-hidden" onClick={e => e.stopPropagation()}>
+                <img
+                    src={avatarUrl}
+                    alt="Ảnh đại diện đầy đủ"
+                    className="object-contain w-[400px] h-[400px] rounded-lg shadow-2xl"
+                />
+            </div>
+            {/* Nút đóng */}
+            <button
+                onClick={onClose}
+                className="absolute top-4 right-4 text-white text-3xl font-bold p-2 rounded-full hover:bg-gray-700 transition duration-200"
+                aria-label="Đóng"
+            >
+                &times;
+            </button>
+        </div>
+    );
+};
+
 
 // --- COMPONENT CON: HUY HIỆU (BADGE) ---
 const BadgeCard = ({ badge }) => {
@@ -29,7 +74,7 @@ const BadgeCard = ({ badge }) => {
                 style={{ backgroundColor: darkCardColor }}
             >
                 <span className="text-xl">{badge.icon}</span>
-                <span className="text-white text-xs font-bold text-center truncate">{badge.name}</span>
+                <span className="text-white text-xs font-bold text-center truncate w-full px-1">{badge.name}</span>
             </div>
 
             {showTooltip && (
@@ -64,6 +109,7 @@ const ContentTab = ({ activeTab }) => {
 function ProfilePage({ userId }) {
     const [user, setUser] = useState(null);
     const [activeTab, setActiveTab] = useState('Bài viết');
+    const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false); // State mới
     const TABS = ['Bài viết', 'Trả lời', 'Likes'];
     const twitterBlue = '#1DA1F2';
 
@@ -71,23 +117,55 @@ function ProfilePage({ userId }) {
         const fetchProfile = async () => {
             try {
                 const data = await graphqlRequest(PROFILE_QUERY, { id: userId });
+                const profile = data.data.publicProfile;
+
+                // Format avatar URL - nếu có avatar từ backend
+                let avatarUrl = null;
+                if (profile.avatar && profile.avatar !== 'default.png') {
+                    // Giả sử avatar được lưu trong storage/public/avatars/
+                    avatarUrl = `http://localhost:8000/storage/avatars/${profile.avatar}`;
+                } else {
+                    // Fallback avatar
+                    avatarUrl = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=600&auto=format&fit=crop';
+
+                }
+
+                // Format badges với icon emoji tùy theo tên
+                const badgeIcons = {
+                    'Tài Trợ Vàng': '🟡',
+                    'Chuyên Gia KS': '⚙️',
+                    'VIP Code Blue': '🔵',
+                    'Người Chia Sẻ': '⭐',
+                    'default': '🏅'
+                };
+
+                const formattedBadges = profile.badges.map((badge, index) => ({
+                    id: index + 1,
+                    name: badge.name,
+                    icon: badgeIcons[badge.name] || badgeIcons.default,
+                    desc: badge.description || 'Huy hiệu đặc biệt',
+                    awardedDate: badge.assigned_at
+                        ? new Date(badge.assigned_at).toLocaleDateString('vi-VN')
+                        : badge.created_at
+                            ? new Date(badge.created_at).toLocaleDateString('vi-VN')
+                            : 'N/A'
+                }));
+
                 setUser({
-                    displayName: data.data.publicProfile.name,
-                    username: data.data.publicProfile.name.toLowerCase().replace(/\s/g, ''),
-                    bio: data.data.publicProfile.address,
+                    displayName: profile.name || 'Chưa có tên',
+                    username: profile.name
+                        ? profile.name.toLowerCase().replace(/\s/g, '')
+                        : 'username',
+                    bio: profile.address || 'Chưa cập nhật địa chỉ',
+                    avatarUrl: avatarUrl,
                     stats: {
-                        posts: 0,
-                        followers: 0,
-                        following: 0,
-                        joined: new Date(data.data.publicProfile.created_at).toLocaleDateString(),
+                        posts: profile.stats?.posts || 0,
+                        followers: profile.stats?.followers || 0,
+                        following: profile.stats?.following || 0,
+                        joined: new Date(profile.created_at).toLocaleDateString('vi-VN'),
                     },
-                    badges: [
-                        { id: 1, name: 'Tài Trợ Vàng', icon: '🟡', desc: 'Người dùng đóng góp tài chính tích cực.', awardedDate: '01/01/2024' },
-                        { id: 2, name: 'Chuyên Gia KS', icon: '⚙️', desc: 'Đã hoàn thành 100+ khảo sát quan trọng.', awardedDate: '15/03/2024' },
-                        { id: 3, name: 'VIP Code Blue', icon: '🔵', desc: 'Thành viên đặc biệt cấp cao của hệ thống.', awardedDate: '20/05/2024' },
-                        { id: 4, name: 'Người Chia Sẻ', icon: '⭐', desc: 'Đã chia sẻ 50+ bài viết chất lượng.', awardedDate: '10/06/2024' },
-                    ],
-                    isOwner: true,
+                    badges: formattedBadges,
+                    isOwner: true, // TODO: Kiểm tra với user hiện tại đang đăng nhập
                 });
             } catch (err) {
                 console.error('Lỗi khi lấy profile:', err);
@@ -111,13 +189,21 @@ function ProfilePage({ userId }) {
 
                 {/* HEADER */}
                 <div className="relative p-6" style={{ backgroundColor: '#15202B' }}>
-                    <div className="h-40 bg-gray-700 rounded-lg mb-20 flex items-center justify-center text-gray-400">Ảnh Bìa</div>
+                    <div className="h-40 bg-gray-700 rounded-lg mb-20 flex items-center justify-center text-gray-400"></div>
+
+                    {/* AVATAR CẬP NHẬT */}
                     <div
-                        className="absolute left-8 top-28 w-32 h-32 rounded-full border-4 border-gray-800 overflow-hidden"
+                        className="absolute left-8 top-28 w-32 h-32 rounded-full border-4 border-gray-800 overflow-hidden cursor-pointer hover:opacity-80 transition duration-200"
+                        onClick={() => setIsAvatarModalOpen(true)} // Mở modal khi click
                         style={{ backgroundColor: twitterBlue }}
                     >
-                        <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-white">U</div>
+                        {user.avatarUrl ? (
+                            <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-white">U</div>
+                        )}
                     </div>
+                    {/* END AVATAR CẬP NHẬT */}
 
                     {user.isOwner && (
                         <button
@@ -157,9 +243,13 @@ function ProfilePage({ userId }) {
                         </svg>
                         Huy hiệu
                     </h3>
-                    <div className="flex flex-wrap justify-center gap-4">
-                        {user.badges.map(badge => <BadgeCard key={badge.id} badge={badge} />)}
-                    </div>
+                    {user.badges && user.badges.length > 0 ? (
+                        <div className="flex flex-wrap justify-center gap-4">
+                            {user.badges.map(badge => <BadgeCard key={badge.id} badge={badge} />)}
+                        </div>
+                    ) : (
+                        <p className="text-gray-400 text-center py-4 italic">Chưa có huy hiệu nào</p>
+                    )}
                 </div>
 
                 {/* TABS */}
@@ -168,11 +258,10 @@ function ProfilePage({ userId }) {
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-3 text-center text-sm font-bold transition duration-200 ${
-                                activeTab === tab
-                                    ? 'text-white border-b-4'
-                                    : 'text-gray-400 hover:bg-gray-700'
-                            }`}
+                            className={`flex-1 py-3 text-center text-sm font-bold transition duration-200 ${activeTab === tab
+                                ? 'text-white border-b-4'
+                                : 'text-gray-400 hover:bg-gray-700'
+                                }`}
                             style={activeTab === tab ? { borderColor: twitterBlue } : {}}
                         >
                             {tab}
@@ -186,13 +275,22 @@ function ProfilePage({ userId }) {
                 </div>
 
             </div>
+
+            {/* RENDER MODAL */}
+            {isAvatarModalOpen && (
+                <AvatarModal
+                    avatarUrl={user.avatarUrl}
+                    onClose={() => setIsAvatarModalOpen(false)}
+                />
+            )}
+
         </div>
     );
 }
 
 // --- APP ---
 function App() {
-    return <ProfilePage userId={15} />;
+    return <ProfilePage userId={10} />;
 }
 
 export default App;
