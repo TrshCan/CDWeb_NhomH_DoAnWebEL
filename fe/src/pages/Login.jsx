@@ -100,6 +100,8 @@ function LoginForm() {
     
             // Lưu token vào localStorage để dùng cho request sau này
             localStorage.setItem("token", token);
+
+            localStorage.setItem("user", JSON.stringify(user));
           } else if (response.errors) {
             // Mutation bị lỗi
             console.error("GraphQL errors:", response.errors);

@@ -1,0 +1,8 @@
+type JoinRequest {
+  id: ID!
+  user: User!
+  group: Group!
+  status: String!
+  created_at: DateTime
+  updated_at: DateTime
+}
