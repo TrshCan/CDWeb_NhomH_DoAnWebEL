@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import SectionHeader from "./SectionHeader";
 import EditableField from "./EditableField";
 import { GlobeIcon, ChevronDownIcon, ReturnIcon } from "../icons";
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap" rel="stylesheet"></link>
 
 export default function WelcomeSection({ isActive, onClick }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -36,12 +37,12 @@ export default function WelcomeSection({ isActive, onClick }) {
             </a>
           </div>
           <EditableField
-            placeholder="Welcome title"
-            inputClassName="text-4xl font-bold text-gray-800 mb-4"
+            placeholder="Tiêu đề chào mừng"
+            inputClassName="text-4xl font-bold text-bold mb-4 font-['Playfair_Display']"
           />
           <EditableField
-            placeholder="Welcome description"
-            inputClassName="text-lg text-gray-600 mb-4"
+            placeholder="Mô tả chào mừng"
+            inputClassName="text-lg text-bold mb-4"
             isTextarea
           />
           <p className="text-gray-500 mb-6 text-left">

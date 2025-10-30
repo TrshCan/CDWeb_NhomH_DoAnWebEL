@@ -62,21 +62,23 @@ export default function QuestionSection({
       </SectionHeader>
 
       <div
-        className={`transition-all duration-500 ease-in-out overflow-hidden ${
-          isCollapsed ? "max-h-0" : "max-h-[1000px]"
+        className={`transition-all duration-500 ease-in-out ${
+          isCollapsed ? "max-h-0 overflow-hidden" : "max-h-[1000px]"
         }`}
       >
-        {questionItems.map((question, index) => (
-          <QuestionItem
-            key={question.id}
-            question={question}
-            index={index}
-            totalQuestions={questionItems.length}
-            isActive={activeSection === `question-${question.id}`}
-            onClick={() => handleSetSection(`question-${question.id}`)}
-            moveQuestionItem={moveQuestionItem}
-          />
-        ))}
+        <div className="bg-white rounded-sm shadow-lg border border-gray-200 divide-y divide-gray-200 overflow-visible">
+          {questionItems.map((question, index) => (
+            <QuestionItem
+              key={question.id}
+              question={question}
+              index={index}
+              totalQuestions={questionItems.length}
+              isActive={activeSection === `question-${question.id}`}
+              onClick={() => handleSetSection(`question-${question.id}`)}
+              moveQuestionItem={moveQuestionItem}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
