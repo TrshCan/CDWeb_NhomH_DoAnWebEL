@@ -1,0 +1,4 @@
+ extend type Query {
+  publicProfile(id: Int!): User
+    @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@publicProfile")
+}
