@@ -135,7 +135,7 @@ export default function Feed() {
       <Toaster position="top-right" />
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow p-2 mb-4 flex space-x-4">
+      <div className="bg-white rounded-lg shadow p-2 mb-4 flex space-x-4 sticky top-0 z-40 backdrop-blur-md bg-white/90">
         {["forYou", "following"].map((tab) => (
           <button
             key={tab}
