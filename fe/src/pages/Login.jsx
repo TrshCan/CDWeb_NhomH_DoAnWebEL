@@ -52,6 +52,7 @@ function LoginForm() {
             id
             name
             email
+            role
           }
         }
       }
@@ -61,6 +62,7 @@ function LoginForm() {
         name: "",
         email: "",
         password: "",
+        role: "",
         remember: true,
     });
     const [message, setMessage] = useState('');
@@ -95,6 +97,7 @@ function LoginForm() {
               name: "",
               email: "",
               password: "",
+              role: "",
               remember: false,
             });
     

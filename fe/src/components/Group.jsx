@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "../assets/css/group-component.css";
+import { sendJoinRequest } from "../api/graphql/joinRequest"; // We'll create this
+import "../assets/css/group-component.css";
 
 export default function Groups() {
   const [activeTab, setActiveTab] = useState("pending");
@@ -7,19 +9,112 @@ export default function Groups() {
   const [pendingGroups, setPendingGroups] = useState([]);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [groupCode, setGroupCode] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinMessage, setJoinMessage] = useState("");
+  const [joinError, setJoinError] = useState("");
 
-  // 👇 simulate getting user role (replace with actual user data later)
-  const userRole = "student"; // "lecturer" | "admin" | "student"
+  // Check if user is logged in
+  const getUserFromStorage = () => {
+    try {
+      const userData = localStorage.getItem("user");
+
+      if (!userData) {
+        console.log("No user found in localStorage (key: 'user')");
+        return null;
+      }
+
+      // Parse the JSON string into an object
+      const user = JSON.parse(userData);
+
+      // Log the full user object for debugging
+      //console.log("Retrieved user from localStorage:", user);
+
+      return user;
+    } catch (error) {
+      console.error("Error parsing user from localStorage:", error);
+      console.error("Raw stored value:", localStorage.getItem("user"));
+      return null;
+    }
+  };
+
+  const user = getUserFromStorage();
+  const isLoggedIn = !!user;
+  const userRole = user?.role || "student"; // Adjust based on your user object structure
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 1500);
   }, []);
 
-  const handleJoinSubmit = (e) => {
+  const handleJoinSubmit = async (e) => {
     e.preventDefault();
-    console.log("Joining group with code:", groupCode);
-    setShowJoinModal(false);
-    setGroupCode("");
+
+    if (!isLoggedIn) {
+      setJoinError("Please log in to join a group");
+      return;
+    }
+
+    if (!groupCode.trim()) {
+      setJoinError("Please enter a group code");
+      return;
+    }
+
+    setJoinLoading(true);
+    setJoinError("");
+    setJoinMessage("");
+
+    try {
+      // Get token from localStorage
+      const token = localStorage.getItem("token");
+
+      const result = await sendJoinRequest(
+        {
+          code: groupCode.trim(),
+          userId: user.id, // Adjust based on your user object structure
+        },
+        token
+      );
+
+      if (result.success) {
+        setJoinMessage(result.message || "Join request sent successfully!");
+        setShowJoinModal(false);
+        setGroupCode("");
+        // Optionally refresh pending groups list
+        // fetchPendingGroups();
+      } else {
+        setJoinError(result.message || "Failed to send join request");
+      }
+    } catch (error) {
+      console.error("Join request error:", error);
+      setJoinError(
+        error.message || "An error occurred while sending join request"
+      );
+    } finally {
+      setJoinLoading(false);
+    }
+  };
+
+  // Disable join button if not logged in
+  const renderJoinButton = () => {
+    if (!isLoggedIn) {
+      return (
+        <button
+          disabled
+          className="bg-gray-400 text-white px-4 py-2 rounded-full cursor-not-allowed"
+          title="Please log in to join groups"
+        >
+          Join Group (Login Required)
+        </button>
+      );
+    }
+
+    return (
+      <button
+        className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition"
+        onClick={() => setShowJoinModal(true)}
+      >
+        Join Group
+      </button>
+    );
   };
 
   return (
@@ -60,13 +155,7 @@ export default function Groups() {
       {activeTab === "pending" && (
         <section id="pending" className="space-y-4 tab-slide">
           <div className="flex space-x-2 mb-4">
-            {/* 🔥 Conditional button rendering */}
-            <button
-              className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition"
-              onClick={() => setShowJoinModal(true)}
-            >
-              Join Group
-            </button>
+            {renderJoinButton()}
 
             {(userRole === "lecturer" || userRole === "admin") && (
               <button className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition">
@@ -75,9 +164,7 @@ export default function Groups() {
             )}
           </div>
 
-          <h2 className="text-lg font-bold text-cyan-200">
-            Pending Requests
-          </h2>
+          <h2 className="text-lg font-bold text-cyan-200">Pending Requests</h2>
 
           {/* Loading Skeletons */}
           {loading ? (
@@ -97,7 +184,7 @@ export default function Groups() {
             </div>
           ) : pendingGroups.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
-              Haven’t sent any requests 😴
+              Haven't sent any requests 😴
             </div>
           ) : (
             pendingGroups.map((group) => (
@@ -135,14 +222,17 @@ export default function Groups() {
         </section>
       )}
 
-      {/* 🔥 Join Group Modal */}
+      {/* Join Group Modal */}
       {showJoinModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-80">
             <h2 className="text-lg font-semibold text-cyan-700 mb-4 text-center">
               Enter Group Code
             </h2>
-            <form onSubmit={handleJoinSubmit} className="flex flex-col space-y-4">
+            <form
+              onSubmit={handleJoinSubmit}
+              className="flex flex-col space-y-4"
+            >
               <input
                 type="text"
                 placeholder="Group Code"
@@ -150,20 +240,44 @@ export default function Groups() {
                 onChange={(e) => setGroupCode(e.target.value)}
                 className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 required
+                disabled={joinLoading}
               />
+
+              {joinError && (
+                <div className="text-red-600 text-sm text-center">
+                  {joinError}
+                </div>
+              )}
+              {joinMessage && (
+                <div className="text-green-600 text-sm text-center">
+                  {joinMessage}
+                </div>
+              )}
+
               <div className="flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setShowJoinModal(false)}
+                  onClick={() => {
+                    setShowJoinModal(false);
+                    setJoinError("");
+                    setJoinMessage("");
+                    setGroupCode("");
+                  }}
                   className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300"
+                  disabled={joinLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-md bg-cyan-600 text-white hover:bg-cyan-700"
+                  disabled={joinLoading || !isLoggedIn}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    joinLoading || !isLoggedIn
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-cyan-600 hover:bg-cyan-700"
+                  }`}
                 >
-                  Join
+                  {joinLoading ? "Joining..." : "Join"}
                 </button>
               </div>
             </form>

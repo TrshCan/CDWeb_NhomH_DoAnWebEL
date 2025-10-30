@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Group;
 use App\Repositories\JoinRequestRepository;
+use App\Repositories\GroupRepository;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Exception;
@@ -12,66 +14,79 @@ class JoinRequestService
 {
     protected $joinRequestRepository;
 
-    public function __construct(JoinRequestRepository $joinRequestRepository)
+    public function __construct(
+        protected JoinRequestRepository $joinRequestRepo,
+        protected GroupRepository $groupRepo
+    ) {}
+
+    /**
+     * Send a join request by group code.
+     *
+     * Returns array matching JoinRequestResponse { success, message, joinRequest }
+     *
+     * Throws exceptions for not found / invalid states.
+     */
+    public function sendJoinRequest(User $user, string $code): array
     {
-        $this->joinRequestRepository = $joinRequestRepository;
-    }
+        // 1. Find the group
+        $group = $this->groupRepo->findByCode($code);
 
-    public function sendJoinRequest(string $code): array
-    {
-        $user = Auth::user();
-
-        // Find group by code
-        $group = Group::where('code', $code)->first();
-        if (!$group) {
-            throw new ModelNotFoundException('Group not found with this code.');
+        if (! $group) {
+            return [
+                'success' => false,
+                'message' => 'Group with this code does not exist',
+            ];
         }
 
-        // Check if already member
-        if ($group->users()->where('users.id', $user->id)->exists()) {
-            throw new Exception('You are already a member of this group.');
+        // 2. Prevent duplicate request / already member
+        $existing = $this->joinRequestRepo->findByUserAndGroup($user->id, $group->id);
+
+        if ($existing) {
+            return [
+                'success' => false,
+                'message' => 'You already have a pending request or are already a member of this group',
+            ];
         }
 
-        // Check if pending request exists
-        $existing = $this->joinRequestRepository->findByUserAndGroup($user->id, $group->id);
-        if ($existing && $existing->status === 'pending') {
-            throw new Exception('Join request already sent and pending.');
+        // 3. Creator cannot request to join his own group
+        if ($group->created_by == $user->id) {
+            return [
+                'success' => false,
+                'message' => 'You are the creator of this group',
+            ];
         }
 
-        // Create join request
-        $joinRequest = $this->joinRequestRepository->create([
-            'user_id'   => $user->id,
-            'group_id'  => $group->id,
-            'status'    => 'pending',
-            'created_by' => $user->id,
-        ]);
+        // 4. Create the request
+        $joinRequest = $this->joinRequestRepo->create($user->id, $group->id);
 
         return [
-            'success' => true,
-            'message' => 'Join request sent successfully.',
-            'joinRequest' => $joinRequest,
+            'success'      => true,
+            'message'      => 'Join request sent successfully',
+            'joinRequest'  => $joinRequest->load(['user', 'group']),
         ];
     }
 
     public function approveJoinRequest($joinRequestId)
     {
         $joinRequest = \App\Models\JoinRequest::findOrFail($joinRequestId);
-        $this->joinRequestRepository->updateStatus($joinRequest, 'approved');
 
-        // Add to group_members table (you can adapt this part)
-        $joinRequest->group->users()->attach($joinRequest->user_id, [
-            'role' => 'member',
-            'joined_at' => now(),
-        ]);
+        $updated = $this->joinRequestRepository->updateStatus($joinRequest, 'approved');
 
-        return $joinRequest;
+        // Add user to group members — ensure pivot doesn't duplicate
+        $group = $updated->group;
+        if (!$group->users()->where('users.id', $updated->user_id)->exists()) {
+            $group->users()->attach($updated->user_id, [
+                'role' => 'member',
+                'joined_at' => now(),
+            ]);
+        }
+
+        return $updated;
     }
 
     public function rejectJoinRequest($joinRequestId)
     {
         $joinRequest = \App\Models\JoinRequest::findOrFail($joinRequestId);
-        $this->joinRequestRepository->updateStatus($joinRequest, 'rejected');
-
-        return $joinRequest;
+        return $this->joinRequestRepository->updateStatus($joinRequest, 'rejected');
     }
 }

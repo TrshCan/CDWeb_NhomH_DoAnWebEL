@@ -1,5 +1,5 @@
 extend type Mutation {
-  sendJoinRequest(code: String!): JoinRequestResponse @field(resolver: "App\\GraphQL\\Resolvers\\JoinRequestResolver@sendJoinRequest")
+  sendJoinRequest(userId: ID!, code: String!): JoinRequestResponse @field(resolver: "App\\GraphQL\\Resolvers\\JoinRequestResolver@sendJoinRequest")
   approveJoinRequest(id: ID!): JoinRequest @field(resolver: "App\\GraphQL\\Resolvers\\JoinRequestResolver@approveJoinRequest")
   rejectJoinRequest(id: ID!): JoinRequest @field(resolver: "App\\GraphQL\\Resolvers\\JoinRequestResolver@rejectJoinRequest")
 }

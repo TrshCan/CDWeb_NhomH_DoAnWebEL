@@ -9,6 +9,9 @@ type Query {
 #import types/postMedia.graphql
 #import types/deadline.graphql
 #import types/event.graphql
+#import types/group.graphql
+#import types/joinRequest.graphql
+#import types/joinRequestResponse.graphql
 
 #import inputs/postCreateInput.graphql
 #import inputs/postUpdateInput.graphql
@@ -18,6 +21,8 @@ type Query {
 #import queries/deadlineQueries.graphql
 
 #import mutations/postMutations.graphql
+#import mutations/groupMutations.graphql
+#import mutations/joinRequestMutations.graphql
 
 type Mutation {
   loginUser(
