@@ -107,7 +107,7 @@ const USER_POSTS_QUERY = `
       media {
         id
         url
-        filename
+        
       }
     }
   }
@@ -299,7 +299,7 @@ function ProfilePage() {
 
     if (loading || !user) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-900">
+            <div className="min-h-screen w-[550px] flex items-center justify-center bg-gray-900">
                 <div className="text-white text-xl">Đang tải thông tin profile...</div>
             </div>
         );
@@ -313,7 +313,7 @@ function ProfilePage() {
     );
 
     return (
-        <div className="min-h-screen flex justify-center p-4 sm:p-8 bg-gray-900">
+        <div className="min-h-screen w-[550px] flex justify-center p-4 sm:p-8 bg-gray-900">
             <div className="w-full max-w-4xl shadow-2xl rounded-xl overflow-hidden">
 
                 {/* HEADER */}
