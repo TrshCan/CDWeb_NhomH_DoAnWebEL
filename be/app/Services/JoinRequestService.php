@@ -17,7 +17,8 @@ class JoinRequestService
     public function __construct(
         protected JoinRequestRepository $joinRequestRepo,
         protected GroupRepository $groupRepo
-    ) {}
+    ) {
+    }
 
     /**
      * Send a join request by group code.
@@ -31,7 +32,7 @@ class JoinRequestService
         // 1. Find the group
         $group = $this->groupRepo->findByCode($code);
 
-        if (! $group) {
+        if (!$group) {
             return [
                 'success' => false,
                 'message' => 'Group with this code does not exist',
@@ -60,9 +61,9 @@ class JoinRequestService
         $joinRequest = $this->joinRequestRepo->create($user->id, $group->id);
 
         return [
-            'success'      => true,
-            'message'      => 'Join request sent successfully',
-            'joinRequest'  => $joinRequest->load(['user', 'group']),
+            'success' => true,
+            'message' => 'Join request sent successfully',
+            'joinRequest' => $joinRequest->load(['user', 'group']),
         ];
     }
 
@@ -88,5 +89,12 @@ class JoinRequestService
     {
         $joinRequest = \App\Models\JoinRequest::findOrFail($joinRequestId);
         return $this->joinRequestRepository->updateStatus($joinRequest, 'rejected');
+    }
+
+    public function getPendingRequests(int $userId): array
+    {
+        return $this->joinRequestRepo
+            ->getPendingByUser($userId)
+            ->toArray();
     }
 }

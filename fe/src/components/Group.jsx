@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import "../assets/css/group-component.css";
-import { sendJoinRequest } from "../api/graphql/joinRequest"; // We'll create this
+import {
+  sendJoinRequest,
+  getPendingJoinRequests,
+} from "../api/graphql/joinRequest"; // We'll create this
 import "../assets/css/group-component.css";
 
 export default function Groups() {
@@ -42,8 +45,37 @@ export default function Groups() {
   const userRole = user?.role || "student"; // Adjust based on your user object structure
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 1500);
-  }, []);
+    const fetchPendingRequests = async () => {
+      if (!isLoggedIn || !user?.id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const requests = await getPendingJoinRequests(user.id);
+        console.log("Fetched pending requests:", requests);
+
+        // Map to match UI structure
+        const formatted = requests.map((req) => ({
+          id: req.id,
+          title: req.group.name,
+          members: 0, // You can add member count later
+          code: req.group.code,
+          status: req.status,
+        }));
+
+        setPendingGroups(formatted);
+      } catch (error) {
+        console.error("Failed to load pending requests:", error);
+        setJoinError("Failed to load pending requests");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPendingRequests();
+  }, [isLoggedIn, user?.id]);
 
   const handleJoinSubmit = async (e) => {
     e.preventDefault();
@@ -187,6 +219,7 @@ export default function Groups() {
               Haven't sent any requests 😴
             </div>
           ) : (
+            // ←←← REPLACE FROM HERE ↓↓↓
             pendingGroups.map((group) => (
               <div
                 key={group.id}
@@ -194,20 +227,26 @@ export default function Groups() {
               >
                 <div className="flex items-center space-x-3">
                   <div className="flex-shrink-0 bg-cyan-100 text-cyan-700 rounded-full h-10 w-10 flex items-center justify-center">
-                    💬
+                    [Chat Icon]
                   </div>
                   <div className="flex-1">
                     <p className="font-semibold text-gray-800">{group.title}</p>
                     <p className="text-sm text-gray-500">
-                      {group.members} members
+                      Code:{" "}
+                      <code className="bg-gray-100 px-1 rounded">
+                        {group.code}
+                      </code>
                     </p>
                   </div>
-                  <button className="bg-gray-600 text-white px-4 py-2 rounded-full cursor-default">
-                    Awaiting Approval
+                  <button className="bg-gray-600 text-white px-4 py-2 rounded-full cursor-default text-sm">
+                    {group.status === "pending"
+                      ? "Awaiting Approval"
+                      : group.status}
                   </button>
                 </div>
               </div>
             ))
+            // ←←← TO HERE ↑↑↑
           )}
         </section>
       )}

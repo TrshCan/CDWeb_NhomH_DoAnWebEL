@@ -54,7 +54,7 @@ class JoinRequestResolver
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return [
                 'success' => false,
                 'message' => 'Internal server error: ' . $e->getMessage()
@@ -71,5 +71,13 @@ class JoinRequestResolver
     public function rejectJoinRequest($root, array $args)
     {
         return $this->joinRequestService->rejectJoinRequest($args['id']);
+    }
+
+    // app/GraphQL/Resolvers/JoinRequestResolver.php
+    public function pendingJoinRequests($root, array $args)
+    {
+        $userId = (int) $args['userId'];
+
+        return $this->joinRequestService->getPendingRequests($userId);
     }
 }

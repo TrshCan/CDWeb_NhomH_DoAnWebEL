@@ -299,8 +299,8 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('group_id')->constrained('groups')->cascadeOnDelete();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->timestamp('created_at')->nullable();
-            $table->timestamp('updated_at')->nullable();
+            $table->datetime('created_at')->nullable();
+            $table->datetime('updated_at')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate();
         });
 

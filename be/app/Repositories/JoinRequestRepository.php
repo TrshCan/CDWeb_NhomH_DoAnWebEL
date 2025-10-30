@@ -22,7 +22,7 @@ class JoinRequestRepository
             'user_id' => $userId,
             'group_id' => $groupId,
             'status' => 'pending',
-            'created_by'=> $userId,
+            'created_by' => $userId,
         ]);
     }
 
@@ -39,5 +39,15 @@ class JoinRequestRepository
         $joinRequest->save();
 
         return $joinRequest->load(['user', 'group']);
+    }
+
+    public function getPendingByUser(int $userId)
+    {
+        return JoinRequest::with('group')
+            ->where('user_id', $userId)
+            ->where('status', 'pending')
+            ->orderByDesc('created_at')
+            ->get()
+            ->values();
     }
 }
