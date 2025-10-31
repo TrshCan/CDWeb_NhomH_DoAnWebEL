@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Services;
+
 use App\Models\Survey;
 use App\Repositories\SurveyRepository;
 use Illuminate\Support\Facades\DB;
@@ -18,42 +20,43 @@ class SurveyService
         $this->repository = $repository;
     }
 
+    /**
+     * TẠO KHẢO SÁT – BẮT TẤT CẢ LỖI
+     */
     public function createSurvey(array $data): Survey
     {
-        // Gán giá trị mặc định theo schema
+        // GÁN MẶC ĐỊNH
         $data = array_merge([
             'type' => 'survey',
             'object' => 'public',
             'points' => 0,
-            'status' => 'active', // Giá trị mặc định cho status
+            'status' => 'active',
         ], $data);
 
-        // Validation với thông báo lỗi tiếng Việt
+        // VALIDATION TIẾNG VIỆT
         $validator = Validator::make($data, [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'categories_id' => 'required|integer|exists:categories,id',
             'type' => 'sometimes|in:survey,quiz',
-            'start_at' => 'nullable|date',
-            'end_at' => 'nullable|date|after_or_equal:start_at',
+            'start_at' => 'nullable|date_format:Y-m-d H:i:s',
+            'end_at' => 'nullable|date_format:Y-m-d H:i:s|after_or_equal:start_at',
             'time_limit' => 'nullable|integer|min:0',
             'points' => 'sometimes|integer|min:0',
             'object' => 'sometimes|in:public,students,lecturers',
-            'created_by' => 'required|exists:users,id',
-            'status' => 'sometimes|in:paused,active,closed', // Validation cho status
+            'created_by' => 'required|integer|exists:users,id',
+            'status' => 'sometimes|in:paused,active,closed',
         ], [
             'title.required' => 'Tiêu đề là bắt buộc.',
-            'title.string' => 'Tiêu đề phải là chuỗi ký tự.',
-            'title.max' => 'Tiêu đề không được vượt quá 255 ký tự.',
-            'categories_id.required' => 'Danh mục là bắt buộc.',
+            'title.max' => 'Tiêu đề không được quá 255 ký tự.',
+            'categories_id.required' => 'Vui lòng chọn danh mục.',
             'categories_id.exists' => 'Danh mục không tồn tại.',
             'created_by.required' => 'Người tạo là bắt buộc.',
-            'created_by.exists' => 'Người tạo không tồn tại.',
-            'type.in' => 'Loại khảo sát phải là "survey" hoặc "quiz".',
+            'created_by.exists' => 'Người dùng không tồn tại.',
+            'type.in' => 'Loại phải là "survey" hoặc "quiz".',
+            'start_at.date_format' => 'Ngày bắt đầu phải đúng định dạng (YYYY-MM-DD HH:MM:SS).',
+            'end_at.date_format' => 'Ngày kết thúc phải đúng định dạng (YYYY-MM-DD HH:MM:SS).',
             'end_at.after_or_equal' => 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.',
-            'time_limit.min' => 'Thời gian giới hạn phải lớn hơn hoặc bằng 0.',
-            'points.min' => 'Điểm phải lớn hơn hoặc bằng 0.',
-            'object.in' => 'Đối tượng phải là "public", "students" hoặc "lecturers".',
             'status.in' => 'Trạng thái phải là "paused", "active" hoặc "closed".',
         ]);
 
@@ -65,66 +68,84 @@ class SurveyService
             DB::beginTransaction();
             $survey = $this->repository->create($data);
             DB::commit();
+
+            Log::info('Tạo khảo sát thành công', ['id' => $survey->id, 'title' => $survey->title]);
             return $survey;
-        } catch (ModelNotFoundException $e) {
+        } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error creating survey: ' . $e->getMessage(), ['data' => $data]);
-            throw new Exception('Danh mục hoặc người dùng không tồn tại.', 404, $e);
-        } catch (Exception $e) {
-            DB::rollBack();
-            Log::error('Error creating survey: ' . $e->getMessage(), ['data' => $data]);
-            throw new Exception('Không thể tạo khảo sát.', 500, $e);
+
+            // BẮT LỖI CỤ THỂ
+            if ($e instanceof \Illuminate\Database\QueryException) {
+                if (str_contains($e->getMessage(), 'foreign key constraint')) {
+                    throw new Exception('Danh mục hoặc người tạo không hợp lệ.', 422);
+                }
+                if (str_contains($e->getMessage(), 'Data too long')) {
+                    throw new Exception('Tiêu đề quá dài.', 422);
+                }
+            }
+
+            Log::error('Lỗi tạo khảo sát', [
+                'error' => $e->getMessage(),
+                'data' => $data,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            throw new Exception('Không thể tạo khảo sát. Vui lòng thử lại.', 500);
         }
     }
 
+    /**
+     * XÓA KHẢO SÁT – SOFT DELETE
+     */
     public function deleteSurvey(int $id): bool
     {
         try {
             DB::beginTransaction();
-            // Tìm khảo sát
+
             $survey = $this->repository->findById($id);
             if (!$survey) {
-                throw new ModelNotFoundException("Không tìm thấy khảo sát có ID {$id}");
+                throw new ModelNotFoundException("Khảo sát ID {$id} không tồn tại.");
             }
-            // Xóa mềm (Soft Delete)
-            $survey->delete();
+
+            $survey->delete(); // Soft delete
             DB::commit();
+
+            Log::info('Xóa khảo sát thành công (soft delete)', ['id' => $id]);
             return true;
         } catch (ModelNotFoundException $e) {
             DB::rollBack();
-            Log::warning("Xóa khảo sát thất bại: không tìm thấy ID {$id}");
-            throw new Exception("Không tìm thấy khảo sát để xóa.", 404);
-        } catch (Exception $e) {
+            Log::warning('Không tìm thấy khảo sát để xóa', ['id' => $id]);
+            throw new Exception('Không tìm thấy khảo sát để xóa.', 404);
+        } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error deleting survey: ' . $e->getMessage(), ['id' => $id]);
-            throw new Exception('Không thể xóa khảo sát.', 500, $e);
+            Log::error('Lỗi xóa khảo sát', ['id' => $id, 'error' => $e->getMessage()]);
+            throw new Exception('Không thể xóa khảo sát.', 500);
         }
     }
 
+    /**
+     * CẬP NHẬT KHẢO SÁT
+     */
     public function updateSurvey(int $id, array $data): Survey
     {
-        // Validation cho cập nhật
         $validator = Validator::make($data, [
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'categories_id' => 'sometimes|integer|exists:categories,id',
             'type' => 'sometimes|in:survey,quiz',
-            'start_at' => 'nullable|date',
-            'end_at' => 'nullable|date|after_or_equal:start_at',
+            'start_at' => 'nullable|date_format:Y-m-d H:i:s',
+            'end_at' => 'nullable|date_format:Y-m-d H:i:s|after_or_equal:start_at',
             'time_limit' => 'nullable|integer|min:0',
             'points' => 'sometimes|integer|min:0',
             'object' => 'sometimes|in:public,students,lecturers',
-            'status' => 'sometimes|in:paused,active,closed', // Validation cho status
+            'status' => 'sometimes|in:paused,active,closed',
         ], [
-            'title.string' => 'Tiêu đề phải là chuỗi ký tự.',
-            'title.max' => 'Tiêu đề không được vượt quá 255 ký tự.',
+            'title.max' => 'Tiêu đề không được quá 255 ký tự.',
             'categories_id.exists' => 'Danh mục không tồn tại.',
-            'type.in' => 'Loại khảo sát phải là "survey" hoặc "quiz".',
+            'type.in' => 'Loại phải là "survey" hoặc "quiz".',
+            'start_at.date_format' => 'Ngày bắt đầu không đúng định dạng.',
             'end_at.after_or_equal' => 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.',
-            'time_limit.min' => 'Thời gian giới hạn phải lớn hơn hoặc bằng 0.',
-            'points.min' => 'Điểm phải lớn hơn hoặc bằng 0.',
-            'object.in' => 'Đối tượng phải là "public", "students" hoặc "lecturers".',
-            'status.in' => 'Trạng thái phải là "paused", "active" hoặc "closed".',
+            'status.in' => 'Trạng thái không hợp lệ.',
         ]);
 
         if ($validator->fails()) {
@@ -133,48 +154,57 @@ class SurveyService
 
         try {
             DB::beginTransaction();
+
             $survey = $this->repository->findById($id);
             if (!$survey) {
-                throw new ModelNotFoundException("Không tìm thấy khảo sát có ID {$id}");
+                throw new ModelNotFoundException("Khảo sát ID {$id} không tồn tại.");
             }
+
             $updatedSurvey = $this->repository->update($survey, $data);
             DB::commit();
+
+            Log::info('Cập nhật khảo sát thành công', ['id' => $id, 'title' => $updatedSurvey->title]);
             return $updatedSurvey;
         } catch (ModelNotFoundException $e) {
             DB::rollBack();
-            Log::warning("Cập nhật khảo sát thất bại: không tìm thấy ID {$id}");
-            throw new Exception("Không tìm thấy khảo sát để cập nhật.", 404);
-        } catch (Exception $e) {
+            throw new Exception('Không tìm thấy khảo sát để cập nhật.', 404);
+        } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error updating survey: ' . $e->getMessage(), ['id' => $id, 'data' => $data]);
-            throw new Exception('Không thể cập nhật khảo sát.', 500, $e);
+            Log::error('Lỗi cập nhật khảo sát', ['id' => $id, 'data' => $data, 'error' => $e->getMessage()]);
+            throw new Exception('Không thể cập nhật khảo sát.', 500);
         }
     }
 
+    /**
+     * LẤY CHI TIẾT
+     */
     public function getSurveyById(int $id): Survey
     {
         try {
             $survey = $this->repository->findById($id);
             if (!$survey) {
-                throw new ModelNotFoundException("Không tìm thấy khảo sát có ID {$id}");
+                throw new ModelNotFoundException("Khảo sát ID {$id} không tồn tại.");
             }
             return $survey;
         } catch (ModelNotFoundException $e) {
-            Log::warning("Xem chi tiết khảo sát thất bại: không tìm thấy ID {$id}");
-            throw new Exception("Không tìm thấy khảo sát.", 404);
-        } catch (Exception $e) {
-            Log::error('Error fetching survey detail: ' . $e->getMessage(), ['id' => $id]);
-            throw new Exception('Không thể tải chi tiết khảo sát.', 500, $e);
+            Log::warning('Không tìm thấy khảo sát', ['id' => $id]);
+            throw new Exception('Không tìm thấy khảo sát.', 404);
+        } catch (\Exception $e) {
+            Log::error('Lỗi tải chi tiết khảo sát', ['id' => $id, 'error' => $e->getMessage()]);
+            throw new Exception('Không thể tải chi tiết.', 500);
         }
     }
 
+    /**
+     * LẤY DANH SÁCH
+     */
     public function getAllSurveys(int $perPage = 10)
     {
         try {
             return $this->repository->getAllPaginated($perPage);
-        } catch (Exception $e) {
-            Log::error('Error fetching surveys: ' . $e->getMessage());
-            throw new Exception('Không thể tải danh sách khảo sát.', 500, $e);
+        } catch (\Exception $e) {
+            Log::error('Lỗi tải danh sách khảo sát', ['error' => $e->getMessage()]);
+            throw new Exception('Không thể tải danh sách khảo sát.', 500);
         }
     }
 }

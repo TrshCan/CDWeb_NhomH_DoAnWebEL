@@ -18,14 +18,10 @@ class SurveyResolver
     public function list($_, array $args)
     {
         $perPage = $args['per_page'] ?? 5;
-        return $this->service->getAllSurveys($perPage);
+        $paginator = $this->service->getAllSurveys($perPage);
+        return $paginator->items(); // Trả về mảng Survey[]
     }
-    /**
-     * ✏️ Cập nhật khảo sát
-     */
-    /**
-     * ✏️ Cập nhật khảo sát
-     */
+
     public function updateSurvey($root, array $args)
     {
         try {
