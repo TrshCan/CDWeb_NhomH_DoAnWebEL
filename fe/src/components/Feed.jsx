@@ -31,19 +31,48 @@ export default function Feed() {
     const loadUser = async () => {
       const userId = localStorage.getItem("userId");
       if (!userId) {
-        console.warn("User not logged in");
+        setUser(null); // Explicitly clear user
         return;
       }
+
       try {
         const data = await getUserProfile(parseInt(userId));
         setUser(data);
       } catch (err) {
         console.error("Failed to load user:", err);
         toast.error("Failed to load user info");
+        setUser(null); // Clear on error too
+        localStorage.removeItem("userId"); // Optional: clean up invalid ID
       }
     };
+
+    // Initial load
     loadUser();
-  }, []);
+
+    // Listen for storage changes (e.g., logout in another tab)
+    const handleStorageChange = (e) => {
+      if (e.key === "userId") {
+        loadUser();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // Optional: Poll localStorage every 2s (in case logout happens in same tab but not via event)
+    const interval = setInterval(() => {
+      const currentUserId = localStorage.getItem("userId");
+      if (!currentUserId && user) {
+        setUser(null);
+      } else if (currentUserId && !user) {
+        loadUser();
+      }
+    }, 2000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [user]); // Re-run if user changes (for polling)
 
   // ✅ Fetch posts
   useEffect(() => {
@@ -111,8 +140,9 @@ export default function Feed() {
 
   // ✅ Create new post using logged-in user info
   const addPost = async () => {
-    if (!user) {
-      toast.error("Please log in first.");
+    const userId = localStorage.getItem("userId");
+    if (!userId || !user) {
+      toast.error("You must be logged in to post.");
       return;
     }
 
