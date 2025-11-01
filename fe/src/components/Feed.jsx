@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import PostCard from "../components/PostCard";
 import { getPostsByType, createPost } from "../api/graphql/post";
+import { getUserProfile } from "../api/graphql/user";
 
 function timeAgo(createdAt) {
   const created = new Date(createdAt);
@@ -23,6 +24,25 @@ export default function Feed() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [files, setFiles] = useState([]);
+  const [user, setUser] = useState(null);
+  // ✅ Load current user from localStorage + GraphQL
+  useEffect(() => {
+    const loadUser = async () => {
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
+        toast.error("User not logged in");
+        return;
+      }
+      try {
+        const data = await getUserProfile(parseInt(userId));
+        setUser(data);
+      } catch (err) {
+        console.error("Failed to load user:", err);
+        toast.error("Failed to load user info");
+      }
+    };
+    loadUser();
+  }, []);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -87,13 +107,19 @@ export default function Feed() {
     setFiles((prev) => [...prev, ...selected]);
   };
 
+  // ✅ Create new post using logged-in user info
   const addPost = async () => {
+    if (!user) {
+      toast.error("User not loaded");
+      return;
+    }
+
     const text = document.getElementById("postInput").value.trim();
     if (!text && files.length === 0) return;
 
     try {
       const input = {
-        user_id: "1", // Replace with actual logged-in user ID
+        user_id: user.id.toString(),
         type: "normal_post",
         content: text,
       };
@@ -105,8 +131,8 @@ export default function Feed() {
         {
           id: newPost.id,
           type: newPost.type,
-          user: newPost.user?.name || "You",
-          time: timeAgo(newPost.created_at),
+          user: newPost.user?.name || user.name || "You",
+          time: timeAgo(new Date().toISOString()),
           content: newPost.content,
           media: newPost.media
             ? newPost.media.map((m) =>
