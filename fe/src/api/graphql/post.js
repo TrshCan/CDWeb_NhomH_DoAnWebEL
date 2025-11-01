@@ -64,7 +64,7 @@ export const createPost = async (input, files = []) => {
   console.log('createPost files:', files.length, files.map(f => f.name));
 
   const query = `
-    mutation ($input: CreatePostInput!, $media: [Upload!]) {
+    mutation ($input: CreatePostInput!, $media: [Upload]) {
       createPost(input: $input, media: $media) {
         id
         type
@@ -82,46 +82,46 @@ export const createPost = async (input, files = []) => {
     }
   `;
 
+  // ✅ If no files, send normal JSON (simpler)
+  if (files.length === 0) {
+    try {
+      const response = await graphqlClient.post('', {
+        query,
+        variables: { input, media: [] },
+      });
+      if (response.data.errors) throw new Error(response.data.errors[0].message);
+      return response.data.data.createPost;
+    } catch (err) {
+      console.error('createPost (no files) failed:', err);
+      throw err;
+    }
+  }
+
+  // ✅ With files: use multipart upload
   const formData = new FormData();
   formData.append(
     'operations',
     JSON.stringify({
       query,
-      variables: { input, media: files.length ? files.map(() => null) : [] },
+      variables: { input, media: files.map(() => null) },
     })
   );
-
-  if (files.length) {
-    formData.append(
-      'map',
-      JSON.stringify(
-        files.reduce((acc, _, i) => ({ ...acc, [i]: [`variables.media.${i}`] }), {})
-      )
-    );
-    files.forEach((file, i) => formData.append(i.toString(), file));
-  }
+  formData.append(
+    'map',
+    JSON.stringify(
+      files.reduce((acc, _, i) => ({ ...acc, [i]: [`variables.media.${i}`] }), {})
+    )
+  );
+  files.forEach((file, i) => formData.append(i.toString(), file));
 
   try {
     const response = await graphqlClient.post('', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    console.log('createPost response:', JSON.stringify(response.data, null, 2));
-    console.log('createPost response.data:', response.data);
-
-    if (response.data.errors) {
-      console.error('createPost GraphQL errors:', response.data.errors);
-      throw new Error('GraphQL errors: ' + JSON.stringify(response.data.errors));
-    }
-
-    if (!response.data.data || !response.data.data.createPost) {
-      console.error('createPost error: response.data.data is undefined', response.data);
-      throw new Error('GraphQL response does not contain createPost data');
-    }
-
-    console.log('createPost success:', response.data.data.createPost);
+    if (response.data.errors) throw new Error(response.data.errors[0].message);
     return response.data.data.createPost;
-  } catch (error) {
-    console.error('createPost failed:', error.message, error);
-    throw error;
+  } catch (err) {
+    console.error('createPost (with files) failed:', err);
+    throw err;
   }
 };

@@ -12,9 +12,9 @@ type Post {
     deleted_at: DateTime
     user: User
     parent: Post
-    children: [Post!]!
-    likes: [PostLike!]! @hasMany
-    shares: [PostShare!]!
-    groups: [Group!]!
-    media: [PostMedia!]! @hasMany
+    children: [Post]!
+    likes: [PostLike]! @hasMany
+    shares: [PostShare]!
+    groups: [Group]!
+    media: [PostMedia]! @hasMany
 }
