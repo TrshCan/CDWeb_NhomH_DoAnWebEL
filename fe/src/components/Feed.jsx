@@ -25,12 +25,13 @@ export default function Feed() {
   const [loading, setLoading] = useState(true);
   const [files, setFiles] = useState([]);
   const [user, setUser] = useState(null);
+
   // ✅ Load current user from localStorage + GraphQL
   useEffect(() => {
     const loadUser = async () => {
       const userId = localStorage.getItem("userId");
       if (!userId) {
-        toast.error("User not logged in");
+        console.warn("User not logged in");
         return;
       }
       try {
@@ -44,6 +45,7 @@ export default function Feed() {
     loadUser();
   }, []);
 
+  // ✅ Fetch posts
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
@@ -82,7 +84,7 @@ export default function Feed() {
     fetchPosts();
   }, [activeTab]);
 
-  // File validation
+  // ✅ File validation
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files);
     const MAX_FILES = 4;
@@ -110,7 +112,7 @@ export default function Feed() {
   // ✅ Create new post using logged-in user info
   const addPost = async () => {
     if (!user) {
-      toast.error("User not loaded");
+      toast.error("Please log in first.");
       return;
     }
 
@@ -132,7 +134,7 @@ export default function Feed() {
           id: newPost.id,
           type: newPost.type,
           user: newPost.user?.name || user.name || "You",
-          time: timeAgo(new Date().toISOString()),
+          time: timeAgo(new Date().toISOString()), // current time
           content: newPost.content,
           media: newPost.media
             ? newPost.media.map((m) =>
@@ -177,11 +179,12 @@ export default function Feed() {
         ))}
       </div>
 
-      {activeTab === "following" && (
+      {/* ✅ Only show Add Post if user is logged in */}
+      {activeTab === "following" && user && (
         <div className="bg-white rounded-lg shadow p-4 mb-4">
           <div className="flex items-center space-x-2 mb-2">
             <div className="w-10 h-10 bg-cyan-600 rounded-full"></div>
-            <p className="font-semibold text-cyan-600">You</p>
+            <p className="font-semibold text-cyan-600">{user.name}</p>
           </div>
 
           <textarea
@@ -302,6 +305,13 @@ export default function Feed() {
               Post
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 🚫 Show login prompt if not logged in */}
+      {activeTab === "following" && !user && (
+        <div className="bg-white rounded-lg shadow p-6 text-center text-gray-600">
+          <p>Please log in to create posts.</p>
         </div>
       )}
 
