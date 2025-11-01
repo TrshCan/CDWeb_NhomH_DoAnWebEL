@@ -87,7 +87,7 @@ export const createPost = async (input, files = []) => {
     'operations',
     JSON.stringify({
       query,
-      variables: { input, media: files.length ? files.map(() => null) : null },
+      variables: { input, media: files.length ? files.map(() => null) : [] },
     })
   );
 

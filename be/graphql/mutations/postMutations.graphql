@@ -1,6 +1,6 @@
 # be/graphql/mutations/postMutation.graphql
 extend type Mutation {
-    createPost(input: CreatePostInput!, media: [Upload!]): Post
+    createPost(input: CreatePostInput!, media: [Upload]): Post
         @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@create")
     updatePost(input: UpdatePostInput!): Post
         @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@update")
