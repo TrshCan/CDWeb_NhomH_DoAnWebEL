@@ -6,6 +6,7 @@ import Login from "./pages/Login.jsx";
 import MainLayout from "./layouts/MainLayout";
 import Feed from "./components/Feed";
 import Group from "./components/Group";
+import GroupDetail from "./components/GroupDetail";
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         {/* Nested pages render inside <Outlet /> */}
         <Route index element={<Feed />} />
         <Route path="group" element={<Group />} />
+        <Route path="group/:groupId" element={<GroupDetail />} />
         {/* Add more */}
       </Route>
       <Route path="/register" element={<Register />} />

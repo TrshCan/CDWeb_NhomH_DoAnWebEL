@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "../assets/css/group-component.css";
 import {
   sendJoinRequest,
@@ -8,6 +9,7 @@ import { getGroupsByUser, createGroup } from "../api/graphql/group";
 import "../assets/css/group-component.css";
 
 export default function Groups() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("pending");
   const [loading, setLoading] = useState(true);
   const [pendingGroups, setPendingGroups] = useState([]);
@@ -420,7 +422,10 @@ export default function Groups() {
                       {group.members} member{group.members !== 1 ? "s" : ""}
                     </p>
                   </div>
-                  <button className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition text-sm">
+                  <button
+                    onClick={() => navigate(`/group/${group.id}`)}
+                    className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 transition text-sm"
+                  >
                     View Group
                   </button>
                 </div>
