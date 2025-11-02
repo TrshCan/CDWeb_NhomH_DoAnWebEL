@@ -43,7 +43,35 @@ class GroupService
      */
     public function createGroup(array $data, ?int $userId = null): Group
     {
-        $userId = $userId ?? Auth::id();
+        $authenticatedUserId = Auth::id();
+        $userId = $userId ?? $authenticatedUserId;
+        
+        if (!$userId) {
+            throw new \Exception('User must be authenticated to create a group');
+        }
+
+        // Verify user exists and get user object
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            throw new \Exception('User not found');
+        }
+
+        // Security check: Only lecturers and admins can create groups
+        if ($user->role !== 'lecturer' && $user->role !== 'admin') {
+            throw new \Exception('Only lecturers and admins can create groups');
+        }
+
+        // Additional security: Verify userId matches authenticated user
+        // Unless authenticated user is admin (admins can create on behalf of others)
+        if ($authenticatedUserId) {
+            $authenticatedUser = \App\Models\User::find($authenticatedUserId);
+            if ($authenticatedUser && $authenticatedUser->role !== 'admin') {
+                if ($userId != $authenticatedUserId) {
+                    throw new \Exception('You can only create groups for yourself');
+                }
+            }
+        }
+
         $data['created_by'] = $data['created_by'] ?? $userId;
         $data['code'] = strtoupper(Str::random(6));
 
