@@ -50,14 +50,16 @@ class GroupService
         $group = $this->groupRepo->create($data);
 
         // Automatically add creator as a member with admin role
-        if ($userId) {
+        // Check if user is not already a member (shouldn't happen on create, but safety check)
+        if ($userId && !$group->users()->where('users.id', $userId)->exists()) {
             $group->users()->attach($userId, [
                 'role' => 'admin',
                 'joined_at' => now(),
             ]);
         }
 
-        return $group;
+        // Reload the group to ensure relationships are fresh
+        return $group->fresh(['creator', 'users']);
     }
 
     /**
