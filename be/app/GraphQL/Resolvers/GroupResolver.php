@@ -102,4 +102,15 @@ class GroupResolver
         }
         return new Collection();
     }
+
+    /**
+     * Query: Check if user is a member of a specific group
+     */
+    public function isUserMemberOfGroup($root, array $args): bool
+    {
+        return $this->groupService->isUserMemberOfGroup(
+            $args['userId'],
+            $args['groupId']
+        );
+    }
 }

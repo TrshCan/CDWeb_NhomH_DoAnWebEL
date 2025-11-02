@@ -119,4 +119,28 @@ class GroupService
 
         return $allGroups;
     }
+
+    /**
+     * Check if user is a member of a specific group or is the creator
+     */
+    public function isUserMemberOfGroup(int $userId, int $groupId): bool
+    {
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            return false;
+        }
+
+        $group = $this->groupRepo->findById($groupId);
+        if (!$group) {
+            return false;
+        }
+
+        // Check if user is the creator
+        if ($group->created_by === $userId) {
+            return true;
+        }
+
+        // Check if user is a member
+        return $user->groups()->where('groups.id', $groupId)->exists();
+    }
 }

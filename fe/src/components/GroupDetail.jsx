@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import PostCard from "./PostCard";
 import { getPostsByGroup, createPost } from "../api/graphql/post";
-import { getGroupsByUser } from "../api/graphql/group";
+import { getGroupsByUser, isUserMemberOfGroup } from "../api/graphql/group";
 
 function timeAgo(createdAt) {
   const created = new Date(createdAt);
@@ -27,6 +27,8 @@ export default function GroupDetail() {
   const [loading, setLoading] = useState(true);
   const [groupInfo, setGroupInfo] = useState(null);
   const [files, setFiles] = useState([]);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   // Get user info
   const getUserFromStorage = () => {
@@ -44,23 +46,65 @@ export default function GroupDetail() {
 
   useEffect(() => {
     const fetchGroupData = async () => {
-      if (!groupId) return;
+      if (!groupId) {
+        setAccessDenied(true);
+        setLoading(false);
+        return;
+      }
+
+      // Validate groupId is numeric
+      if (isNaN(parseInt(groupId))) {
+        toast.error("Invalid group ID");
+        setAccessDenied(true);
+        setLoading(false);
+        navigate("/group");
+        return;
+      }
 
       try {
         setLoading(true);
         
+        // Check if user is logged in
+        if (!user?.id) {
+          toast.error("Please log in to view this group");
+          setAccessDenied(true);
+          setLoading(false);
+          setTimeout(() => navigate("/group"), 2000);
+          return;
+        }
+
+        // Check if user is a member of this group
+        const isMember = await isUserMemberOfGroup(user.id, groupId);
+        
+        if (!isMember) {
+          toast.error("You don't have access to this group");
+          setAccessDenied(true);
+          setLoading(false);
+          setTimeout(() => navigate("/group"), 2000);
+          return;
+        }
+
+        setIsAuthorized(true);
+        
         // Fetch group info from user's groups
-        if (user?.id) {
-          const userGroups = await getGroupsByUser(user.id);
-          const group = userGroups.find((g) => String(g.id) === String(groupId));
-          if (group) {
-            setGroupInfo({
-              id: group.id,
-              name: group.name,
-              description: group.description,
-              code: group.code,
-            });
-          }
+        const userGroups = await getGroupsByUser(user.id);
+        const group = userGroups.find((g) => String(g.id) === String(groupId));
+        
+        if (group) {
+          setGroupInfo({
+            id: group.id,
+            name: group.name,
+            description: group.description,
+            code: group.code,
+          });
+        } else {
+          // Fallback: group exists and user is member but not in their groups list
+          setGroupInfo({
+            id: groupId,
+            name: "Group",
+            description: "",
+            code: "",
+          });
         }
 
         // Fetch posts for this group
@@ -86,13 +130,15 @@ export default function GroupDetail() {
       } catch (err) {
         console.error("Failed to fetch group data:", err);
         toast.error("Failed to load group data.");
+        setAccessDenied(true);
+        setTimeout(() => navigate("/group"), 2000);
       } finally {
         setLoading(false);
       }
     };
 
     fetchGroupData();
-  }, [groupId, user?.id]);
+  }, [groupId, user?.id, navigate]);
 
   // File validation
   const handleFileChange = (e) => {
@@ -173,6 +219,39 @@ export default function GroupDetail() {
   const handleBack = () => {
     navigate("/group");
   };
+
+  // Show access denied message
+  if (accessDenied) {
+    return (
+      <main className="w-full lg:w-2/3">
+        <Toaster position="top-right" />
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            You don't have permission to view this group.
+          </p>
+          <button
+            onClick={handleBack}
+            className="bg-cyan-600 text-white px-6 py-2 rounded-full hover:bg-cyan-700 transition"
+          >
+            Back to Groups
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  // Show loading state
+  if (loading || !isAuthorized) {
+    return (
+      <main className="w-full lg:w-2/3">
+        <Toaster position="top-right" />
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <p className="text-gray-500">Loading group...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="w-full lg:w-2/3">

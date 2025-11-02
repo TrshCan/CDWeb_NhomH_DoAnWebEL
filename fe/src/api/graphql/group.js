@@ -113,3 +113,35 @@ export const createGroup = async (name, description, userId) => {
     throw error;
   }
 };
+
+export const isUserMemberOfGroup = async (userId, groupId) => {
+  // Validate groupId is numeric
+  if (!groupId || isNaN(parseInt(groupId))) {
+    return false;
+  }
+
+  const query = `
+    query ($userId: ID!, $groupId: ID!) {
+      isUserMemberOfGroup(userId: $userId, groupId: $groupId)
+    }
+  `;
+
+  const variables = {
+    userId: userId.toString(),
+    groupId: groupId.toString(),
+  };
+
+  try {
+    const response = await graphqlClient.post("", { query, variables });
+    
+    if (response.data.errors) {
+      console.error("GraphQL errors:", response.data.errors);
+      return false;
+    }
+
+    return response.data.data.isUserMemberOfGroup || false;
+  } catch (error) {
+    console.error("isUserMemberOfGroup failed:", error);
+    return false;
+  }
+};

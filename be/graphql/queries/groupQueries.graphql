@@ -4,4 +4,5 @@ extend type Query {
   groupByCode(code: String!): Group @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@findByCode")
   searchGroups(keyword: String!): [Group!] @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@search")
   groupsByUser(userId: ID!): [Group!] @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@groupsByUser")
+  isUserMemberOfGroup(userId: ID!, groupId: ID!): Boolean! @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@isUserMemberOfGroup")
 }
