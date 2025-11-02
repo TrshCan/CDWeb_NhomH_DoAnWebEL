@@ -7,5 +7,5 @@ type Group {
   created_at: DateTime
   updated_at: DateTime
   creator: User
-  members: [User!]
+  members: [User!] @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@members")
 }

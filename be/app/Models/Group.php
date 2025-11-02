@@ -43,8 +43,7 @@ class Group extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'group_members')
-            ->withPivot(['role', 'joined_at'])
-            ->withTimestamps(); // group_members có softDeletes nhưng không có created/updated; nếu không muốn timestamps thì bỏ dòng này.
+            ->withPivot(['role', 'joined_at']);
     }
 
     public function isCreatedBy(User $user): bool

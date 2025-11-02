@@ -45,7 +45,12 @@ class GroupResolver
      */
     public function create($root, array $args): Group
     {
-        return $this->groupService->createGroup($args);
+        // Get userId from args if provided, otherwise use Auth (if available)
+        $userId = $args['userId'] ?? null;
+        // Remove userId from args before passing to service
+        $data = $args;
+        unset($data['userId']);
+        return $this->groupService->createGroup($data, $userId);
     }
 
     /**
@@ -70,5 +75,31 @@ class GroupResolver
     public function search($root, array $args): Collection
     {
         return $this->groupService->searchGroups($args['keyword']);
+    }
+
+    /**
+     * Query: Get groups by user ID (groups that user is a member of)
+     */
+    public function groupsByUser($root, array $args): Collection
+    {
+        return $this->groupService->getGroupsByUserId($args['userId']);
+    }
+
+    /**
+     * Field resolver: Get users/members of a group
+     */
+    public function members($root): Collection
+    {
+        if ($root instanceof Group) {
+            // Load users relationship if not already loaded
+            if (!$root->relationLoaded('users')) {
+                $root->load('users');
+            }
+            // Filter out any users with null names to prevent GraphQL errors
+            return $root->users->filter(function ($user) {
+                return !is_null($user->name);
+            })->values();
+        }
+        return new Collection();
     }
 }

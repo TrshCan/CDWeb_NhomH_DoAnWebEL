@@ -60,6 +60,14 @@ class User extends Authenticatable
         return $this->hasMany(Post::class, 'user_id');
     }
 
+    // User belongs to many groups through group_members
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class, 'group_members', 'user_id', 'group_id')
+            ->withPivot(['role', 'joined_at'])
+            ->wherePivotNull('deleted_at');
+    }
+
     // ============================
     // 🔹 HELPER / LOGIC METHODS
     // ============================

@@ -1,5 +1,5 @@
 extend type Mutation {
-  createGroup(name: String!, description: String): Group @field(resolver: "GroupResolver@create")
-  updateGroup(id: ID!, name: String, description: String): Group @field(resolver: "GroupResolver@update")
-  deleteGroup(id: ID!): Boolean @field(resolver: "GroupResolver@delete")
+  createGroup(name: String!, description: String, userId: ID): Group @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@create")
+  updateGroup(id: ID!, name: String, description: String): Group @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@update")
+  deleteGroup(id: ID!): Boolean @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@delete")
 }

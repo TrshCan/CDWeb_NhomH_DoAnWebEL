@@ -41,12 +41,23 @@ class GroupService
     /**
      * Create a new group
      */
-    public function createGroup(array $data): Group
+    public function createGroup(array $data, ?int $userId = null): Group
     {
-        $data['created_by'] = $data['created_by'] ?? Auth::id();
+        $userId = $userId ?? Auth::id();
+        $data['created_by'] = $data['created_by'] ?? $userId;
         $data['code'] = strtoupper(Str::random(6));
 
-        return $this->groupRepo->create($data);
+        $group = $this->groupRepo->create($data);
+
+        // Automatically add creator as a member with admin role
+        if ($userId) {
+            $group->users()->attach($userId, [
+                'role' => 'admin',
+                'joined_at' => now(),
+            ]);
+        }
+
+        return $group;
     }
 
     /**
@@ -83,5 +94,29 @@ class GroupService
     public function searchGroups(string $keyword): Collection
     {
         return $this->groupRepo->search($keyword);
+    }
+
+    /**
+     * Get groups that a user is a member of AND groups created by the user
+     */
+    public function getGroupsByUserId(int $userId): Collection
+    {
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            return new Collection();
+        }
+
+        // Get groups the user is a member of
+        $joinedGroups = $user->groups()->with(['creator', 'users'])->get();
+
+        // Get groups created by the user (but not already in joined groups)
+        $createdGroups = Group::where('created_by', $userId)
+            ->with(['creator', 'users'])
+            ->get();
+
+        // Merge and remove duplicates
+        $allGroups = $joinedGroups->merge($createdGroups)->unique('id');
+
+        return $allGroups;
     }
 }
