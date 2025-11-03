@@ -30,7 +30,7 @@ export default function PublishAccessForm({ value, onChange }) {
 
   const baseFieldCls =
     "w-full border border-gray-300 rounded-md px-4 py-2 pr-12 text-gray-800 " +
-    "focus:border-violet-600 focus:shadow-md " + // 1 viền duy nhất khi focus
+    "focus:border-violet-600 focus:shadow-md " +
     "hover:bg-violet-50 hover:border-violet-500 transition-colors input-no-indicator";
 
   const startInput = useMemo(
@@ -39,9 +39,8 @@ export default function PublishAccessForm({ value, onChange }) {
   );
   const endInput = useMemo(() => toLocalInputValue(form.end_at), [form.end_at]);
 
-  // Validate chi tiết
   const validate = (startISO, endISO) => {
-    if (!startISO && !endISO) return ""; // chưa nhập gì
+    if (!startISO && !endISO) return "";
     if (!startISO) return "Vui lòng chọn ngày/giờ bắt đầu.";
     if (!endISO) return "Vui lòng chọn ngày/giờ kết thúc.";
     const start = new Date(startISO);
@@ -56,41 +55,41 @@ export default function PublishAccessForm({ value, onChange }) {
     setError(validate(form.start_at, form.end_at));
   }, [form.start_at, form.end_at]);
 
-  // Commit lưu + toast xanh (chỉ khi giá trị thật sự đổi)
+  // ✅ FIX chính: không reset giá trị khác khi commit
   const commitIfValidAndChanged = (key, nextISO) => {
     const prevISO = committedRef.current[key];
-    if (nextISO === prevISO) return; // không đổi -> thôi
+    if (nextISO === prevISO) return;
 
-    const startISO = key === "start_at" ? nextISO : form.start_at;
-    const endISO = key === "end_at" ? nextISO : form.end_at;
-
-    const msg = validate(startISO, endISO);
+    const nextForm = { ...form, [key]: nextISO }; // merge trực tiếp vào form
+    const msg = validate(nextForm.start_at, nextForm.end_at);
     if (msg) {
-      // lỗi -> toast đỏ ngay, không lưu
       setError(msg);
       if (msg !== lastErrorRef.current) {
         lastErrorRef.current = msg;
         toast.error(msg, {
           id: "pubdate-error",
           style: { background: "#dc2626", color: "#fff" },
-        }); // đỏ
+        });
       }
       return;
     }
 
-    // hợp lệ -> xoá lỗi, lưu + toast xanh
     lastErrorRef.current = "";
     toast.dismiss("pubdate-error");
-    committedRef.current[key] = nextISO;
-    onChange?.({ ...committedRef.current });
+
+    // ✅ cập nhật cả state + committedRef
+    setForm(nextForm);
+    committedRef.current = { ...nextForm };
+
+    onChange?.(nextForm); // gửi toàn bộ form (không mất giá trị cũ)
+
     setError("");
     toast.success("Đã lưu thay đổi ✅", {
       id: `pubdate-ok-${key}`,
       style: { background: "#16a34a", color: "#fff" },
-    }); // xanh
+    });
   };
 
-  // onChange cho datetime: cập nhật state, validate và AUTO-COMMIT (không cần blur)
   const handleDateChange = (key, rawValue) => {
     const iso = rawValue ? new Date(rawValue).toISOString() : "";
     const nextForm = { ...form, [key]: iso };
@@ -99,11 +98,9 @@ export default function PublishAccessForm({ value, onChange }) {
     const msg = validate(nextForm.start_at, nextForm.end_at);
     setError(msg);
 
-    // Tự lưu ngay khi hợp lệ
     if (!msg) {
       commitIfValidAndChanged(key, iso);
     } else {
-      // Báo lỗi ngay
       if (msg !== lastErrorRef.current) {
         lastErrorRef.current = msg;
         toast.error(msg, {
@@ -148,7 +145,6 @@ export default function PublishAccessForm({ value, onChange }) {
 
   return (
     <>
-      {/* Ẩn icon lịch mặc định để không bị icon đôi */}
       <style>{`
         .input-no-indicator::-webkit-calendar-picker-indicator { opacity: 0; display: none; }
         .input-no-indicator::-webkit-clear-button { display: none; }
@@ -173,10 +169,6 @@ export default function PublishAccessForm({ value, onChange }) {
               className={baseFieldCls}
               value={startInput}
               onChange={(e) => handleDateChange("start_at", e.target.value)}
-              // vẫn để onBlur, nhưng commit đã xảy ra ngay onChange khi hợp lệ
-              onBlur={() => {
-                /* no-op */
-              }}
             />
             <button
               type="button"
@@ -201,9 +193,6 @@ export default function PublishAccessForm({ value, onChange }) {
               className={baseFieldCls}
               value={endInput}
               onChange={(e) => handleDateChange("end_at", e.target.value)}
-              onBlur={() => {
-                /* no-op */
-              }}
             />
             <button
               type="button"
@@ -216,7 +205,6 @@ export default function PublishAccessForm({ value, onChange }) {
           </div>
         </div>
 
-        {/* Lỗi hiển thị trực tiếp dưới form */}
         {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
       </div>
     </>
