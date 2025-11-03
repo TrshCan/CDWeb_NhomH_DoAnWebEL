@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import toast from "react-hot-toast";
 
-// Chuẩn hoá giá trị datetime-local
+// format value cho <input type="datetime-local">
 function toLocalInputValue(v) {
   if (!v) return "";
   const d = new Date(v);
@@ -17,15 +18,20 @@ export default function PublishAccessForm({ value, onChange }) {
 
   const startRef = useRef(null);
   const endRef = useRef(null);
+  const committedRef = useRef({ start_at: "", end_at: "" });
+  const lastErrorRef = useRef("");
 
   useEffect(() => {
-    if (value) setForm((f) => ({ ...f, ...value }));
+    if (value) {
+      setForm((f) => ({ ...f, ...value }));
+      committedRef.current = { ...value };
+    }
   }, [value]);
 
   const baseFieldCls =
-    "w-full border border-gray-300 rounded-md px-4 py-2 pr-12 text-gray-800 " + // pr-12 để chừa chỗ cho icon
-    "focus:border-violet-600 " +
-    "hover:border-violet-500 transition-colors input-no-indicator";
+    "w-full border border-gray-300 rounded-md px-4 py-2 pr-12 text-gray-800 " +
+    "focus:border-violet-600 focus:shadow-md " + // 1 viền duy nhất khi focus
+    "hover:bg-violet-50 hover:border-violet-500 transition-colors input-no-indicator";
 
   const startInput = useMemo(
     () => toLocalInputValue(form.start_at),
@@ -33,20 +39,81 @@ export default function PublishAccessForm({ value, onChange }) {
   );
   const endInput = useMemo(() => toLocalInputValue(form.end_at), [form.end_at]);
 
-  const update = (key, val) => setForm((p) => ({ ...p, [key]: val }));
-  const blurPush = (key) => onChange?.({ ...form, [key]: form[key] });
+  // Validate chi tiết
+  const validate = (startISO, endISO) => {
+    if (!startISO && !endISO) return ""; // chưa nhập gì
+    if (!startISO) return "Vui lòng chọn ngày/giờ bắt đầu.";
+    if (!endISO) return "Vui lòng chọn ngày/giờ kết thúc.";
+    const start = new Date(startISO);
+    const end = new Date(endISO);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()))
+      return "Thời gian không hợp lệ.";
+    if (end < start) return "Ngày/giờ kết thúc phải sau ngày/giờ bắt đầu.";
+    return "";
+  };
 
   useEffect(() => {
-    if (
-      form.start_at &&
-      form.end_at &&
-      new Date(form.end_at) < new Date(form.start_at)
-    ) {
-      setError("⚠️ Ngày/giờ kết thúc phải sau ngày/giờ bắt đầu.");
-    } else setError("");
+    setError(validate(form.start_at, form.end_at));
   }, [form.start_at, form.end_at]);
 
-  // Icon lịch (màu đen)
+  // Commit lưu + toast xanh (chỉ khi giá trị thật sự đổi)
+  const commitIfValidAndChanged = (key, nextISO) => {
+    const prevISO = committedRef.current[key];
+    if (nextISO === prevISO) return; // không đổi -> thôi
+
+    const startISO = key === "start_at" ? nextISO : form.start_at;
+    const endISO = key === "end_at" ? nextISO : form.end_at;
+
+    const msg = validate(startISO, endISO);
+    if (msg) {
+      // lỗi -> toast đỏ ngay, không lưu
+      setError(msg);
+      if (msg !== lastErrorRef.current) {
+        lastErrorRef.current = msg;
+        toast.error(msg, {
+          id: "pubdate-error",
+          style: { background: "#dc2626", color: "#fff" },
+        }); // đỏ
+      }
+      return;
+    }
+
+    // hợp lệ -> xoá lỗi, lưu + toast xanh
+    lastErrorRef.current = "";
+    toast.dismiss("pubdate-error");
+    committedRef.current[key] = nextISO;
+    onChange?.({ ...committedRef.current });
+    setError("");
+    toast.success("Đã lưu thay đổi ✅", {
+      id: `pubdate-ok-${key}`,
+      style: { background: "#16a34a", color: "#fff" },
+    }); // xanh
+  };
+
+  // onChange cho datetime: cập nhật state, validate và AUTO-COMMIT (không cần blur)
+  const handleDateChange = (key, rawValue) => {
+    const iso = rawValue ? new Date(rawValue).toISOString() : "";
+    const nextForm = { ...form, [key]: iso };
+    setForm(nextForm);
+
+    const msg = validate(nextForm.start_at, nextForm.end_at);
+    setError(msg);
+
+    // Tự lưu ngay khi hợp lệ
+    if (!msg) {
+      commitIfValidAndChanged(key, iso);
+    } else {
+      // Báo lỗi ngay
+      if (msg !== lastErrorRef.current) {
+        lastErrorRef.current = msg;
+        toast.error(msg, {
+          id: "pubdate-error",
+          style: { background: "#dc2626", color: "#fff" },
+        });
+      }
+    }
+  };
+
   const CalendarIcon = () => (
     <svg
       width="20px"
@@ -73,7 +140,6 @@ export default function PublishAccessForm({ value, onChange }) {
 
   const openPicker = (ref) => {
     if (ref.current) {
-      // Chromium hỗ trợ showPicker(); nếu không có, fallback focus
       if (typeof ref.current.showPicker === "function")
         ref.current.showPicker();
       else ref.current.focus();
@@ -82,16 +148,11 @@ export default function PublishAccessForm({ value, onChange }) {
 
   return (
     <>
-      {/* CSS ẩn icon lịch mặc định của trình duyệt */}
+      {/* Ẩn icon lịch mặc định để không bị icon đôi */}
       <style>{`
-        /* Chrome, Edge, Safari (WebKit) */
-        .input-no-indicator::-webkit-calendar-picker-indicator {
-          opacity: 0;
-          display: none;
-        }
+        .input-no-indicator::-webkit-calendar-picker-indicator { opacity: 0; display: none; }
         .input-no-indicator::-webkit-clear-button { display: none; }
         .input-no-indicator::-webkit-inner-spin-button { display: none; }
-        /* Firefox hầu như không hiện indicator nên không cần */
       `}</style>
 
       <div className="bg-white rounded-md shadow border border-gray-200 p-10 max-w-3xl mx-auto mt-8">
@@ -111,16 +172,12 @@ export default function PublishAccessForm({ value, onChange }) {
               type="datetime-local"
               className={baseFieldCls}
               value={startInput}
-              onChange={(e) =>
-                update(
-                  "start_at",
-                  e.target.value ? new Date(e.target.value).toISOString() : ""
-                )
-              }
-              onBlur={() => blurPush("start_at")}
-              placeholder="MM/DD/YYYY hh:mm"
+              onChange={(e) => handleDateChange("start_at", e.target.value)}
+              // vẫn để onBlur, nhưng commit đã xảy ra ngay onChange khi hợp lệ
+              onBlur={() => {
+                /* no-op */
+              }}
             />
-            {/* Icon tuỳ biến duy nhất */}
             <button
               type="button"
               aria-label="Open date picker"
@@ -143,14 +200,10 @@ export default function PublishAccessForm({ value, onChange }) {
               type="datetime-local"
               className={baseFieldCls}
               value={endInput}
-              onChange={(e) =>
-                update(
-                  "end_at",
-                  e.target.value ? new Date(e.target.value).toISOString() : ""
-                )
-              }
-              onBlur={() => blurPush("end_at")}
-              placeholder="MM/DD/YYYY hh:mm"
+              onChange={(e) => handleDateChange("end_at", e.target.value)}
+              onBlur={() => {
+                /* no-op */
+              }}
             />
             <button
               type="button"
@@ -163,7 +216,8 @@ export default function PublishAccessForm({ value, onChange }) {
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+        {/* Lỗi hiển thị trực tiếp dưới form */}
+        {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
       </div>
     </>
   );

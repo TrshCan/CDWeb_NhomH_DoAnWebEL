@@ -11,6 +11,8 @@ import SettingsPanel from "./components/SettingsPanel";
 import GeneralSettingsForm from "./components/GeneralSettingsForm";
 import PublishAccessForm from "./components/PublishAccessForm";
 
+import { Toaster } from "react-hot-toast";
+
 export default function App() {
   const [activeSection, setActiveSection] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -231,6 +233,16 @@ export default function App() {
         isOpen={isModalOpen}
         onClose={handleToggleModal}
         onSelectQuestionType={handleSelectQuestionType}
+      />
+
+      {/* Toaster hiển thị toast ở góc trên bên phải */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 2500,
+          success: { style: { background: "#16a34a", color: "#fff" } }, // green-600
+          error: { style: { background: "#dc2626", color: "#fff" } }, // red-600
+        }}
       />
     </>
   );
