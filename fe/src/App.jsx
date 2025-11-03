@@ -9,14 +9,15 @@ import SidebarRail from "./components/SidebarRail";
 import StructurePanel from "./components/StructurePanel";
 import SettingsPanel from "./components/SettingsPanel";
 import GeneralSettingsForm from "./components/GeneralSettingsForm";
+import PublishAccessForm from "./components/PublishAccessForm";
 
 export default function App() {
   const [activeSection, setActiveSection] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // chỉ 2 panel: null | 'structure' | 'settings'
+  // panel: null | 'structure' | 'settings'
   const [openPanel, setOpenPanel] = useState(null);
-  const [settingsTab, setSettingsTab] = useState("publish");
+  const [settingsTab, setSettingsTab] = useState("general"); // luôn vào Tổng quát đầu tiên
 
   const [questionItems, setQuestionItems] = useState([
     {
@@ -27,12 +28,19 @@ export default function App() {
     },
   ]);
 
+  // STATE: Tổng quát (5 field)
   const [generalSettings, setGeneralSettings] = useState({
     title: "",
     type: "survey",
     object: "public",
     base_language: "vi",
     owner: "",
+  });
+
+  // STATE: Xuất bản & truy cập (thời gian)
+  const [publishSettings, setPublishSettings] = useState({
+    start_at: "",
+    end_at: "",
   });
 
   // Khi mở panel "settings", luôn đưa về tab Tổng quát
@@ -95,7 +103,6 @@ export default function App() {
   // ===== Panel bên trái =====
   const renderLeftPanel = () => {
     if (!openPanel) return null;
-
     return (
       <div
         className="fixed inset-y-0 left-[55px] w-72 z-40"
@@ -157,7 +164,6 @@ export default function App() {
         onClick={() => setActiveSection(null)}
       >
         <SidebarRail active={openPanel} onOpen={handleOpenPanel} />
-
         {renderLeftPanel()}
 
         <div
@@ -165,13 +171,19 @@ export default function App() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="max-w-4xl mx-auto p-4 overflow-visible relative isolate">
-            {/* Nếu đang mở Settings + tab là "Tổng quát" → CHỈ hiển thị form Tổng quát */}
-            {openPanel === "settings" && settingsTab === "general" ? (
-              <GeneralSettingsForm
-                value={generalSettings}
-                onChange={setGeneralSettings}
-                onSubmit={(val) => setGeneralSettings(val)}
-              />
+            {/* Khi đang ở Settings -> CHỈ hiển thị form theo tab; ẩn toàn bộ phần survey */}
+            {openPanel === "settings" ? (
+              settingsTab === "general" ? (
+                <GeneralSettingsForm
+                  value={generalSettings}
+                  onChange={setGeneralSettings}
+                />
+              ) : settingsTab === "publish" ? (
+                <PublishAccessForm
+                  value={publishSettings}
+                  onChange={setPublishSettings}
+                />
+              ) : null
             ) : (
               <>
                 {/* Welcome Section */}
