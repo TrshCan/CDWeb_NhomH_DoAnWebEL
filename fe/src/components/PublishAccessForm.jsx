@@ -24,8 +24,8 @@ export default function PublishAccessForm({ value, onChange }) {
 
   const baseFieldCls =
     "w-full border border-gray-300 rounded-md px-4 py-2 pr-12 text-gray-800 " + // pr-12 để chừa chỗ cho icon
-    "focus:ring-2 focus:ring-violet-600 focus:border-violet-600 " +
-    "hover:bg-violet-50 hover:border-violet-500 transition-colors input-no-indicator";
+    "focus:border-violet-600 " +
+    "hover:border-violet-500 transition-colors input-no-indicator";
 
   const startInput = useMemo(
     () => toLocalInputValue(form.start_at),

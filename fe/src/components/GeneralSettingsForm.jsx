@@ -18,8 +18,8 @@ export default function GeneralSettingsForm({ value, onChange }) {
 
   const baseFieldCls =
     "w-full border border-gray-300 rounded-md px-4 py-2 text-gray-800 " +
-    "focus:ring-2 focus:ring-violet-600 focus:border-violet-600 " +
-    "focus:text-violet-700 hover:bg-violet-50 hover:border-violet-500 transition-colors";
+    "focus:border-violet-600 " +
+    "hover:bg-violet-50 hover:border-violet-500 transition-colors";
 
   return (
     <div className="bg-white rounded-md shadow border border-gray-200 p-10 max-w-3xl mx-auto mt-8">
@@ -27,9 +27,7 @@ export default function GeneralSettingsForm({ value, onChange }) {
 
       {/* Tên khảo sát */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tên khảo sát
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Tên khảo sát</label>
         <input
           type="text"
           className={baseFieldCls}
@@ -42,9 +40,7 @@ export default function GeneralSettingsForm({ value, onChange }) {
 
       {/* Loại khảo sát */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Loại khảo sát
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Loại khảo sát</label>
         <select
           className={baseFieldCls}
           value={form.type}
@@ -58,9 +54,7 @@ export default function GeneralSettingsForm({ value, onChange }) {
 
       {/* Đối tượng khảo sát */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Đối tượng khảo sát
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Đối tượng khảo sát</label>
         <select
           className={baseFieldCls}
           value={form.object}
@@ -76,9 +70,7 @@ export default function GeneralSettingsForm({ value, onChange }) {
 
       {/* Ngôn ngữ cơ sở */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Ngôn ngữ cơ sở
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Ngôn ngữ cơ sở</label>
         <select
           className={baseFieldCls}
           value={form.base_language}
@@ -92,9 +84,7 @@ export default function GeneralSettingsForm({ value, onChange }) {
 
       {/* Người tạo khảo sát */}
       <div className="mb-2">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Người tạo khảo sát
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Người tạo khảo sát</label>
         <input
           type="text"
           className={baseFieldCls}
