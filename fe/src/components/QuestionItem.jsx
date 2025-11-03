@@ -32,12 +32,12 @@ export default function QuestionItem({
             <EditableField
               placeholder="Your question here"
               initialValue={question.text}
-              inputClassName="text-lg text-gray-800"
+              inputClassName="text-lg text-gray-800 font-thin text-[25px]"
             />
             <EditableField
               placeholder="Optional help description"
               initialValue={question.helpText}
-              inputClassName="text-sm text-gray-500 mt-1"
+              inputClassName="text-sm text-gray-500 mt-1 "
             />
           </div>
         </div>
