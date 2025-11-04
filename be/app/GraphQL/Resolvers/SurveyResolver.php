@@ -104,7 +104,31 @@ class SurveyResolver
     }
     public function deleteSurvey($_, array $args)
     {
-        return $this->service->deleteSurvey($args['id']);
+        try {
+            return $this->service->deleteSurvey($args['id']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw new \Nuwave\Lighthouse\Exceptions\ValidationException(
+                'Validation failed.',
+                $e->validator
+            );
+        } catch (\Exception $e) {
+            $category = 'INTERNAL_SERVER_ERROR';
+            $code = (int) $e->getCode();
+            if ($code === 404) {
+                $category = 'NOT_FOUND';
+            } elseif ($code === 403) {
+                $category = 'FORBIDDEN';
+            }
+            throw new \GraphQL\Error\Error(
+                $e->getMessage(),
+                null,
+                null,
+                [],
+                null,
+                $e,
+                ['category' => $category]
+            );
+        }
     }
     /**
      * 🔍 Xem chi tiết khảo sát theo ID

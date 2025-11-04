@@ -83,13 +83,37 @@ const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
               <svg className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               Điểm thưởng
             </div>
-            <div className="mt-2 text-2xl font-bold text-amber-700">{selectedSurvey.points} điểm</div>
+            <div className="mt-2 text-2xl font-bold text-amber-700">{selectedSurvey.type === 'quiz' ? `${selectedSurvey.points} điểm` : '—'}</div>
           </div>
-          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-purple-50 to-pink-50 p-5 shadow-sm md:col-span-2">
-            <div className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Đối tượng</div>
+          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-emerald-50 to-green-50 p-5 shadow-sm">
+            <div className="text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-2">
+              <svg className="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8m4-4H8"/></svg>
+              Giới hạn thời gian
+            </div>
+            <div className="mt-2 text-base font-semibold text-gray-900">{selectedSurvey.timeLimit ? `${selectedSurvey.timeLimit} phút` : 'Không giới hạn'}</div>
+          </div>
+          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-purple-50 to-pink-50 p-5 shadow-sm">
+            <div className="text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Đối tượng</div>
             <div className="inline-flex items-center gap-3 rounded-full bg-purple-100 px-5 py-3 text-base font-semibold text-purple-800 border-2 border-purple-200">
               <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M9 20H4v-2a3 3 0 015.356-1.857M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               {selectedSurvey.object === 'public' ? 'Công khai' : selectedSurvey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border-2 border-gray-200 bg-white p-5 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Danh mục</div>
+              <div className="mt-1 text-sm font-medium text-gray-900">{selectedSurvey.category}</div>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Loại</div>
+              <div className="mt-1 text-sm font-medium text-gray-900">{selectedSurvey.type === 'survey' ? 'Survey' : 'Quiz'}</div>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Trạng thái</div>
+              <div className="mt-1 text-sm font-medium text-gray-900">{statusConfig[selectedSurvey.status]?.label}</div>
             </div>
           </div>
         </div>
@@ -191,6 +215,20 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
         />
       </div>
       <div>
+        <label className="block text-left font-semibold mb-2">Giới hạn thời gian (phút)</label>
+        <input
+          type="number"
+          min="1"
+          value={editForm.timeLimit}
+          onChange={(e) => onChange.timeLimit(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          placeholder="Ví dụ: 30"
+        />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4">
+      <div>
         <label className="block text-left font-semibold mb-2">Đối tượng</label>
         <select
           value={editForm.object}
@@ -204,21 +242,20 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
           <option value="lecturers">Giảng viên</option>
         </select>
       </div>
-    </div>
-
-    <div>
-      <label className="block text-left font-semibold mb-2">Trạng thái</label>
-      <select
-        value={editForm.status}
-        onChange={(e) => onChange.status(e.target.value)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-        required
-      >
-        <option value="">Chọn trạng thái</option>
-        {statuses.filter(s => s).map(s => (
-          <option key={s} value={s}>{statusConfig[s]?.label}</option>
-        ))}
-      </select>
+      <div>
+        <label className="block text-left font-semibold mb-2">Trạng thái</label>
+        <select
+          value={editForm.status}
+          onChange={(e) => onChange.status(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          required
+        >
+          <option value="">Chọn trạng thái</option>
+          {statuses.filter(s => s).map(s => (
+            <option key={s} value={s}>{statusConfig[s]?.label}</option>
+          ))}
+        </select>
+      </div>
     </div>
   </form>
 );
@@ -316,6 +353,20 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
         />
       </div>
       <div>
+        <label className="block text-left font-semibold mb-2">Giới hạn thời gian (phút)</label>
+        <input
+          type="number"
+          min="1"
+          value={addForm.timeLimit}
+          onChange={(e) => onChange.timeLimit(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          placeholder="Ví dụ: 30"
+        />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4">
+      <div>
         <label className="block text-left font-semibold mb-2">Đối tượng</label>
         <select
           value={addForm.object}
@@ -329,21 +380,20 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
           <option value="lecturers">Giảng viên</option>
         </select>
       </div>
-    </div>
-
-    <div>
-      <label className="block text-left font-semibold mb-2">Trạng thái</label>
-      <select
-        value={addForm.status}
-        onChange={(e) => onChange.status(e.target.value)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-        required
-      >
-        <option value="">Chọn trạng thái</option>
-        {statuses.filter(s => s).map(s => (
-          <option key={s} value={s}>{statusConfig[s]?.label}</option>
-        ))}
-      </select>
+      <div>
+        <label className="block text-left font-semibold mb-2">Trạng thái</label>
+        <select
+          value={addForm.status}
+          onChange={(e) => onChange.status(e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          required
+        >
+          <option value="">Chọn trạng thái</option>
+          {statuses.filter(s => s).map(s => (
+            <option key={s} value={s}>{statusConfig[s]?.label}</option>
+          ))}
+        </select>
+      </div>
     </div>
   </form>
 );
@@ -373,6 +423,7 @@ const SurveyFilter = () => {
     endAt: '',
     points: 0,
     object: 'public',
+    timeLimit: ''
   });
 
   const [editForm, setEditForm] = useState({
@@ -385,6 +436,7 @@ const SurveyFilter = () => {
     endAt: '',
     points: 0,
     object: 'public',
+    timeLimit: ''
   });
 
   const itemsPerPage = 3;
@@ -399,6 +451,7 @@ const SurveyFilter = () => {
   const handleEditEndAtChange = useCallback((value) => setEditForm(prev => ({ ...prev, endAt: value })), []);
   const handleEditPointsChange = useCallback((value) => setEditForm(prev => ({ ...prev, points: parseInt(value) || 0 })), []);
   const handleEditObjectChange = useCallback((value) => setEditForm(prev => ({ ...prev, object: value })), []);
+  const handleEditTimeLimitChange = useCallback((value) => setEditForm(prev => ({ ...prev, timeLimit: value === '' ? '' : Math.max(1, parseInt(value) || 1) })), []);
 
   const handleAddTitleChange = useCallback((value) => setAddForm(prev => ({ ...prev, title: value })), []);
   const handleAddDescriptionChange = useCallback((value) => setAddForm(prev => ({ ...prev, description: value })), []);
@@ -409,6 +462,7 @@ const SurveyFilter = () => {
   const handleAddEndAtChange = useCallback((value) => setAddForm(prev => ({ ...prev, endAt: value })), []);
   const handleAddPointsChange = useCallback((value) => setAddForm(prev => ({ ...prev, points: parseInt(value) || 0 })), []);
   const handleAddObjectChange = useCallback((value) => setAddForm(prev => ({ ...prev, object: value })), []);
+  const handleAddTimeLimitChange = useCallback((value) => setAddForm(prev => ({ ...prev, timeLimit: value === '' ? '' : Math.max(1, parseInt(value) || 1) })), []);
 
   const pushToast = useCallback((message, type = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -529,6 +583,7 @@ const SurveyFilter = () => {
             status
             start_at
             end_at
+            time_limit
             points
             object
             created_by
@@ -556,6 +611,7 @@ const SurveyFilter = () => {
         endAt: toDateTimeLocal(s.end_at),
         points: s.points,
         object: s.object,
+        timeLimit: s.time_limit ?? ''
       }));
 
       setSurveysList(surveys);
@@ -615,6 +671,7 @@ const SurveyFilter = () => {
       endAt: survey.endAt,
       points: survey.points || 0,
       object: survey.object || 'public',
+      timeLimit: survey.timeLimit ?? ''
     });
     setShowEditModal(true);
   };
@@ -638,6 +695,7 @@ const SurveyFilter = () => {
       endAt: '',
       points: 0,
       object: 'public',
+      timeLimit: ''
     });
     setShowAddModal(true);
   };
@@ -671,7 +729,7 @@ const SurveyFilter = () => {
       const result = await graphqlRequest(`
         mutation CreateSurvey($input: SurveyInput!) {
           createSurvey(input: $input) {
-            id title description categories_id type status start_at end_at points object
+            id title description categories_id type status start_at end_at points object time_limit
           }
         }
       `, {
@@ -685,7 +743,8 @@ const SurveyFilter = () => {
           end_at: toDBDateTime(addForm.endAt),
           points: addForm.points || 0,
           object: addForm.object || 'public',
-          created_by: 1
+          created_by: 1,
+          time_limit: addForm.timeLimit === '' ? null : parseInt(addForm.timeLimit)
         }
       });
 
@@ -720,6 +779,7 @@ const SurveyFilter = () => {
         endAt: toDateTimeLocal(created.end_at),
         points: created.points,
         object: created.object,
+        timeLimit: created.time_limit ?? ''
       };
 
       closeAddModal();
@@ -781,7 +841,7 @@ const SurveyFilter = () => {
       const result = await graphqlRequest(`
         mutation UpdateSurvey($id: Int!, $input: UpdateSurveyInput!) {
           updateSurvey(id: $id, input: $input) {
-            id title description categories_id type status start_at end_at points object
+            id title description categories_id type status start_at end_at points object time_limit
           }
         }
       `, {
@@ -821,6 +881,7 @@ const SurveyFilter = () => {
         endAt: toDateTimeLocal(updated.end_at),
         points: updated.points,
         object: updated.object,
+        timeLimit: updated.time_limit ?? ''
       };
 
       closeEditModal();
@@ -1168,6 +1229,7 @@ const SurveyFilter = () => {
               endAt: handleEditEndAtChange,
               points: handleEditPointsChange,
               object: handleEditObjectChange,
+              timeLimit: handleEditTimeLimitChange
             }}
             categories={categories}
             types={types}
@@ -1191,6 +1253,7 @@ const SurveyFilter = () => {
               endAt: handleAddEndAtChange,
               points: handleAddPointsChange,
               object: handleAddObjectChange,
+              timeLimit: handleAddTimeLimitChange
             }}
             categories={categories}
             types={types}
