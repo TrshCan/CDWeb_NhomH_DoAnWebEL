@@ -88,3 +88,21 @@ export const getPendingJoinRequests = async (userId) => {
     throw error;
   }
 };
+
+export const getPendingJoinRequestsByGroup = async (groupId) => {
+  const query = `
+    query ($groupId: ID!) {
+      pendingJoinRequestsByGroup(groupId: $groupId) {
+        id
+        status
+        created_at
+        user { id name }
+        group { id name }
+      }
+    }
+  `;
+  const variables = { groupId: groupId.toString() };
+  const response = await graphqlClient.post("", { query, variables });
+  if (response.data.errors) throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  return response.data.data.pendingJoinRequestsByGroup;
+};

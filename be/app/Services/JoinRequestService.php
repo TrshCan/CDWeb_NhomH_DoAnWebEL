@@ -97,4 +97,11 @@ class JoinRequestService
             ->getPendingByUser($userId)
             ->toArray();
     }
+
+    public function findPendingForGroup(int $groupId): array
+    {
+        return $this->joinRequestRepo
+            ->findPendingForGroup($groupId)
+            ->toArray();
+    }
 }

@@ -30,7 +30,8 @@ class JoinRequestRepository
     {
         return JoinRequest::where('group_id', $groupId)
             ->where('status', 'pending')
-            ->get();
+            ->get()
+            ->values();
     }
 
     public function updateStatus(JoinRequest $joinRequest, string $status): JoinRequest

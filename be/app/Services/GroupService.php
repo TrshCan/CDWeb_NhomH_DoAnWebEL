@@ -173,4 +173,34 @@ class GroupService
         // Check if user is a member
         return $user->groups()->where('groups.id', $groupId)->exists();
     }
+
+    /**
+     * Check if user is admin or moderator of a group (or the creator)
+     */
+    public function isUserGroupAdminOrModerator(int $userId, int $groupId): bool
+    {
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            return false;
+        }
+
+        $group = $this->groupRepo->findById($groupId);
+        if (!$group) {
+            return false;
+        }
+
+        // Creator is implicitly admin
+        if ($group->created_by === $userId) {
+            return true;
+        }
+
+        // Check pivot role in group_members
+        $pivot = $user->groups()->where('groups.id', $groupId)->first();
+        if (!$pivot) {
+            return false;
+        }
+
+        $role = optional($pivot->pivot)->role;
+        return in_array($role, ['admin', 'moderator'], true);
+    }
 }

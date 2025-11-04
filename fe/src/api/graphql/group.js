@@ -145,3 +145,41 @@ export const isUserMemberOfGroup = async (userId, groupId) => {
     return false;
   }
 };
+
+export const isUserGroupAdminOrModerator = async (userId, groupId) => {
+  if (!groupId || isNaN(parseInt(groupId))) return false;
+
+  const query = `
+    query ($userId: ID!, $groupId: ID!) {
+      isUserGroupAdminOrModerator(userId: $userId, groupId: $groupId)
+    }
+  `;
+
+  const variables = { userId: userId.toString(), groupId: groupId.toString() };
+
+  try {
+    const response = await graphqlClient.post("", { query, variables });
+    if (response.data.errors) return false;
+    return response.data.data.isUserGroupAdminOrModerator || false;
+  } catch (e) {
+    console.error("isUserGroupAdminOrModerator failed:", e);
+    return false;
+  }
+};
+
+export const updateGroup = async (id, name, description) => {
+  const query = `
+    mutation ($id: ID!, $name: String, $description: String) {
+      updateGroup(id: $id, name: $name, description: $description) {
+        id
+        name
+        description
+        code
+      }
+    }
+  `;
+  const variables = { id: id.toString(), name, description };
+  const response = await graphqlClient.post("", { query, variables });
+  if (response.data.errors) throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  return response.data.data.updateGroup;
+};

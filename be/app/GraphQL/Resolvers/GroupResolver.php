@@ -113,4 +113,15 @@ class GroupResolver
             $args['groupId']
         );
     }
+
+    /**
+     * Query: Check if user is admin or moderator of group
+     */
+    public function isUserGroupAdminOrModerator($root, array $args): bool
+    {
+        return $this->groupService->isUserGroupAdminOrModerator(
+            $args['userId'],
+            $args['groupId']
+        );
+    }
 }

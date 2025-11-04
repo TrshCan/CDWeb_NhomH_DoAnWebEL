@@ -80,4 +80,10 @@ class JoinRequestResolver
 
         return $this->joinRequestService->getPendingRequests($userId);
     }
+
+    public function pendingJoinRequestsByGroup($root, array $args)
+    {
+        $groupId = (int) $args['groupId'];
+        return $this->joinRequestService->findPendingForGroup($groupId);
+    }
 }

@@ -1,4 +1,6 @@
 extend type Query {
   pendingJoinRequests(userId: ID!): [JoinRequest!]!
     @field(resolver: "App\\GraphQL\\Resolvers\\JoinRequestResolver@pendingJoinRequests")
+  pendingJoinRequestsByGroup(groupId: ID!): [JoinRequest!]!
+    @field(resolver: "App\\GraphQL\\Resolvers\\JoinRequestResolver@pendingJoinRequestsByGroup")
 }
