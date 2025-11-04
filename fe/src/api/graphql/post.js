@@ -125,3 +125,36 @@ export const createPost = async (input, files = []) => {
     throw error;
   }
 };
+
+export const updatePost = async (id, content) => {
+  const query = `
+    mutation ($input: UpdatePostInput!) {
+      updatePost(input: $input) {
+        id
+        content
+        created_at
+        user { id name }
+      }
+    }
+  `;
+  const variables = { input: { id: id.toString(), content } };
+  const response = await graphqlClient.post("", { query, variables });
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+  return response.data.data.updatePost;
+};
+
+export const deletePost = async (id) => {
+  const query = `
+    mutation ($id: ID!) {
+      deletePost(id: $id)
+    }
+  `;
+  const variables = { id: id.toString() };
+  const response = await graphqlClient.post("", { query, variables });
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+  return response.data.data.deletePost;
+};

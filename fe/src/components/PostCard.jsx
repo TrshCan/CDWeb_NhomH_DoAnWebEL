@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from "react";
+import { updatePost, deletePost } from "../api/graphql/post";
 
-export default function PostCard({ post }) {
+export default function PostCard({ post, onDeleted }) {
   const [selectedIndex, setSelectedIndex] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(post.content);
+  const [saving, setSaving] = useState(false);
+  const [hidden, setHidden] = useState(false);
+
+  const currentUserId = (() => {
+    try {
+      const u = localStorage.getItem("user");
+      return u ? JSON.parse(u)?.id : null;
+    } catch { return null; }
+  })();
+  const ownerId = post.userId || post.user_id || null;
+  const isOwner = ownerId && String(ownerId) === String(currentUserId);
 
   const maxVisible = 4;
   const hasExtra = post.media?.length > maxVisible;
@@ -93,19 +108,107 @@ export default function PostCard({ post }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedIndex]);
 
+  if (hidden) return null;
+
   return (
     <div className="post bg-white rounded-lg shadow p-4 relative">
       {/* Header */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center space-x-2">
         <div className="w-10 h-10 bg-cyan-600 rounded-full"></div>
         <div>
           <p className="font-semibold text-cyan-600">{post.user}</p>
           <p className="text-gray-500 text-sm">{post.time}</p>
         </div>
+        </div>
+        {/* 3-dots menu */}
+        <div className="relative">
+          <button
+            aria-haspopup="true"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="p-1 rounded hover:bg-gray-100"
+            title="More options"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-600">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+            </svg>
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+              <div className="py-1 text-sm">
+                {isOwner ? (
+                  <>
+                    <button
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                      onClick={() => { setIsEditing(true); setMenuOpen(false); }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50"
+                      onClick={async () => {
+                        try {
+                          await deletePost(post.id);
+                          if (onDeleted) onDeleted(post.id); else setHidden(true);
+                        } catch (e) {
+                          console.error(e);
+                          alert(e.message || "Failed to delete post");
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                    onClick={() => { setMenuOpen(false); alert(`Following ${post.user} (mock)`); }}
+                  >
+                    Follow {post.user}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Content */}
-      <p className="mt-2 text-gray-800 whitespace-pre-wrap">{post.content}</p>
+      {/* Content / Edit */}
+      {isEditing ? (
+        <div className="mt-2">
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            rows={3}
+            className="w-full bg-gray-50 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              disabled={saving}
+              onClick={async () => {
+                try {
+                  setSaving(true);
+                  const updated = await updatePost(post.id, editContent.trim());
+                  post.content = updated.content;
+                  setIsEditing(false);
+                } catch (e) {
+                  console.error(e);
+                  alert(e.message || "Failed to update post");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              className={`px-3 py-1 rounded text-white ${saving ? "bg-gray-400" : "bg-cyan-600 hover:bg-cyan-700"}`}
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+            <button onClick={() => { setIsEditing(false); setEditContent(post.content); }} className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-2 text-gray-800 whitespace-pre-wrap">{post.content}</p>
+      )}
 
       {/* Media grid */}
       {visibleMedia.length > 0 && (
