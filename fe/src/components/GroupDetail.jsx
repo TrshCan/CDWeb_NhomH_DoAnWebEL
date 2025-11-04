@@ -37,7 +37,10 @@ export default function GroupDetail() {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [latestPostTime, setLatestPostTime] = useState(null);
-  const [announcement, setAnnouncement] = useState(null);
+  const [announcement, setAnnouncement] = useState(null); // { text, count, firstName }
+  const [bannerVisible, setBannerVisible] = useState(false);
+  const announcementTimerRef = React.useRef(null);
+  const postsTopRef = React.useRef(null);
 
   // Get user info
   const getUserFromStorage = () => {
@@ -173,10 +176,16 @@ export default function GroupDetail() {
           // Count how many new posts newer than latestPostTime and not by current user
           const newOnes = groupPosts.filter((p) => new Date(p.created_at).getTime() > latestPostTime && String(p.user?.id) !== String(user?.id));
           if (newOnes.length > 0) {
-            const firstUser = newOnes[0]?.user?.name || "Someone";
+            const firstName = newOnes[0]?.user?.name || "Someone";
             const more = newOnes.length - 1;
-            const text = more <= 0 ? `${firstUser} just posted` : `${firstUser} and ${more} more just posted`;
-            setAnnouncement({ text, count: newOnes.length });
+            const text = more <= 0 ? `${firstName} just posted` : `${firstName} and ${more} more just posted`;
+            setAnnouncement({ text, count: newOnes.length, firstName });
+            setBannerVisible(true);
+            // Auto-dismiss after 8s
+            if (announcementTimerRef.current) clearTimeout(announcementTimerRef.current);
+            announcementTimerRef.current = setTimeout(() => {
+              setBannerVisible(false);
+            }, 8000);
           }
         }
       } catch (e) {
@@ -212,6 +221,16 @@ export default function GroupDetail() {
       const newest = mapped[0]?.created_at ? new Date(mapped[0].created_at).getTime() : null;
       setLatestPostTime(newest);
       setAnnouncement(null);
+      setBannerVisible(false);
+      // Smooth scroll to top of posts
+      setTimeout(() => {
+        const topEl = postsTopRef.current;
+        if (topEl) {
+          topEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }, 0);
     } catch (e) {
       // ignore
     }
@@ -334,16 +353,40 @@ export default function GroupDetail() {
     <main className="w-full lg:w-2/3">
       <Toaster position="top-right" />
 
-      {announcement && (
-        <div className="mb-3">
-          <button
-            onClick={handleReloadForAnnouncement}
-            className="w-full bg-cyan-50 text-cyan-700 border border-cyan-200 rounded-md px-3 py-2 text-sm text-left hover:bg-cyan-100 transition"
-          >
-            {announcement.text}
-          </button>
-        </div>
-      )}
+      {/* Sticky sliding announcement banner */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className={`sticky top-2 z-40 transition-transform duration-300 ${bannerVisible ? "translate-y-0" : "-translate-y-24"}`}
+      >
+        {announcement && (
+          <div className="mx-auto max-w-3xl">
+            <div className="flex items-center gap-3 bg-white/95 backdrop-blur border border-cyan-200 rounded-full shadow px-3 py-2">
+              {/* Avatar (first poster initial) */}
+              <div className="w-8 h-8 rounded-full bg-cyan-600 text-white flex items-center justify-center text-sm font-semibold">
+                {(announcement.firstName || "?").charAt(0).toUpperCase()}
+              </div>
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-800 truncate" title={announcement.text}>
+                  {announcement.text}
+                </p>
+              </div>
+              {/* Badge count */}
+              <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full text-xs font-bold bg-cyan-100 text-cyan-700">
+                {announcement.count}
+              </span>
+              {/* Action button */}
+              <button
+                onClick={handleReloadForAnnouncement}
+                className="ml-2 text-sm font-medium bg-cyan-600 text-white px-3 py-1 rounded-full hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              >
+                New posts
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Header with group name, back arrow and settings */}
       <div className="bg-white rounded-lg shadow p-4 mb-4 flex items-center space-x-4">
@@ -395,6 +438,9 @@ export default function GroupDetail() {
           </button>
         )}
       </div>
+
+      {/* Invisible anchor for scrolling to top of posts */}
+      <div ref={postsTopRef} />
 
       {/* Post Upload Section */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
