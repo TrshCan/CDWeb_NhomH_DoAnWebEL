@@ -106,3 +106,27 @@ export const getPendingJoinRequestsByGroup = async (groupId) => {
   if (response.data.errors) throw new Error(response.data.errors[0]?.message || "GraphQL error");
   return response.data.data.pendingJoinRequestsByGroup;
 };
+
+export const approveJoinRequest = async (id) => {
+  const query = `
+    mutation ($id: ID!) {
+      approveJoinRequest(id: $id) {
+        id
+        status
+        user { id name }
+        group { id name }
+      }
+    }
+  `;
+  const variables = { id: id.toString() };
+  try {
+    const response = await graphqlClient.post("", { query, variables });
+    if (response.data.errors) {
+      throw new Error(response.data.errors[0]?.message || "GraphQL error");
+    }
+    return response.data.data.approveJoinRequest;
+  } catch (e) {
+    console.error("approveJoinRequest failed:", e);
+    throw e;
+  }
+};

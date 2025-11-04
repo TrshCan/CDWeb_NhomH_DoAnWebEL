@@ -71,7 +71,7 @@ class JoinRequestService
     {
         $joinRequest = \App\Models\JoinRequest::findOrFail($joinRequestId);
 
-        $updated = $this->joinRequestRepository->updateStatus($joinRequest, 'approved');
+        $updated = $this->joinRequestRepo->updateStatus($joinRequest, 'approved');
 
         // Add user to group members — ensure pivot doesn't duplicate
         $group = $updated->group;
@@ -88,7 +88,7 @@ class JoinRequestService
     public function rejectJoinRequest($joinRequestId)
     {
         $joinRequest = \App\Models\JoinRequest::findOrFail($joinRequestId);
-        return $this->joinRequestRepository->updateStatus($joinRequest, 'rejected');
+        return $this->joinRequestRepo->updateStatus($joinRequest, 'rejected');
     }
 
     public function getPendingRequests(int $userId): array

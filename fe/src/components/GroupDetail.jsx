@@ -4,7 +4,7 @@ import toast, { Toaster } from "react-hot-toast";
 import PostCard from "./PostCard";
 import { getPostsByGroup, createPost } from "../api/graphql/post";
 import { getGroupsByUser, isUserMemberOfGroup, isUserGroupAdminOrModerator, updateGroup } from "../api/graphql/group";
-import { getPendingJoinRequestsByGroup } from "../api/graphql/joinRequest";
+import { getPendingJoinRequestsByGroup, approveJoinRequest } from "../api/graphql/joinRequest";
 
 function timeAgo(createdAt) {
   const created = new Date(createdAt);
@@ -496,16 +496,11 @@ export default function GroupDetail() {
                         <button
                           onClick={async () => {
                             try {
-                              const mutation = `mutation($id: ID!){ approveJoinRequest(id:$id){ id status user{ id name } group{ id } } }`;
-                              await fetch("http://localhost:8000/graphql", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
-                                body: JSON.stringify({ query: mutation, variables: { id: r.id.toString() } })
-                              });
+                              await approveJoinRequest(r.id);
                               setPendingRequests((prev) => prev.filter((x) => x.id !== r.id));
                               toast.success("Request approved");
                             } catch (e) {
-                              toast.error("Failed to approve request");
+                              toast.error(e.message || "Failed to approve request");
                             }
                           }}
                           className="bg-cyan-600 text-white px-3 py-1 rounded hover:bg-cyan-700 text-sm"
