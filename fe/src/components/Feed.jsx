@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import PostCard from "../components/PostCard";
 import { getPostsByType, createPost } from "../api/graphql/post";
 import { getUserProfile } from "../api/graphql/user";
 
+import "../assets/css/feed.css"; // 👈 import the shimmer + fade css
 function timeAgo(createdAt) {
   const created = new Date(createdAt);
   const now = new Date();
@@ -21,8 +22,10 @@ function timeAgo(createdAt) {
 
 export default function Feed() {
   const [activeTab, setActiveTab] = useState("forYou");
-  const [posts, setPosts] = useState([]);
+  const [allPosts, setAllPosts] = useState([]);
+  const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [files, setFiles] = useState([]);
   const [user, setUser] = useState(null);
 
@@ -84,11 +87,11 @@ export default function Feed() {
             ? await getPostsByType("announcement")
             : await getPostsByType("normal_post");
 
-        setPosts(
-          data.map((p) => ({
+        const mapped = data.map((p) => ({
             id: p.id,
             type: p.type,
             user: p.user?.name || "Anonymous",
+            userId: p.user?.id,
             time: timeAgo(p.created_at),
             content: p.content,
             media: p.media
@@ -101,7 +104,8 @@ export default function Feed() {
                 )
               : [],
           }))
-        );
+        setAllPosts(mapped);
+        setVisibleCount(10);
       } catch (err) {
         console.error("Failed to fetch posts:", err);
         toast.error("Failed to load posts.");
@@ -113,7 +117,32 @@ export default function Feed() {
     fetchPosts();
   }, [activeTab]);
 
-  // ✅ File validation
+  // Setup intersection observer for infinite loading
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && !loading && !loadingMore) {
+          if (visibleCount < allPosts.length) {
+            setLoadingMore(true);
+            // Small delay to show animation
+            setTimeout(() => {
+              setVisibleCount((c) => Math.min(c + 10, allPosts.length));
+              setLoadingMore(false);
+            }, 600);
+          }
+        }
+      },
+      { root: null, rootMargin: "200px", threshold: 0 }
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [allPosts.length, loading, loadingMore, visibleCount]);
+
+  // File validation
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files);
     const MAX_FILES = 4;
@@ -159,12 +188,13 @@ export default function Feed() {
       const newPost = await createPost(input, files);
       toast.success("Post created!");
 
-      setPosts((prev) => [
+      setAllPosts((prev) => [
         {
           id: newPost.id,
           type: newPost.type,
-          user: newPost.user?.name || user.name || "You",
-          time: timeAgo(new Date().toISOString()), // current time
+          user: newPost.user?.name || "You",
+          userId: newPost.user?.id,
+          time: timeAgo(newPost.created_at),
           content: newPost.content,
           media: newPost.media
             ? newPost.media.map((m) =>
@@ -348,11 +378,56 @@ export default function Feed() {
       {/* Posts */}
       <div className="space-y-4">
         {loading ? (
-          <p className="text-gray-500 text-center">Loading posts...</p>
-        ) : posts.length === 0 ? (
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="post bg-white rounded-lg shadow p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="skeleton skeleton-avatar"></div>
+                  <div className="flex-1">
+                    <div className="skeleton skeleton-text w-1/3"></div>
+                    <div className="skeleton skeleton-text w-1/4"></div>
+                  </div>
+                </div>
+                <div className="skeleton skeleton-text w-full mt-3"></div>
+                <div className="skeleton skeleton-text w-5/6"></div>
+                <div className="skeleton skeleton-text w-4/6"></div>
+                <div className="skeleton skeleton-image"></div>
+              </div>
+            ))}
+          </div>
+        ) : allPosts.length === 0 ? (
           <p className="text-gray-500 text-center">No posts yet.</p>
         ) : (
-          posts.map((post, i) => <PostCard key={i} post={post} />)
+          <>
+            {allPosts.slice(0, visibleCount).map((post, i) => (
+              <div key={post.id} className="animate-fade-in">
+                <PostCard
+                  post={post}
+                />
+              </div>
+            ))}
+            {/* Load more sentinel */}
+            <div ref={loadMoreRef} />
+            {/* Loading more shimmer */}
+            {loadingMore && (
+              <div className="space-y-4 mt-2">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i} className="post bg-white rounded-lg shadow p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="skeleton skeleton-avatar"></div>
+                      <div className="flex-1">
+                        <div className="skeleton skeleton-text w-1/3"></div>
+                        <div className="skeleton skeleton-text w-1/4"></div>
+                      </div>
+                    </div>
+                    <div className="skeleton skeleton-text w-full mt-3"></div>
+                    <div className="skeleton skeleton-text w-5/6"></div>
+                    <div className="skeleton skeleton-image"></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>
