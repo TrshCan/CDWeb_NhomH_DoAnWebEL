@@ -7,36 +7,35 @@ const statusConfig = {
   paused: { label: 'Tạm dừng', class: 'bg-amber-100 text-amber-800' },
 };
 
-const categories = ['', 'Khoa học', 'Kinh tế', 'Giáo dục', 'Công nghệ Thông tin', 'Hỗ trợ sinh viên'];
 const types = ['', 'survey', 'quiz'];
 const statuses = ['', 'active', 'paused', 'closed'];
 const objects = ['', 'public', 'students', 'lecturers'];
 
-const categoryIdMap = {
-  1: 'Khoa học',
-  2: 'Kinh tế',
-  3: 'Giáo dục',
-  4: 'Công nghệ Thông tin',
-  5: 'Hỗ trợ sinh viên',
-};
-
-const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-lg' }) => (
+const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' }) => (
   isOpen && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity" onClick={onClose}>
       <div
-        className={`relative ${size} mx-auto max-w-2xl rounded-lg bg-white shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto`}
+        className={`relative ${size} w-full mx-auto rounded-xl bg-white shadow-2xl overflow-hidden max-h-[95vh] overflow-y-auto transform transition-all animate-in fade-in zoom-in-95`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h3 className="text-2xl font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-900">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        <div className="flex items-center justify-between px-8 py-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-200">
+          <h3 className="text-3xl font-bold text-gray-900">{title}</h3>
+          <button 
+            onClick={onClose} 
+            className="text-gray-500 hover:text-gray-900 hover:bg-white rounded-full p-2 transition-all duration-200 hover:scale-110"
+            aria-label="Đóng"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div className="p-6">{children}</div>
-        {footer && <div className="flex justify-end p-6 border-t border-gray-200 gap-3">{footer}</div>}
+        <div className="p-8">{children}</div>
+        {footer && (
+          <div className="flex justify-end px-8 py-6 bg-gray-50 border-t-2 border-gray-200 gap-4">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -47,38 +46,49 @@ const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
     {selectedSurvey && (
       <>
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h4 className="text-xl font-semibold text-gray-900">{selectedSurvey.title}</h4>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <div className="flex-1">
+            <h4 className="text-2xl font-bold text-gray-900 mb-3">{selectedSurvey.title}</h4>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 border-2 border-gray-200">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 {selectedSurvey.category}
               </span>
-              <span className="inline-flex items-center gap-2 rounded bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87V14.13a1 1 0 001.555.834l3.197-2.132a1 1 0 000-1.664z"/></svg>
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-800 border-2 border-blue-200">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87V14.13a1 1 0 001.555.834l3.197-2.132a1 1 0 000-1.664z"/></svg>
                 {selectedSurvey.type === 'survey' ? 'Survey' : 'Quiz'}
               </span>
-              <span className={`inline-flex items-center gap-2 rounded px-3 py-1 text-xs font-semibold ${statusConfig[selectedSurvey.status]?.class}`}>
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+              <span className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold border-2 ${statusConfig[selectedSurvey.status]?.class} ${statusConfig[selectedSurvey.status]?.class?.includes('green') ? 'border-green-300' : statusConfig[selectedSurvey.status]?.class?.includes('red') || statusConfig[selectedSurvey.status]?.class?.includes('amber') ? 'border-amber-300' : 'border-gray-300'}`}>
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
                 {statusConfig[selectedSurvey.status]?.label}
               </span>
             </div>
           </div>
         </div>
 
+        <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6 shadow-sm">
+          <div className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Mô tả</div>
+          <div className="text-base text-gray-900 whitespace-pre-wrap leading-relaxed">{selectedSurvey.description || 'Chưa có mô tả'}</div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-lg border border-gray-200 p-4">
-            <div className="text-xs font-medium text-gray-500">Thời gian</div>
-            <div className="mt-1 text-sm text-gray-900">{formatTimeRange(selectedSurvey.startAt, selectedSurvey.endAt)}</div>
+          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 shadow-sm">
+            <div className="text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-2">
+              <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              Thời gian
+            </div>
+            <div className="mt-2 text-base font-semibold text-gray-900">{formatTimeRange(selectedSurvey.startAt, selectedSurvey.endAt)}</div>
           </div>
-          <div className="rounded-lg border border-gray-200 p-4">
-            <div className="text-xs font-medium text-gray-500">Điểm thưởng</div>
-            <div className="mt-1 text-sm text-gray-900">{selectedSurvey.points}</div>
+          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-5 shadow-sm">
+            <div className="text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-2">
+              <svg className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Điểm thưởng
+            </div>
+            <div className="mt-2 text-2xl font-bold text-amber-700">{selectedSurvey.points} điểm</div>
           </div>
-          <div className="rounded-lg border border-gray-200 p-4 md:col-span-2">
-            <div className="text-xs font-medium text-gray-500">Đối tượng</div>
-            <div className="mt-1 inline-flex items-center gap-2 rounded bg-purple-50 px-3 py-1 text-sm font-medium text-purple-700">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M9 20H4v-2a3 3 0 015.356-1.857M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-purple-50 to-pink-50 p-5 shadow-sm md:col-span-2">
+            <div className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Đối tượng</div>
+            <div className="inline-flex items-center gap-3 rounded-full bg-purple-100 px-5 py-3 text-base font-semibold text-purple-800 border-2 border-purple-200">
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M9 20H4v-2a3 3 0 015.356-1.857M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               {selectedSurvey.object === 'public' ? 'Công khai' : selectedSurvey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}
             </div>
           </div>
@@ -99,6 +109,18 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
         required
         autoFocus
+      />
+    </div>
+
+    <div>
+      <label className="block text-left font-semibold mb-2">Mô tả</label>
+      <textarea
+        value={editForm.description}
+        onChange={(e) => onChange.description(e.target.value)}
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+        rows="4"
+        placeholder="Nhập mô tả cho khảo sát..."
+        required
       />
     </div>
 
@@ -215,6 +237,18 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
       />
     </div>
 
+    <div>
+      <label className="block text-left font-semibold mb-2">Mô tả</label>
+      <textarea
+        value={addForm.description}
+        onChange={(e) => onChange.description(e.target.value)}
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+        rows="4"
+        placeholder="Nhập mô tả cho khảo sát..."
+        required
+      />
+    </div>
+
     <div className="grid grid-cols-2 gap-4">
       <div>
         <label className="block text-left font-semibold mb-2">Danh mục</label>
@@ -316,6 +350,9 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
 
 const SurveyFilter = () => {
   const [surveysList, setSurveysList] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [categoryIdMap, setCategoryIdMap] = useState({});
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [filters, setFilters] = useState({ category: '', type: '', status: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSurvey, setSelectedSurvey] = useState(null);
@@ -328,6 +365,7 @@ const SurveyFilter = () => {
 
   const [addForm, setAddForm] = useState({
     title: '',
+    description: '',
     category: '',
     type: 'survey',
     status: 'active',
@@ -339,6 +377,7 @@ const SurveyFilter = () => {
 
   const [editForm, setEditForm] = useState({
     title: '',
+    description: '',
     category: '',
     type: '',
     status: '',
@@ -352,6 +391,7 @@ const SurveyFilter = () => {
 
   // HANDLERS
   const handleEditTitleChange = useCallback((value) => setEditForm(prev => ({ ...prev, title: value })), []);
+  const handleEditDescriptionChange = useCallback((value) => setEditForm(prev => ({ ...prev, description: value })), []);
   const handleEditCategoryChange = useCallback((value) => setEditForm(prev => ({ ...prev, category: value })), []);
   const handleEditTypeChange = useCallback((value) => setEditForm(prev => ({ ...prev, type: value })), []);
   const handleEditStatusChange = useCallback((value) => setEditForm(prev => ({ ...prev, status: value })), []);
@@ -361,6 +401,7 @@ const SurveyFilter = () => {
   const handleEditObjectChange = useCallback((value) => setEditForm(prev => ({ ...prev, object: value })), []);
 
   const handleAddTitleChange = useCallback((value) => setAddForm(prev => ({ ...prev, title: value })), []);
+  const handleAddDescriptionChange = useCallback((value) => setAddForm(prev => ({ ...prev, description: value })), []);
   const handleAddCategoryChange = useCallback((value) => setAddForm(prev => ({ ...prev, category: value })), []);
   const handleAddTypeChange = useCallback((value) => setAddForm(prev => ({ ...prev, type: value })), []);
   const handleAddStatusChange = useCallback((value) => setAddForm(prev => ({ ...prev, status: value })), []);
@@ -401,19 +442,88 @@ const SurveyFilter = () => {
     return `${dateString} 00:00:00`;
   };
 
-  // LOAD SURVEYS
-  useEffect(() => {
-    loadSurveys();
-  }, []);
-
-  const loadSurveys = async () => {
-    setLoading(true);
+  const loadCategories = async () => {
+    setCategoriesLoading(true);
     try {
       const result = await graphqlRequest(`
         query {
-          surveys(per_page: 100) {
+          categories {
+            id
+            name
+          }
+        }
+      `);
+
+      if (result.errors) {
+        console.error('GraphQL Errors:', result.errors);
+        pushToast('Lỗi tải danh mục', 'error');
+        return;
+      }
+
+      const categoriesData = result.data?.categories || [];
+      
+      // Lọc và sắp xếp categories theo tên
+      const categoriesList = categoriesData
+        .filter(cat => cat.name && cat.name.trim() !== '') // Lọc các category có tên hợp lệ
+        .map(cat => cat.name)
+        .sort(); // Sắp xếp theo thứ tự alphabet
+      
+      const idMap = {};
+      categoriesData.forEach(cat => {
+        if (cat.id && cat.name) {
+          idMap[cat.id] = cat.name;
+        }
+      });
+
+      // Thêm option "Tất cả" ở đầu danh sách
+      setCategories(['', ...categoriesList]);
+      setCategoryIdMap(idMap);
+    } catch (error) {
+      console.error('Lỗi tải danh mục:', error);
+      pushToast('Không thể tải danh sách danh mục', 'error');
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  const loadSurveys = useCallback(async (filterParams = {}) => {
+    setLoading(true);
+    try {
+      // Xây dựng filter object cho GraphQL
+      const graphQLFilter = {};
+      
+      // Chuyển đổi category name thành category ID
+      if (filterParams.category) {
+        const categoryId = Object.entries(categoryIdMap).find(([_, name]) => name === filterParams.category)?.[0];
+        if (categoryId) {
+          graphQLFilter.categories_id = parseInt(categoryId);
+        }
+      }
+      
+      if (filterParams.type) {
+        graphQLFilter.type = filterParams.type;
+      }
+      
+      if (filterParams.status) {
+        graphQLFilter.status = filterParams.status;
+      }
+
+      // Xây dựng query với filter
+      const filterString = Object.keys(graphQLFilter).length > 0 
+        ? `filter: { ${Object.entries(graphQLFilter).map(([key, value]) => {
+            if (typeof value === 'string') {
+              return `${key}: "${value}"`;
+            }
+            return `${key}: ${value}`;
+          }).join(', ')} }`
+        : '';
+
+      const result = await graphqlRequest(`
+        query {
+          surveys(per_page: 100${filterString ? ', ' + filterString : ''}) {
             id
             title
+            description
             categories_id
             type
             status
@@ -433,10 +543,13 @@ const SurveyFilter = () => {
       }
 
       const surveysData = result.data?.surveys || [];
+      // Sử dụng categoryIdMap từ dependency của useCallback (luôn là giá trị mới nhất)
       const surveys = surveysData.map(s => ({
         id: Number(s.id),  // CHUYỂN ID → SỐ NGAY TỪ ĐẦU
         title: s.title,
+        description: s.description || '',
         category: categoryIdMap[s.categories_id] || 'Không xác định',
+        categoryId: s.categories_id,
         type: s.type,
         status: s.status,
         startAt: toDateTimeLocal(s.start_at),
@@ -452,19 +565,34 @@ const SurveyFilter = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [categoryIdMap, pushToast]);
 
-  const filteredSurveys = surveysList.filter(survey =>
-    (!filters.category || survey.category === filters.category) &&
-    (!filters.type || survey.type === filters.type) &&
-    (!filters.status || survey.status === filters.status)
-  );
+  // LOAD DATA
+  useEffect(() => {
+    loadCategories();
+  }, []);
 
+  // Load surveys sau khi categories đã được load và khi filters thay đổi
+  useEffect(() => {
+    if (Object.keys(categoryIdMap).length > 0) {
+      loadSurveys(filters);
+    }
+  }, [filters, categoryIdMap, loadSurveys]);
+
+  // Không cần filter client-side nữa vì đã filter ở server
+  const filteredSurveys = surveysList;
   const totalPages = Math.ceil(filteredSurveys.length / itemsPerPage);
   const paginatedSurveys = filteredSurveys.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
+    const newFilters = { ...filters, [e.target.name]: e.target.value };
+    setFilters(newFilters);
+    setCurrentPage(1);
+    // loadSurveys sẽ được gọi tự động qua useEffect khi filters thay đổi
+  };
+
+  const handleResetFilters = () => {
+    setFilters({ category: '', type: '', status: '' });
     setCurrentPage(1);
   };
 
@@ -479,6 +607,7 @@ const SurveyFilter = () => {
     });
     setEditForm({
       title: survey.title,
+      description: survey.description || '',
       category: survey.category,
       type: survey.type,
       status: survey.status,
@@ -501,6 +630,7 @@ const SurveyFilter = () => {
   const handleAddClick = () => {
     setAddForm({
       title: '',
+      description: '',
       category: '',
       type: 'survey',
       status: 'active',
@@ -541,12 +671,13 @@ const SurveyFilter = () => {
       const result = await graphqlRequest(`
         mutation CreateSurvey($input: SurveyInput!) {
           createSurvey(input: $input) {
-            id title categories_id type status start_at end_at points object
+            id title description categories_id type status start_at end_at points object
           }
         }
       `, {
         input: {
           title: addForm.title,
+          description: addForm.description || '',
           categories_id: parseInt(categoryId),
           type: addForm.type || 'survey',
           status: addForm.status || 'active',
@@ -581,6 +712,7 @@ const SurveyFilter = () => {
       const newSurvey = {
         id: Number(created.id),  // CHUYỂN ID → SỐ
         title: created.title,
+        description: created.description || '',
         category: addForm.category,
         type: created.type,
         status: created.status,
@@ -590,9 +722,10 @@ const SurveyFilter = () => {
         object: created.object,
       };
 
-      setSurveysList(prev => [...prev, newSurvey]);
       closeAddModal();
       pushToast('Tạo khảo sát thành công', 'success');
+      // Reload với filters hiện tại
+      loadSurveys(filters);
     } catch (error) {
       console.error('Lỗi hệ thống:', error);
       pushToast('Lỗi hệ thống: ' + error.message, 'error');
@@ -622,28 +755,52 @@ const SurveyFilter = () => {
         return;
       }
 
+      // Chỉ gửi các trường hợp lệ/đã thay đổi để tránh vi phạm validation phía BE
+      const input = {
+        title: editForm.title,
+        description: editForm.description || '',
+        categories_id: parseInt(categoryId),
+        type: editForm.type || 'survey',
+        status: editForm.status || 'active',
+        object: editForm.object || 'public',
+      };
+
+      // start_at/end_at: chỉ gửi nếu thay đổi
+      if (editForm.startAt !== selectedSurvey.startAt) {
+        input.start_at = toDBDateTime(editForm.startAt);
+      }
+      if (editForm.endAt !== selectedSurvey.endAt) {
+        input.end_at = toDBDateTime(editForm.endAt);
+      }
+
+      // points: chỉ gửi nếu là quiz, tránh rule `prohibited` khi type = survey
+      if ((editForm.type || 'survey') === 'quiz') {
+        input.points = editForm.points || 0;
+      }
+
       const result = await graphqlRequest(`
         mutation UpdateSurvey($id: Int!, $input: UpdateSurveyInput!) {
           updateSurvey(id: $id, input: $input) {
-            id title categories_id type status start_at end_at points object
+            id title description categories_id type status start_at end_at points object
           }
         }
       `, {
-        id: Number(selectedSurvey.id),  // CHUYỂN ID → SỐ
-        input: {
-          title: editForm.title,
-          categories_id: parseInt(categoryId),
-          type: editForm.type || 'survey',
-          status: editForm.status || 'active',
-          start_at: toDBDateTime(editForm.startAt),
-          end_at: toDBDateTime(editForm.endAt),
-          points: editForm.points || 0,
-          object: editForm.object || 'public',
-        }
+        id: Number(selectedSurvey.id),
+        input
       });
 
       if (result.errors?.length > 0) {
-        pushToast('Cập nhật thất bại: ' + result.errors.map(e => e.message).join('; '), 'error');
+        // Hiển thị chi tiết validation nếu có
+        const messages = result.errors.map(e => {
+          let msg = e.message;
+          if (e.extensions?.validation) {
+            msg += '\n' + Object.entries(e.extensions.validation)
+              .map(([field, errs]) => `${field}: ${errs.join(', ')}`)
+              .join('\n');
+          }
+          return msg;
+        }).join('\n');
+        pushToast('Cập nhật thất bại: ' + messages, 'error');
         return;
       }
 
@@ -654,8 +811,9 @@ const SurveyFilter = () => {
 
       const updated = result.data.updateSurvey;
       const updatedSurvey = {
-        id: Number(updated.id),  // CHUYỂN ID → SỐ
+        id: Number(updated.id),
         title: updated.title,
+        description: updated.description || '',
         category: editForm.category,
         type: updated.type,
         status: updated.status,
@@ -665,9 +823,10 @@ const SurveyFilter = () => {
         object: updated.object,
       };
 
-      setSurveysList(prev => prev.map(s => s.id === selectedSurvey.id ? updatedSurvey : s));
       closeEditModal();
       pushToast('Cập nhật thành công', 'success');
+      // Reload với filters hiện tại
+      loadSurveys(filters);
     } catch (error) {
       console.error('Lỗi:', error);
       pushToast('Lỗi hệ thống: ' + error.message, 'error');
@@ -693,9 +852,10 @@ const SurveyFilter = () => {
         return;
       }
 
-      setSurveysList(prev => prev.filter(s => s.id !== selectedSurvey.id));
       closeDeleteModal();
       pushToast('Đã xóa khảo sát', 'success');
+      // Reload với filters hiện tại
+      loadSurveys(filters);
     } catch (error) {
       console.error('Lỗi xóa:', error);
       pushToast('Lỗi hệ thống', 'error');
@@ -725,52 +885,116 @@ const SurveyFilter = () => {
 
   // FOOTERS
   const viewFooter = useMemo(() => (
-    <button onClick={closeViewModal} className="px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600">Đóng</button>
+    <button 
+      onClick={closeViewModal} 
+      className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+    >
+      Đóng
+    </button>
   ), [closeViewModal]);
 
   const editFooter = useMemo(() => (
     <>
-      <button onClick={closeEditModal} className="px-6 py-3 border rounded hover:bg-gray-50">Hủy</button>
-      <button type="submit" form="editForm" className="px-6 py-3 bg-blue-500 text-white rounded hover:bg-blue-600">Lưu</button>
+      <button 
+        onClick={closeEditModal} 
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+      >
+        Hủy
+      </button>
+      <button 
+        type="submit" 
+        form="editForm" 
+        className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+      >
+        Lưu thay đổi
+      </button>
     </>
   ), [closeEditModal]);
 
   const addFooter = useMemo(() => (
     <>
-      <button onClick={closeAddModal} className="px-6 py-3 border rounded hover:bg-gray-50">Hủy</button>
-      <button type="submit" form="addForm" className="px-6 py-3 bg-green-500 text-white rounded hover:bg-green-600">Thêm</button>
+      <button 
+        onClick={closeAddModal} 
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+      >
+        Hủy
+      </button>
+      <button 
+        type="submit" 
+        form="addForm" 
+        className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+      >
+        Thêm khảo sát
+      </button>
     </>
   ), [closeAddModal]);
 
   const deleteFooter = useMemo(() => (
     <>
-      <button onClick={closeDeleteModal} className="px-6 py-3 border rounded hover:bg-gray-50">Hủy</button>
-      <button onClick={handleDelete} className="px-6 py-3 bg-red-600 text-white rounded hover:bg-red-700">Xóa</button>
+      <button 
+        onClick={closeDeleteModal} 
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+      >
+        Hủy
+      </button>
+      <button 
+        onClick={handleDelete} 
+        className="px-8 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold rounded-lg hover:from-red-700 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+      >
+        Xóa khảo sát
+      </button>
     </>
   ), [closeDeleteModal, handleDelete]);
 
   return (
     <div className="bg-gray-50 p-8">
       {/* Toasts */}
-      <div className="fixed top-4 right-4 z-[60] space-y-3">
+      <div className="fixed top-6 right-6 z-[60] space-y-4 flex flex-col items-end">
         {toasts.map(t => (
-          <div key={t.id} className={`flex items-start gap-3 rounded-lg px-4 py-3 shadow-lg max-w-sm border ${
-            t.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
-            t.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
-            'bg-gray-50 border-gray-200 text-gray-800'
-          }`}>
-            <div className="mt-0.5">
+          <div 
+            key={t.id} 
+            className={`flex items-start gap-4 rounded-xl px-6 py-4 shadow-2xl max-w-md border-2 backdrop-blur-sm transform transition-all duration-300 animate-in slide-in-from-right-5 fade-in ${
+              t.type === 'success' 
+                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400 text-green-900 shadow-green-200/50' 
+                : t.type === 'error' 
+                ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-400 text-red-900 shadow-red-200/50'
+                : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400 text-blue-900 shadow-blue-200/50'
+            }`}
+          >
+            <div className={`flex-shrink-0 mt-0.5 ${
+              t.type === 'success' ? 'text-green-600' :
+              t.type === 'error' ? 'text-red-600' :
+              'text-blue-600'
+            }`}>
               {t.type === 'success' ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               ) : t.type === 'error' ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 6a9 9 0 110 12A9 9 0 0112 6z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               )}
             </div>
-            <div className="flex-1 text-sm whitespace-pre-line">{t.message}</div>
-            <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} className="text-gray-400 hover:text-gray-700">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            <div className="flex-1 text-base font-medium whitespace-pre-line leading-relaxed">{t.message}</div>
+            <button 
+              onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} 
+              className={`flex-shrink-0 mt-0.5 transition-colors ${
+                t.type === 'success' 
+                  ? 'text-green-600 hover:text-green-800 hover:bg-green-100' 
+                  : t.type === 'error' 
+                  ? 'text-red-600 hover:text-red-800 hover:bg-red-100'
+                  : 'text-blue-600 hover:text-blue-800 hover:bg-blue-100'
+              } rounded-full p-1`}
+              aria-label="Đóng"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         ))}
@@ -785,12 +1009,42 @@ const SurveyFilter = () => {
 
         {/* Bộ lọc */}
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-6">Bộ lọc</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">Bộ lọc</h2>
+            {(filters.category || filters.type || filters.status) && (
+              <button 
+                onClick={handleResetFilters} 
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-colors"
+                title="Xóa bộ lọc"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Xóa bộ lọc
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-2">Danh mục</label>
-              <select name="category" value={filters.category} onChange={handleFilterChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                {categories.map(cat => <option key={cat} value={cat}>{cat || 'Tất cả'}</option>)}
+              <select 
+                name="category" 
+                value={filters.category} 
+                onChange={handleFilterChange} 
+                disabled={categoriesLoading}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                {categoriesLoading ? (
+                  <option value="">Đang tải...</option>
+                ) : categories.length > 0 ? (
+                  categories.map(cat => (
+                    <option key={cat || 'all'} value={cat}>
+                      {cat || 'Tất cả'}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Không có danh mục</option>
+                )}
               </select>
             </div>
             <div>
@@ -805,9 +1059,6 @@ const SurveyFilter = () => {
                 {statuses.map(s => <option key={s} value={s}>{statusConfig[s]?.label || 'Tất cả'}</option>)}
               </select>
             </div>
-            <button onClick={() => setCurrentPage(1)} className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors">
-              Lọc
-            </button>
           </div>
         </div>
 
@@ -815,6 +1066,29 @@ const SurveyFilter = () => {
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {loading ? (
             <div className="p-8 text-center">Đang tải...</div>
+          ) : paginatedSurveys.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center">
+                <svg className="h-7 w-7 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <p className="text-lg font-semibold text-gray-800">Không có khảo sát nào</p>
+              <p className="mt-1 text-sm text-gray-500">Hãy thay đổi điều kiện lọc hoặc xóa bộ lọc để xem thêm kết quả.</p>
+              {(filters.category || filters.type || filters.status) && (
+                <div className="mt-4">
+                  <button 
+                    onClick={handleResetFilters}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9M4 20v-5h-.418m0 0A8.003 8.003 0 0019.418 15" />
+                    </svg>
+                    Xóa bộ lọc
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -880,12 +1154,13 @@ const SurveyFilter = () => {
           <ViewModalBody selectedSurvey={selectedSurvey} statusConfig={statusConfig} formatTimeRange={formatTimeRange} />
         </Modal>
 
-        <Modal key="edit-modal" isOpen={showEditModal} onClose={closeEditModal} title="Chỉnh sửa" footer={editFooter}>
+        <Modal key="edit-modal" isOpen={showEditModal} onClose={closeEditModal} title="Chỉnh sửa khảo sát" size="max-w-4xl" footer={editFooter}>
           <EditModalBody
             editForm={editForm}
             onSubmit={handleEditSubmit}
             onChange={{
               title: handleEditTitleChange,
+              description: handleEditDescriptionChange,
               category: handleEditCategoryChange,
               type: handleEditTypeChange,
               status: handleEditStatusChange,
@@ -902,12 +1177,13 @@ const SurveyFilter = () => {
           />
         </Modal>
 
-        <Modal key="add-modal" isOpen={showAddModal} onClose={closeAddModal} title="Thêm khảo sát" footer={addFooter}>
+        <Modal key="add-modal" isOpen={showAddModal} onClose={closeAddModal} title="Thêm khảo sát mới" size="max-w-4xl" footer={addFooter}>
           <AddModalBody
             addForm={addForm}
             onSubmit={handleAddSubmit}
             onChange={{
               title: handleAddTitleChange,
+              description: handleAddDescriptionChange,
               category: handleAddCategoryChange,
               type: handleAddTypeChange,
               status: handleAddStatusChange,
@@ -924,10 +1200,18 @@ const SurveyFilter = () => {
           />
         </Modal>
 
-        <Modal key="delete-modal" isOpen={showDeleteModal} onClose={closeDeleteModal} title="Xác nhận xóa" size="max-w-sm" footer={deleteFooter}>
-          <div className="text-center">
-            <p className="text-lg font-medium">Bạn có chắc chắn muốn xóa?</p>
-            <p className="text-sm text-gray-500 mt-2">"{selectedSurvey?.title}"</p>
+        <Modal key="delete-modal" isOpen={showDeleteModal} onClose={closeDeleteModal} title="Xác nhận xóa khảo sát" size="max-w-lg" footer={deleteFooter}>
+          <div className="text-center py-4">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
+              <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <p className="text-xl font-semibold text-gray-900 mb-2">Bạn có chắc chắn muốn xóa?</p>
+            <p className="text-base text-gray-600 mt-3 px-4 py-3 bg-gray-50 rounded-lg border-2 border-gray-200">
+              <span className="font-medium text-gray-800">"{selectedSurvey?.title}"</span>
+            </p>
+           
           </div>
         </Modal>
       </div>

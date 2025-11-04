@@ -17,8 +17,22 @@ class SurveyResolver
     }
     public function list($_, array $args)
     {
-        $perPage = $args['per_page'] ?? 5;
-        $paginator = $this->service->getAllSurveys($perPage);
+        $perPage = $args['per_page'] ?? 100;
+        $filterInput = $args['filter'] ?? [];
+        
+        // Xây dựng filters array
+        $filters = [];
+        if (!empty($filterInput['categories_id'])) {
+            $filters['categories_id'] = $filterInput['categories_id'];
+        }
+        if (!empty($filterInput['type'])) {
+            $filters['type'] = $filterInput['type'];
+        }
+        if (!empty($filterInput['status'])) {
+            $filters['status'] = $filterInput['status'];
+        }
+        
+        $paginator = $this->service->getAllSurveys($perPage, $filters);
         return $paginator->items(); // Trả về mảng Survey[]
     }
 

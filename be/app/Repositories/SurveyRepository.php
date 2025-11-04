@@ -25,12 +25,25 @@ class SurveyRepository
         return $survey->fresh(); // đảm bảo return bản ghi mới nhất
     }
     
-    // 🆕 Thêm hàm lấy danh sách khảo sát (có phân trang)
-    public function getAllPaginated(int $perPage = 10)
+    // 🆕 Thêm hàm lấy danh sách khảo sát (có phân trang và filter)
+    public function getAllPaginated(int $perPage = 10, array $filters = [])
     {
-        return Survey::with(['category', 'creator'])
-            ->orderByDesc('created_at')
-            ->paginate($perPage);
+        $query = Survey::with(['category', 'creator']);
+
+        // Áp dụng filters
+        if (!empty($filters['categories_id'])) {
+            $query->where('categories_id', $filters['categories_id']);
+        }
+
+        if (!empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        return $query->orderByDesc('created_at')->paginate($perPage);
     }
     public function findById(int $id): ?Survey
 {
