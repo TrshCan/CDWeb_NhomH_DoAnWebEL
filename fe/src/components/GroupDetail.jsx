@@ -36,6 +36,8 @@ export default function GroupDetail() {
   const [settingsDesc, setSettingsDesc] = useState("");
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [latestPostTime, setLatestPostTime] = useState(null);
+  const [announcement, setAnnouncement] = useState(null);
 
   // Get user info
   const getUserFromStorage = () => {
@@ -123,8 +125,7 @@ export default function GroupDetail() {
 
         // Fetch posts for this group
         const groupPosts = await getPostsByGroup(groupId);
-        setPosts(
-          groupPosts.map((p) => ({
+        const mapped = groupPosts.map((p) => ({
             id: p.id,
             type: p.type,
             user: p.user?.name || "Anonymous",
@@ -139,8 +140,13 @@ export default function GroupDetail() {
                     : { filename: m.filename }
                 )
               : [],
-          }))
-        );
+            created_at: p.created_at,
+            user_id: p.user?.id,
+          }));
+        setPosts(mapped);
+        // Track latest post timestamp for polling
+        const newest = mapped[0]?.created_at ? new Date(mapped[0].created_at).getTime() : null;
+        setLatestPostTime(newest);
       } catch (err) {
         console.error("Failed to fetch group data:", err);
         toast.error("Failed to load group data.");
@@ -153,6 +159,63 @@ export default function GroupDetail() {
 
     fetchGroupData();
   }, [groupId, user?.id, navigate]);
+
+  // Poll for new posts to show announcement
+  useEffect(() => {
+    if (!isAuthorized || !groupId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const groupPosts = await getPostsByGroup(groupId);
+        if (!groupPosts || groupPosts.length === 0) return;
+        const newestServerTime = groupPosts[0]?.created_at ? new Date(groupPosts[0].created_at).getTime() : null;
+        if (latestPostTime && newestServerTime && newestServerTime > latestPostTime) {
+          // Count how many new posts newer than latestPostTime and not by current user
+          const newOnes = groupPosts.filter((p) => new Date(p.created_at).getTime() > latestPostTime && String(p.user?.id) !== String(user?.id));
+          if (newOnes.length > 0) {
+            const firstUser = newOnes[0]?.user?.name || "Someone";
+            const more = newOnes.length - 1;
+            const text = more <= 0 ? `${firstUser} just posted` : `${firstUser} and ${more} more just posted`;
+            setAnnouncement({ text, count: newOnes.length });
+          }
+        }
+      } catch (e) {
+        // fail silently
+      }
+    }, 10000); // poll every 10s
+
+    return () => clearInterval(interval);
+  }, [isAuthorized, groupId, latestPostTime, user?.id]);
+
+  const handleReloadForAnnouncement = async () => {
+    try {
+      const groupPosts = await getPostsByGroup(groupId);
+      const mapped = groupPosts.map((p) => ({
+        id: p.id,
+        type: p.type,
+        user: p.user?.name || "Anonymous",
+        time: timeAgo(p.created_at),
+        content: p.content,
+        media: p.media
+          ? p.media.map((m) =>
+              typeof m === "string"
+                ? { filename: m }
+                : m.url
+                ? { url: m.url }
+                : { filename: m.filename }
+            )
+          : [],
+        created_at: p.created_at,
+        user_id: p.user?.id,
+      }));
+      setPosts(mapped);
+      const newest = mapped[0]?.created_at ? new Date(mapped[0].created_at).getTime() : null;
+      setLatestPostTime(newest);
+      setAnnouncement(null);
+    } catch (e) {
+      // ignore
+    }
+  };
 
   // File validation
   const handleFileChange = (e) => {
@@ -270,6 +333,17 @@ export default function GroupDetail() {
   return (
     <main className="w-full lg:w-2/3">
       <Toaster position="top-right" />
+
+      {announcement && (
+        <div className="mb-3">
+          <button
+            onClick={handleReloadForAnnouncement}
+            className="w-full bg-cyan-50 text-cyan-700 border border-cyan-200 rounded-md px-3 py-2 text-sm text-left hover:bg-cyan-100 transition"
+          >
+            {announcement.text}
+          </button>
+        </div>
+      )}
 
       {/* Header with group name, back arrow and settings */}
       <div className="bg-white rounded-lg shadow p-4 mb-4 flex items-center space-x-4">
