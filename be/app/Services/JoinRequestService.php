@@ -100,8 +100,9 @@ class JoinRequestService
 
     public function findPendingForGroup(int $groupId): array
     {
-        return $this->joinRequestRepo
-            ->findPendingForGroup($groupId)
-            ->toArray();
+        $requests = $this->joinRequestRepo->findPendingForGroup($groupId);
+        // Eager load related user and group for each request
+        $requests->load(['user', 'group']);
+        return $requests->toArray();
     }
 }
