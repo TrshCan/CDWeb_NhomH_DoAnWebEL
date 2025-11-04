@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom"; // ✅ add these
 import { searchAll, fetchSuggestions } from "../api/graphql/search";
 import PostCard from "./PostCard";
@@ -16,6 +16,9 @@ export default function SearchResult() {
   const [results, setResults] = useState({ posts: [], users: [] });
   const [loading, setLoading] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreRef = useRef(null);
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -56,6 +59,7 @@ export default function SearchResult() {
   useEffect(() => {
     if (!searchQuery.trim()) {
       setResults({ posts: [], users: [] });
+      setVisibleCount(10);
       return;
     }
 
@@ -65,6 +69,7 @@ export default function SearchResult() {
       try {
         const data = await searchAll(searchQuery);
         setResults(data);
+        setVisibleCount(10);
       } catch (err) {
         console.error("Search failed:", err);
       } finally {
@@ -86,6 +91,29 @@ export default function SearchResult() {
         return [...results.posts, ...results.users];
     }
   })();
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && !loading && !loadingMore) {
+          if (visibleCount < filteredResults.length) {
+            setLoadingMore(true);
+            setTimeout(() => {
+              setVisibleCount((c) => Math.min(c + 10, filteredResults.length));
+              setLoadingMore(false);
+            }, 500);
+          }
+        }
+      },
+      { root: null, rootMargin: "200px", threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [filteredResults.length, loading, loadingMore, visibleCount]);
 
   const Skeleton = ({ type }) =>
     type === "post" ? (
@@ -186,7 +214,7 @@ export default function SearchResult() {
         <p className="text-gray-500 text-center">No results found.</p>
       ) : (
         <div className={`space-y-6 fade-in ${fadeIn ? "visible" : ""}`}>
-          {filteredResults.map((item) =>
+          {filteredResults.slice(0, visibleCount).map((item) =>
             "content" in item ? (
               <PostCard
                 key={item.id}
@@ -214,6 +242,15 @@ export default function SearchResult() {
                 </div>
               </div>
             )
+          )}
+          {/* Sentinel for infinite scroll */}
+          <div ref={loadMoreRef} />
+          {loadingMore && (
+            <div className="space-y-6 mt-2">
+              {[...Array(2)].map((_, i) => (
+                <Skeleton key={i} type={filter === "User" ? "user" : "post"} />
+              ))}
+            </div>
           )}
         </div>
       )}
