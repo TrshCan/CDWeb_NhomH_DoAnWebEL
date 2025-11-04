@@ -279,7 +279,7 @@ class DatabaseSeeder extends Seeder
         $posts = [];
         $types = ['announcement', 'group_post', 'comment', 'normal_post'];
 
-        for ($i = 1; $i <= 10; $i++) {
+        for ($i = 1; $i <= 100; $i++) {
             // Generate a random date and time from the past year
             $pastDate = fake()->dateTimeBetween('-1 year', 'now');
 
@@ -315,7 +315,7 @@ class DatabaseSeeder extends Seeder
             "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91"
         ];
 
-        for ($i = 1; $i <= 20; $i++) {
+        for ($i = 1; $i <= 100; $i++) {
             $pastDate = fake()->dateTimeBetween('-1 year', 'now');
             $postImages[] = [
                 'post_id' => rand(1, 10),
