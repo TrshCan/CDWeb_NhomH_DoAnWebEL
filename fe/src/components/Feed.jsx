@@ -28,6 +28,7 @@ export default function Feed() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [files, setFiles] = useState([]);
   const [user, setUser] = useState(null);
+  const loadMoreRef = useRef(null);
 
   // ✅ Load current user from localStorage + GraphQL
   useEffect(() => {
