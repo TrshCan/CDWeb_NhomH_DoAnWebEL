@@ -31,52 +31,50 @@ export default function Feed() {
   const loadMoreRef = useRef(null);
 
   // ✅ Load current user from localStorage + GraphQL
+  // Check login status based on token (same pattern as Sidebar)
+  const checkLoginStatus = async () => {
+    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+    
+    if (!token || !userId) {
+      setUser(null);
+      return;
+    }
+
+    try {
+      const data = await getUserProfile(parseInt(userId));
+      setUser(data);
+    } catch (err) {
+      console.error("Failed to load user:", err);
+      toast.error("Failed to load user info");
+      setUser(null);
+      // Clean up invalid token/userId
+      localStorage.removeItem("token");
+      localStorage.removeItem("userId");
+    }
+  };
+
   useEffect(() => {
-    const loadUser = async () => {
-      const userId = localStorage.getItem("userId");
-      if (!userId) {
-        setUser(null); // Explicitly clear user
-        return;
-      }
+    // Initial check
+    checkLoginStatus();
 
-      try {
-        const data = await getUserProfile(parseInt(userId));
-        setUser(data);
-      } catch (err) {
-        console.error("Failed to load user:", err);
-        toast.error("Failed to load user info");
-        setUser(null); // Clear on error too
-        localStorage.removeItem("userId"); // Optional: clean up invalid ID
-      }
-    };
-
-    // Initial load
-    loadUser();
-
-    // Listen for storage changes (e.g., logout in another tab)
+    // Listen for changes in localStorage (cross-tab sync)
     const handleStorageChange = (e) => {
-      if (e.key === "userId") {
-        loadUser();
+      if (e.key === "token" || e.key === "userId") {
+        checkLoginStatus();
       }
     };
-
     window.addEventListener("storage", handleStorageChange);
 
-    // Optional: Poll localStorage every 2s (in case logout happens in same tab but not via event)
-    const interval = setInterval(() => {
-      const currentUserId = localStorage.getItem("userId");
-      if (!currentUserId && user) {
-        setUser(null);
-      } else if (currentUserId && !user) {
-        loadUser();
-      }
-    }, 2000);
+    // Listen for same-tab login/logout via custom event (same as Sidebar)
+    const handleTokenChange = () => checkLoginStatus();
+    window.addEventListener("tokenChanged", handleTokenChange);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      clearInterval(interval);
+      window.removeEventListener("tokenChanged", handleTokenChange);
     };
-  }, [user]); // Re-run if user changes (for polling)
+  }, []); // Run once on mount
 
   // ✅ Fetch posts
   useEffect(() => {
@@ -170,8 +168,8 @@ export default function Feed() {
 
   // ✅ Create new post using logged-in user info
   const addPost = async () => {
-    const userId = localStorage.getItem("userId");
-    if (!userId || !user) {
+    const token = localStorage.getItem("token");
+    if (!token || !user) {
       toast.error("You must be logged in to post.");
       return;
     }
