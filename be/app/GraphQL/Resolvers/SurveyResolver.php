@@ -17,8 +17,22 @@ class SurveyResolver
     }
     public function list($_, array $args)
     {
-        $perPage = $args['per_page'] ?? 5;
-        $paginator = $this->service->getAllSurveys($perPage);
+        $perPage = $args['per_page'] ?? 100;
+        $filterInput = $args['filter'] ?? [];
+        
+        // Xây dựng filters array
+        $filters = [];
+        if (!empty($filterInput['categories_id'])) {
+            $filters['categories_id'] = $filterInput['categories_id'];
+        }
+        if (!empty($filterInput['type'])) {
+            $filters['type'] = $filterInput['type'];
+        }
+        if (!empty($filterInput['status'])) {
+            $filters['status'] = $filterInput['status'];
+        }
+        
+        $paginator = $this->service->getAllSurveys($perPage, $filters);
         return $paginator->items(); // Trả về mảng Survey[]
     }
 
@@ -90,7 +104,35 @@ class SurveyResolver
     }
     public function deleteSurvey($_, array $args)
     {
-        return $this->service->deleteSurvey($args['id']);
+        try {
+            return $this->service->deleteSurvey($args['id']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw new \Nuwave\Lighthouse\Exceptions\ValidationException(
+                'Validation failed.',
+                $e->validator
+            );
+        } catch (\Exception $e) {
+            $code = (int) $e->getCode();
+            $message = $e->getMessage() ?: 'Không thể xóa khảo sát.';
+            // Tránh đẩy lỗi 500 chung chung ra FE
+            $category = 'BAD_REQUEST';
+            if ($code === 404) {
+                $category = 'NOT_FOUND';
+            } elseif ($code === 403) {
+                $category = 'FORBIDDEN';
+            } elseif ($code === 422) {
+                $category = 'VALIDATION_FAILED';
+            }
+            throw new \GraphQL\Error\Error(
+                $message,
+                null,
+                null,
+                [],
+                null,
+                $e,
+                ['category' => $category]
+            );
+        }
     }
     /**
      * 🔍 Xem chi tiết khảo sát theo ID

@@ -42,8 +42,14 @@ input UpdateSurveyInput {
     status: String # ✅ cho phép cập nhật trạng thái
 }
 
+input SurveyFilterInput {
+    categories_id: Int
+    type: String
+    status: String
+}
+
 extend type Query {
-    surveys(per_page: Int): [Survey!]!
+    surveys(per_page: Int, filter: SurveyFilterInput): [Survey!]!
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@list")
     getSurveyById(id: Int!): Survey
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@getSurveyById")
