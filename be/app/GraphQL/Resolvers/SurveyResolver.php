@@ -112,15 +112,19 @@ class SurveyResolver
                 $e->validator
             );
         } catch (\Exception $e) {
-            $category = 'INTERNAL_SERVER_ERROR';
             $code = (int) $e->getCode();
+            $message = $e->getMessage() ?: 'Không thể xóa khảo sát.';
+            // Tránh đẩy lỗi 500 chung chung ra FE
+            $category = 'BAD_REQUEST';
             if ($code === 404) {
                 $category = 'NOT_FOUND';
             } elseif ($code === 403) {
                 $category = 'FORBIDDEN';
+            } elseif ($code === 422) {
+                $category = 'VALIDATION_FAILED';
             }
             throw new \GraphQL\Error\Error(
-                $e->getMessage(),
+                $message,
                 null,
                 null,
                 [],

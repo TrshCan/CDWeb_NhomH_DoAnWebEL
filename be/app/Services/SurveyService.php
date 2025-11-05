@@ -164,7 +164,12 @@ class SurveyService
             throw new Exception('Khảo sát không tồn tại hoặc đã bị xóa.', 404);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Lỗi xóa khảo sát', ['id' => $id, 'error' => $e->getMessage()]);
+            $code = (int) $e->getCode();
+            Log::error('Lỗi xóa khảo sát', ['id' => $id, 'error' => $e->getMessage(), 'code' => $code]);
+            // Giữ nguyên thông điệp & mã lỗi có ý nghĩa để FE hiển thị đúng lý do
+            if (in_array($code, [400, 403, 404, 422], true)) {
+                throw new Exception($e->getMessage() ?: 'Không thể xóa khảo sát.', $code);
+            }
             throw new Exception('Không thể xóa khảo sát.', 500);
         }
     }
