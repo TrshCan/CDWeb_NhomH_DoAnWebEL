@@ -50,14 +50,14 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => $now,
                 'password' => bcrypt('password'),
                 'remember_token' => Str::random(10),
-                'phone' => '090'.rand(1000000,9999999),
+                'phone' => '090' . rand(1000000, 9999999),
                 'address' => "Address $i",
-                'role' => ['student','lecturer','admin'][rand(0,2)],
-                'class_id' => rand(1,10),
-                'faculty_id' => rand(1,10),
+                'role' => ['student', 'lecturer', 'admin'][rand(0, 2)],
+                'class_id' => rand(1, 10),
+                'faculty_id' => rand(1, 10),
                 'status_id' => 1,
                 'ban_reason' => null,
-                'point' => rand(0,100),
+                'point' => rand(0, 100),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -78,7 +78,7 @@ class DatabaseSeeder extends Seeder
             DB::table('groups')->insert([
                 'name' => "Group $i",
                 'description' => "Group description $i",
-                'created_by' => rand(1,10),
+                'created_by' => rand(1, 10),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -109,13 +109,13 @@ class DatabaseSeeder extends Seeder
             DB::table('surveys')->insert([
                 'title' => "Survey $i",
                 'description' => "Survey description $i",
-                'categories_id' => rand(1,10),
-                'type' => ['survey','quiz'][rand(0,1)],
+                'categories_id' => rand(1, 10),
+                'type' => ['survey', 'quiz'][rand(0, 1)],
                 'start_at' => $now,
                 'end_at' => $now->copy()->addDays(7),
-                'points' => rand(0,10),
-                'object' => ['public','students','lecturers'][rand(0,2)],
-                'created_by' => rand(1,10),
+                'points' => rand(0, 10),
+                'object' => ['public', 'students', 'lecturers'][rand(0, 2)],
+                'created_by' => rand(1, 10),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -141,9 +141,16 @@ class DatabaseSeeder extends Seeder
             'Music Club Jam Session',
         ];
         $locations = [
-            'Lecture Hall A', 'Campus Quad', 'Library Seminar Room', 'Student Union',
-            'Science Building B-101', 'Sports Complex', 'Auditorium', 'Cafeteria',
-            'Online (Zoom)', null, // Include some null locations
+            'Lecture Hall A',
+            'Campus Quad',
+            'Library Seminar Room',
+            'Student Union',
+            'Science Building B-101',
+            'Sports Complex',
+            'Auditorium',
+            'Cafeteria',
+            'Online (Zoom)',
+            null, // Include some null locations
         ];
 
         for ($i = 1; $i <= 20; $i++) {
@@ -242,8 +249,8 @@ class DatabaseSeeder extends Seeder
         $pairs = [];
         $followRows = [];
         while (count($followRows) < 10) {
-            $follower = rand(1,10);
-            $followed = rand(1,10);
+            $follower = rand(1, 10);
+            $followed = rand(1, 10);
 
             if ($follower === $followed) {
                 continue; // không tự follow
@@ -258,8 +265,8 @@ class DatabaseSeeder extends Seeder
             $followRows[] = [
                 'follower_id' => $follower,
                 'followed_id' => $followed,
-                'status'      => 'active',
-                'created_at'  => $now,
+                'status' => 'active',
+                'created_at' => $now,
             ];
         }
         DB::table('follows')->insert($followRows);
@@ -267,9 +274,9 @@ class DatabaseSeeder extends Seeder
         // ===== UserBadges =====
         for ($i = 1; $i <= 10; $i++) {
             DB::table('user_badges')->insert([
-                'user_id' => rand(1,10),
-                'badge_id' => rand(1,10),
-                'assigned_by' => rand(1,10),
+                'user_id' => rand(1, 10),
+                'badge_id' => rand(1, 10),
+                'assigned_by' => rand(1, 10),
                 'assigned_at' => $now,
             ]);
         }
@@ -327,6 +334,248 @@ class DatabaseSeeder extends Seeder
 
         DB::table('post_media')->insert($postImages);
 
+        // ================================================================
+// ====================== SURVEY SEEDER ===========================
+// ================================================================
 
+        // ---- 1. Fixed Categories (so IDs are predictable) ----
+        $categoryNames = [
+            'Student Life',
+            'Course Feedback',
+            'Campus Facilities',
+            'Event Satisfaction',
+            'Academic Support'
+        ];
+        $categoryIds = [];
+        foreach ($categoryNames as $idx => $name) {
+            $id = $idx + 1; // 1-based, matches your SMALLINT PK
+            DB::table('categories')->updateOrInsert(
+                ['id' => $id],
+                [
+                    'name' => $name,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
+            $categoryIds[] = $id;
+        }
+
+        // ---- 2. Helper: pick random users (exclude admin if you want) ----
+        $allUserIds = range(1, 12); // 10 random + 2 test users
+
+        // ---- 3. Survey definitions (easy to read & tweak) ----
+        $surveyTemplates = [
+            // ── Surveys (type = survey) ─────────────────────────────────────
+            [
+                'title' => 'End-of-Semester Student Life Survey',
+                'type' => 'survey',
+                'object' => 'students',
+                'category_id' => $categoryIds[0],
+                'questions' => [
+                    ['type' => 'text', 'text' => 'What do you like most about campus life?', 'points' => 0],
+                    [
+                        'type' => 'single_choice',
+                        'text' => 'How satisfied are you with dorms?',
+                        'points' => 0,
+                        'options' => ['Very Satisfied', 'Satisfied', 'Neutral', 'Dissatisfied', 'Very Dissatisfied']
+                    ],
+                    [
+                        'type' => 'multiple_choice',
+                        'text' => 'Which campus events did you attend?',
+                        'points' => 0,
+                        'options' => ['Career Fair', 'Cultural Fest', 'Hackathon', 'Sports Day', 'None']
+                    ],
+                ],
+            ],
+            [
+                'title' => 'Course Feedback – CS101',
+                'type' => 'survey',
+                'object' => 'students',
+                'category_id' => $categoryIds[1],
+                'questions' => [
+                    [
+                        'type' => 'single_choice',
+                        'text' => 'Was the pace of the course appropriate?',
+                        'points' => 0,
+                        'options' => ['Too Fast', 'Just Right', 'Too Slow']
+                    ],
+                    ['type' => 'text', 'text' => 'Any suggestions for the instructor?', 'points' => 0],
+                ],
+            ],
+
+            // ── Quizzes (type = quiz) ───────────────────────────────────────
+            [
+                'title' => 'PHP Basics Quiz',
+                'type' => 'quiz',
+                'object' => 'students',
+                'category_id' => $categoryIds[1],
+                'points' => 10,
+                'questions' => [
+                    [
+                        'type' => 'single_choice',
+                        'text' => 'What does PHP stand for?',
+                        'points' => 2,
+                        'options' => ['Personal Home Page', 'PHP: Hypertext Preprocessor', 'Private Host Protocol'],
+                        'correct' => 1
+                    ],
+                    [
+                        'type' => 'multiple_choice',
+                        'text' => 'Which are superglobals?',
+                        'points' => 3,
+                        'options' => ['$_GET', '$_POST', '$_SESSION', '$GLOBALS', '$_LOCAL'],
+                        'correct' => [0, 1, 2, 3]
+                    ],
+                ],
+            ],
+            [
+                'title' => 'Campus Safety Quiz',
+                'type' => 'quiz',
+                'object' => 'public',
+                'category_id' => $categoryIds[2],
+                'points' => 5,
+                'questions' => [
+                    [
+                        'type' => 'single_choice',
+                        'text' => 'Where is the nearest emergency exit?',
+                        'points' => 2,
+                        'options' => ['Left corridor', 'Right corridor', 'Behind cafeteria'],
+                        'correct' => 0
+                    ],
+                    ['type' => 'text', 'text' => 'Name one safety tip you learned today.', 'points' => 1],
+                ],
+            ],
+        ];
+
+        // Add a few more random surveys to reach ~8 total
+        for ($i = count($surveyTemplates) + 1; $i <= 8; $i++) {
+            $surveyTemplates[] = [
+                'title' => "Random Survey #$i",
+                'type' => ['survey', 'quiz'][rand(0, 1)],
+                'object' => ['public', 'students', 'lecturers'][rand(0, 2)],
+                'category_id' => $faker->randomElement($categoryIds),
+                'points' => rand(0, 15),
+                'questions' => [
+                    [
+                        'type' => 'single_choice',
+                        'text' => "Random Q1 for S#$i",
+                        'points' => 0,
+                        'options' => ['A', 'B', 'C', 'D']
+                    ],
+                    ['type' => 'text', 'text' => "Any comments for S#$i?", 'points' => 0],
+                ],
+            ];
+        }
+
+        // ---- 4. Insert Surveys + Questions + Options + Answers ----
+        $surveyIds = [];
+
+        foreach ($surveyTemplates as $tmpl) {
+            $start = $now->copy()->addDays(rand(-30, 30));
+            $end = $start->copy()->addDays(rand(7, 60));
+
+            $surveyId = DB::table('surveys')->insertGetId([
+                'title' => $tmpl['title'],
+                'description' => $faker->paragraph(2),
+                'categories_id' => $tmpl['category_id'],
+                'type' => $tmpl['type'],
+                'start_at' => $start,
+                'end_at' => $end,
+                'time_limit' => $tmpl['type'] === 'quiz' ? rand(10, 30) : null,
+                'points' => $tmpl['points'] ?? 0,
+                'object' => $tmpl['object'],
+                'created_by' => $faker->randomElement($allUserIds),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $surveyIds[] = $surveyId;
+
+            // ----- Questions -----
+            foreach ($tmpl['questions'] as $qData) {
+                $questionId = DB::table('survey_questions')->insertGetId([
+                    'survey_id' => $surveyId,
+                    'question_text' => $qData['text'],
+                    'question_type' => $qData['type'],
+                    'points' => $qData['points'],
+                ]);
+
+                // ----- Options (only for choice questions) -----
+                if (in_array($qData['type'], ['single_choice', 'multiple_choice'])) {
+                    $options = $qData['options'];
+                    $correctIndices = $qData['correct'] ?? [];
+
+                    foreach ($options as $idx => $optText) {
+                        DB::table('survey_options')->insert([
+                            'question_id' => $questionId,
+                            'option_text' => $optText,
+                            'is_correct' => in_array($idx, (array) $correctIndices),
+                        ]);
+                    }
+                }
+
+                // ----- Answers (simulate 3–8 users answering) -----
+                $answerCount = rand(3, 8);
+                $answeredUserIds = (array) $faker->randomElements($allUserIds, $answerCount);
+
+                foreach ($answeredUserIds as $userId) {
+                    $answeredAt = $faker->dateTimeBetween($start, $end);
+
+                    if ($qData['type'] === 'text') {
+                        DB::table('survey_answers')->insert([
+                            'question_id' => $questionId,
+                            'user_id' => $userId,
+                            'answer_text' => $faker->sentences(rand(1, 3), true),
+                            'answered_at' => $answeredAt,
+                            'score' => 0,
+                        ]);
+                    } else {
+                        // Pick random option(s)
+                        $optionIds = DB::table('survey_options')
+                            ->where('question_id', $questionId)
+                            ->pluck('id')
+                            ->toArray();
+
+                        if ($qData['type'] === 'single_choice') {
+                            $selected = $faker->randomElement($optionIds);
+                            $isCorrect = DB::table('survey_options')
+                                ->where('id', $selected)
+                                ->value('is_correct');
+
+                            DB::table('survey_answers')->insert([
+                                'question_id' => $questionId,
+                                'user_id' => $userId,
+                                'selected_option_id' => $selected,
+                                'answered_at' => $answeredAt,
+                                'score' => $isCorrect ? $qData['points'] : 0,
+                            ]);
+                        } else { // multiple_choice – store one row per selected option
+                            $selectedCount = rand(1, min(3, count($optionIds)));
+                            $chosen = $faker->randomElements($optionIds, $selectedCount);
+
+                            $earned = 0;
+                            foreach ($chosen as $optId) {
+                                $isCorrect = DB::table('survey_options')
+                                    ->where('id', $optId)
+                                    ->value('is_correct');
+                                if ($isCorrect)
+                                    $earned += $qData['points'] / count((array) $qData['correct']);
+
+                                DB::table('survey_answers')->insert([
+                                    'question_id' => $questionId,
+                                    'user_id' => $userId,
+                                    'selected_option_id' => $optId,
+                                    'answered_at' => $answeredAt,
+                                    'score' => 0, // score calculated later if needed
+                                ]);
+                            }
+                            // Optional: update a total score row – omitted for simplicity
+                        }
+                    }
+                }
+            }
+        }
+
+        // End of Survey Seeder
+// ================================================================
     }
 }
