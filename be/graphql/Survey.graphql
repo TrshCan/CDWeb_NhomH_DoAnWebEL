@@ -10,6 +10,7 @@ type Survey {
     points: Int
     object: String
     created_by: Int!
+    creator_name: String
     status: String! # ✅ thêm trạng thái
     created_at: String
     updated_at: String
@@ -46,6 +47,9 @@ input SurveyFilterInput {
     categories_id: Int
     type: String
     status: String
+    keyword: String
+    created_by: Int
+    creator_name: String
 }
 
 extend type Query {
