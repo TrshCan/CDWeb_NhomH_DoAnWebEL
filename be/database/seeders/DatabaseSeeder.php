@@ -100,6 +100,44 @@ class DatabaseSeeder extends Seeder
             ]));
         }
 
+        // ----- 2 **known** test accounts -----
+        $testUsers = [
+            [
+                'name' => 'Test Admin',
+                'email' => 'admin@test.com',
+                'password' => bcrypt('admin123'),   // <-- you know the plain text
+                'role' => 'admin',
+                'phone' => '0901111111',
+                'address' => 'Admin HQ',
+                'class_id' => 1,
+                'faculty_id' => 1,
+                'status_id' => 1,
+                'point' => 999,
+            ],
+            [
+                'name' => 'Test Student',
+                'email' => 'student@test.com',
+                'password' => bcrypt('student123'), // <-- you know the plain text
+                'role' => 'student',
+                'phone' => '0902222222',
+                'address' => 'Student Dorm',
+                'class_id' => 5,
+                'faculty_id' => 3,
+                'status_id' => 1,
+                'point' => 42,
+            ],
+        ];
+
+        foreach ($testUsers as $u) {
+            DB::table('users')->insert(array_merge($u, [
+                'email_verified_at' => $now,
+                'remember_token' => Str::random(10),
+                'ban_reason' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]));
+        }
+
         // ===== Permissions =====
         for ($i = 1; $i <= 10; $i++) {
             DB::table('permissions')->insert([
