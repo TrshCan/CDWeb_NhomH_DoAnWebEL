@@ -22,10 +22,8 @@ export default function SidebarRail({ active, onOpen }) {
   return (
     <div
       className={[
-        "fixed left-0 top-0 h-screen w-14 flex flex-col items-center justify-start pt-4 gap-4 bg-white border-r border-gray-200 z-40",
-        isPanelOpen
-          ? "bg-white border-r-0"
-          : "bg-white border-r border-gray-200",
+        "fixed left-0 top-[60px] h-[calc(100vh-60px)] w-14 flex flex-col items-center justify-start pt-4 gap-4 bg-white z-40",
+        isPanelOpen ? "border-r-0" : "border-r border-gray-200",
       ].join(" ")}
     >
       {/* Kết cấu */}

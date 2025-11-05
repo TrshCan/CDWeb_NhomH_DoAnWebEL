@@ -47,7 +47,7 @@ export default function WelcomeSection({ isActive, onClick }) {
 
       {/* Nội dung */}
       <div className="relative">
-        <div className="absolute inset-0 rounded-lg shadow-[0_2px_10px_-2px_rgba(0,0,0,0.25)] pointer-events-none"></div>
+        <div className="absolute inset-0 rounded-sm shadow-[0_2px_10px_-2px_rgba(0,0,0,0.25)] pointer-events-none"></div>
 
         <div
           className={`transition-all duration-500 ease-in-out ${

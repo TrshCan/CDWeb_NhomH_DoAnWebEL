@@ -12,6 +12,7 @@ import GeneralSettingsForm from "./components/GeneralSettingsForm";
 import PublishAccessForm from "./components/PublishAccessForm";
 
 import WelcomeSettingsPanel from "./components/WelcomeSettingsPanel";
+import HeaderBar from "./components/HeaderBar";
 
 import { Toaster, toast } from "react-hot-toast";
 
@@ -51,20 +52,45 @@ export default function App() {
     showXQuestions: true,
   });
 
+  // Log “Đã lưu lúc …” trên Header
+  const [savedAt, setSavedAt] = useState(null);
+  const handleGeneralChange = (v) => {
+    setGeneralSettings(v);
+    setSavedAt(new Date());
+  };
+  const handlePublishChange = (v) => {
+    setPublishSettings(v);
+    setSavedAt(new Date());
+  };
+
+  // Rộng khu giữa: 750 bình thường, 900 khi mở “Cài đặt”
   const centerWidth = openPanel === "settings" ? "900px" : "750px";
 
+  const [prevRightPanel, setPrevRightPanel] = useState(null);
+
   const handleOpenPanel = (panel) => {
+    // Nếu mở settings => lưu panel phải hiện tại và ẩn nó tạm thời
+    if (panel === "settings") {
+      if (rightPanel) setPrevRightPanel(rightPanel); // ✅ nhớ lại panel đang mở
+      setRightPanel(null); // ẩn tạm
+      setSettingsTab("general");
+    }
+
+    // Nếu rời khỏi settings => khôi phục panel phải trước đó
+    if (openPanel === "settings" && panel !== "settings") {
+      if (prevRightPanel) {
+        setRightPanel(prevRightPanel); // ✅ bật lại panel cũ (vd: welcome)
+        setPrevRightPanel(null);
+      }
+    }
+
     setOpenPanel(panel);
-    if (panel === "settings") setSettingsTab("general");
   };
 
   const handleSetSection = (sectionId) => {
     setActiveSection(sectionId);
-
     // Khi chọn Welcome -> mở panel phải
-    if (sectionId === "welcome") {
-      setRightPanel("welcome");
-    }
+    if (sectionId === "welcome") setRightPanel("welcome");
 
     requestAnimationFrame(() => {
       const el = document.getElementById(sectionId);
@@ -152,7 +178,7 @@ export default function App() {
     if (!openPanel) return null;
     return (
       <div
-        className="fixed inset-y-0 left-[55px] w-72 z-40"
+        className="fixed top-[60px] left-[55px] h-[calc(100vh-60px)] w-72 z-40"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="h-full flex flex-col bg-white border-r border-gray-300">
@@ -204,19 +230,37 @@ export default function App() {
   return (
     <>
       <div
-        className="min-h-screen bg-gray-100 font-sans overflow-visible"
-        onClick={() => setActiveSection(null)}
+        className="min-h-screen bg-gray-100 font-sans overflow-visible pt-[60px]"
+        onClick={(e) => {
+          // ✅ chỉ reset nếu click TRỰC TIẾP vào wrapper (nền),
+          //    không phải click vào con (Sidebar, Header, buttons...)
+          if (e.target === e.currentTarget) {
+            setActiveSection(null);
+          }
+        }}
       >
+        {/* Header 60px (full width, cố định) */}
+        <HeaderBar
+          title={generalSettings?.title}
+          savedAt={savedAt}
+          onActivate={() => toast.success("Đã kích hoạt")}
+          // logoSrc="/logo.svg"
+        />
+
+        {/* Panel trái (1 lần) */}
         <SidebarRail active={openPanel} onOpen={handleOpenPanel} />
         {renderLeftPanel()}
 
-        {/* Panel phải: Cài đặt màn hình chào mừng (cố định, không đẩy layout) */}
+        {/* Panel phải: Welcome settings (1 lần) */}
         {rightPanel === "welcome" && (
-          <div className="fixed inset-y-0 right-0 w-[300px] z-40 bg-white border-l border-gray-300">
+          <div className="fixed top-[60px] right-0 h-[calc(100vh-60px)] w-[300px] z-40 bg-white border-l border-gray-300">
             <WelcomeSettingsPanel
               value={welcomeSettings}
               onChange={setWelcomeSettings}
-              onClose={() => setRightPanel(null)}
+              onClose={() => {
+                setRightPanel(null);
+                setActiveSection(null); // ⬅️ khi nhấn X thì tắt panel và bỏ chọn
+              }}
             />
           </div>
         )}
@@ -227,32 +271,32 @@ export default function App() {
             {/* Spacer trái: 55px (offset) + 18rem (w-72) = 343px */}
             <div className="shrink-0 w-[343px]" />
 
-            {/* Khối giữa: 750px "net", KHÔNG padding ngang, luôn giữa 2 spacer */}
+            {/* Khối giữa: 750/900 "net", KHÔNG padding ngang, luôn giữa 2 spacer */}
             <div className="flex-1 flex justify-center">
               <div
                 id="center-750"
                 className="relative isolate"
                 style={{ width: centerWidth, boxSizing: "content-box" }}
               >
-                {/* KHÔNG đặt px-4 ở div này để khỏi mất width net */}
+                {/* KHÔNG đặt px-4 ở đây để khỏi mất width net */}
                 <div className="flex flex-col space-y-6">
                   {openPanel === "settings" ? (
                     settingsTab === "general" ? (
                       <GeneralSettingsForm
                         value={generalSettings}
-                        onChange={setGeneralSettings}
+                        onChange={handleGeneralChange}
                       />
                     ) : settingsTab === "publish" ? (
                       <PublishAccessForm
                         value={publishSettings}
-                        onChange={setPublishSettings}
+                        onChange={handlePublishChange}
                       />
                     ) : null
                   ) : (
                     <>
                       <div
                         id="welcome"
-                        className="scroll-mt-24 relative z-10 overflow-visible"
+                        className="scroll-mt-[84px] relative z-10 overflow-visible mt-5"
                       >
                         <WelcomeSection
                           isActive={activeSection === "welcome"}
@@ -276,7 +320,7 @@ export default function App() {
 
                       <div
                         id="end"
-                        className="scroll-mt-24 relative z-10 overflow-visible"
+                        className="scroll-mt-[84px] relative z-10 overflow-visible mb-5"
                       >
                         <EndSection
                           isActive={activeSection === "end"}
