@@ -9,19 +9,22 @@ export default function QuestionItem({
   index,
   totalQuestions,
   moveQuestionItem,
+  onDuplicate,
+  onDelete,
 }) {
   return (
     // Cho phép icon tràn ra ngoài card
     <div className="relative overflow-visible">
       <div
         onClick={onClick}
-        // thêm 'group' để có thể hiện icon khi hover
         className={[
-          "group p-6 pb-12 cursor-pointer bg-white rounded-sm",
+          "group p-6 pb-12 cursor-pointer rounded-sm",
           "transition-shadow duration-150",
           "hover:ring-2 hover:ring-inset hover:ring-violet-600",
           "focus-within:ring-2 focus-within:ring-inset focus-within:ring-violet-600",
-          isActive ? "ring-2 ring-inset ring-violet-600 z-10" : "z-0",
+          isActive
+            ? "ring-2 ring-inset ring-violet-600 z-10 bg-gray-50"
+            : "z-0 bg-white",
         ].join(" ")}
       >
         <div className="flex items-baseline">
@@ -30,14 +33,14 @@ export default function QuestionItem({
           </span>
           <div className="w-full">
             <EditableField
-              placeholder="Your question here"
+              placeholder="Nhập câu hỏi của bạn ở đây"
               initialValue={question.text}
               inputClassName="text-lg text-gray-800 font-thin text-[25px]"
             />
             <EditableField
-              placeholder="Optional help description"
+              placeholder="Mô tả trợ giúp tuỳ chọn"
               initialValue={question.helpText}
-              inputClassName="text-sm text-gray-500 mt-1 "
+              inputClassName="text-sm text-gray-700 mt-1 "
             />
           </div>
         </div>
@@ -51,10 +54,24 @@ export default function QuestionItem({
               </button>
             </div>
             <div className="absolute bottom-4 right-4 flex items-center space-x-2">
-              <button className="p-1 rounded-md hover:bg-gray-100">
+              <button
+                className="p-1 rounded-md hover:bg-gray-100"
+                title="Duplicate"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate?.(index);
+                }}
+              >
                 <DuplicateIcon />
               </button>
-              <button className="p-1 rounded-md hover:bg-gray-100">
+              <button
+                className="p-1 rounded-md hover:bg-gray-100"
+                title="Delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(index); // confirm ở App
+                }}
+              >
                 <TrashIcon />
               </button>
             </div>
@@ -62,12 +79,11 @@ export default function QuestionItem({
         )}
       </div>
 
-      {/* Icon vuông, nhỏ, NẰM HẲN BÊN NGOÀI; hiện khi active hoặc hover card */}
+      {/* Nút move lên/xuống: giữ nguyên như trước, không thêm icon cạnh dấu ... */}
       <div
         className={[
           "absolute z-50 top-1/2 -right-10 -translate-y-1/2",
           "flex flex-col items-center space-y-1",
-          // ẩn mặc định, hiện khi hover card
           isActive ? "" : "opacity-0 pointer-events-none",
           "group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity",
         ].join(" ")}
@@ -79,15 +95,13 @@ export default function QuestionItem({
             moveQuestionItem(index, "up");
           }}
           disabled={index === 0}
-          className={`rounded-0.5 p-1 transition-colors duration-150 shadow
-            ${
-              index === 0
-                ? "bg-gray-400 opacity-50 cursor-not-allowed"
-                : "bg-gray-500 hover:bg-gray-600"
-            }`}
+          className={`rounded-0.5 p-1 transition-colors duration-150 shadow ${
+            index === 0
+              ? "bg-gray-400 opacity-50 cursor-not-allowed"
+              : "bg-gray-500 hover:bg-gray-600"
+          }`}
           aria-label="Move up"
         >
-          {/* icon trắng */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="14"
@@ -110,15 +124,13 @@ export default function QuestionItem({
             moveQuestionItem(index, "down");
           }}
           disabled={index === totalQuestions - 1}
-          className={`rounded-0.5 p-1 transition-colors duration-150 shadow
-            ${
-              index === totalQuestions - 1
-                ? "bg-gray-400 opacity-50 cursor-not-allowed"
-                : "bg-gray-500 hover:bg-gray-600"
-            }`}
+          className={`rounded-0.5 p-1 transition-colors duration-150 shadow ${
+            index === totalQuestions - 1
+              ? "bg-gray-400 opacity-50 cursor-not-allowed"
+              : "bg-gray-500 hover:bg-gray-600"
+          }`}
           aria-label="Move down"
         >
-          {/* icon trắng */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="14"

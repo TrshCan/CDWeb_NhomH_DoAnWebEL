@@ -8,34 +8,45 @@ export default function WelcomeSection({ isActive, onClick }) {
       {/* Header */}
       <div
         className="flex items-center text-gray-600 mb-4 cursor-pointer"
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={onClick} // chỉ chọn section, không toggle
       >
-        <div
-          className={`transition-transform duration-300 ${
-            collapsed ? "-rotate-90" : "rotate-0"
-          }`}
+        <button
+          type="button"
+          className="p-1 -ml-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCollapsed((v) => !v);
+          }}
+          aria-label={collapsed ? "Mở rộng" : "Thu gọn"}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 text-gray-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
+          <div
+            className={`transition-transform duration-300 ${
+              collapsed ? "rotate-180" : "rotate-0"
+            }`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M5 15l7-7 7 7"
-            />
-          </svg>
-        </div>
+            {/* Chevron Up: lên = mở. Xoay 180 khi thu = xuống */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 text-gray-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 15l7-7 7 7"
+              />
+            </svg>
+          </div>
+        </button>
+
         <h2 className="text-md font-semibold ml-2 mr-3">Màn hình chào mừng</h2>
       </div>
 
       {/* Nội dung */}
       <div className="relative">
-        {/* Lớp bóng nằm ngoài overflow */}
         <div className="absolute inset-0 rounded-lg shadow-[0_2px_10px_-2px_rgba(0,0,0,0.25)] pointer-events-none"></div>
 
         <div
@@ -46,7 +57,7 @@ export default function WelcomeSection({ isActive, onClick }) {
           }`}
         >
           <div
-            className={`bg-violet-100 rounded-lg p-8 transition-all duration-300 border-2 ${
+            className={`bg-violet-100 rounded-sm p-8 transition-all duration-300 border-2 ${
               isActive
                 ? "border-violet-600"
                 : "border-transparent group-hover:border-violet-600"

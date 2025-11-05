@@ -8,35 +8,46 @@ export default function EndSection({ isActive, onClick }) {
       {/* Header */}
       <div
         className="flex items-center text-gray-600 mb-4 cursor-pointer"
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={onClick} // không toggle
       >
-        <div
-          className={`transition-transform duration-300 ${
-            collapsed ? "-rotate-90" : "rotate-0"
-          }`}
+        <button
+          type="button"
+          className="p-1 -ml-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCollapsed((v) => !v);
+          }}
+          aria-label={collapsed ? "Mở rộng" : "Thu gọn"}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 text-gray-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
+          <div
+            className={`transition-transform duration-300 ${
+              collapsed ? "rotate-180" : "rotate-0"
+            }`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M5 15l7-7 7 7"
-            />
-          </svg>
-        </div>
+            {/* Chevron Up */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 text-gray-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 15l7-7 7 7"
+              />
+            </svg>
+          </div>
+        </button>
+
         <h2 className="text-md font-semibold ml-2 mr-3">Màn hình kết thúc</h2>
       </div>
 
       {/* Nội dung */}
       <div className="relative">
-        {/* LAYER BÓNG */}
-        <div className="absolute inset-0 rounded-lg shadow-[0_2px_10px_-2px_rgba(0,0,0,0.25)] pointer-events-none"></div>
+        <div className="absolute inset-0 rounded-sm shadow-[0_2px_10px_-2px_rgba(0,0,0,0.25)] pointer-events-none"></div>
 
         <div
           className={`transition-all duration-500 ease-in-out ${
