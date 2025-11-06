@@ -1,16 +1,36 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
+import { getUserProfile } from "../api/graphql/user";
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+  const [showSurveysDropdown, setShowSurveysDropdown] = useState(false);
+  const surveysDropdownRef = useRef(null);
 
   // Check login status based on token
-  const checkLoginStatus = () => {
+  const checkLoginStatus = async () => {
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
+
+    // Fetch user role if logged in
+    if (token) {
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        try {
+          const userProfile = await getUserProfile(parseInt(userId));
+          setUserRole(userProfile?.role || null);
+        } catch (error) {
+          console.error("Failed to fetch user role:", error);
+          setUserRole(null);
+        }
+      }
+    } else {
+      setUserRole(null);
+    }
   };
 
   useEffect(() => {
@@ -29,6 +49,23 @@ export default function Sidebar() {
       window.removeEventListener("tokenChanged", handleTokenChange);
     };
   }, [location]); // Re-check when route changes (optional but safe)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        surveysDropdownRef.current &&
+        !surveysDropdownRef.current.contains(event.target)
+      ) {
+        setShowSurveysDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Sidebar links
   const allLinks = [
@@ -68,7 +105,7 @@ export default function Sidebar() {
   );
 
   // Handle navigation with auth check
-  const handleLinkClick = (e, path, requiresAuth) => {
+  const handleLinkClick = (e, path, requiresAuth, isSurveys = false) => {
     if (requiresAuth && !isLoggedIn) {
       e.preventDefault();
       toast.error("Bruh, you gotta log in first", {
@@ -81,6 +118,20 @@ export default function Sidebar() {
       });
       return;
     }
+
+    // Handle Surveys dropdown
+    if (isSurveys && isLoggedIn) {
+      e.preventDefault();
+      setShowSurveysDropdown(!showSurveysDropdown);
+      return;
+    }
+
+    navigate(path);
+  };
+
+  // Handle survey dropdown option click
+  const handleSurveyOptionClick = (path) => {
+    setShowSurveysDropdown(false);
     navigate(path);
   };
 
@@ -111,30 +162,109 @@ export default function Sidebar() {
 
       <aside className="w-16 lg:w-1/4 bg-white rounded-r-lg shadow p-4 flex flex-col space-y-2 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
         <nav className="flex flex-col space-y-2 flex-grow">
-          {visibleLinks.map((item, index) => (
-            <Link
-              key={index}
-              to={item.path}
-              onClick={(e) => handleLinkClick(e, item.path, item.requiresAuth)}
-              className="flex items-center space-x-2 text-cyan-600 hover:bg-cyan-50 p-2 rounded-lg cursor-pointer transition-all duration-150"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+          {visibleLinks.map((item, index) => {
+            // Special handling for Surveys dropdown
+            if (item.label === "Surveys" && isLoggedIn) {
+              const isLecturerOrAdmin =
+                userRole === "lecturer" || userRole === "admin";
+
+              return (
+                <div key={index} ref={surveysDropdownRef} className="relative">
+                  <button
+                    onClick={(e) =>
+                      handleLinkClick(e, item.path, item.requiresAuth, true)
+                    }
+                    className="w-full flex items-center space-x-2 text-cyan-600 hover:bg-cyan-50 p-2 rounded-lg cursor-pointer transition-all duration-150"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d={item.icon}
+                      />
+                    </svg>
+                    <span className="hidden lg:inline flex-1 text-left">
+                      {item.label}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 hidden lg:block transition-transform ${
+                        showSurveysDropdown ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {showSurveysDropdown && (
+                    <div className="absolute left-0 mt-1 w-full lg:w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                      <div className="py-1">
+                        {isLecturerOrAdmin && (
+                          <button
+                            onClick={() =>
+                              handleSurveyOptionClick("/surveys/made")
+                            }
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors"
+                          >
+                            Surveys I Made
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleSurveyOptionClick("/surveys/did")}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors"
+                        >
+                          Surveys I Did
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Regular link
+            return (
+              <Link
+                key={index}
+                to={item.path}
+                onClick={(e) =>
+                  handleLinkClick(e, item.path, item.requiresAuth)
+                }
+                className="flex items-center space-x-2 text-cyan-600 hover:bg-cyan-50 p-2 rounded-lg cursor-pointer transition-all duration-150"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d={item.icon}
-                />
-              </svg>
-              <span className="hidden lg:inline">{item.label}</span>
-            </Link>
-          ))}
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d={item.icon}
+                  />
+                </svg>
+                <span className="hidden lg:inline">{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Auth Section */}
