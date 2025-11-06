@@ -19,9 +19,10 @@ export default function App() {
         <Route index element={<Feed />} /> {/* mặc định là Feed */}
         <Route path="profile" element={<Profile />} />
         <Route path="surveys/made" element={<SurveysMade />} />
-        <Route path="surveys/did" element={<SurveysDid />} />
         {/* sau này sẽ thêm các route như profile expole v.v*/}
       </Route>
+      {/* Independent pages outside MainLayout */}
+      <Route path="/surveys/did" element={<SurveysDid />} />
       
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
