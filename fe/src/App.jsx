@@ -8,7 +8,7 @@ import Feed from "./components/Feed.jsx";
 import Profile from "./pages/Profile.jsx";
 import MainLayout from "./layouts/MainLayout.jsx";
 import SurveysMade from "./pages/SurveysMade.jsx";
-import SurveysDid from "./pages/SurveysDid.jsx";
+import SurveysCompleted from "./pages/SurveysCompleted.jsx";
 
 export default function App() {
   return (
@@ -22,7 +22,7 @@ export default function App() {
         {/* sau này sẽ thêm các route như profile expole v.v*/}
       </Route>
       {/* Independent pages outside MainLayout */}
-      <Route path="/surveys/did" element={<SurveysDid />} />
+      <Route path="/surveys/completed" element={<SurveysCompleted />} />
       
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />

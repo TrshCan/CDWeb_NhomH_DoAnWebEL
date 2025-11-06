@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../assets/css/SurveysMade.css";
+import "../assets/css/survey-completed.css";
 
 const mockDidSurveys = [
   { id: 1, name: "Khảo sát Mức độ Hài lòng với Trang Social", creator: "Khoa CNTT", completedAt: "2025-09-10", canView: true },
@@ -11,12 +11,46 @@ const mockDidSurveys = [
 export default function SurveysDid() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [permission, setPermission] = useState("all"); // all | can | cannot
+  const [creator, setCreator] = useState("all");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
+
+  const creators = useMemo(() => {
+    const set = new Set(mockDidSurveys.map((s) => s.creator));
+    return ["all", ...Array.from(set)];
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return mockDidSurveys;
-    return mockDidSurveys.filter((s) => s.name.toLowerCase().includes(q));
-  }, [query]);
+    const start = dateStart ? new Date(dateStart) : null;
+    const end = dateEnd ? new Date(dateEnd) : null;
+
+    return mockDidSurveys.filter((s) => {
+      // search by name
+      if (q && !s.name.toLowerCase().includes(q)) return false;
+
+      // permission filter
+      if (permission === "can" && !s.canView) return false;
+      if (permission === "cannot" && s.canView) return false;
+
+      // creator filter
+      if (creator !== "all" && s.creator !== creator) return false;
+
+      // date range filter (inclusive)
+      if (start || end) {
+        const completed = new Date(s.completedAt);
+        if (start && completed < start) return false;
+        if (end) {
+          const endOfDay = new Date(end);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (completed > endOfDay) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [query, permission, creator, dateStart, dateEnd]);
 
   const goBack = () => navigate(-1);
 
@@ -51,6 +85,44 @@ export default function SurveysDid() {
               placeholder="Tìm kiếm theo tên khảo sát..."
               aria-label="Tìm kiếm khảo sát"
               className="search-input flex-1"
+            />
+
+            <select
+              value={permission}
+              onChange={(e) => setPermission(e.target.value)}
+              className="status-select"
+              aria-label="Lọc theo quyền xem kết quả"
+            >
+              <option value="all">Tất cả quyền xem</option>
+              <option value="can">Được phép xem</option>
+              <option value="cannot">Không được phép</option>
+            </select>
+
+            <select
+              value={creator}
+              onChange={(e) => setCreator(e.target.value)}
+              className="status-select"
+              aria-label="Lọc theo người tạo"
+            >
+              {creators.map((c) => (
+                <option key={c} value={c}>{c === "all" ? "Tất cả người tạo" : c}</option>
+              ))}
+            </select>
+
+            <input
+              type="date"
+              value={dateStart}
+              onChange={(e) => setDateStart(e.target.value)}
+              className="status-select"
+              aria-label="Từ ngày hoàn thành"
+            />
+
+            <input
+              type="date"
+              value={dateEnd}
+              onChange={(e) => setDateEnd(e.target.value)}
+              className="status-select"
+              aria-label="Đến ngày hoàn thành"
             />
           </div>
 
