@@ -18,6 +18,7 @@ type Query {
 #import queries/deadlineQueries.graphql
 #import queries/getProfileQueries.graphql
 #import mutations/postMutations.graphql
+#import mutations/userMutations.graphql
 
 type Mutation {
   loginUser(
@@ -67,3 +68,4 @@ type UserBadge {
   description: String
   created_at: DateTime
   assigned_at: DateTime
+}

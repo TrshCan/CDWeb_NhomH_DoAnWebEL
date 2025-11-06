@@ -229,7 +229,12 @@ function ProfilePage() {
 
         let avatarUrl = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=600&auto=format&fit=crop';
         if (profile.avatar && profile.avatar !== 'default.png') {
-          avatarUrl = `http://localhost:8000/storage/avatars/${profile.avatar}`;
+          // Kiểm tra xem avatar đã có "avatars/" chưa
+          if (profile.avatar.startsWith('avatars/')) {
+            avatarUrl = `http://localhost:8000/storage/${profile.avatar}`;
+          } else {
+            avatarUrl = `http://localhost:8000/storage/avatars/${profile.avatar}`;
+          }
         }
 
         const badgeIcons = {
