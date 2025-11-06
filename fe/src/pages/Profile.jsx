@@ -281,7 +281,7 @@ function ProfilePage() {
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="min-h-screen w-full flex items-center justify-center bg-gray-900">
         <div className="text-white text-xl">Đang tải thông tin profile...</div>
       </div>
     );
@@ -318,7 +318,7 @@ function ProfilePage() {
           </div>
 
           {user.isOwner && (
-            <button className="absolute right-6 top-52 mt-2 px-4 py-2 text-sm font-bold text-white border border-white rounded-full hover:bg-white hover:text-gray-800 transition duration-200 flex items-center">
+            <button onClick={() => navigate('/edit-profile', { state: { user } })}  className="absolute right-6 top-52 mt-2 px-4 py-2 text-sm font-bold text-white border border-white rounded-full hover:bg-white hover:text-gray-800 transition duration-200 flex items-center">
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
               </svg>
