@@ -67,4 +67,3 @@ type UserBadge {
   description: String
   created_at: DateTime
   assigned_at: DateTime
-}

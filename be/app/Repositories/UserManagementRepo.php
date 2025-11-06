@@ -24,6 +24,7 @@ class UserManagementRepo {
             // Cập nhật các trường cơ bản
             if (isset($data['name'])) $user->name = $data['name'];
             if (isset($data['email'])) $user->email = $data['email'];
+            if (isset($data['address'])) $user->address = $data['address'];
 
             // Cập nhật mật khẩu (nếu có)
             if (!empty($data['password'])) {

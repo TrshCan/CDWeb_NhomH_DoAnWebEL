@@ -1,25 +1,12 @@
-import React, { useState } from "react";
-// import { graphqlRequest } from "../api/graphql.js"; // Giữ lại nếu cần cho API thật
+import React, { useState, useCallback, useMemo } from "react";
+import { useLocation } from "react-router-dom";
+import { graphqlRequest } from "../api/graphql";
 
-// ================== MAIN COMPONENT ==================
-function UserManagement({ user, onCancel, onUpdateSuccess }) {
-    const twitterBlue = "#1DA1F2";
-
-    const [formData, setFormData] = useState({
-        displayName: user?.displayName || "",
-        email: user?.email || "",
-        newPassword: "",
-        confirmPassword: "",
-        avatarUrl: user?.avatarUrl || user?.avatarInitial || "",
-    });
-
-    const [errors, setErrors] = useState({}); // Vẫn giữ errors state để xử lý UI cho InputField
-    const [message, setMessage] = useState(null);
-    const [isPasswordChange, setIsPasswordChange] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-
-    // ================== INPUT COMPONENT (đã di chuyển vào đây cho gọn) ==================
-    const InputField = ({ id, label, type = "text", value, onChange, placeholder, error }) => (
+// ================== INPUT COMPONENT (Đã Tách và Tối Ưu) ==================
+// Tách InputField ra ngoài để nó không bị định nghĩa lại trong mỗi lần render của UserManagement.
+// Sử dụng React.memo để ngăn nó render lại nếu props không thay đổi.
+const InputField = React.memo(({ id, label, type = "text", value, onChange, placeholder, error }) => {
+    return (
         <div className="mb-6 text-left">
             <label htmlFor={id} className="block mb-2 text-sm font-medium text-white">
                 {label}
@@ -30,31 +17,46 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
                 value={value}
                 onChange={onChange}
                 placeholder={placeholder}
-                // Giữ lại logic CSS dựa trên `error` prop
                 className={`w-full p-3 rounded-lg bg-gray-700 text-white border ${error ? "border-red-500" : "border-gray-600"
-                } focus:ring-blue-500 focus:border-blue-500 transition duration-150`}
+                    } focus:ring-blue-500 focus:border-blue-500 transition duration-150`}
             />
             {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
         </div>
     );
-    // ==================================================================================
+});
+
+// ================== MAIN COMPONENT ==================
+function UserManagement({ onCancel, onUpdateSuccess }) {
+    const twitterBlue = "#1DA1F2";
+    const { state } = useLocation();
+    const user = state?.user;
+
+    const [formData, setFormData] = useState(() => ({ // Dùng functional update cho useState
+        displayName: user?.displayName || "",
+        email: user?.email || "",
+        newPassword: "",
+        confirmPassword: "",
+        // Đảm bảo sử dụng avatarUrl nếu có, nếu không thì dùng avatarInitial
+        avatarUrl: user?.avatarUrl || user?.avatarInitial || "", 
+    }));
+
+    const [errors, setErrors] = useState({});
+    const [message, setMessage] = useState(null);
+    const [isPasswordChange, setIsPasswordChange] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     // --- Handlers ---
-    const handleChange = (e) => {
+    const handleChange = useCallback((e) => {
         const { id, value } = e.target;
         setFormData((prev) => ({ ...prev, [id]: value }));
-        // Không xóa lỗi khi thay đổi input vì không còn logic validation.
-        // Trong trường hợp này, `errors` sẽ chỉ được set sau khi submit (nếu có logic API validation).
-        // Tạm thời set về undefined để code không bị crash.
-        setErrors((prev) => ({ ...prev, [id]: undefined }));
-        setMessage(null);
-    };
+        // Clear error ngay khi user bắt đầu gõ
+        setErrors((prev) => (prev[id] ? { ...prev, [id]: undefined } : prev));
+    }, []);
 
-    const handleAvatarUpload = (e) => {
+    const handleAvatarUpload = useCallback((e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Giữ lại các kiểm tra cơ bản về kích thước và định dạng file
         if (file.size > 2 * 1024 * 1024) {
             setMessage({ type: "error", text: "Kích thước ảnh không được vượt quá 2MB." });
             e.target.value = null;
@@ -72,19 +74,19 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
             setMessage({ type: "success", text: "Đã chọn ảnh đại diện mới. Nhấn 'Cập nhật' để lưu." });
         };
         reader.readAsDataURL(file);
-    };
+    }, []); // Không cần dependencies
 
-    const handleSubmit = (e) => {
+    const handleSubmit = useCallback((e) => {
         e.preventDefault();
         setIsLoading(true);
         setMessage(null);
-        setErrors({}); // Đảm bảo clear errors
+        setErrors({});
 
-        // KHÔNG CÒN VALIDATION LOGIC NỘI BỘ NÀO
+        // *** Chú ý: Cần thêm validation logic thật vào đây trước khi gọi API ***
 
-        // Giả lập API call thành công sau 1.5s
+        // Giả lập API call
         setTimeout(() => {
-            // Giả lập lỗi từ server nếu email là mock.exist@example.com (giữ lại 1 mock duy nhất)
+            // Giả lập lỗi từ server
             if (formData.email === "mock.exist@example.com") {
                 setErrors({ email: "Email đã được đăng ký (Mock Server Error)" });
                 setMessage({ type: "error", text: "Cập nhật thất bại. Vui lòng kiểm tra lại." });
@@ -101,14 +103,18 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
                 setIsPasswordChange(false);
             }
         }, 1500);
-    };
+    }, [formData, isPasswordChange, onUpdateSuccess]); // Dependencies
+
+    // Xử lý logic hiển thị Avatar
+    const avatarDisplay = useMemo(() => {
+        const isImageUrl = formData.avatarUrl && (formData.avatarUrl.startsWith("data:") || formData.avatarUrl.includes("http"));
+        const initial = formData.displayName?.[0]?.toUpperCase() || "U";
+        return { isImageUrl, initial };
+    }, [formData.avatarUrl, formData.displayName]);
 
 
     return (
-        // Div ngoài cùng: Đảm bảo component chiếm hết không gian được cấp
         <div className="w-full h-full p-0">
-
-            {/* Chỉ giữ lại phần Form */}
             <div className="flex-1 p-8 w-full bg-gray-800 rounded-xl">
                 <h2 className="text-3xl font-extrabold text-white mb-6 border-b border-gray-700 pb-3">
                     Quản lý Hồ Sơ Cá Nhân
@@ -118,7 +124,7 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
                 {message && (
                     <div
                         className={`p-3 mb-4 rounded-lg font-medium ${message.type === "success" ? "bg-green-600" : "bg-red-600"
-                        } text-white`}
+                            } text-white`}
                     >
                         {message.text}
                     </div>
@@ -130,17 +136,14 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
                         <div
                             className="w-24 h-24 rounded-full border-4 border-gray-700 overflow-hidden flex items-center justify-center text-4xl font-bold text-white cursor-pointer hover:opacity-80 transition duration-150"
                             style={{
-                                backgroundColor:
-                                    formData.avatarUrl && !formData.avatarUrl.startsWith("data:")
-                                        ? "transparent"
-                                        : twitterBlue,
+                                backgroundColor: avatarDisplay.isImageUrl ? "transparent" : twitterBlue,
                             }}
                             onClick={() => document.getElementById("avatar-upload").click()}
                         >
-                            {formData.avatarUrl && (formData.avatarUrl.startsWith("data:") || !formData.avatarUrl.includes(' ')) ? (
+                            {avatarDisplay.isImageUrl ? (
                                 <img src={formData.avatarUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
                             ) : (
-                                formData.displayName?.[0]?.toUpperCase() || "U"
+                                avatarDisplay.initial
                             )}
                         </div>
 
@@ -187,8 +190,8 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setIsPasswordChange(!isPasswordChange);
-                                    if (isPasswordChange) {
+                                    setIsPasswordChange(prev => !prev);
+                                    if (isPasswordChange) { // Kiểm tra trạng thái cũ (trước khi toggle)
                                         setFormData((prev) => ({ ...prev, newPassword: "", confirmPassword: "" }));
                                         setErrors({});
                                     }
@@ -196,7 +199,7 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
                                 className={`px-3 py-1 text-sm font-bold rounded-full transition duration-200 ${isPasswordChange
                                     ? "bg-red-500 hover:bg-red-600"
                                     : "bg-blue-600 hover:bg-blue-700"
-                                } text-white`}
+                                    } text-white`}
                             >
                                 {isPasswordChange ? "Hủy đổi mật khẩu" : "Đổi mật khẩu"}
                             </button>
@@ -222,7 +225,6 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
                                     placeholder="••••••••"
                                     error={errors.confirmPassword}
                                 />
-                                {/* Xóa hướng dẫn về yêu cầu mật khẩu vì không còn validation */}
                                 <p className="text-sm text-gray-400 mt-2">
                                     Vui lòng nhập mật khẩu mới để thay đổi.
                                 </p>
@@ -245,7 +247,7 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
                             className={`px-6 py-2 font-bold rounded-lg text-white transition duration-200 ${isLoading
                                 ? "bg-blue-800 opacity-70 cursor-not-allowed"
                                 : "bg-blue-600 hover:bg-blue-700"
-                            }`}
+                                }`}
                             disabled={isLoading}
                         >
                             {isLoading ? "Đang cập nhật..." : "Cập nhật"}
@@ -257,4 +259,4 @@ function UserManagement({ user, onCancel, onUpdateSuccess }) {
     );
 }
 
-export default UserManagement;
+export default React.memo(UserManagement);

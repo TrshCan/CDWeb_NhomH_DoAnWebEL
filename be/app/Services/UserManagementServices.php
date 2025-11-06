@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Repositories\UserManagementRepo;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
-use GraphQL\Validator;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class UserManagementServices
 {
@@ -25,11 +27,33 @@ class UserManagementServices
      */
     public function updateProfile(array $data)
     {
-        $userId = Auth::id();
+        // Lấy userId từ args thay vì từ Auth
+        $userId = $data['user_id'] ?? null;
+
+        if (!$userId) {
+            throw new \Exception('Thiếu thông tin user_id');
+        }
+
+        // Kiểm tra user có tồn tại không
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            throw new \Exception('Không tìm thấy người dùng');
+        }
+
+        Log::info('UserManagementServices: Updating profile', [
+            'user_id' => $userId,
+            'email' => $data['email'] ?? 'not provided',
+            'current_user_email' => $user->email,
+        ]);
 
         $validator = Validator::make($data, [
             'name' => ['required', 'string', 'min:10', 'max:50', 'regex:/^[\pL\s]+$/u'],
-            'email' => ['required', 'email', 'unique:users,email,' . $userId],
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->ignore($userId, 'id')
+            ],
+            'address' => ['nullable', 'string', 'max:255'],
             'password' => ['nullable', 'string', 'min:8',
                 'regex:/[A-Z]/',   // chữ hoa
                 'regex:/[a-z]/',   // chữ thường
@@ -46,6 +70,7 @@ class UserManagementServices
             'email.required' => 'Vui lòng nhập email',
             'email.email' => 'Email không hợp lệ',
             'email.unique' => 'Email đã được đăng ký',
+            'address.max' => 'Địa chỉ không được quá 255 ký tự',
             'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự',
             'password.regex' => 'Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt',
             'password_confirmation.same' => 'Xác nhận mật khẩu không trùng khớp',

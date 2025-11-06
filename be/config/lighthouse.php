@@ -37,7 +37,7 @@ return [
             // Logs in a user if they are authenticated. In contrast to Laravel's 'auth'
             // middleware, this delegates auth and permission checks to the field level.
             Nuwave\Lighthouse\Http\Middleware\AttemptAuthentication::class,
-            
+
 
             // Logs every incoming GraphQL query.
             // Nuwave\Lighthouse\Http\Middleware\LogGraphQLQueries::class,
@@ -75,7 +75,7 @@ return [
     */
 
     'schema_path' => base_path('graphql/schema.graphql'),
-    
+
 
     /*
     |--------------------------------------------------------------------------
