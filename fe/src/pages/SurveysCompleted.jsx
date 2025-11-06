@@ -1,12 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../assets/css/survey-completed.css";
+import { getSurveysCompletedByUser } from "../api/graphql/survey";
 
-const mockDidSurveys = [
-  { id: 1, name: "Khảo sát Mức độ Hài lòng với Trang Social", creator: "Khoa CNTT", completedAt: "2025-09-10", canView: true },
-  { id: 2, name: "Đánh giá Cơ sở vật chất Khu học tập", creator: "Phòng QLĐT", completedAt: "2025-07-20", canView: false },
-  { id: 3, name: "Thu thập thông tin Đồ án Tốt nghiệp", creator: "Bộ môn Kỹ thuật", completedAt: "2025-05-15", canView: false },
-];
+const mockDidSurveys = [];
 
 export default function SurveysDid() {
   const navigate = useNavigate();
@@ -15,18 +12,42 @@ export default function SurveysDid() {
   const [creator, setCreator] = useState("all");
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
+  const [completedSurveys, setCompletedSurveys] = useState(mockDidSurveys);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCompleted = async () => {
+      setLoading(true);
+      try {
+        const userIdStr = localStorage.getItem("userId");
+        if (!userIdStr) {
+          setCompletedSurveys([]);
+          setLoading(false);
+          return;
+        }
+        const rows = await getSurveysCompletedByUser(parseInt(userIdStr));
+        setCompletedSurveys(rows || []);
+      } catch (e) {
+        console.error(e);
+        setCompletedSurveys([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCompleted();
+  }, []);
 
   const creators = useMemo(() => {
-    const set = new Set(mockDidSurveys.map((s) => s.creator));
+    const set = new Set(completedSurveys.map((s) => s.creator));
     return ["all", ...Array.from(set)];
-  }, []);
+  }, [completedSurveys]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const start = dateStart ? new Date(dateStart) : null;
     const end = dateEnd ? new Date(dateEnd) : null;
 
-    return mockDidSurveys.filter((s) => {
+    return completedSurveys.filter((s) => {
       // search by name
       if (q && !s.name.toLowerCase().includes(q)) return false;
 
@@ -50,7 +71,7 @@ export default function SurveysDid() {
 
       return true;
     });
-  }, [query, permission, creator, dateStart, dateEnd]);
+  }, [query, permission, creator, dateStart, dateEnd, completedSurveys]);
 
   const goBack = () => navigate(-1);
 
@@ -137,7 +158,11 @@ export default function SurveysDid() {
                 </tr>
               </thead>
               <tbody className="table-body">
-                {filtered.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan="4" className="empty-state">Đang tải...</td>
+                  </tr>
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan="4" className="empty-state">Không có khảo sát phù hợp</td>
                   </tr>

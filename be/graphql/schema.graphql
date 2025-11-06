@@ -9,6 +9,7 @@ type Query {
 #import types/postMedia.graphql
 #import types/deadline.graphql
 #import types/event.graphql
+#import types/survey.graphql
 
 #import inputs/postCreateInput.graphql
 #import inputs/postUpdateInput.graphql
@@ -16,6 +17,7 @@ type Query {
 #import queries/postQueries.graphql
 #import queries/eventQueries.graphql
 #import queries/deadlineQueries.graphql
+#import queries/surveyQueries.graphql
 #import queries/getProfileQueries.graphql
 #import mutations/postMutations.graphql
 
