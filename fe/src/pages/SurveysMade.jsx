@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import "../assets/css/SurveysMade.css";
+import { getSurveysMadeByUser } from "../api/graphql/survey";
 
 // Mock data - replace with actual API calls later
 const mockSurveys = [
@@ -43,10 +44,47 @@ const formatDate = (dateString) => {
 
 export default function SurveysMade() {
   const navigate = useNavigate();
-  const [surveys, setSurveys] = useState(mockSurveys);
-  const [filteredSurveys, setFilteredSurveys] = useState(mockSurveys);
+  const [surveys, setSurveys] = useState([]);
+  const [filteredSurveys, setFilteredSurveys] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+
+  // Load surveys from API
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const userIdStr = localStorage.getItem("userId");
+        if (!userIdStr) {
+          toast.error("Vui lòng đăng nhập để xem khảo sát đã tạo");
+          setSurveys([]);
+          setFilteredSurveys([]);
+          setLoading(false);
+          return;
+        }
+        const data = await getSurveysMadeByUser(parseInt(userIdStr));
+        const mapped = (data || []).map((s) => ({
+          id: s.id,
+          title: s.title,
+          createdDate: s.created_at,
+          endDate: s.end_at,
+          status: s.status, // "open" | "closed" | "draft"
+          responses: Number(s.responses ?? 0),
+        }));
+        setSurveys(mapped);
+        setFilteredSurveys(mapped);
+      } catch (err) {
+        console.error(err);
+        toast.error("Không tải được danh sách khảo sát");
+        setSurveys([]);
+        setFilteredSurveys([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Calculate metrics
   const metrics = {
@@ -307,7 +345,11 @@ export default function SurveysMade() {
               </tr>
             </thead>
             <tbody className="table-body">
-              {filteredSurveys.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="empty-state">Đang tải...</td>
+                </tr>
+              ) : filteredSurveys.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="empty-state">
                     Không tìm thấy khảo sát nào

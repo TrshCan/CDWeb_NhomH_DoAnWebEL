@@ -1,0 +1,10 @@
+type SurveySummary {
+  id: ID!
+  title: String!
+  created_at: DateTime
+  end_at: DateTime
+  status: String!
+  responses: Int!
+}
+
+
