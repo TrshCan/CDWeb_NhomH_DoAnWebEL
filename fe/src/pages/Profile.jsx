@@ -38,17 +38,62 @@ const USER_POSTS_QUERY = `
       content
       type
       created_at
+      parent_id
       user {
         id
         name
+      }
+      parent {
+        id
+        user {
+          id
+          name
+        }
       }
       media {
         id
         url
       }
+      likes {
+        id
+        user_id
+      }
+      children {
+        id
+      }
     }
   }
 `;
+
+const USER_REPLIES_QUERY = `
+  query getUserReplies($user_id: ID!) {
+    repliesByUser(user_id: $user_id) {
+      id
+      content
+      created_at
+      parent {
+        id
+        user { id name }
+      }
+      user { id name }
+      media { id url }
+      likes { id user_id }
+    }
+  }
+`;
+const USER_LIKES_QUERY = `
+  query getUserLikes($user_id: ID!) {
+    likedPostsByUser(user_id: $user_id) {
+      id
+      content
+      created_at
+      user { id name }
+      media { id url }
+      likes { id user_id }
+    }
+  }
+`;
+
 
 // --- AVATAR MODAL ---
 const AvatarModal = ({ avatarUrl, onClose }) => {
@@ -133,69 +178,121 @@ const ContentTab = ({ activeTab, userId }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (activeTab === 'Bài viết' && userId) {
-      const fetchPosts = async () => {
-        setLoading(true);
-        try {
-          const data = await graphqlRequest(USER_POSTS_QUERY, { user_id: userId });
+    if (!userId) {
+      setPosts([]);
+      return;
+    }
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        let data;
+        let items = [];
+
+        if (activeTab === 'Bài viết') {
+          data = await graphqlRequest(USER_POSTS_QUERY, { user_id: userId });
           if (data?.data?.postsByUser) {
-            const formattedPosts = data.data.postsByUser.map((p) => ({
+            items = data.data.postsByUser.map((p) => ({
               id: p.id,
               type: p.type,
               user: p.user?.name || "Unknown",
+              userId: p.user?.id,
               time: timeAgo(p.created_at),
               content: p.content,
+              parent_id: p.parent_id,
+              parent_user: p.parent?.user?.name || null,
               media: p.media
                 ? p.media.map((m) => ({ url: m.url })).filter((m) => m.url)
                 : [],
+              likes: p.likes || [],
+              children: p.children || [],
             }));
-            setPosts(formattedPosts);
           }
-        } catch (err) {
-          console.error('Lỗi khi lấy posts:', err);
-          setPosts([]);
-        } finally {
-          setLoading(false);
+        } else if (activeTab === 'Trả lời') {
+          data = await graphqlRequest(USER_REPLIES_QUERY, { user_id: userId });
+          if (data?.data?.repliesByUser) {
+            items = data.data.repliesByUser.map((r) => ({
+              id: r.id,
+              user: r.user?.name || "Unknown",
+              userId: r.user?.id,
+              time: timeAgo(r.created_at),
+              content: r.content,
+              parent_id: r.parent?.id || null,
+              parent_user: r.parent?.user?.name || null,
+              media: r.media
+                ? r.media.map((m) => ({ url: m.url })).filter((m) => m.url)
+                : [],
+              likes: r.likes || [],
+              children: [],
+            }));
+          }
+        } else if (activeTab === 'Likes') {
+          data = await graphqlRequest(USER_LIKES_QUERY, { user_id: userId });
+          if (data?.data?.likedPostsByUser) {
+            items = data.data.likedPostsByUser.map((p) => ({
+              id: p.id,
+              user: p.user?.name || "Unknown",
+              userId: p.user?.id,
+              time: timeAgo(p.created_at),
+              content: p.content,
+              parent_id: null,
+              parent_user: null,
+              media: p.media
+                ? p.media.map((m) => ({ url: m.url })).filter((m) => m.url)
+                : [],
+              likes: p.likes || [],
+              children: [],
+            }));
+          }
         }
-      };
-      fetchPosts();
-    } else {
-      setPosts([]);
-    }
+
+        setPosts(items);
+      } catch (err) {
+        console.error(`Lỗi khi lấy ${activeTab}:`, err);
+        setPosts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [activeTab, userId]);
 
-  if (activeTab === 'Bài viết') {
-    return (
-      <div className="mt-4 min-h-[300px] bg-gray-900 rounded-lg">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-gray-400 text-lg">Đang tải bài viết...</div>
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-gray-400 text-lg italic">Chưa có bài viết nào.</p>
-          </div>
-        ) : (
-          <div className="space-y-4 p-4">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
+  const getLoadingMessage = () => {
+    const messages = {
+      'Bài viết': 'Đang tải bài viết...',
+      'Trả lời': 'Đang tải trả lời...',
+      'Likes': 'Đang tải bài viết đã like...',
+    };
+    return messages[activeTab] || 'Đang tải...';
+  };
 
-  const contentMap = {
-    'Trả lời': 'Đây là danh sách các Trả lời (Replies) và bình luận của người dùng.',
-    'Likes': 'Đây là danh sách các bài viết mà người dùng đã Likes.',
+  const getEmptyMessage = () => {
+    const messages = {
+      'Bài viết': 'Chưa có bài viết nào.',
+      'Trả lời': 'Chưa có trả lời nào.',
+      'Likes': 'Chưa like bài viết nào.',
+    };
+    return messages[activeTab] || 'Không có nội dung.';
   };
 
   return (
-    <div className="mt-4 p-6 text-gray-200 border border-gray-800 rounded-lg min-h-[300px] flex items-center justify-center bg-gray-900">
-      <p className="text-lg font-light italic">
-        {contentMap[activeTab] || 'Không có nội dung để hiển thị.'}
-      </p>
+    <div className="mt-4 min-h-[300px] bg-gray-900 rounded-lg">
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-400 text-lg">{getLoadingMessage()}</div>
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="flex items-center justify-center py-12">
+          <p className="text-gray-400 text-lg italic">{getEmptyMessage()}</p>
+        </div>
+      ) : (
+        <div className="space-y-4 p-4">
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

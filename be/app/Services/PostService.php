@@ -41,6 +41,16 @@ class PostService
         return $this->repository->byGroup($groupId);
     }
 
+    public function repliesByUser($userId)
+    {
+        return $this->repository->repliesByUser($userId);
+    }
+
+    public function likedPostsByUser($userId)
+    {
+        return $this->repository->likedPostsByUser($userId);
+    }
+
     public function create(array $input, array $media = [])
     {
         \Log::debug('PostService create input:', $input);
@@ -59,6 +69,11 @@ class PostService
             throw new ValidationException($validator);
         }
 
+        // ✅ Filter out null/empty files first
+        $media = array_filter($media, function($file) {
+            return $file !== null && $file !== false;
+        });
+
         // ✅ Limit media count to 4
         if (count($media) > 4) {
             \Log::error('Too many media files in request:', ['count' => count($media)]);
@@ -68,13 +83,13 @@ class PostService
 
         // ✅ Validate each media file
         foreach ($media as $index => $file) {
-            if ($file && !$file instanceof \Illuminate\Http\UploadedFile) {
-                \Log::error("Invalid file at index $index:", ['file' => $file]);
+            if (!$file instanceof \Illuminate\Http\UploadedFile) {
+                \Log::error("Invalid file at index $index:", ['file' => $file, 'type' => gettype($file)]);
                 throw new ValidationException(Validator::make([], []), "Invalid file at index $index");
             }
 
             $validator = Validator::make(['file' => $file], [
-                'file' => 'nullable|file|mimes:jpg,jpeg,png,mp4|max:10240', // 10MB max
+                'file' => 'required|file|mimes:jpg,jpeg,png,mp4|max:10240', // 10MB max
             ]);
 
             if ($validator->fails()) {
@@ -88,17 +103,25 @@ class PostService
 
         // ✅ Handle media uploads
         foreach ($media as $file) {
-            if ($file instanceof \Illuminate\Http\UploadedFile) {
-                $path = $file->store('media', 'public');
+            if ($file && $file instanceof \Illuminate\Http\UploadedFile) {
+                try {
+                    $path = $file->store('media', 'public');
 
-                // Make absolute URL
-                $url = asset(Storage::url($path));
+                    // Make absolute URL
+                    $url = asset(Storage::url($path));
 
-                \Log::debug('Media stored:', ['path' => $path, 'url' => $url]);
+                    \Log::debug('Media stored:', ['path' => $path, 'url' => $url]);
 
-                $post->media()->create([
-                    'url' => $url, // Full URL, not relative anymore
-                ]);
+                    $post->media()->create([
+                        'url' => $url, // Full URL, not relative anymore
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to store media file:', [
+                        'error' => $e->getMessage(),
+                        'file' => $file->getClientOriginalName(),
+                    ]);
+                    throw new \Exception('Failed to upload media file: ' . $e->getMessage());
+                }
             }
         }
 

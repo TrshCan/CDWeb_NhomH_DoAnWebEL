@@ -13,6 +13,21 @@ export const getAllPosts = async () => {
           id
           name
         }
+        likes {
+          id
+          user_id
+          user {
+            id
+            name
+          }
+        }
+        children {
+          id
+        }
+        media {
+          id
+          url
+        }
       }
     }
   `;
@@ -27,12 +42,98 @@ export const getPostById = async (id) => {
       post(id: $id) {
         id
         content
+        created_at
+        user {
+          id
+          name
+        }
+        parent {
+          id
+          content
+          user {
+            id
+            name
+          }
+        }
+        children {
+          id
+          content
+          created_at
+          parent_id
+          user {
+            id
+            name
+          }
+          parent {
+            id
+            user {
+              id
+              name
+            }
+          }
+          likes {
+            id
+            user_id
+            user {
+              id
+              name
+            }
+          }
+          media {
+            id
+            url
+          }
+          children {
+            id
+            content
+            created_at
+            parent_id
+            user {
+              id
+              name
+            }
+            parent {
+              id
+              user {
+                id
+                name
+              }
+            }
+            likes {
+              id
+              user_id
+              user {
+                id
+                name
+              }
+            }
+            media {
+              id
+              url
+            }
+          }
+        }
+        likes {
+          id
+          user_id
+          user {
+            id
+            name
+          }
+        }
+        media {
+          id
+          url
+        }
       }
     }
   `;
   const variables = { id };
 
   const response = await graphqlClient.post("", { query, variables });
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
   return response.data.data.post;
 };
 
@@ -47,6 +148,17 @@ export const getPostsByType = async (type) => {
         user { 
           id
           name 
+        }
+        likes {
+          id
+          user_id
+          user {
+            id
+            name
+          }
+        }
+        children {
+          id
         }
         media {
           id
@@ -115,13 +227,35 @@ export const createPost = async (input, files = []) => {
   files.forEach((file, i) => formData.append(i.toString(), file));
 
   try {
-    const response = await graphqlClient.post('', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    if (response.data.errors) throw new Error(response.data.errors[0].message);
+    // Không set Content-Type header, để axios tự động set với boundary
+    const response = await graphqlClient.post('', formData);
+    
+    if (response.data.errors) {
+      console.error('GraphQL errors:', response.data.errors);
+      const error = response.data.errors[0];
+      const errorMessage = error.message || "Failed to create post";
+      
+      // Nếu có validation errors, lấy thông tin chi tiết
+      if (error.extensions?.validation) {
+        const validationErrors = error.extensions.validation;
+        const firstError = Object.values(validationErrors)[0];
+        throw new Error(Array.isArray(firstError) ? firstError[0] : firstError);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
     return response.data.data.createPost;
   } catch (err) {
     console.error('createPost (with files) failed:', err);
+    console.error('Error response:', err?.response?.data);
+    
+    // Nếu có response từ server, lấy error message chi tiết hơn
+    if (err?.response?.data?.errors) {
+      const error = err.response.data.errors[0];
+      throw new Error(error.message || "Internal server error");
+    }
+    
     throw err;
   }
 };
@@ -157,4 +291,31 @@ export const deletePost = async (id) => {
     throw new Error(response.data.errors[0]?.message || "GraphQL error");
   }
   return response.data.data.deletePost;
+};
+
+export const toggleLike = async (postId, userId) => {
+  const query = `
+    mutation ($post_id: ID!, $user_id: ID!) {
+      toggleLike(post_id: $post_id, user_id: $user_id)
+    }
+  `;
+  const variables = { 
+    post_id: postId.toString(), 
+    user_id: userId.toString() 
+  };
+  const response = await graphqlClient.post("", { query, variables });
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+  return response.data.data.toggleLike;
+};
+
+export const createComment = async (postId, userId, content, files = []) => {
+  const input = {
+    user_id: userId.toString(),
+    parent_id: postId.toString(),
+    type: "comment",
+    content: content,
+  };
+  return await createPost(input, files);
 };

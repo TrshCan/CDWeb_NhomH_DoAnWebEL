@@ -1,22 +1,43 @@
 import React, { useState, useEffect } from "react";
-import { updatePost, deletePost } from "../api/graphql/post";
+import { useNavigate } from "react-router-dom";
+import { updatePost, deletePost, toggleLike } from "../api/graphql/post";
 
-export default function PostCard({ post, onDeleted }) {
+export default function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = false, onReply = null }) {
+  const navigate = useNavigate();
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [saving, setSaving] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(post.likes?.length || 0);
+  const [commentsCount, setCommentsCount] = useState(post.children?.length || 0);
 
   const currentUserId = (() => {
     try {
       const u = localStorage.getItem("user");
-      return u ? JSON.parse(u)?.id : null;
+      const userId = localStorage.getItem("userId");
+      return userId || (u ? JSON.parse(u)?.id : null);
     } catch { return null; }
   })();
   const ownerId = post.userId || post.user_id || null;
   const isOwner = ownerId && String(ownerId) === String(currentUserId);
+
+  // Check if current user liked this post
+  useEffect(() => {
+    if (currentUserId && post.likes) {
+      const liked = post.likes.some(like => 
+        String(like.user_id || like.user?.id) === String(currentUserId)
+      );
+      setIsLiked(liked);
+    }
+  }, [currentUserId, post.likes]);
+
+  useEffect(() => {
+    setLikesCount(post.likes?.length || 0);
+    setCommentsCount(post.children?.length || 0);
+  }, [post.likes, post.children]);
 
   const maxVisible = 4;
   const hasExtra = post.media?.length > maxVisible;
@@ -118,7 +139,17 @@ export default function PostCard({ post, onDeleted }) {
         <div className="w-10 h-10 bg-cyan-600 rounded-full"></div>
         <div>
           <p className="font-semibold text-cyan-600">{post.user}</p>
-          <p className="text-gray-500 text-sm">{post.time}</p>
+          <div className="flex items-center gap-1 text-gray-500 text-sm">
+            <span>{post.time}</span>
+            {post.parent_id && post.parent_user && (
+              <>
+                <span>·</span>
+                <span className="text-cyan-600">
+                  Replying to <span className="font-semibold">@{post.parent_user}</span>
+                </span>
+              </>
+            )}
+          </div>
         </div>
         </div>
         {/* 3-dots menu */}
@@ -302,8 +333,30 @@ export default function PostCard({ post, onDeleted }) {
 
       {/* Actions */}
       <div className="flex space-x-4 mt-3 text-gray-500">
-        <button title="Like" className="hover:text-cyan-600">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button 
+          title="Like" 
+          onClick={async () => {
+            if (!currentUserId) {
+              alert("Please log in to like posts");
+              return;
+            }
+            try {
+              const newLikedState = await toggleLike(post.id, currentUserId);
+              setIsLiked(newLikedState);
+              setLikesCount(prev => newLikedState ? prev + 1 : Math.max(0, prev - 1));
+              if (onLikeUpdate) onLikeUpdate(post.id, newLikedState);
+            } catch (e) {
+              console.error("Failed to toggle like:", e);
+              alert(e.message || "Failed to like post");
+            }
+          }}
+          className={`flex items-center gap-1 hover:text-cyan-600 transition-colors ${isLiked ? "text-cyan-600" : ""}`}
+        >
+          <svg 
+            className={`w-5 h-5 ${isLiked ? "fill-current" : "fill-none"}`} 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -311,18 +364,46 @@ export default function PostCard({ post, onDeleted }) {
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
             />
           </svg>
+          {likesCount > 0 && <span className="text-sm">{likesCount}</span>}
         </button>
 
-        <button title="Comment" className="hover:text-cyan-600">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-        </button>
+        {onReply ? (
+          <button 
+            title="Reply" 
+            onClick={() => onReply(post.id, post.user)}
+            className="flex items-center gap-1 hover:text-cyan-600 cursor-pointer"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+              />
+            </svg>
+            <span className="text-sm">Reply</span>
+          </button>
+        ) : (
+          <button 
+            title="Comment" 
+            onClick={() => {
+              if (!disableCommentNavigate) {
+                navigate(`/post/${post.id}`);
+              }
+            }}
+            className={`flex items-center gap-1 hover:text-cyan-600 ${disableCommentNavigate ? 'cursor-default opacity-50' : 'cursor-pointer'}`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              />
+            </svg>
+            {commentsCount > 0 && <span className="text-sm">{commentsCount}</span>}
+          </button>
+        )}
 
         <button title="Share" className="hover:text-cyan-600">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
