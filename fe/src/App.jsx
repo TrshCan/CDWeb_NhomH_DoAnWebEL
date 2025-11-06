@@ -112,12 +112,8 @@ export default function App() {
       } else {
         return prevItems;
       }
-      const updatedItems = newItems.map((item, i) => ({ ...item, id: i + 1 }));
-      const newActiveId = updatedItems.find(
-        (item) => item.text === removed.text
-      )?.id;
-      if (newActiveId) setActiveSection(`question-${newActiveId}`);
-      return updatedItems;
+      setActiveSection(`question-${removed.id}`);
+      return newItems;
     });
   };
 

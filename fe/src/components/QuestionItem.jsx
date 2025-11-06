@@ -29,7 +29,7 @@ export default function QuestionItem({
       >
         <div className="flex items-baseline">
           <span className="text-violet-600 font-semibold mr-2 whitespace-nowrap">
-            {question.id} →
+            {index + 1} →
           </span>
           <div className="w-full">
             <EditableField

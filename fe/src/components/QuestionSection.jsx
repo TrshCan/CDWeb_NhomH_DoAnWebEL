@@ -195,7 +195,9 @@ export default function QuestionSection({
       {/* Vùng nội dung có hiệu ứng thu/mở mượt */}
       <div
         className={`transition-all duration-500 ease-in-out ${
-          isCollapsed ? "max-h-0 overflow-hidden" : "max-h-[1000px]"
+          isCollapsed
+            ? "max-h-0 overflow-hidden"
+            : "max-h-none overflow-visible"
         }`}
       >
         <div className="bg-white rounded-sm shadow-lg border border-gray-200 divide-y divide-gray-200 overflow-visible">
