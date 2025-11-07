@@ -112,6 +112,10 @@ const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
               <div className="mt-1 text-sm font-medium text-gray-900">{selectedSurvey.type === 'survey' ? 'Survey' : 'Quiz'}</div>
             </div>
             <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Người tạo</div>
+              <div className="mt-1 text-sm font-medium text-gray-900">{selectedSurvey.creatorName}</div>
+            </div>
+            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Trạng thái</div>
               <div className="mt-1 text-sm font-medium text-gray-900">{statusConfig[selectedSurvey.status]?.label}</div>
             </div>
@@ -403,7 +407,7 @@ const SurveyFilter = () => {
   const [categories, setCategories] = useState([]);
   const [categoryIdMap, setCategoryIdMap] = useState({});
   const [categoriesLoading, setCategoriesLoading] = useState(false);
-  const [filters, setFilters] = useState({ category: '', type: '', status: '' });
+  const [filters, setFilters] = useState({ category: '', type: '', status: '', keyword: '', creatorName: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSurvey, setSelectedSurvey] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -562,6 +566,14 @@ const SurveyFilter = () => {
         graphQLFilter.status = filterParams.status;
       }
 
+      if (filterParams.keyword) {
+        graphQLFilter.keyword = filterParams.keyword;
+      }
+
+      if (filterParams.creatorName) {
+        graphQLFilter.creator_name = filterParams.creatorName;
+      }
+
       // Xây dựng query với filter
       const filterString = Object.keys(graphQLFilter).length > 0 
         ? `filter: { ${Object.entries(graphQLFilter).map(([key, value]) => {
@@ -587,6 +599,7 @@ const SurveyFilter = () => {
             points
             object
             created_by
+            creator_name
           }
         }
       `);
@@ -611,7 +624,8 @@ const SurveyFilter = () => {
         endAt: toDateTimeLocal(s.end_at),
         points: s.points,
         object: s.object,
-        timeLimit: s.time_limit ?? ''
+        timeLimit: s.time_limit ?? '',
+        creatorName: s.creator_name || `#${s.created_by}`
       }));
 
       setSurveysList(surveys);
@@ -648,7 +662,7 @@ const SurveyFilter = () => {
   };
 
   const handleResetFilters = () => {
-    setFilters({ category: '', type: '', status: '' });
+    setFilters({ category: '', type: '', status: '', keyword: '', creatorName: '' });
     setCurrentPage(1);
   };
 
@@ -1072,7 +1086,7 @@ const SurveyFilter = () => {
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">Bộ lọc</h2>
-            {(filters.category || filters.type || filters.status) && (
+            {(filters.category || filters.type || filters.status || filters.keyword || filters.creatorName) && (
               <button 
                 onClick={handleResetFilters} 
                 className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-colors"
@@ -1085,7 +1099,29 @@ const SurveyFilter = () => {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-2">Tìm kiếm</label>
+              <input 
+                type="text"
+                name="keyword"
+                value={filters.keyword}
+                onChange={handleFilterChange}
+                placeholder="Tiêu đề hoặc mô tả..."
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-2">Người tạo (Giảng viên)</label>
+              <input 
+                type="text"
+                name="creatorName"
+                value={filters.creatorName}
+                onChange={handleFilterChange}
+                placeholder="Tên giảng viên..."
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-2">Danh mục</label>
               <select 
@@ -1136,7 +1172,7 @@ const SurveyFilter = () => {
               </div>
               <p className="text-lg font-semibold text-gray-800">Không có khảo sát nào</p>
               <p className="mt-1 text-sm text-gray-500">Hãy thay đổi điều kiện lọc hoặc xóa bộ lọc để xem thêm kết quả.</p>
-              {(filters.category || filters.type || filters.status) && (
+              {(filters.category || filters.type || filters.status || filters.keyword) && (
                 <div className="mt-4">
                   <button 
                     onClick={handleResetFilters}
@@ -1157,6 +1193,7 @@ const SurveyFilter = () => {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Tiêu đề</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Danh mục</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Loại</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Người tạo</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Điểm</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Đối tượng</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Trạng thái</th>
@@ -1170,6 +1207,7 @@ const SurveyFilter = () => {
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{survey.title}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{survey.category}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{survey.type === 'survey' ? 'Survey' : 'Quiz'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{survey.creatorName}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{survey.points}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}</td>
                     <td className="px-6 py-4">

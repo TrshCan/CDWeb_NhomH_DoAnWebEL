@@ -31,6 +31,15 @@ class SurveyResolver
         if (!empty($filterInput['status'])) {
             $filters['status'] = $filterInput['status'];
         }
+        if (!empty($filterInput['keyword'])) {
+            $filters['keyword'] = $filterInput['keyword'];
+        }
+        if (!empty($filterInput['created_by'])) {
+            $filters['created_by'] = (int) $filterInput['created_by'];
+        }
+        if (!empty($filterInput['creator_name'])) {
+            $filters['creator_name'] = $filterInput['creator_name'];
+        }
         
         $paginator = $this->service->getAllSurveys($perPage, $filters);
         return $paginator->items(); // Trả về mảng Survey[]
