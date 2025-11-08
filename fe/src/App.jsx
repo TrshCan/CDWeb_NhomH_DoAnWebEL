@@ -9,6 +9,7 @@ import Profile from "./pages/Profile.jsx";
 import MainLayout from "./layouts/MainLayout.jsx";
 import SurveysMade from "./pages/SurveysMade.jsx";
 import SurveysDid from "./pages/SurveysDid.jsx";
+import RawDataList from "./pages/RawDataList.jsx";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
       
       {/* Independent pages outside MainLayout */}
       <Route path="/surveys/made" element={<SurveysMade />} />
+      <Route path="/surveys/:surveyId/raw-data" element={<RawDataList />} />
       
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />

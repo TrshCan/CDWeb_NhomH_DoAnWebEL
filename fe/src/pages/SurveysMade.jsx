@@ -119,8 +119,7 @@ export default function SurveysMade() {
   };
 
   const handleViewResults = (surveyId, surveyTitle) => {
-    toast.success(`Xem kết quả: ${surveyTitle}`);
-    // navigate(`/surveys/${surveyId}/results`);
+    navigate(`/surveys/${surveyId}/raw-data`);
   };
 
   const handleEditSurvey = (surveyId, surveyTitle) => {
