@@ -2,9 +2,6 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from "react"
 import { useLocation } from "react-router-dom";
 import { updateProfile, getUserProfile } from "../api/graphql/user";
 
-// ================== INPUT COMPONENT (Đã Tách và Tối Ưu) ==================
-// Tách InputField ra ngoài để nó không bị định nghĩa lại trong mỗi lần render của UserManagement.
-// Sử dụng React.memo để ngăn nó render lại nếu props không thay đổi.
 const InputField = React.memo(({ id, label, type = "text", value, onChange, placeholder, error }) => {
     return (
         <div className="mb-6 text-left">
@@ -46,6 +43,7 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
             displayName: user?.displayName || "",
             email: user?.email || "",
             address: user?.bio || user?.address || "",
+            currentPassword: "",
             newPassword: "",
             confirmPassword: "",
             avatarUrl: avatarUrl,
@@ -141,10 +139,15 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
         }
 
         if (isPasswordChange) {
+            // Validation cho current password
+            if (!formData.currentPassword || formData.currentPassword.trim() === "") {
+                newErrors.currentPassword = "Vui lòng nhập mật khẩu hiện tại";
+            }
+            
+            // Validation cho new password
             if (!formData.newPassword || formData.newPassword.length < 8) {
                 newErrors.newPassword = "Mật khẩu phải có ít nhất 8 ký tự";
             } else {
-                // Kiểm tra độ phức tạp của mật khẩu
                 const hasUpperCase = /[A-Z]/.test(formData.newPassword);
                 const hasLowerCase = /[a-z]/.test(formData.newPassword);
                 const hasNumbers = /[0-9]/.test(formData.newPassword);
@@ -154,6 +157,8 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                     newErrors.newPassword = "Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt";
                 }
             }
+            
+            // Validation cho confirm password
             if (formData.newPassword !== formData.confirmPassword) {
                 newErrors.confirmPassword = "Mật khẩu xác nhận không trùng khớp";
             }
@@ -170,6 +175,9 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
         try {
             const password = isPasswordChange ? formData.newPassword : null;
             const password_confirmation = isPasswordChange ? formData.confirmPassword : null;
+            // Backend yêu cầu current_password là String! (non-null), nhưng chỉ kiểm tra khi có password
+            // Khi không đổi mật khẩu, gửi empty string để đáp ứng schema
+            const current_password = isPasswordChange ? formData.currentPassword : "";
             const avatarFile = avatarFileRef.current;
 
             const updatedUser = await updateProfile(
@@ -178,10 +186,9 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                 formData.address?.trim() || null,
                 password,
                 password_confirmation,
-                avatarFile
+                avatarFile,
+                current_password,
             );
-
-            // Cập nhật thành công
             setMessage({ type: "success", text: "Cập nhật hồ sơ thành công!" });
             
             // Reset avatar file ref sau khi upload thành công
@@ -201,11 +208,8 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                 }
                 setFormData((prev) => ({ ...prev, avatarUrl }));
             }
-
-            // Gọi callback để cập nhật thông tin user ở component cha
             let finalAvatarUrl = formData.avatarUrl;
             if (updatedUser.avatar) {
-                // Chuyển path thành URL đầy đủ nếu cần
                 finalAvatarUrl = updatedUser.avatar;
                 if (!finalAvatarUrl.startsWith("http") && !finalAvatarUrl.startsWith("data:")) {
                     finalAvatarUrl = `http://localhost:8000/storage/${finalAvatarUrl}`;
@@ -222,18 +226,87 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
 
             // Reset password fields nếu đã đổi mật khẩu
             if (isPasswordChange) {
-                setFormData((prev) => ({ ...prev, newPassword: "", confirmPassword: "" }));
+                setFormData((prev) => ({ ...prev, currentPassword: "", newPassword: "", confirmPassword: "" }));
                 setIsPasswordChange(false);
             }
         } catch (error) {
             console.error("Update profile error:", error);
+            console.error("Error message:", error.message);
+            console.error("Error response:", error.response?.data);
+            console.error("Error response data errors:", error.response?.data?.errors);
             
-            // Xử lý lỗi từ server
-            const errorMessage = error.message || "Cập nhật thất bại. Vui lòng thử lại.";
+            // Lấy error message từ nhiều nguồn có thể
+            let errorMessage = error.message;
+            console.log("Initial error.message:", errorMessage);
+            
+            // Kiểm tra response.data.errors (GraphQL errors)
+            if (!errorMessage && error.response?.data?.errors && error.response.data.errors.length > 0) {
+                errorMessage = error.response.data.errors[0]?.message;
+                console.log("Error from response.data.errors:", errorMessage);
+                // Kiểm tra extensions nếu có
+                if (!errorMessage && error.response.data.errors[0]?.extensions) {
+                    errorMessage = error.response.data.errors[0].extensions.message || 
+                                  error.response.data.errors[0].extensions.exception?.message;
+                    console.log("Error from extensions:", errorMessage);
+                }
+            }
+            
+            // Kiểm tra response.data.error
+            if (!errorMessage && error.response?.data?.error) {
+                errorMessage = error.response.data.error;
+                console.log("Error from response.data.error:", errorMessage);
+            }
+            
+            errorMessage = errorMessage || "Cập nhật thất bại. Vui lòng thử lại.";
+            console.log("Final errorMessage:", errorMessage);
+            
             const newErrors = {};
-            
-            // Phân tích lỗi validation từ server
-            if (errorMessage.includes("name") || errorMessage.includes("họ tên") || errorMessage.includes("Họ tên")) {
+            // Kiểm tra lỗi về password/mật khẩu TRƯỚC các lỗi khác
+            if (errorMessage.toLowerCase().includes("password") || 
+                errorMessage.toLowerCase().includes("mật khẩu") || 
+                errorMessage.toLowerCase().includes("mat khau")) {
+                console.log("Password error detected:", errorMessage);
+                // Kiểm tra lỗi cho current password
+                if (errorMessage.toLowerCase().includes("hiện tại") || 
+                    errorMessage.toLowerCase().includes("hien tai") ||
+                    errorMessage.toLowerCase().includes("current")) {
+                    console.log("Current password error detected");
+                    if (errorMessage.toLowerCase().includes("không đúng") || 
+                        errorMessage.toLowerCase().includes("khong dung") ||
+                        errorMessage.toLowerCase().includes("incorrect") || 
+                        errorMessage.toLowerCase().includes("wrong") ||
+                        errorMessage.toLowerCase().includes("sai")) {
+                        newErrors.currentPassword = "Mật khẩu hiện tại không đúng";
+                        console.log("Set currentPassword error:", newErrors.currentPassword);
+                    } else if (errorMessage.toLowerCase().includes("nhập") || 
+                               errorMessage.toLowerCase().includes("nhap") ||
+                               errorMessage.toLowerCase().includes("required")) {
+                        newErrors.currentPassword = "Vui lòng nhập mật khẩu hiện tại";
+                    } else {
+                        newErrors.currentPassword = errorMessage;
+                    }
+                } else if (errorMessage.includes("8")) {
+                    newErrors.newPassword = "Mật khẩu phải có ít nhất 8 ký tự";
+                } else if (errorMessage.toLowerCase().includes("chữ hoa") || 
+                          errorMessage.toLowerCase().includes("chu hoa") ||
+                          errorMessage.toLowerCase().includes("chữ thường") || 
+                          errorMessage.toLowerCase().includes("chu thuong") ||
+                          errorMessage.toLowerCase().includes("ký tự đặc biệt") ||
+                          errorMessage.toLowerCase().includes("ky tu dac biet")) {
+                    newErrors.newPassword = "Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt";
+                } else if (errorMessage.toLowerCase().includes("không trùng khớp") || 
+                          errorMessage.toLowerCase().includes("khong trung khop") ||
+                          errorMessage.toLowerCase().includes("same") ||
+                          errorMessage.toLowerCase().includes("trùng khớp") ||
+                          errorMessage.toLowerCase().includes("trung khop")) {
+                    newErrors.confirmPassword = "Mật khẩu xác nhận không trùng khớp";
+                } else {
+                    newErrors.newPassword = errorMessage;
+                }
+            } else if (errorMessage.toLowerCase().includes("name") || 
+                      errorMessage.toLowerCase().includes("họ tên") || 
+                      errorMessage.toLowerCase().includes("ho ten") ||
+                      errorMessage.toLowerCase().includes("Họ tên")) {
                 if (errorMessage.includes("10")) {
                     newErrors.displayName = "Họ và tên phải từ 10 ký tự trở lên";
                 } else if (errorMessage.includes("50")) {
@@ -243,7 +316,7 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                 } else {
                     newErrors.displayName = errorMessage;
                 }
-            } else if (errorMessage.includes("email") || errorMessage.includes("Email")) {
+            } else if (errorMessage.toLowerCase().includes("email")) {
                 if (errorMessage.includes("đã được đăng ký") || errorMessage.includes("unique")) {
                     newErrors.email = "Email đã được đăng ký";
                 } else if (errorMessage.includes("không hợp lệ")) {
@@ -251,31 +324,24 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                 } else {
                     newErrors.email = errorMessage;
                 }
-            } else if (errorMessage.includes("password") || errorMessage.includes("mật khẩu") || errorMessage.includes("Mật khẩu")) {
-                if (errorMessage.includes("8")) {
-                    newErrors.newPassword = "Mật khẩu phải có ít nhất 8 ký tự";
-                } else if (errorMessage.includes("chữ hoa") || errorMessage.includes("chữ thường") || errorMessage.includes("ký tự đặc biệt")) {
-                    newErrors.newPassword = "Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt";
-                } else if (errorMessage.includes("không trùng khớp") || errorMessage.includes("same")) {
-                    newErrors.confirmPassword = "Mật khẩu xác nhận không trùng khớp";
-                } else {
-                    newErrors.newPassword = errorMessage;
-                }
-            } else if (errorMessage.includes("avatar") || errorMessage.includes("Ảnh")) {
+            } else if (errorMessage.toLowerCase().includes("avatar") || 
+                      errorMessage.toLowerCase().includes("ảnh") ||
+                      errorMessage.toLowerCase().includes("anh")) {
                 setMessage({ type: "error", text: errorMessage });
             } else {
-                // Nếu có lỗi validation, hiển thị trong form
-                if (Object.keys(newErrors).length > 0) {
-                    setErrors(newErrors);
-                } else {
-                    setMessage({ type: "error", text: errorMessage });
-                }
+                // Nếu không match với bất kỳ lỗi nào, hiển thị message chung
+                setMessage({ type: "error", text: errorMessage });
             }
             
-            // Nếu có lỗi validation, hiển thị chúng
+            // Nếu có lỗi validation, hiển thị chúng trong form
             if (Object.keys(newErrors).length > 0) {
+                console.log("Setting errors:", newErrors);
                 setErrors(newErrors);
-                setMessage({ type: "error", text: "Vui lòng kiểm tra lại thông tin." });
+                // Không cần set message nếu đã set errors, vì errors sẽ hiển thị trong form
+                // Chỉ set message nếu không có errors cụ thể nào
+                if (!newErrors.currentPassword && !newErrors.newPassword && !newErrors.confirmPassword) {
+                    setMessage({ type: "error", text: "Vui lòng kiểm tra lại thông tin." });
+                }
             }
         } finally {
             setIsLoading(false);
@@ -392,8 +458,14 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                                 onClick={() => {
                                     setIsPasswordChange(prev => !prev);
                                     if (isPasswordChange) { // Kiểm tra trạng thái cũ (trước khi toggle)
-                                        setFormData((prev) => ({ ...prev, newPassword: "", confirmPassword: "" }));
-                                        setErrors({});
+                                        setFormData((prev) => ({ ...prev, currentPassword: "", newPassword: "", confirmPassword: "" }));
+                                        setErrors((prev) => {
+                                            const newErrors = { ...prev };
+                                            delete newErrors.currentPassword;
+                                            delete newErrors.newPassword;
+                                            delete newErrors.confirmPassword;
+                                            return newErrors;
+                                        });
                                     }
                                 }}
                                 className={`px-3 py-1 text-sm font-bold rounded-full transition duration-200 ${isPasswordChange
@@ -407,6 +479,15 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
 
                         {isPasswordChange && (
                             <>
+                                <InputField
+                                    id="currentPassword"
+                                    label="Mật khẩu hiện tại"
+                                    type="password"
+                                    value={formData.currentPassword}
+                                    onChange={handleChange}
+                                    placeholder="••••••••"
+                                    error={errors.currentPassword}
+                                />
                                 <InputField
                                     id="newPassword"
                                     label="Mật khẩu mới"
@@ -425,11 +506,9 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                                     placeholder="••••••••"
                                     error={errors.confirmPassword}
                                 />
-                                <p className="text-sm text-gray-400 mt-2">
-                                    Vui lòng nhập mật khẩu mới để thay đổi.
-                                </p>
                             </>
                         )}
+
                     </div>
 
                     {/* Buttons */}

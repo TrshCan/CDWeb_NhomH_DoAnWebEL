@@ -5,6 +5,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use GraphQL\Error\UserError;
 class UserManagementRepo {
 
 
@@ -21,24 +22,37 @@ class UserManagementRepo {
                 $user->avatar = $path;
             }
 
-            // Cập nhật các trường cơ bản
             if (isset($data['name'])) $user->name = $data['name'];
             if (isset($data['email'])) $user->email = $data['email'];
             if (isset($data['address'])) $user->address = $data['address'];
 
-            // Cập nhật mật khẩu (nếu có)
             if (!empty($data['password'])) {
+                if (empty($data['current_password'])) {
+                    throw new UserError("Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu.");
+                }
+
+                // Kiểm tra mật khẩu hiện tại
+                if (!Hash::check($data['current_password'], $user->password)) {
+                    throw new UserError("Mật khẩu hiện tại không đúng.");
+                }
+
+                // Kiểm tra confirm password trùng khớp
+                if (!isset($data['password_confirmation']) || $data['password'] !== $data['password_confirmation']) {
+                    throw new UserError("Mật khẩu mới và xác nhận mật khẩu không trùng khớp.");
+                }
+
                 $user->password = Hash::make($data['password']);
             }
+
 
             $user->save();
 
             return $user;
         } catch (ModelNotFoundException $e) {
-            throw new \Exception("Không tìm thấy người dùng.");
+            throw new UserError("Không tìm thấy người dùng.");
         } catch (\Exception $e) {
             Log::error("Lỗi khi cập nhật hồ sơ: " . $e->getMessage());
-            throw new \Exception("Không thể cập nhật hồ sơ.");
+            throw new UserError($e->getMessage());
         }
     }
 }

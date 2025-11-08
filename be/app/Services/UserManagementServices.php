@@ -3,49 +3,30 @@
 namespace App\Services;
 
 use App\Repositories\UserManagementRepo;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
+use GraphQL\Error\UserError;
 use Illuminate\Validation\Rule;
 
 class UserManagementServices
 {
-
-
-    public function __construct(private UserManagementRepo $UserManagementRepo)
-    {
-
-    }
+    public function __construct(private UserManagementRepo $UserManagementRepo) {}
 
     /**
-     * Lấy trang cá nhân công khai theo ID
-     */
-
-    /**
-     * Cập nhật hồ sơ người dùng đã đăng nhập
+     * Cập nhật hồ sơ người dùng
      */
     public function updateProfile(array $data)
     {
-        // Lấy userId từ args thay vì từ Auth
         $userId = $data['user_id'] ?? null;
-
         if (!$userId) {
-            throw new \Exception('Thiếu thông tin user_id');
+            throw new UserError('Thiếu thông tin user_id');
         }
 
-        // Kiểm tra user có tồn tại không
         $user = \App\Models\User::find($userId);
         if (!$user) {
-            throw new \Exception('Không tìm thấy người dùng');
+            throw new UserError('Không tìm thấy người dùng');
         }
 
-        Log::info('UserManagementServices: Updating profile', [
-            'user_id' => $userId,
-            'email' => $data['email'] ?? 'not provided',
-            'current_user_email' => $user->email,
-        ]);
-
+        // --- Validator ---
         $validator = Validator::make($data, [
             'name' => ['required', 'string', 'min:10', 'max:50', 'regex:/^[\pL\s]+$/u'],
             'email' => [
@@ -79,10 +60,21 @@ class UserManagementServices
         ]);
 
         if ($validator->fails()) {
-            throw new ValidationException($validator);
+            // Lấy tất cả message và nối thành chuỗi
+            $messages = $validator->errors()->all();
+            throw new UserError(implode(" | ", $messages));
         }
 
+        // Nếu muốn kiểm tra password hiện tại khi đổi mật khẩu
+        if (!empty($data['password']) && !empty($data['current_password'])) {
+            if (!\Illuminate\Support\Facades\Hash::check($data['current_password'], $user->password)) {
+                throw new UserError("Mật khẩu hiện tại không đúng.");
+            }
+        } elseif (!empty($data['password'])) {
+            throw new UserError("Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu.");
+        }
+
+        // Gọi Repo để update
         return $this->UserManagementRepo->updateProfile($userId, $data);
     }
-
 }
