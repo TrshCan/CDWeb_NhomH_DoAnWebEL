@@ -114,7 +114,8 @@ class SurveyResolver
     public function deleteSurvey($_, array $args)
     {
         try {
-            return $this->service->deleteSurvey($args['id']);
+            $result = $this->service->deleteSurvey($args['id']);
+            return $result;
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw new \Nuwave\Lighthouse\Exceptions\ValidationException(
                 'Validation failed.',
@@ -123,6 +124,16 @@ class SurveyResolver
         } catch (\Exception $e) {
             $code = (int) $e->getCode();
             $message = $e->getMessage() ?: 'Không thể xóa khảo sát.';
+            
+            // Log lỗi để debug
+            \Log::error('GraphQL deleteSurvey error', [
+                'id' => $args['id'] ?? null,
+                'message' => $message,
+                'code' => $code,
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             // Tránh đẩy lỗi 500 chung chung ra FE
             $category = 'BAD_REQUEST';
             if ($code === 404) {
@@ -131,7 +142,10 @@ class SurveyResolver
                 $category = 'FORBIDDEN';
             } elseif ($code === 422) {
                 $category = 'VALIDATION_FAILED';
+            } elseif ($code >= 500) {
+                $category = 'INTERNAL_SERVER_ERROR';
             }
+            
             throw new \GraphQL\Error\Error(
                 $message,
                 null,
@@ -162,5 +176,24 @@ class SurveyResolver
                 ['category' => $e->getCode() === 404 ? 'NOT_FOUND' : 'INTERNAL_SERVER_ERROR']
             );
         }
+    }
+
+    /**
+     * Field resolver để resolve creator_name
+     * Tự động load từ relationship nếu chưa có
+     */
+    public function resolveCreatorName($root)
+    {
+        // Nếu đã có creator_name từ join query
+        if (isset($root->creator_name)) {
+            return $root->creator_name;
+        }
+
+        // Load từ relationship nếu chưa được load
+        if (!$root->relationLoaded('creator')) {
+            $root->load('creator');
+        }
+
+        return $root->creator?->name;
     }
 }

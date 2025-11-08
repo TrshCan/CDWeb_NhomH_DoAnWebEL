@@ -68,9 +68,41 @@ class SurveyRepository
         return $query->orderByDesc('created_at')->paginate($perPage);
     }
     public function findById(int $id): ?Survey
-{
-    return Survey::find($id);
-}
+    {
+        return Survey::find($id);
+    }
 
-    
+    /**
+     * Lấy survey với creator_name
+     */
+    public function findWithCreatorName(int $id): ?Survey
+    {
+        $result = Survey::leftJoin('users as u', 'u.id', '=', 'surveys.created_by')
+            ->select('surveys.*')
+            ->addSelect(['creator_name' => \DB::raw('u.name')])
+            ->where('surveys.id', $id)
+            ->first();
+        
+        if ($result) {
+            // Đảm bảo creator_name được set vào attributes
+            $result->setAttribute('creator_name', $result->getAttributeValue('creator_name'));
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Lấy survey sau khi create/update với creator_name
+     */
+    public function findWithCreatorNameAfterSave(int $id): ?Survey
+    {
+        $survey = $this->findWithCreatorName($id);
+        
+        // Nếu không tìm thấy từ join, load với relationship
+        if (!$survey) {
+            $survey = Survey::with('creator')->find($id);
+        }
+        
+        return $survey;
+    }
 }

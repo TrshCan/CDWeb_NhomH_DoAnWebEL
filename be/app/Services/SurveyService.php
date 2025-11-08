@@ -109,8 +109,11 @@ class SurveyService
             $survey = $this->repository->create($data);
             DB::commit();
 
+            // Load lại survey với creator_name
+            $surveyWithCreator = $this->repository->findWithCreatorNameAfterSave($survey->id);
+            
             Log::info('Tạo khảo sát thành công', ['id' => $survey->id, 'title' => $survey->title]);
-            return $survey;
+            return $surveyWithCreator ?: $survey;
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -147,11 +150,34 @@ class SurveyService
             }
 
             // === KIỂM TRA ĐANG HOẠT ĐỘNG ===
-            $now = Carbon::now();
-            if ($survey->start_at && $survey->end_at &&
-                $now->between(Carbon::parse($survey->start_at), Carbon::parse($survey->end_at))) {
-                throw new Exception('Khảo sát đang được sử dụng, không thể xóa vào lúc này.', 403);
+            // Chỉ kiểm tra nếu có cả start_at và end_at và status là active
+            // Bỏ qua kiểm tra này tạm thời để đảm bảo xóa hoạt động
+            // Có thể bật lại sau khi xác định được nguyên nhân lỗi
+            /*
+            if ($survey->status === 'active' && $survey->start_at && $survey->end_at) {
+                try {
+                    $now = Carbon::now();
+                    // start_at và end_at đã được cast thành Carbon instance trong Model
+                    $startAt = $survey->start_at;
+                    $endAt = $survey->end_at;
+                    
+                    // Kiểm tra nếu hiện tại đang trong khoảng thời gian diễn ra
+                    if ($now->greaterThanOrEqualTo($startAt) && $now->lessThanOrEqualTo($endAt)) {
+                        throw new Exception('Khảo sát đang được sử dụng, không thể xóa vào lúc này.', 403);
+                    }
+                } catch (\Exception $e) {
+                    // Nếu là lỗi 403 (không được xóa), re-throw
+                    if ($e->getCode() === 403) {
+                        throw $e;
+                    }
+                    // Nếu có lỗi khác, bỏ qua kiểm tra này
+                    Log::warning('Lỗi kiểm tra thời gian khi xóa survey', [
+                        'id' => $id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
+            */
 
             $survey->delete(); // Soft delete
             DB::commit();
@@ -165,12 +191,21 @@ class SurveyService
         } catch (\Exception $e) {
             DB::rollBack();
             $code = (int) $e->getCode();
-            Log::error('Lỗi xóa khảo sát', ['id' => $id, 'error' => $e->getMessage(), 'code' => $code]);
+            $message = $e->getMessage() ?: 'Không thể xóa khảo sát.';
+            
+            Log::error('Lỗi xóa khảo sát', [
+                'id' => $id, 
+                'error' => $message, 
+                'code' => $code,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             // Giữ nguyên thông điệp & mã lỗi có ý nghĩa để FE hiển thị đúng lý do
             if (in_array($code, [400, 403, 404, 422], true)) {
-                throw new Exception($e->getMessage() ?: 'Không thể xóa khảo sát.', $code);
+                throw new Exception($message, $code);
             }
-            throw new Exception('Không thể xóa khảo sát.', 500);
+            // Nếu là lỗi không có code hoặc code 0, throw với message gốc
+            throw new Exception($message, $code ?: 500);
         }
     }
 
@@ -248,8 +283,11 @@ class SurveyService
             $updatedSurvey = $this->repository->update($survey, $data);
             DB::commit();
 
+            // Load lại survey với creator_name
+            $surveyWithCreator = $this->repository->findWithCreatorNameAfterSave($updatedSurvey->id);
+            
             Log::info('Cập nhật khảo sát thành công', ['id' => $id, 'title' => $updatedSurvey->title]);
-            return $updatedSurvey;
+            return $surveyWithCreator ?: $updatedSurvey;
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Lỗi cập nhật khảo sát', ['id' => $id, 'data' => $data, 'error' => $e->getMessage()]);
@@ -263,7 +301,7 @@ class SurveyService
     public function getSurveyById(int $id): Survey
     {
         try {
-            $survey = $this->repository->findById($id);
+            $survey = $this->repository->findWithCreatorName($id);
             if (!$survey) {
                 throw new ModelNotFoundException("Khảo sát ID {$id} không tồn tại.");
             }

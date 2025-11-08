@@ -11,6 +11,7 @@ type Survey {
     object: String
     created_by: Int!
     creator_name: String
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@resolveCreatorName")
     status: String! # ✅ thêm trạng thái
     created_at: String
     updated_at: String

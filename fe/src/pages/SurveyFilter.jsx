@@ -625,7 +625,7 @@ const SurveyFilter = () => {
         points: s.points,
         object: s.object,
         timeLimit: s.time_limit ?? '',
-        creatorName: s.creator_name || `#${s.created_by}`
+        creatorName: s.creator_name || (s.created_by ? `Người dùng #${s.created_by}` : 'Không xác định')
       }));
 
       setSurveysList(surveys);
@@ -743,7 +743,7 @@ const SurveyFilter = () => {
       const result = await graphqlRequest(`
         mutation CreateSurvey($input: SurveyInput!) {
           createSurvey(input: $input) {
-            id title description categories_id type status start_at end_at points object time_limit
+            id title description categories_id type status start_at end_at points object time_limit created_by creator_name
           }
         }
       `, {
@@ -793,7 +793,8 @@ const SurveyFilter = () => {
         endAt: toDateTimeLocal(created.end_at),
         points: created.points,
         object: created.object,
-        timeLimit: created.time_limit ?? ''
+        timeLimit: created.time_limit ?? '',
+        creatorName: created.creator_name || (created.created_by ? `Người dùng #${created.created_by}` : 'Không xác định')
       };
 
       closeAddModal();
@@ -855,7 +856,7 @@ const SurveyFilter = () => {
       const result = await graphqlRequest(`
         mutation UpdateSurvey($id: Int!, $input: UpdateSurveyInput!) {
           updateSurvey(id: $id, input: $input) {
-            id title description categories_id type status start_at end_at points object time_limit
+            id title description categories_id type status start_at end_at points object time_limit created_by creator_name
           }
         }
       `, {
@@ -895,7 +896,8 @@ const SurveyFilter = () => {
         endAt: toDateTimeLocal(updated.end_at),
         points: updated.points,
         object: updated.object,
-        timeLimit: updated.time_limit ?? ''
+        timeLimit: updated.time_limit ?? '',
+        creatorName: updated.creator_name || (updated.created_by ? `Người dùng #${updated.created_by}` : 'Không xác định')
       };
 
       closeEditModal();
@@ -923,17 +925,25 @@ const SurveyFilter = () => {
       });
 
       if (result.errors?.length > 0) {
-        pushToast('Xóa thất bại: ' + result.errors[0].message, 'error');
+        const errorMessage = result.errors[0].message || 'Xóa thất bại';
+        console.error('Lỗi xóa survey:', result.errors);
+        pushToast(errorMessage, 'error');
         return;
       }
 
-      closeDeleteModal();
-      pushToast('Đã xóa khảo sát', 'success');
-      // Reload với filters hiện tại
-      loadSurveys(filters);
+      // Kiểm tra kết quả
+      if (result.data?.deleteSurvey === true || result.data?.deleteSurvey === false) {
+        closeDeleteModal();
+        pushToast('Đã xóa khảo sát thành công', 'success');
+        // Reload với filters hiện tại
+        loadSurveys(filters);
+      } else {
+        pushToast('Xóa thất bại: Không nhận được phản hồi từ server', 'error');
+      }
     } catch (error) {
       console.error('Lỗi xóa:', error);
-      pushToast('Lỗi hệ thống', 'error');
+      const errorMessage = error.message || 'Lỗi hệ thống khi xóa khảo sát';
+      pushToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

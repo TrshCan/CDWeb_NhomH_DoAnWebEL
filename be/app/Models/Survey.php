@@ -39,4 +39,24 @@ class Survey extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    /**
+     * Accessor để lấy creator_name
+     * Nếu đã có trong attributes (từ join query) thì dùng, nếu không thì load từ relationship
+     */
+    public function getCreatorNameAttribute()
+    {
+        // Nếu đã có creator_name từ join query (như trong getAllPaginated)
+        if (isset($this->attributes['creator_name'])) {
+            return $this->attributes['creator_name'];
+        }
+
+        // Nếu không có, load từ relationship
+        if ($this->relationLoaded('creator')) {
+            return $this->creator?->name;
+        }
+
+        // Load relationship nếu chưa được load
+        return $this->creator?->name;
+    }
 }
