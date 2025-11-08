@@ -44,4 +44,29 @@ class StateManagementResolver
             return ['survey' => null, 'message' => 'Cập nhật thất bại.'];
         }
     }
+
+    /**
+     * Lấy danh sách surveys và tự động sync status
+     */
+    public function listSurveys($_, array $args)
+    {
+        try {
+            $surveys = \App\Models\Survey::whereNull('deleted_at')
+                ->orderByDesc('created_at')
+                ->get();
+            
+            // Tự động sync status cho mỗi survey (tự động đóng nếu quá ngày kết thúc)
+            foreach ($surveys as $survey) {
+                $this->service->syncStatus($survey);
+            }
+            
+            // Reload để lấy status đã được cập nhật
+            return \App\Models\Survey::whereNull('deleted_at')
+                ->orderByDesc('created_at')
+                ->get();
+        } catch (Exception $e) {
+            Log::error('List surveys failed', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
 }

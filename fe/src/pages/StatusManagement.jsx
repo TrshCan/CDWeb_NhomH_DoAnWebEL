@@ -1,15 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { graphqlRequest } from "../api/graphql";
 
-const now = new Date('2025-10-18T14:30:00'); // Giả lập thời gian hiện tại
-
-const surveys = [
-  { id: 1, name: 'Khảo sát chuẩn bị diễn ra', status: 'pending', start_at: '2025-10-10T09:00:00', end_at: '2025-10-15T17:00:00', allowReview: true },
-  { id: 2, name: 'Khảo sát đang hoạt động', status: 'active', start_at: '2025-10-01T09:00:00', end_at: '2025-10-12T17:00:00', allowReview: false },
-  { id: 3, name: 'Khảo sát đang tạm dừng', status: 'paused', start_at: '2025-10-05T09:00:00', end_at: '2025-10-20T17:00:00', allowReview: true },
-  { id: 4, name: 'Khảo sát đã đóng (cho phép xem)', status: 'active', start_at: '2025-09-20T09:00:00', end_at: '2025-09-30T17:00:00', allowReview: true },
-  { id: 5, name: 'Khảo sát đã đóng (không cho xem)', status: 'closed', start_at: '2025-10-01T09:00:00', end_at: '2025-10-30T17:00:00', allowReview: false },
-];
+const now = new Date(); // Sử dụng thời gian thực
 
 const statusConfig = {
   pending: { text: 'Chưa bắt đầu', color: 'gray', actions: ['activate'] },
@@ -34,7 +26,8 @@ const colorMap = {
 };
 
 const StatusManagement = () => {
-  const [surveysState, setSurveysState] = useState(surveys);
+  const [surveysState, setSurveysState] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentUserRole, setCurrentUserRole] = useState('admin');
   const [activeAction, setActiveAction] = useState({ surveyId: null, action: null });
   const [currentView, setCurrentView] = useState('survey-list');
@@ -48,6 +41,67 @@ const StatusManagement = () => {
   const buttonRefs = useRef({}); // 🔹 ref riêng cho từng survey
   const itemsPerPage = 3;
 
+  const showToast = (message, type = 'success') => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3000);
+  };
+
+  // Load surveys từ API
+  const loadSurveys = async () => {
+    try {
+      setLoading(true);
+      const result = await graphqlRequest(`
+        query {
+          surveys {
+            id
+            title
+            description
+            start_at
+            end_at
+            status
+            allow_review
+            created_by
+            type
+            object
+          }
+        }
+      `);
+
+      if (result.errors) {
+        console.error('GraphQL Errors:', result.errors);
+        showToast('Lỗi tải danh sách khảo sát', 'error');
+        return;
+      }
+
+      const surveysData = result.data?.surveys || [];
+      // Map dữ liệu từ API sang format của component
+      const mappedSurveys = surveysData.map(s => ({
+        id: Number(s.id),
+        name: s.title,
+        status: s.status,
+        start_at: s.start_at,
+        end_at: s.end_at,
+        allowReview: s.allow_review || false,
+        description: s.description,
+        type: s.type,
+        object: s.object,
+        created_by: s.created_by
+      }));
+
+      setSurveysState(mappedSurveys);
+    } catch (error) {
+      console.error('Lỗi tải surveys:', error);
+      showToast('Không thể tải danh sách khảo sát', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSurveys();
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (openDropdownId !== null && !event.target.closest('.dropdown')) {
@@ -60,13 +114,29 @@ const StatusManagement = () => {
   }, [openDropdownId]);
 
   const getEffectiveStatus = (survey) => {
-    const startDate = new Date(survey.start_at);
-    const endDate = new Date(survey.end_at);
-    if (survey.status === 'closed' || now > endDate) return 'closed';
+    // Nếu status là closed, luôn trả về closed
+    if (survey.status === 'closed') return 'closed';
+    
+    // Nếu status là paused, trả về paused
     if (survey.status === 'paused') return 'paused';
-    if (survey.status === 'active' && now >= startDate && now <= endDate) return 'active';
-    if (now < startDate) return 'pending';
-    return 'pending';
+    
+    // Xử lý thời gian
+    const startDate = survey.start_at ? new Date(survey.start_at) : null;
+    const endDate = survey.end_at ? new Date(survey.end_at) : null;
+    
+    // Nếu đã quá thời gian kết thúc
+    if (endDate && now > endDate) return 'closed';
+    
+    // Nếu chưa đến thời gian bắt đầu
+    if (startDate && now < startDate) return 'pending';
+    
+    // Nếu đang trong khoảng thời gian và status là active
+    if (survey.status === 'active' && startDate && endDate && now >= startDate && now <= endDate) {
+      return 'active';
+    }
+    
+    // Mặc định trả về status hiện tại
+    return survey.status || 'pending';
   };
 
   // 🔹 Function để lấy available actions cho một survey
@@ -165,10 +235,55 @@ const StatusManagement = () => {
     setOpenDropdownId(null);
   };
 
-  const handleToggleReview = (surveyId, isAllowed) => {
-    setSurveysState((prev) => prev.map((s) => (s.id === surveyId ? { ...s, allowReview: isAllowed } : s)));
-    const message = isAllowed ? 'Đã BẬT quyền xem lại kết quả.' : 'Đã TẮT quyền xem lại kết quả.';
-    showToast(message, 'success');
+  const handleToggleReview = async (surveyId, isAllowed) => {
+    try {
+      const result = await graphqlRequest(`
+        mutation ToggleReviewPermission($id: ID!, $allowReview: Boolean!) {
+          toggleReviewPermission(id: $id, allowReview: $allowReview) {
+            survey {
+              id
+              title
+              status
+              allow_review
+              start_at
+              end_at
+            }
+            message
+          }
+        }
+      `, {
+        id: String(surveyId),
+        allowReview: isAllowed
+      });
+
+      if (result.errors) {
+        const errorMessage = result.errors[0]?.message || 'Không thể cập nhật quyền xem lại';
+        showToast(errorMessage, 'error');
+        return;
+      }
+
+      const response = result.data?.toggleReviewPermission;
+      if (response?.survey) {
+        // Cập nhật state với dữ liệu từ server
+        setSurveysState((prev) => prev.map((s) => 
+          s.id === surveyId 
+            ? { 
+                ...s, 
+                allowReview: response.survey.allow_review,
+                status: response.survey.status
+              } 
+            : s
+        ));
+        showToast(response.message || (isAllowed ? 'Đã BẬT quyền xem lại kết quả.' : 'Đã TẮT quyền xem lại kết quả.'), 'success');
+        // Reload để đảm bảo dữ liệu đồng bộ
+        await loadSurveys();
+      } else {
+        showToast(response?.message || 'Cập nhật thất bại', 'error');
+      }
+    } catch (error) {
+      console.error('Lỗi toggle review permission:', error);
+      showToast('Lỗi hệ thống khi cập nhật quyền xem lại', 'error');
+    }
   };
 
   const showConfirmationModal = (surveyId, action) => {
@@ -187,28 +302,71 @@ const StatusManagement = () => {
     setActiveAction({ surveyId: null, action: null });
   };
 
-  const showToast = (message, type = 'success') => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3000);
-  };
-
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     const { surveyId, action } = activeAction;
     hideConfirmationModal();
-    setSurveysState((prev) =>
-      prev.map((s) => {
-        if (s.id === surveyId) {
-          let newStatus = s.status;
-          if (action === 'activate') newStatus = 'active';
-          if (action === 'pause') newStatus = 'paused';
-          if (action === 'close') newStatus = 'closed';
-          return { ...s, status: newStatus };
+
+    // Map action sang status
+    const statusMap = {
+      'activate': 'active',
+      'pause': 'paused',
+      'close': 'closed'
+    };
+
+    const newStatus = statusMap[action];
+    if (!newStatus) {
+      showToast('Hành động không hợp lệ', 'error');
+      return;
+    }
+
+    try {
+      const result = await graphqlRequest(`
+        mutation ChangeSurveyStatus($id: ID!, $status: SurveyStatus!) {
+          changeSurveyStatus(id: $id, status: $status) {
+            survey {
+              id
+              title
+              status
+              allow_review
+              start_at
+              end_at
+            }
+            message
+          }
         }
-        return s;
-      })
-    );
-    showToast(actionConfig[action].success, 'success');
+      `, {
+        id: String(surveyId),
+        status: newStatus
+      });
+
+      if (result.errors) {
+        const errorMessage = result.errors[0]?.message || 'Không thể thay đổi trạng thái';
+        showToast(errorMessage, 'error');
+        return;
+      }
+
+      const response = result.data?.changeSurveyStatus;
+      if (response?.survey) {
+        // Cập nhật state với dữ liệu từ server
+        setSurveysState((prev) => prev.map((s) => 
+          s.id === surveyId 
+            ? { 
+                ...s, 
+                status: response.survey.status,
+                allowReview: response.survey.allow_review || s.allowReview
+              } 
+            : s
+        ));
+        showToast(response.message || actionConfig[action].success, 'success');
+        // Reload để đảm bảo dữ liệu đồng bộ
+        await loadSurveys();
+      } else {
+        showToast(response?.message || 'Thay đổi trạng thái thất bại', 'error');
+      }
+    } catch (error) {
+      console.error('Lỗi change status:', error);
+      showToast('Lỗi hệ thống khi thay đổi trạng thái', 'error');
+    }
   };
 
   const handleRoleChange = (role) => {
@@ -400,18 +558,31 @@ const StatusManagement = () => {
 
         {/* 🔹 Bỏ overflow-hidden để dropdown không bị clip */}
         <div className="bg-white rounded-lg shadow-md">
-          <table className="w-full text-sm text-left text-gray-700">
-            <thead className="bg-gray-100 text-gray-900 text-xs uppercase font-semibold">
-              <tr>
-                <th className="px-6 py-3">Tên khảo sát</th>
-                <th className="px-6 py-3">Trạng thái</th>
-                {currentUserRole === 'admin' && <th className="px-6 py-3">Cho phép xem lại</th>}
-                <th className="px-6 py-3 text-center">Hành động</th>
-              </tr>
-            </thead>
-            <tbody>{renderSurveyList()}</tbody>
-          </table>
-          <Pagination />
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-2 text-gray-600">Đang tải danh sách khảo sát...</p>
+            </div>
+          ) : surveysState.length === 0 ? (
+            <div className="p-12 text-center">
+              <p className="text-gray-600">Không có khảo sát nào</p>
+            </div>
+          ) : (
+            <>
+              <table className="w-full text-sm text-left text-gray-700">
+                <thead className="bg-gray-100 text-gray-900 text-xs uppercase font-semibold">
+                  <tr>
+                    <th className="px-6 py-3">Tên khảo sát</th>
+                    <th className="px-6 py-3">Trạng thái</th>
+                    {currentUserRole === 'admin' && <th className="px-6 py-3">Cho phép xem lại</th>}
+                    <th className="px-6 py-3 text-center">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>{renderSurveyList()}</tbody>
+              </table>
+              <Pagination />
+            </>
+          )}
         </div>
 
         {confirmationModal.show && (

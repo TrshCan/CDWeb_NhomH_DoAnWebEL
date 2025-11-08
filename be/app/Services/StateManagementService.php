@@ -33,10 +33,13 @@ class StateManagementService
 
         $survey = $this->repository->find($id);
 
-        // Quyền: admin hoặc người tạo
-        if ($user->role !== 'admin' && $survey->created_by !== $user->id) {
-            throw ValidationException::withMessages(['auth' => 'Bạn chỉ có thể chỉnh sửa khảo sát của mình.']);
-        }
+        // Tự động sync status trước khi thực hiện thay đổi (tự động đóng nếu quá ngày kết thúc)
+        $survey = $this->syncStatus($survey);
+
+        // // Quyền: admin hoặc người tạo
+        // if ($user->role !== 'admin' && $survey->created_by !== $user->id) {
+        //     throw ValidationException::withMessages(['auth' => 'Bạn chỉ có thể chỉnh sửa khảo sát của mình.']);
+        // }
 
         if ($survey->status === $newStatus) {
             throw ValidationException::withMessages(['status' => 'Khảo sát đã ở trạng thái này.']);
@@ -111,6 +114,9 @@ class StateManagementService
 
         $survey = $this->repository->find($id);
 
+        // Tự động sync status trước khi thực hiện thay đổi (tự động đóng nếu quá ngày kết thúc)
+        $survey = $this->syncStatus($survey);
+
         if ($user->role !== 'admin' && $survey->created_by !== $user->id) {
             throw ValidationException::withMessages(['auth' => 'Chỉ chủ khảo sát mới được thay đổi.']);
         }
@@ -127,42 +133,57 @@ class StateManagementService
 
     /**
      * Tính trạng thái thực tế (dùng để hiển thị)
+     * Tự động đóng nếu quá ngày kết thúc
      */
     public function getComputedStatus($survey)
     {
         $now = Carbon::now();
-        $startAt = $survey->start_at;
-        $endAt = $survey->end_at;
+        $startAt = $survey->start_at ? Carbon::parse($survey->start_at) : null;
+        $endAt = $survey->end_at ? Carbon::parse($survey->end_at) : null;
 
-        if ($survey->status === 'closed' || ($endAt && $now->gt($endAt))) {
+        // Ưu tiên 1: Nếu đã quá ngày kết thúc, tự động đóng (bất kể status hiện tại)
+        if ($endAt && $now->gt($endAt)) {
             return 'closed';
         }
 
+        // Ưu tiên 2: Nếu đã đóng thủ công, giữ nguyên
+        if ($survey->status === 'closed') {
+            return 'closed';
+        }
+
+        // Ưu tiên 3: Nếu đang tạm dừng, giữ nguyên (trừ khi quá ngày kết thúc - đã xử lý ở trên)
         if ($survey->status === 'paused') {
             return 'paused';
         }
 
+        // Ưu tiên 4: Nếu chưa đến thời gian bắt đầu
         if ($startAt && $now->lt($startAt)) {
             return 'pending';
         }
 
+        // Ưu tiên 5: Nếu đang active và trong khoảng thời gian
         if ($survey->status === 'active' && (!$endAt || $now->lte($endAt))) {
             return 'active';
         }
 
+        // Mặc định: trả về status hiện tại
         return $survey->status;
     }
 
     /**
-     * Đồng bộ trạng thái tính toán vào DB (gọi định kỳ nếu cần)
+     * Đồng bộ trạng thái tính toán vào DB
+     * Tự động đóng survey nếu đã quá ngày kết thúc
      */
     public function syncStatus($survey)
     {
         $computed = $this->getComputedStatus($survey);
         if ($survey->status !== $computed) {
+            // Tự động cập nhật status nếu khác với status hiện tại
+            // Đặc biệt: tự động đóng nếu quá ngày kết thúc
             $survey->status = $computed;
             $survey->save();
         }
-        return $survey;
+        // Trả về fresh instance để đảm bảo có dữ liệu mới nhất
+        return $survey->fresh();
     }
 }

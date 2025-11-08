@@ -31,6 +31,8 @@ type SurveyStatusResponse {
 
 type Query {
   _empty: String
+  surveys: [Survey!]!
+    @field(resolver: "App\\GraphQL\\Resolvers\\StateManagementResolver@listSurveys")
 }
 
 extend type Mutation {
