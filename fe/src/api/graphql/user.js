@@ -135,3 +135,93 @@ export const updateProfile = async (name, email, address = null, password = null
     throw error;
   }
 };
+
+// --- GRAPHQL QUERIES ---
+ export const PROFILE_QUERY = `
+  query getProfileQueries($id: Int!) {
+    publicProfile(id: $id) {
+      id
+      name
+      email
+      phone
+      address
+      avatar
+      role
+      created_at
+      stats {
+        posts
+        followers
+        following
+      }
+      badges {
+        name
+        description
+        created_at
+        assigned_at
+      }
+    }
+  }
+`;
+
+ export const USER_POSTS_QUERY = `
+  query getUserPosts($user_id: ID!) {
+    postsByUser(user_id: $user_id) {
+      id
+      content
+      type
+      created_at
+      parent_id
+      user {
+        id
+        name
+      }
+      parent {
+        id
+        user {
+          id
+          name
+        }
+      }
+      media {
+        id
+        url
+      }
+      likes {
+        id
+        user_id
+      }
+      children {
+        id
+      }
+    }
+  }
+`;
+
+export const USER_REPLIES_QUERY = `
+  query getUserReplies($user_id: ID!) {
+    repliesByUser(user_id: $user_id) {
+      id
+      content
+      created_at
+      parent {
+        id
+        user { id name }
+      }
+      user { id name }
+      media { id url }
+      likes { id user_id }
+    }
+  }
+`;
+ export const USER_LIKES_QUERY = `
+  query getUserLikes($user_id: ID!) {
+    likedPostsByUser(user_id: $user_id) {
+      id
+      content
+      created_at
+      user { id name }
+      media { id url }
+      likes { id user_id }
+    }
+  }
+`;

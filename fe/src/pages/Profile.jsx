@@ -3,96 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { graphqlRequest } from '../api/graphql.js';
 import PostCard from '../components/PostCard.jsx';
+import {
+    USER_POSTS_QUERY,
+    USER_REPLIES_QUERY,
+    USER_LIKES_QUERY,
+    PROFILE_QUERY
+} from '../api/graphql/user.js';
 
-// --- GRAPHQL QUERIES ---
-const PROFILE_QUERY = `
-  query getProfileQueries($id: Int!) {
-    publicProfile(id: $id) {
-      id
-      name
-      email
-      phone
-      address
-      avatar
-      role
-      created_at
-      stats {
-        posts
-        followers
-        following
-      }
-      badges {
-        name
-        description
-        created_at
-        assigned_at
-      }
-    }
-  }
-`;
-
-const USER_POSTS_QUERY = `
-  query getUserPosts($user_id: ID!) {
-    postsByUser(user_id: $user_id) {
-      id
-      content
-      type
-      created_at
-      parent_id
-      user {
-        id
-        name
-      }
-      parent {
-        id
-        user {
-          id
-          name
-        }
-      }
-      media {
-        id
-        url
-      }
-      likes {
-        id
-        user_id
-      }
-      children {
-        id
-      }
-    }
-  }
-`;
-
-const USER_REPLIES_QUERY = `
-  query getUserReplies($user_id: ID!) {
-    repliesByUser(user_id: $user_id) {
-      id
-      content
-      created_at
-      parent {
-        id
-        user { id name }
-      }
-      user { id name }
-      media { id url }
-      likes { id user_id }
-    }
-  }
-`;
-const USER_LIKES_QUERY = `
-  query getUserLikes($user_id: ID!) {
-    likedPostsByUser(user_id: $user_id) {
-      id
-      content
-      created_at
-      user { id name }
-      media { id url }
-      likes { id user_id }
-    }
-  }
-`;
 
 
 // --- AVATAR MODAL ---
@@ -174,128 +91,135 @@ function timeAgo(createdAt) {
 
 // --- CONTENT TAB ---
 const ContentTab = ({ activeTab, userId }) => {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(false);
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!userId) {
-      setPosts([]);
-      return;
-    }
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        let data;
-        let items = [];
-
-        if (activeTab === 'Bài viết') {
-          data = await graphqlRequest(USER_POSTS_QUERY, { user_id: userId });
-          if (data?.data?.postsByUser) {
-            items = data.data.postsByUser.map((p) => ({
-              id: p.id,
-              type: p.type,
-              user: p.user?.name || "Unknown",
-              userId: p.user?.id,
-              time: timeAgo(p.created_at),
-              content: p.content,
-              parent_id: p.parent_id,
-              parent_user: p.parent?.user?.name || null,
-              media: p.media
-                ? p.media.map((m) => ({ url: m.url })).filter((m) => m.url)
-                : [],
-              likes: p.likes || [],
-              children: p.children || [],
-            }));
-          }
-        } else if (activeTab === 'Trả lời') {
-          data = await graphqlRequest(USER_REPLIES_QUERY, { user_id: userId });
-          if (data?.data?.repliesByUser) {
-            items = data.data.repliesByUser.map((r) => ({
-              id: r.id,
-              user: r.user?.name || "Unknown",
-              userId: r.user?.id,
-              time: timeAgo(r.created_at),
-              content: r.content,
-              parent_id: r.parent?.id || null,
-              parent_user: r.parent?.user?.name || null,
-              media: r.media
-                ? r.media.map((m) => ({ url: m.url })).filter((m) => m.url)
-                : [],
-              likes: r.likes || [],
-              children: [],
-            }));
-          }
-        } else if (activeTab === 'Likes') {
-          data = await graphqlRequest(USER_LIKES_QUERY, { user_id: userId });
-          if (data?.data?.likedPostsByUser) {
-            items = data.data.likedPostsByUser.map((p) => ({
-              id: p.id,
-              user: p.user?.name || "Unknown",
-              userId: p.user?.id,
-              time: timeAgo(p.created_at),
-              content: p.content,
-              parent_id: null,
-              parent_user: null,
-              media: p.media
-                ? p.media.map((m) => ({ url: m.url })).filter((m) => m.url)
-                : [],
-              likes: p.likes || [],
-              children: [],
-            }));
-          }
+    useEffect(() => {
+        if (!userId) {
+            setPosts([]);
+            return;
         }
 
-        setPosts(items);
-      } catch (err) {
-        console.error(`Lỗi khi lấy ${activeTab}:`, err);
-        setPosts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+        const cacheKey = `user_${userId}_${activeTab}`;
+        const cached = localStorage.getItem(cacheKey);
 
-    fetchData();
-  }, [activeTab, userId]);
+        if (cached) {
+            // ✅ Dùng cache ngay
+            setPosts(JSON.parse(cached));
+            setLoading(false); // ✅ Dừng loading
+            return; // ✅ Không fetch nữa
+        }
 
-  const getLoadingMessage = () => {
-    const messages = {
-      'Bài viết': 'Đang tải bài viết...',
-      'Trả lời': 'Đang tải trả lời...',
-      'Likes': 'Đang tải bài viết đã like...',
-    };
-    return messages[activeTab] || 'Đang tải...';
-  };
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                let data;
+                let items = [];
 
-  const getEmptyMessage = () => {
-    const messages = {
-      'Bài viết': 'Chưa có bài viết nào.',
-      'Trả lời': 'Chưa có trả lời nào.',
-      'Likes': 'Chưa like bài viết nào.',
-    };
-    return messages[activeTab] || 'Không có nội dung.';
-  };
+                if (activeTab === 'Bài viết') {
+                    data = await graphqlRequest(USER_POSTS_QUERY, { user_id: userId });
+                    if (data?.data?.postsByUser) {
+                        items = data.data.postsByUser.map((p) => ({
+                            id: p.id,
+                            type: p.type,
+                            user: p.user?.name || "Unknown",
+                            userId: p.user?.id,
+                            time: timeAgo(p.created_at),
+                            content: p.content,
+                            parent_id: p.parent_id,
+                            parent_user: p.parent?.user?.name || null,
+                            media: p.media
+                                ? p.media.map((m) => ({ url: m.url })).filter((m) => m.url)
+                                : [],
+                            likes: p.likes || [],
+                            children: p.children || [],
+                        }));
+                    }
+                } else if (activeTab === 'Trả lời') {
+                    data = await graphqlRequest(USER_REPLIES_QUERY, { user_id: userId });
+                    if (data?.data?.repliesByUser) {
+                        items = data.data.repliesByUser.map((r) => ({
+                            id: r.id,
+                            user: r.user?.name || "Unknown",
+                            userId: r.user?.id,
+                            time: timeAgo(r.created_at),
+                            content: r.content,
+                            parent_id: r.parent?.id || null,
+                            parent_user: r.parent?.user?.name || null,
+                            media: r.media
+                                ? r.media.map((m) => ({ url: m.url })).filter((m) => m.url)
+                                : [],
+                            likes: r.likes || [],
+                            children: [],
+                        }));
+                    }
+                } else if (activeTab === 'Likes') {
+                    data = await graphqlRequest(USER_LIKES_QUERY, { user_id: userId });
+                    if (data?.data?.likedPostsByUser) {
+                        items = data.data.likedPostsByUser.map((p) => ({
+                            id: p.id,
+                            user: p.user?.name || "Unknown",
+                            userId: p.user?.id,
+                            time: timeAgo(p.created_at),
+                            content: p.content,
+                            parent_id: null,
+                            parent_user: null,
+                            media: p.media
+                                ? p.media.map((m) => ({ url: m.url })).filter((m) => m.url)
+                                : [],
+                            likes: p.likes || [],
+                            children: [],
+                        }));
+                    }
+                }
 
-  return (
-    <div className="mt-4 min-h-[300px] bg-gray-900 rounded-lg">
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-gray-400 text-lg">{getLoadingMessage()}</div>
+                setPosts(items);
+                // ✅ Lưu cache
+                localStorage.setItem(cacheKey, JSON.stringify(items));
+            } catch (err) {
+                console.error(`Lỗi khi lấy ${activeTab}:`, err);
+                setPosts([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [activeTab, userId]);
+
+    const getLoadingMessage = () => ({
+        'Bài viết': 'Đang tải bài viết...',
+        'Trả lời': 'Đang tải trả lời...',
+        'Likes': 'Đang tải bài viết đã like...',
+    }[activeTab] || 'Đang tải...');
+
+    const getEmptyMessage = () => ({
+        'Bài viết': 'Chưa có bài viết nào.',
+        'Trả lời': 'Chưa có trả lời nào.',
+        'Likes': 'Chưa like bài viết nào.',
+    }[activeTab] || 'Không có nội dung.');
+
+    return (
+        <div className="mt-4 min-h-[300px] bg-gray-900 rounded-lg">
+            {loading && posts.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                    <div className="text-gray-400 text-lg">{getLoadingMessage()}</div>
+                </div>
+            ) : posts.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                    <p className="text-gray-400 text-lg italic">{getEmptyMessage()}</p>
+                </div>
+            ) : (
+                <div className="space-y-4 p-4">
+                    {posts.map((post) => (
+                        <PostCard key={post.id} post={post} />
+                    ))}
+                </div>
+            )}
         </div>
-      ) : posts.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-gray-400 text-lg italic">{getEmptyMessage()}</p>
-        </div>
-      ) : (
-        <div className="space-y-4 p-4">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
+    );
 };
+
 
 // --- MAIN PROFILE PAGE ---
 function ProfilePage() {
@@ -307,79 +231,90 @@ function ProfilePage() {
   const TABS = ['Bài viết', 'Trả lời', 'Likes'];
   const twitterBlue = '#1DA1F2';
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const userId = localStorage.getItem('userId');
-        if (!userId) {
-          navigate('/login');
-          return;
-        }
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                navigate('/login');
+                return;
+            }
 
-        const data = await graphqlRequest(PROFILE_QUERY, { id: parseInt(userId) });
-        if (!data?.data?.publicProfile) {
-          navigate('/login');
-          return;
-        }
+            const cacheKey = `profile_${userId}`;
+            const cached = localStorage.getItem(cacheKey);
 
-        const profile = data.data.publicProfile;
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                setUser(parsed);
+                setLoading(false);
+            }
 
-        let avatarUrl = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=600&auto=format&fit=crop';
-        if (profile.avatar && profile.avatar !== 'default.png') {
-          // Kiểm tra xem avatar đã có "avatars/" chưa
-          if (profile.avatar.startsWith('avatars/')) {
-            avatarUrl = `http://localhost:8000/storage/${profile.avatar}`;
-          } else {
-            avatarUrl = `http://localhost:8000/storage/avatars/${profile.avatar}`;
-          }
-        }
+            try {
+                const data = await graphqlRequest(PROFILE_QUERY, { id: parseInt(userId) });
+                if (!data?.data?.publicProfile) {
+                    navigate('/login');
+                    return;
+                }
 
-        const badgeIcons = {
-          'Tài Trợ Vàng': 'Gold',
-          'Chuyên Gia KS': 'Tools',
-          'VIP Code Blue': 'Blue',
-          'Người Chia Sẻ': 'Star',
-          'default': 'Medal'
+                const profile = data.data.publicProfile;
+
+                let avatarUrl = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=600&auto=format&fit=crop';
+                if (profile.avatar && profile.avatar !== 'default.png') {
+                    if (profile.avatar.startsWith('avatars/')) {
+                        avatarUrl = `http://localhost:8000/storage/${profile.avatar}`;
+                    } else {
+                        avatarUrl = `http://localhost:8000/storage/avatars/${profile.avatar}`;
+                    }
+                }
+
+                const badgeIcons = {
+                    'Tài Trợ Vàng': 'Gold',
+                    'Chuyên Gia KS': 'Tools',
+                    'VIP Code Blue': 'Blue',
+                    'Người Chia Sẻ': 'Star',
+                    'default': 'Medal'
+                };
+
+                const formattedBadges = profile.badges.map((badge, index) => ({
+                    id: index + 1,
+                    name: badge.name,
+                    icon: badgeIcons[badge.name] || badgeIcons.default,
+                    desc: badge.description || 'Huy hiệu đặc biệt',
+                    awardedDate: badge.assigned_at
+                        ? new Date(badge.assigned_at).toLocaleDateString('vi-VN')
+                        : badge.created_at
+                            ? new Date(badge.created_at).toLocaleDateString('vi-VN')
+                            : 'N/A',
+                }));
+
+                const userData = {
+                    id: profile.id,
+                    displayName: profile.name || 'Chưa có tên',
+                    username: profile.name ? profile.name.toLowerCase().replace(/\s/g, '') : 'username',
+                    bio: profile.address || 'Chưa cập nhật địa chỉ',
+                    avatarUrl,
+                    stats: {
+                        posts: profile.stats?.posts || 0,
+                        followers: profile.stats?.followers || 0,
+                        following: profile.stats?.following || 0,
+                        joined: new Date(profile.created_at).toLocaleDateString('vi-VN'),
+                    },
+                    badges: formattedBadges,
+                    isOwner: true,
+                };
+
+                localStorage.setItem(cacheKey, JSON.stringify(userData));
+                setUser(userData);
+            } catch (err) {
+                console.error('Lỗi khi lấy profile:', err);
+                navigate('/login');
+            } finally {
+                setLoading(false);
+            }
         };
 
-        const formattedBadges = profile.badges.map((badge, index) => ({
-          id: index + 1,
-          name: badge.name,
-          icon: badgeIcons[badge.name] || badgeIcons.default,
-          desc: badge.description || 'Huy hiệu đặc biệt',
-          awardedDate: badge.assigned_at
-            ? new Date(badge.assigned_at).toLocaleDateString('vi-VN')
-            : badge.created_at
-            ? new Date(badge.created_at).toLocaleDateString('vi-VN')
-            : 'N/A',
-        }));
+        fetchProfile();
+    }, [navigate]);
 
-        setUser({
-          id: profile.id,
-          displayName: profile.name || 'Chưa có tên',
-          username: profile.name
-            ? profile.name.toLowerCase().replace(/\s/g, '')
-            : 'username',
-          bio: profile.address || 'Chưa cập nhật địa chỉ',
-          avatarUrl,
-          stats: {
-            posts: profile.stats?.posts || 0,
-            followers: profile.stats?.followers || 0,
-            following: profile.stats?.following || 0,
-            joined: new Date(profile.created_at).toLocaleDateString('vi-VN'),
-          },
-          badges: formattedBadges,
-          isOwner: true,
-        });
-      } catch (err) {
-        console.error('Lỗi khi lấy profile:', err);
-        navigate('/login');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, [navigate]);
 
   if (loading || !user) {
     return (
