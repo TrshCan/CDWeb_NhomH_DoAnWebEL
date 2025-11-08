@@ -6,7 +6,7 @@ extend type Mutation {
         address: String
         password: String
         password_confirmation: String
-        current_password: String!
+        current_password: String
         avatar: Upload
     ): User
     @field(resolver: "App\\GraphQL\\Resolvers\\UserManagementResolvers@updateProfile")

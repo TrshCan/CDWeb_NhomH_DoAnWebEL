@@ -81,6 +81,10 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
     // --- Handlers ---
     const handleChange = useCallback((e) => {
         const { id, value } = e.target;
+        // Email không thể thay đổi
+        if (id === "email") {
+            return;
+        }
         setFormData((prev) => ({ ...prev, [id]: value }));
         // Clear error ngay khi user bắt đầu gõ
         setErrors((prev) => (prev[id] ? { ...prev, [id]: undefined } : prev));
@@ -132,10 +136,11 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
             newErrors.displayName = "Họ và tên không được quá 50 ký tự";
         }
 
+        // Email không cần validate vì không thể thay đổi
+        // Nhưng vẫn cần đảm bảo có email để gửi lên server
         if (!formData.email || formData.email.trim() === "") {
-            newErrors.email = "Email không được để trống";
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = "Email không hợp lệ";
+            // Nếu không có email, lấy từ user object hoặc localStorage
+            // Không hiển thị lỗi vì user không thể sửa
         }
 
         if (isPasswordChange) {
@@ -175,14 +180,17 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
         try {
             const password = isPasswordChange ? formData.newPassword : null;
             const password_confirmation = isPasswordChange ? formData.confirmPassword : null;
-            // Backend yêu cầu current_password là String! (non-null), nhưng chỉ kiểm tra khi có password
-            // Khi không đổi mật khẩu, gửi empty string để đáp ứng schema
-            const current_password = isPasswordChange ? formData.currentPassword : "";
+            // current_password chỉ cần khi đổi mật khẩu, có thể là null khi không đổi
+            const current_password = isPasswordChange ? formData.currentPassword : null;
             const avatarFile = avatarFileRef.current;
 
+            // Email không thể thay đổi, nhưng vẫn cần gửi email hiện tại lên server để đáp ứng schema
+            // Sử dụng email từ user object hoặc formData (đã được set từ initial state)
+            const emailToSend = formData.email.trim() || user?.email || "";
+            
             const updatedUser = await updateProfile(
                 formData.displayName.trim(),
-                formData.email.trim(),
+                emailToSend,
                 formData.address?.trim() || null,
                 password,
                 password_confirmation,
@@ -316,14 +324,6 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                 } else {
                     newErrors.displayName = errorMessage;
                 }
-            } else if (errorMessage.toLowerCase().includes("email")) {
-                if (errorMessage.includes("đã được đăng ký") || errorMessage.includes("unique")) {
-                    newErrors.email = "Email đã được đăng ký";
-                } else if (errorMessage.includes("không hợp lệ")) {
-                    newErrors.email = "Email không hợp lệ";
-                } else {
-                    newErrors.email = errorMessage;
-                }
             } else if (errorMessage.toLowerCase().includes("avatar") || 
                       errorMessage.toLowerCase().includes("ảnh") ||
                       errorMessage.toLowerCase().includes("anh")) {
@@ -429,15 +429,20 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                         error={errors.displayName}
                     />
 
-                    <InputField
-                        id="email"
-                        label="Email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="nguyenvana@gmail.com"
-                        error={errors.email}
-                    />
+                    <div className="mb-6 text-left">
+                        <label htmlFor="email" className="block mb-2 text-sm font-medium text-white">
+                            Email
+                        </label>
+                        <input
+                            type="email"
+                            id="email"
+                            value={formData.email}
+                            disabled
+                            readOnly
+                            className="w-full p-3 rounded-lg bg-gray-700 text-gray-400 border border-gray-600 cursor-not-allowed opacity-70"
+                            placeholder="nguyenvana@gmail.com"
+                        />
+                    </div>
 
                     <InputField
                         id="address"

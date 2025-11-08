@@ -39,7 +39,7 @@ export const updateProfile = async (name, email, address = null, password = null
     }
 
     const mutation = `
-    mutation ($user_id: Int!, $name: String!, $email: String!, $address: String, $password: String,$current_password: String!, $password_confirmation: String, $avatar: Upload) {
+    mutation ($user_id: Int!, $name: String!, $email: String!, $address: String, $password: String, $current_password: String, $password_confirmation: String, $avatar: Upload) {
       updateProfile(
         user_id: $user_id
         name: $name
@@ -73,7 +73,7 @@ export const updateProfile = async (name, email, address = null, password = null
                     address,
                     password,
                     password_confirmation,
-                    current_password,
+                    current_password: current_password || null,
                     avatar: null, // File sẽ được map sau
                 },
             })
@@ -123,7 +123,7 @@ export const updateProfile = async (name, email, address = null, password = null
                 address,
                 password,
                 password_confirmation,
-                current_password,
+                current_password: current_password || null,
             },
         });
 
