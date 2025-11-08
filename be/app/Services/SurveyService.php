@@ -31,7 +31,7 @@ class SurveyService
             'type' => 'survey',
             'object' => 'public',
             'points' => 0,
-            'status' => 'active',
+            'status' => 'pending',
             'description' => '',
             'time_limit' => null,
             'start_at' => null,
@@ -64,7 +64,7 @@ class SurveyService
             'time_limit' => 'nullable|integer|min:1',
             'object' => 'required|in:public,students,lecturers',
             'created_by' => 'required|integer|exists:users,id',
-            'status' => 'sometimes|in:paused,active,closed',
+            'status' => 'sometimes|in:pending,active,paused,closed',
         ];
 
         // Nếu là quiz → yêu cầu points
@@ -262,7 +262,7 @@ class SurveyService
             'time_limit' => 'nullable|integer|min:1',
             'points' => $pointsRule,
             'object' => 'sometimes|in:public,students,lecturers',
-            'status' => 'sometimes|in:paused,active,closed',
+            'status' => 'sometimes|in:pending,active,paused,closed',
         ], [
             'description.required' => 'Mô tả khảo sát không được để trống.',
             'start_at.after_or_equal' => 'Thời gian bắt đầu phải lớn hơn hoặc bằng thời điểm hiện tại.',

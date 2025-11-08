@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { graphqlRequest } from '../api/graphql';
 
 const statusConfig = {
+  pending: { label: 'Chưa bắt đầu', class: 'bg-blue-100 text-blue-800' },
   active: { label: 'Đang hoạt động', class: 'bg-green-100 text-green-800' },
-  closed: { label: 'Đã đóng', class: 'bg-gray-100 text-gray-800' },
   paused: { label: 'Tạm dừng', class: 'bg-amber-100 text-amber-800' },
+  closed: { label: 'Đã đóng', class: 'bg-gray-100 text-gray-800' },
 };
 
 const types = ['', 'survey', 'quiz'];
-const statuses = ['', 'active', 'paused', 'closed'];
+const statuses = ['', 'pending', 'active', 'paused', 'closed'];
 const objects = ['', 'public', 'students', 'lecturers'];
 
 const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' }) => (
@@ -422,7 +423,7 @@ const SurveyFilter = () => {
     description: '',
     category: '',
     type: 'survey',
-    status: 'active',
+    status: 'pending',
     startAt: '',
     endAt: '',
     points: 0,
@@ -704,7 +705,7 @@ const SurveyFilter = () => {
       description: '',
       category: '',
       type: 'survey',
-      status: 'active',
+      status: 'pending',
       startAt: '',
       endAt: '',
       points: 0,
@@ -752,7 +753,7 @@ const SurveyFilter = () => {
           description: addForm.description || '',
           categories_id: parseInt(categoryId),
           type: addForm.type || 'survey',
-          status: addForm.status || 'active',
+          status: addForm.status || 'pending',
           start_at: toDBDateTime(addForm.startAt),
           end_at: toDBDateTime(addForm.endAt),
           points: addForm.points || 0,
@@ -836,7 +837,7 @@ const SurveyFilter = () => {
         description: editForm.description || '',
         categories_id: parseInt(categoryId),
         type: editForm.type || 'survey',
-        status: editForm.status || 'active',
+        status: editForm.status || 'pending',
         object: editForm.object || 'public',
       };
 

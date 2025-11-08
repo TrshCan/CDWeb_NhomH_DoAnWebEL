@@ -89,7 +89,7 @@ class SurveyResolver
                 'points' => $args['input']['points'] ?? null,
                 'object' => $args['input']['object'] ?? null,
                 'created_by' => $args['input']['created_by'],
-                'status' => $args['input']['status'] ?? 'active', // ✅ thêm dòng này
+                'status' => $args['input']['status'] ?? 'pending', // ✅ default là pending
             ];
 
 
