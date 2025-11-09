@@ -52,7 +52,7 @@ class DatabaseSeeder extends Seeder
                 'remember_token' => Str::random(10),
                 'phone' => '090' . rand(1000000, 9999999),
                 'address' => "Address $i",
-                'role' => ['student', 'lecturer', 'admin'][rand(0, 2)],
+                'role' => $i <= 8 ? 'student' : ($i === 9 ? 'lecturer' : 'admin'),
                 'class_id' => rand(1, 10),
                 'faculty_id' => rand(1, 10),
                 'status_id' => 1,
@@ -80,44 +80,6 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Test Student',
                 'email' => 'student@test.com',
                 'password' => bcrypt('student123'),
-                'role' => 'student',
-                'phone' => '0902222222',
-                'address' => 'Student Dorm',
-                'class_id' => 5,
-                'faculty_id' => 3,
-                'status_id' => 1,
-                'point' => 42,
-            ],
-        ];
-
-        foreach ($testUsers as $u) {
-            DB::table('users')->insert(array_merge($u, [
-                'email_verified_at' => $now,
-                'remember_token' => Str::random(10),
-                'ban_reason' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]));
-        }
-
-        // ----- 2 **known** test accounts -----
-        $testUsers = [
-            [
-                'name' => 'Test Admin',
-                'email' => 'admin@test.com',
-                'password' => bcrypt('admin123'),   // <-- you know the plain text
-                'role' => 'admin',
-                'phone' => '0901111111',
-                'address' => 'Admin HQ',
-                'class_id' => 1,
-                'faculty_id' => 1,
-                'status_id' => 1,
-                'point' => 999,
-            ],
-            [
-                'name' => 'Test Student',
-                'email' => 'student@test.com',
-                'password' => bcrypt('student123'), // <-- you know the plain text
                 'role' => 'student',
                 'phone' => '0902222222',
                 'address' => 'Student Dorm',
@@ -437,6 +399,10 @@ class DatabaseSeeder extends Seeder
 
         // ---- 2. Helper: pick random users (exclude admin if you want) ----
         $allUserIds = range(1, 12); // 10 random + 2 test users
+        $studentUserIds = DB::table('users')
+            ->where('role', 'student')
+            ->pluck('id')
+            ->toArray();
 
         // ---- 3. Survey definitions (easy to read & tweak) ----
         $surveyTemplates = [
@@ -558,7 +524,7 @@ class DatabaseSeeder extends Seeder
                 'time_limit' => $tmpl['type'] === 'quiz' ? rand(10, 30) : null,
                 'points' => $tmpl['points'] ?? 0,
                 'object' => $tmpl['object'],
-                'created_by' => $faker->randomElement($allUserIds),
+                'created_by' => rand(1, 10),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -566,6 +532,7 @@ class DatabaseSeeder extends Seeder
             $surveyIds[] = $surveyId;
 
             // ----- Questions -----
+            $questionIds = [];
             foreach ($tmpl['questions'] as $qData) {
                 $questionId = DB::table('survey_questions')->insertGetId([
                     'survey_id' => $surveyId,
@@ -573,6 +540,8 @@ class DatabaseSeeder extends Seeder
                     'question_type' => $qData['type'],
                     'points' => $qData['points'],
                 ]);
+
+                $questionIds[] = ['id' => $questionId, 'data' => $qData];
 
                 // ----- Options (only for choice questions) -----
                 if (in_array($qData['type'], ['single_choice', 'multiple_choice'])) {
@@ -587,13 +556,18 @@ class DatabaseSeeder extends Seeder
                         ]);
                     }
                 }
+            }
 
-                // ----- Answers (simulate 3–8 users answering) -----
-                $answerCount = rand(3, 8);
-                $answeredUserIds = (array) $faker->randomElements($allUserIds, $answerCount);
+            // ----- Answers (exactly 5 users answer ALL questions in this survey) -----
+            $answeredUserIds = (array) $faker->randomElements($studentUserIds, 5);
 
-                foreach ($answeredUserIds as $userId) {
-                    $answeredAt = $faker->dateTimeBetween($start, $end);
+            foreach ($answeredUserIds as $userId) {
+                $answeredAt = $faker->dateTimeBetween($start, $end);
+
+                // Each user answers ALL questions in this survey
+                foreach ($questionIds as $qInfo) {
+                    $questionId = $qInfo['id'];
+                    $qData = $qInfo['data'];
 
                     if ($qData['type'] === 'text') {
                         DB::table('survey_answers')->insert([
@@ -627,23 +601,19 @@ class DatabaseSeeder extends Seeder
                             $selectedCount = rand(1, min(3, count($optionIds)));
                             $chosen = $faker->randomElements($optionIds, $selectedCount);
 
-                            $earned = 0;
                             foreach ($chosen as $optId) {
                                 $isCorrect = DB::table('survey_options')
                                     ->where('id', $optId)
                                     ->value('is_correct');
-                                if ($isCorrect)
-                                    $earned += $qData['points'] / count((array) $qData['correct']);
 
                                 DB::table('survey_answers')->insert([
                                     'question_id' => $questionId,
                                     'user_id' => $userId,
                                     'selected_option_id' => $optId,
                                     'answered_at' => $answeredAt,
-                                    'score' => 0, // score calculated later if needed
+                                    'score' => $isCorrect ? ($qData['points'] / count((array) $qData['correct'])) : 0,
                                 ]);
                             }
-                            // Optional: update a total score row – omitted for simplicity
                         }
                     }
                 }
