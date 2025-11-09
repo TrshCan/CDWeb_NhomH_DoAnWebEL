@@ -40,40 +40,31 @@ class SurveyService
         });
     }
 
-    public function getRawData(int $surveyId)
+    public function getRawData(int $surveyId): array
     {
+        // @var Collection $rawData
         $rawData = $this->repo->getRawDataBySurveyId($surveyId);
         $surveyTitle = $this->repo->getSurveyTitle($surveyId);
 
         return [
             'title' => $surveyTitle ?? 'Khảo sát',
             'responses' => $rawData->map(function ($row) {
-                // Map faculty name to khoa code for frontend compatibility
-                $khoa = 'other';
-                if (!empty($row->faculty_name)) {
-                    $facultyName = strtolower($row->faculty_name);
-                    if (strpos($facultyName, 'công nghệ') !== false || strpos($facultyName, 'cntt') !== false) {
-                        $khoa = 'cntt';
-                    } elseif (strpos($facultyName, 'kinh tế') !== false || strpos($facultyName, 'kinhte') !== false) {
-                        $khoa = 'kinhte';
-                    }
-                }
+                // Use the real faculty code; fall back to 'other' if missing
+                $khoa = $row->faculty_name ?? 'other';
 
-                // Format completed date
-                $completedDate = null;
-                if ($row->completed_date) {
-                    $date = Carbon::parse($row->completed_date);
-                    $completedDate = $date->format('d/m/Y H:i');
-                }
+                // Format completed date (or 'N/A')
+                $completedDate = $row->completed_date
+                    ? Carbon::parse($row->completed_date)->format('d/m/Y H:i')
+                    : 'N/A';
 
                 return [
                     'id' => $row->response_id,
-                    'studentId' => (string) $row->user_id, // Using user_id as student ID
+                    'studentId' => (string) $row->user_id,
                     'studentName' => $row->student_name ?? 'N/A',
                     'khoa' => $khoa,
-                    'completedDate' => $completedDate ?? 'N/A',
+                    'completedDate' => $completedDate,
                 ];
-            })->values()->all(), // Convert to array for GraphQL
+            })->values()->all(),
         ];
     }
 }
