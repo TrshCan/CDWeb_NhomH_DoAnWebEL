@@ -34,9 +34,11 @@ class SurveyRepository
         return DB::table('survey_answers')
             ->select([
                 'users.id as user_id',
+                'users.student_code',
                 'users.name as student_name',
                 'users.email as student_email',
                 'faculties.name as faculty_name',
+                'faculties.code as faculty_code',
                 'survey_questions.survey_id',
                 DB::raw('MAX(survey_answers.answered_at) as completed_date'),
                 DB::raw('CONCAT(survey_questions.survey_id, "-", survey_answers.user_id) as response_id'),
@@ -46,7 +48,7 @@ class SurveyRepository
             ->leftJoin('faculties', 'faculties.id', '=', 'users.faculty_id')
             ->where('survey_questions.survey_id', $surveyId)
             ->whereNull('survey_answers.deleted_at')
-            ->groupBy('users.id', 'users.name', 'users.email', 'faculties.name', 'survey_questions.survey_id')
+            ->groupBy('users.id', 'users.student_code', 'users.name', 'users.email', 'faculties.name', 'faculties.code', 'survey_questions.survey_id')
             ->orderByDesc('completed_date')
             ->get();
     }

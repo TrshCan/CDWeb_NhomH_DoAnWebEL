@@ -16,9 +16,12 @@ class DatabaseSeeder extends Seeder
         $now = Carbon::now();
 
         // ===== Faculties =====
+        // Generate faculty codes (2 letters, unique)
+        $facultyCodes = ['TT', 'CN', 'KT', 'NN', 'SP', 'YT', 'QT', 'LD', 'TH', 'VL'];
         for ($i = 1; $i <= 10; $i++) {
             DB::table('faculties')->insert([
                 'name' => "Faculty $i",
+                'code' => $facultyCodes[$i - 1] ?? str_pad((string) $i, 2, '0', STR_PAD_LEFT),
                 'description' => "Description for faculty $i",
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -43,7 +46,48 @@ class DatabaseSeeder extends Seeder
         }
 
         // ===== Users =====
+        // Helper function to generate student code
+        $generateStudentCode = function ($facultyId) use ($now) {
+            $faculty = DB::table('faculties')->where('id', $facultyId)->first();
+            if (!$faculty || !$faculty->code) {
+                return null;
+            }
+
+            $facultyCode = strtoupper($faculty->code);
+            // Get last 2 digits of year, minimum is 23 (first year is 2023)
+            $yearPart = max(23, (int) substr($now->year, -2));
+            $yearPart = str_pad((string) $yearPart, 2, '0', STR_PAD_LEFT);
+
+            // Generate unique 4-digit number
+            $maxAttempts = 100;
+            $attempt = 0;
+
+            do {
+                $randomPart = str_pad((string) rand(0, 9999), 4, '0', STR_PAD_LEFT);
+                $studentCode = $yearPart . '211' . $facultyCode . $randomPart;
+
+                // Check if this code already exists
+                $exists = DB::table('users')->where('student_code', $studentCode)->exists();
+                $attempt++;
+
+                if ($attempt >= $maxAttempts) {
+                    throw new \Exception("Could not generate unique student code after {$maxAttempts} attempts");
+                }
+            } while ($exists);
+
+            return $studentCode;
+        };
+
         for ($i = 1; $i <= 10; $i++) {
+            $role = $i <= 8 ? 'student' : ($i === 9 ? 'lecturer' : 'admin');
+            $facultyId = rand(1, 10);
+            $studentCode = null;
+
+            // Generate student code only for students
+            if ($role === 'student') {
+                $studentCode = $generateStudentCode($facultyId);
+            }
+
             DB::table('users')->insert([
                 'name' => "User $i",
                 'email' => "user$i@example.com",
@@ -52,9 +96,10 @@ class DatabaseSeeder extends Seeder
                 'remember_token' => Str::random(10),
                 'phone' => '090' . rand(1000000, 9999999),
                 'address' => "Address $i",
-                'role' => $i <= 8 ? 'student' : ($i === 9 ? 'lecturer' : 'admin'),
+                'role' => $role,
                 'class_id' => rand(1, 10),
-                'faculty_id' => rand(1, 10),
+                'faculty_id' => $facultyId,
+                'student_code' => $studentCode,
                 'status_id' => 1,
                 'ban_reason' => null,
                 'point' => rand(0, 100),
@@ -91,10 +136,36 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($testUsers as $u) {
+            $studentCode = null;
+            
+            // Generate student code for test student
+            if (isset($u['role']) && $u['role'] === 'student' && isset($u['faculty_id'])) {
+                $faculty = DB::table('faculties')->where('id', $u['faculty_id'])->first();
+                if ($faculty && $faculty->code) {
+                    $facultyCode = strtoupper($faculty->code);
+                    // Get last 2 digits of year, minimum is 23 (first year is 2023)
+                    $yearPart = max(23, (int) substr($now->year, -2));
+                    $yearPart = str_pad((string) $yearPart, 2, '0', STR_PAD_LEFT);
+                    
+                    $maxAttempts = 100;
+                    $attempt = 0;
+                    do {
+                        $randomPart = str_pad((string) rand(0, 9999), 4, '0', STR_PAD_LEFT);
+                        $studentCode = $yearPart . '211' . $facultyCode . $randomPart;
+                        $exists = DB::table('users')->where('student_code', $studentCode)->exists();
+                        $attempt++;
+                        if ($attempt >= $maxAttempts) {
+                            throw new \Exception("Could not generate unique student code for test user");
+                        }
+                    } while ($exists);
+                }
+            }
+
             DB::table('users')->insert(array_merge($u, [
                 'email_verified_at' => $now,
                 'remember_token' => Str::random(10),
                 'ban_reason' => null,
+                'student_code' => $studentCode,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]));

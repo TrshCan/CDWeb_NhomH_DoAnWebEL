@@ -49,7 +49,7 @@ class SurveyService
         return [
             'title' => $surveyTitle ?? 'Khảo sát',
             'responses' => $rawData->map(function ($row) {
-                // Use the real faculty code; fall back to 'other' if missing
+                // Use the real faculty name; fall back to 'other' if missing
                 $khoa = $row->faculty_name ?? 'other';
 
                 // Format completed date (or 'N/A')
@@ -57,9 +57,12 @@ class SurveyService
                     ? Carbon::parse($row->completed_date)->format('d/m/Y H:i')
                     : 'N/A';
 
+                // Use student_code if available, otherwise fall back to user_id
+                $studentId = $row->student_code ?? (string) $row->user_id;
+
                 return [
                     'id' => $row->response_id,
-                    'studentId' => (string) $row->user_id,
+                    'studentId' => $studentId,
                     'studentName' => $row->student_name ?? 'N/A',
                     'khoa' => $khoa,
                     'completedDate' => $completedDate,
