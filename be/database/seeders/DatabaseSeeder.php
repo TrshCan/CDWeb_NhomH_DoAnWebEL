@@ -141,22 +141,6 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // ===== Surveys =====
-        for ($i = 1; $i <= 10; $i++) {
-            DB::table('surveys')->insert([
-                'title' => "Survey $i",
-                'description' => "Survey description $i",
-                'categories_id' => rand(1, 10),
-                'type' => ['survey', 'quiz'][rand(0, 1)],
-                'start_at' => $now,
-                'end_at' => $now->copy()->addDays(7),
-                'points' => rand(0, 10),
-                'object' => ['public', 'students', 'lecturers'][rand(0, 2)],
-                'created_by' => rand(1, 10),
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-        }
 
         // ===== Events Seeder =====
         $events = [];
