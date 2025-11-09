@@ -45,6 +45,12 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
+/* Header */
+.header-section {
+  margin-bottom: 2rem;
+  animation: fadeInDown 0.6s ease-out 0.2s both;
+}
+
 .raw-data-container h1 {
   font-size: 2.5rem;
   font-weight: 700;
@@ -56,7 +62,11 @@
   background-clip: text;
   border-bottom: none;
   padding-bottom: 0;
-  animation: fadeInDown 0.6s ease-out 0.2s both;
+}
+
+.header-section .subtitle {
+  color: #6b7280;
+  font-size: 1.1rem;
 }
 
 @keyframes fadeInDown {
@@ -68,6 +78,55 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e5e7eb;
+  animation: fadeInUp 0.6s ease-out 0.3s both;
+}
+
+.tab-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #6b7280;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  margin-bottom: -2px;
+}
+
+.tab-button svg {
+  transition: transform 0.3s ease;
+}
+
+.tab-button:hover {
+  color: #0891b2;
+  background: linear-gradient(to bottom, transparent, rgba(8, 145, 178, 0.05));
+}
+
+.tab-button:hover svg {
+  transform: scale(1.1);
+}
+
+.tab-button.active {
+  color: #0891b2;
+  border-bottom-color: #0891b2;
+  background: linear-gradient(to bottom, transparent, rgba(8, 145, 178, 0.1));
+}
+
+.tab-button.active svg {
+  transform: scale(1.1);
 }
 
 .summary-bar {
@@ -429,6 +488,23 @@
 
   .raw-data-container h1 {
     font-size: 2rem;
+  }
+
+  .tab-navigation {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .tab-button {
+    border-bottom: none;
+    border-left: 3px solid transparent;
+    margin-bottom: 0;
+    margin-left: -2px;
+  }
+
+  .tab-button.active {
+    border-bottom: none;
+    border-left-color: #0891b2;
   }
 
   .summary-bar {

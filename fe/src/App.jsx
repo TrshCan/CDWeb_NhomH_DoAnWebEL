@@ -10,6 +10,7 @@ import MainLayout from "./layouts/MainLayout.jsx";
 import SurveysCreated from "./pages/SurveysCreated.jsx";
 import SurveysDid from "./pages/SurveysDid.jsx";
 import RawDataList from "./pages/RawDataList.jsx";
+import SurveyOverview from "./pages/SurveyOverview.jsx";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
       
       {/* Independent pages outside MainLayout */}
       <Route path="/surveys/created" element={<SurveysCreated />} />
+      <Route path="/surveys/:surveyId/overview" element={<SurveyOverview />} />
       <Route path="/surveys/:surveyId/raw-data" element={<RawDataList />} />
       
       <Route path="/register" element={<Register />} />

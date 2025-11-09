@@ -119,7 +119,7 @@ export default function SurveysCreated() {
   };
 
   const handleViewResults = (surveyId, surveyTitle) => {
-    navigate(`/surveys/${surveyId}/raw-data`);
+    navigate(`/surveys/${surveyId}/overview`);
   };
 
   const handleEditSurvey = (surveyId, surveyTitle) => {

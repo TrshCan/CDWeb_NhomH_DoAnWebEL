@@ -18,6 +18,7 @@ export default function RawDataList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterKhoa, setFilterKhoa] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("raw-data");
   
   const pieChartRef = useRef(null);
   const barChartRef = useRef(null);
@@ -81,7 +82,15 @@ export default function RawDataList() {
   }, [searchQuery, filterKhoa, rawData]);
 
   const handleGoBack = () => {
-    navigate("/surveys/made");
+    navigate("/surveys/created");
+  };
+
+  const handleTabSwitch = (tab) => {
+    if (tab === "overview") {
+      navigate(`/surveys/${surveyId}/overview`);
+    } else {
+      navigate(`/surveys/${surveyId}/raw-data`);
+    }
   };
 
   const handleExportData = () => {
@@ -233,7 +242,55 @@ export default function RawDataList() {
           Quay lại
         </button>
 
-        <h1>Khảo sát: {surveyTitle}</h1>
+        <div className="header-section">
+          <h1>Khảo sát: {surveyTitle}</h1>
+          <p className="subtitle">Dữ liệu chi tiết các phản hồi</p>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="tab-navigation">
+          <button
+            className={`tab-button ${activeTab === "overview" ? "active" : ""}`}
+            onClick={() => handleTabSwitch("overview")}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            Tổng quan
+          </button>
+          <button
+            className={`tab-button ${activeTab === "raw-data" ? "active" : ""}`}
+            onClick={() => handleTabSwitch("raw-data")}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
+            </svg>
+            Dữ liệu Chi tiết
+          </button>
+        </div>
 
         <div className="summary-bar">
           <p>Tổng số Phản hồi: <span>{totalResponses}</span></p>
