@@ -1,6 +1,9 @@
 extend type Query {
   surveysMade(createdBy: Int!): [SurveySummary!]!
     @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@surveysMade")
+  
+  surveyRawData(surveyId: Int!): SurveyRawData!
+    @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@surveyRawData")
 }
 
 

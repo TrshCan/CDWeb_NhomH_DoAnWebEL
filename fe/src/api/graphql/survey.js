@@ -28,4 +28,33 @@ export async function getSurveysMadeByUser(createdBy) {
   return response.data.data.surveysMade;
 }
 
+// Query raw data for a specific survey
+export async function getSurveyRawData(surveyId) {
+  const query = `
+    query ($surveyId: Int!) {
+      surveyRawData(surveyId: $surveyId) {
+        title
+        responses {
+          id
+          studentId
+          studentName
+          khoa
+          completedDate
+        }
+      }
+    }
+  `;
+
+  const response = await graphqlClient.post("", {
+    query,
+    variables: { surveyId: parseInt(surveyId) },
+  });
+
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+
+  return response.data.data.surveyRawData;
+}
+
 

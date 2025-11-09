@@ -7,4 +7,17 @@ type SurveySummary {
   responses: Int!
 }
 
+type SurveyRawDataResponse {
+  id: ID!
+  studentId: String!
+  studentName: String!
+  khoa: String!
+  completedDate: String!
+}
+
+type SurveyRawData {
+  title: String!
+  responses: [SurveyRawDataResponse!]!
+}
+
 

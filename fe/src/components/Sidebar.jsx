@@ -203,10 +203,10 @@ export default function Sidebar() {
                     <div className="flex flex-col space-y-1 mt-1 ml-2 lg:ml-4 border-l-2 border-cyan-200 pl-2">
                       {isLecturerOrAdmin && (
                         <Link
-                          to="/surveys/made"
+                          to="/surveys/created"
                           onClick={() => setShowSurveysExpanded(true)}
                           className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-150 ${
-                            location.pathname === "/surveys/made"
+                            location.pathname === "/surveys/created"
                               ? "bg-cyan-100 text-cyan-700 font-medium"
                               : "text-gray-600 hover:bg-cyan-50 hover:text-cyan-600"
                           }`}

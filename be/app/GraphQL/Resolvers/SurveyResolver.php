@@ -25,6 +25,22 @@ class SurveyResolver
         }
         return $this->service->listByCreatorWithStatus($createdBy);
     }
+
+    /**
+     * @param  null  $_
+     * @param  array<string, mixed>  $args
+     */
+    public function surveyRawData($_, array $args)
+    {
+        $surveyId = (int) ($args['surveyId'] ?? 0);
+        if ($surveyId <= 0) {
+            return [
+                'title' => 'Khảo sát',
+                'responses' => [],
+            ];
+        }
+        return $this->service->getRawData($surveyId);
+    }
 }
 
 

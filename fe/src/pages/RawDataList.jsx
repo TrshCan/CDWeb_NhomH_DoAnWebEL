@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Chart, registerables } from "chart.js";
 import toast from "react-hot-toast";
 import "../assets/css/RawDataList.css";
+import { getSurveyRawData } from "../api/graphql/survey";
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -23,46 +24,30 @@ export default function RawDataList() {
   const pieChartInstance = useRef(null);
   const barChartInstance = useRef(null);
 
-  // Mock data - replace with actual API calls
+  // Fetch data from API
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual API call
-        // const data = await getSurveyRawData(surveyId);
+        const data = await getSurveyRawData(surveyId);
         
-        // Mock data
-        const mockData = [
-          {
-            id: "12345",
-            studentId: "20210123",
-            studentName: "Nguyễn Văn A",
-            khoa: "cntt",
-            completedDate: "10/09/2025 10:30",
-          },
-          {
-            id: "12344",
-            studentId: "20220456",
-            studentName: "Lê Thị B",
-            khoa: "kinhte",
-            completedDate: "10/09/2025 09:45",
-          },
-          {
-            id: "12343",
-            studentId: "20210789",
-            studentName: "Trần Văn C",
-            khoa: "cntt",
-            completedDate: "09/09/2025 18:20",
-          },
-        ];
-
-        setRawData(mockData);
-        setFilteredData(mockData);
-        setTotalResponses(mockData.length);
-        setSurveyTitle("Mức độ Hài lòng Trang Social");
+        if (data && data.responses) {
+          setRawData(data.responses);
+          setFilteredData(data.responses);
+          setTotalResponses(data.responses.length);
+          setSurveyTitle(data.title || "Khảo sát");
+        } else {
+          setRawData([]);
+          setFilteredData([]);
+          setTotalResponses(0);
+          setSurveyTitle("Khảo sát");
+        }
       } catch (err) {
         console.error(err);
         toast.error("Không tải được dữ liệu");
+        setRawData([]);
+        setFilteredData([]);
+        setTotalResponses(0);
       } finally {
         setLoading(false);
       }
@@ -110,9 +95,27 @@ export default function RawDataList() {
     // navigate(`/surveys/${surveyId}/responses/${responseId}`);
   };
 
-  // Initialize charts
+  // Initialize and update charts with real data
   useEffect(() => {
-    if (pieChartRef.current && !pieChartInstance.current) {
+    // Calculate data for charts
+    const khoaCounts = rawData.reduce((acc, item) => {
+      const khoa = item.khoa || "other";
+      acc[khoa] = (acc[khoa] || 0) + 1;
+      return acc;
+    }, {});
+
+    const barChartLabels = ["CNTT", "Kinh tế", "Khác"];
+    const barChartData = [
+      khoaCounts.cntt || 0,
+      khoaCounts.kinhte || 0,
+      khoaCounts.other || 0,
+    ];
+
+    // Initialize or update pie chart
+    if (pieChartRef.current) {
+      if (pieChartInstance.current) {
+        pieChartInstance.current.destroy();
+      }
       const pieCtx = pieChartRef.current.getContext("2d");
       pieChartInstance.current = new Chart(pieCtx, {
         type: "pie",
@@ -120,7 +123,7 @@ export default function RawDataList() {
           labels: ["Sinh viên Năm nhất", "Sinh viên Năm hai", "Sinh viên Năm ba", "Khách"],
           datasets: [
             {
-              data: [50, 40, 30, 30],
+              data: [50, 40, 30, 30], // TODO: Calculate from actual data if available
               backgroundColor: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"],
             },
           ],
@@ -143,16 +146,20 @@ export default function RawDataList() {
       });
     }
 
-    if (barChartRef.current && !barChartInstance.current) {
+    // Initialize or update bar chart
+    if (barChartRef.current) {
+      if (barChartInstance.current) {
+        barChartInstance.current.destroy();
+      }
       const barCtx = barChartRef.current.getContext("2d");
       barChartInstance.current = new Chart(barCtx, {
         type: "bar",
         data: {
-          labels: ["CNTT", "Kinh tế", "Khác"],
+          labels: barChartLabels,
           datasets: [
             {
               label: "Số lượng Phản hồi",
-              data: [90, 40, 20],
+              data: barChartData,
               backgroundColor: "#3b82f6",
             },
           ],
@@ -195,7 +202,7 @@ export default function RawDataList() {
         barChartInstance.current = null;
       }
     };
-  }, []);
+  }, [rawData]);
 
   const getKhoaLabel = (khoa) => {
     const labels = {
@@ -208,6 +215,24 @@ export default function RawDataList() {
   return (
     <div className="raw-data-list-page">
       <div className="raw-data-container">
+        {/* Back Button */}
+        <button onClick={handleGoBack} className="back-button">
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Quay lại
+        </button>
+
         <h1>Khảo sát: {surveyTitle}</h1>
 
         <div className="summary-bar">

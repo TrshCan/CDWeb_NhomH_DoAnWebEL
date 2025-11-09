@@ -42,7 +42,7 @@ const formatDate = (dateString) => {
   });
 };
 
-export default function SurveysMade() {
+export default function SurveysCreated() {
   const navigate = useNavigate();
   const [surveys, setSurveys] = useState([]);
   const [filteredSurveys, setFilteredSurveys] = useState([]);

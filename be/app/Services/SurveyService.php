@@ -39,6 +39,43 @@ class SurveyService
             ];
         });
     }
+
+    public function getRawData(int $surveyId)
+    {
+        $rawData = $this->repo->getRawDataBySurveyId($surveyId);
+        $surveyTitle = $this->repo->getSurveyTitle($surveyId);
+
+        return [
+            'title' => $surveyTitle ?? 'Khảo sát',
+            'responses' => $rawData->map(function ($row) {
+                // Map faculty name to khoa code for frontend compatibility
+                $khoa = 'other';
+                if (!empty($row->faculty_name)) {
+                    $facultyName = strtolower($row->faculty_name);
+                    if (strpos($facultyName, 'công nghệ') !== false || strpos($facultyName, 'cntt') !== false) {
+                        $khoa = 'cntt';
+                    } elseif (strpos($facultyName, 'kinh tế') !== false || strpos($facultyName, 'kinhte') !== false) {
+                        $khoa = 'kinhte';
+                    }
+                }
+
+                // Format completed date
+                $completedDate = null;
+                if ($row->completed_date) {
+                    $date = Carbon::parse($row->completed_date);
+                    $completedDate = $date->format('d/m/Y H:i');
+                }
+
+                return [
+                    'id' => $row->response_id,
+                    'studentId' => (string) $row->user_id, // Using user_id as student ID
+                    'studentName' => $row->student_name ?? 'N/A',
+                    'khoa' => $khoa,
+                    'completedDate' => $completedDate ?? 'N/A',
+                ];
+            })->values()->all(), // Convert to array for GraphQL
+        ];
+    }
 }
 
 
