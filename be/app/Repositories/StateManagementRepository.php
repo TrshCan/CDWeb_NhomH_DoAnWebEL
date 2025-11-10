@@ -15,8 +15,12 @@ class StateManagementRepository
     public function updateStatus($id, string $status): Survey
     {
         $survey = Survey::findOrFail($id);
+        $oldStatus = $survey->status;
         $survey->status = $status;
+        
+        // Nếu đang cập nhật end_at, đảm bảo nó được lưu
         $survey->save();
+        
         return $survey;
     }
 

@@ -54,13 +54,11 @@ class StateManagementResolver
             $surveys = \App\Models\Survey::whereNull('deleted_at')
                 ->orderByDesc('created_at')
                 ->get();
-            
-            // Tự động sync status cho mỗi survey (tự động đóng nếu quá ngày kết thúc)
+
             foreach ($surveys as $survey) {
-                $this->service->syncStatus($survey);
+                app(StateManagementService::class)->syncStatus($survey);
             }
-            
-            // Reload để lấy status đã được cập nhật
+
             return \App\Models\Survey::whereNull('deleted_at')
                 ->orderByDesc('created_at')
                 ->get();

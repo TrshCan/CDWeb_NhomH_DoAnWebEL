@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { graphqlRequest } from "../api/graphql";
 
-const now = new Date(); // Sử dụng thời gian thực
-
 const statusConfig = {
   pending: { text: 'Chưa bắt đầu', color: 'gray', actions: ['activate'] },
   active: { text: 'Đang hoạt động', color: 'green', actions: ['pause', 'close'] },
@@ -28,6 +26,7 @@ const colorMap = {
 const StatusManagement = () => {
   const [surveysState, setSurveysState] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date()); // Thời gian thực
   const [currentUserRole, setCurrentUserRole] = useState('admin');
   const [activeAction, setActiveAction] = useState({ surveyId: null, action: null });
   const [currentView, setCurrentView] = useState('survey-list');
@@ -40,6 +39,8 @@ const StatusManagement = () => {
   const [dropdownPosition, setDropdownPosition] = useState('bottom'); // 'bottom' or 'top'
   const buttonRefs = useRef({}); // 🔹 ref riêng cho từng survey
   const itemsPerPage = 3;
+  const lastRefreshTime = useRef(0); // Lưu thời gian refresh cuối cùng
+  const isRefreshing = useRef(false); // Flag để tránh refresh đồng thời
 
   const showToast = (message, type = 'success') => {
     const id = Date.now();
@@ -48,9 +49,24 @@ const StatusManagement = () => {
   };
 
   // Load surveys từ API
-  const loadSurveys = async () => {
+  const loadSurveys = async (silent = false) => {
+    // Tránh refresh đồng thời
+    if (isRefreshing.current) {
+      return;
+    }
+
+    // Kiểm tra thời gian refresh cuối cùng (tránh refresh quá thường xuyên)
+    const now = Date.now();
+    if (!silent && now - lastRefreshTime.current < 3000) {
+      return; // Chỉ refresh nếu đã qua 3 giây
+    }
+
     try {
-      setLoading(true);
+      isRefreshing.current = true;
+      if (!silent) {
+        setLoading(true);
+      }
+      
       const result = await graphqlRequest(`
         query {
           surveys {
@@ -70,7 +86,9 @@ const StatusManagement = () => {
 
       if (result.errors) {
         console.error('GraphQL Errors:', result.errors);
-        showToast('Lỗi tải danh sách khảo sát', 'error');
+        if (!silent) {
+          showToast('Lỗi tải danh sách khảo sát', 'error');
+        }
         return;
       }
 
@@ -90,17 +108,79 @@ const StatusManagement = () => {
       }));
 
       setSurveysState(mappedSurveys);
+      lastRefreshTime.current = now;
     } catch (error) {
       console.error('Lỗi tải surveys:', error);
-      showToast('Không thể tải danh sách khảo sát', 'error');
+      if (!silent) {
+        showToast('Không thể tải danh sách khảo sát', 'error');
+      }
     } finally {
       setLoading(false);
+      isRefreshing.current = false;
     }
   };
 
+  // Load surveys khi mount
   useEffect(() => {
     loadSurveys();
   }, []);
+
+  // Cập nhật thời gian thực mỗi giây
+  useEffect(() => {
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timeInterval);
+  }, []);
+
+  // Auto-refresh surveys định kỳ (mỗi 30 giây)
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      loadSurveys(true); // Silent refresh
+    }, 30000); // 30 giây
+
+    return () => clearInterval(refreshInterval);
+  }, []);
+
+  // Kiểm tra và refresh ngay khi đến thời gian start/end
+  useEffect(() => {
+    if (surveysState.length === 0) return;
+
+    const checkAndRefresh = () => {
+      const now = currentTime.getTime();
+      let shouldRefresh = false;
+      
+      surveysState.forEach(survey => {
+        // Kiểm tra thời gian bắt đầu: nếu đã đến hoặc vượt qua thời gian bắt đầu
+        if (survey.start_at && survey.status === 'pending') {
+          const startTime = new Date(survey.start_at).getTime();
+          // Nếu đã đến thời gian bắt đầu (trong vòng 30 giây sau khi đến)
+          if (now >= startTime && now <= startTime + 30000) {
+            shouldRefresh = true;
+          }
+        }
+        
+        // Kiểm tra thời gian kết thúc: nếu đã đến hoặc vượt qua thời gian kết thúc
+        if (survey.end_at && survey.status !== 'closed') {
+          const endTime = new Date(survey.end_at).getTime();
+          // Nếu đã đến thời gian kết thúc (trong vòng 30 giây sau khi đến)
+          if (now >= endTime && now <= endTime + 30000) {
+            shouldRefresh = true;
+          }
+        }
+      });
+
+      if (shouldRefresh) {
+        console.log('Auto-refresh triggered by time event');
+        loadSurveys(true); // Silent refresh để không làm gián đoạn UI
+      }
+    };
+
+    // Kiểm tra mỗi 5 giây để phát hiện sự kiện
+    const checkTimer = setInterval(checkAndRefresh, 5000);
+    return () => clearInterval(checkTimer);
+  }, [currentTime, surveysState]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -114,6 +194,9 @@ const StatusManagement = () => {
   }, [openDropdownId]);
 
   const getEffectiveStatus = (survey) => {
+    // Sử dụng currentTime thay vì now
+    const now = currentTime;
+    
     // Nếu status là closed, luôn trả về closed
     if (survey.status === 'closed') return 'closed';
     
@@ -289,11 +372,24 @@ const StatusManagement = () => {
   const showConfirmationModal = (surveyId, action) => {
     const survey = surveysState.find((s) => s.id === surveyId);
     if (!survey) return;
+    
+    let message = actionConfig[action].message.replace('{surveyName}', survey.name);
+    
+    // Nếu là kích hoạt và chưa đến thời gian bắt đầu, thêm cảnh báo
+    if (action === 'activate' && survey.start_at) {
+      const startTime = new Date(survey.start_at);
+      const now = currentTime;
+      if (now < startTime) {
+        const timeDiff = Math.round((startTime - now) / (1000 * 60)); // phút
+        message += `\n\n⚠️ Cảnh báo: Khảo sát sẽ được kích hoạt sớm ${timeDiff} phút so với thời gian dự kiến (${startTime.toLocaleString('vi-VN')}).`;
+      }
+    }
+    
     setActiveAction({ surveyId, action });
     setConfirmationModal({
       show: true,
       title: 'Xác nhận hành động',
-      text: actionConfig[action].message.replace('{surveyName}', survey.name),
+      text: message,
     });
   };
 
@@ -369,10 +465,6 @@ const StatusManagement = () => {
     }
   };
 
-  const handleRoleChange = (role) => {
-    setCurrentUserRole(role);
-    setOpenDropdownId(null);
-  };
 
   const getResultsContent = () => {
     if (!selectedSurvey) return null;
@@ -523,38 +615,35 @@ const StatusManagement = () => {
 
       <div className="container mx-auto p-4 md:p-8 antialiased text-slate-700 bg-gray-100 min-h-screen">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800">Quản Lý Trạng Thái Khảo Sát</h1>
-          <p className="text-slate-500 mt-1">Thay đổi trạng thái hoạt động và quyền xem lại của các khảo sát.</p>
-          
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">Quản Lý Trạng Thái Khảo Sát</h1>
+              <p className="text-slate-500 mt-1">Thay đổi trạng thái hoạt động và quyền xem lại của các khảo sát.</p>
+            </div>
+            <div className="text-right">
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="text-sm text-gray-600">Thời gian hiện tại</div>
+                <div className="text-lg font-mono font-semibold text-blue-600">
+                  {currentTime.toLocaleString('vi-VN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                  })}
+                </div>
+                <button
+                  onClick={() => loadSurveys()}
+                  className="mt-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                >
+                  🔄 Làm mới
+                </button>
+              </div>
+            </div>
+          </div>
         </header>
 
-        <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-          <label className="block text-sm font-medium text-gray-900 mb-2">Xem với vai trò:</label>
-          <div className="flex items-center space-x-4">
-            <label className="inline-flex items-center">
-              <input
-                type="radio"
-                name="userRole"
-                value="admin"
-                checked={currentUserRole === 'admin'}
-                onChange={(e) => handleRoleChange(e.target.value)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
-              />
-              <span className="ml-2 text-sm font-medium text-gray-900">Quản trị viên / Giảng viên</span>
-            </label>
-            <label className="inline-flex items-center">
-              <input
-                type="radio"
-                name="userRole"
-                value="user"
-                checked={currentUserRole === 'user'}
-                onChange={(e) => handleRoleChange(e.target.value)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
-              />
-              <span className="ml-2 text-sm font-medium text-gray-900">Người tham gia</span>
-            </label>
-          </div>
-        </div>
 
         {/* 🔹 Bỏ overflow-hidden để dropdown không bị clip */}
         <div className="bg-white rounded-lg shadow-md">
@@ -589,7 +678,7 @@ const StatusManagement = () => {
           <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center">
               <h2 className="text-lg font-semibold text-gray-800 mb-4">{confirmationModal.title}</h2>
-              <p className="text-gray-600 mb-6">{confirmationModal.text}</p>
+              <p className="text-gray-600 mb-6 whitespace-pre-line text-left">{confirmationModal.text}</p>
               <div className="flex justify-center space-x-4">
                 <button
                   onClick={handleConfirmAction}
