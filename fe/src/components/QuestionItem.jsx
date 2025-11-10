@@ -16,7 +16,10 @@ export default function QuestionItem({
   const hasImage = !!question?.image;
 
   return (
-    <div className="relative" style={{ overflow: 'visible', position: 'relative', width: '100%' }}>
+    <div
+      className="relative"
+      style={{ overflow: "visible", position: "relative", width: "100%" }}
+    >
       {/* Dấu * cho câu hỏi bắt buộc (chỉ hiện khi Bật/true) */}
       {question?.required === true && (
         <span className="absolute top-2 right-4 z-50 text-red-500 text-[25px] font-bold select-none pointer-events-none">
@@ -28,13 +31,13 @@ export default function QuestionItem({
       {isActive && (
         <div
           className="absolute flex flex-col items-center space-y-1"
-          style={{ 
-            top: '50%', 
-            right: '-37px', // 22px icon + 15px khoảng cách
-            transform: 'translateY(-50%)',
+          style={{
+            top: "50%",
+            right: "-37px", // 22px icon + 15px khoảng cách
+            transform: "translateY(-50%)",
             zIndex: 1000,
-            pointerEvents: 'auto',
-            position: 'absolute'
+            pointerEvents: "auto",
+            position: "absolute",
           }}
         >
           {/* Up */}
@@ -50,7 +53,13 @@ export default function QuestionItem({
                 : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
             }`}
             aria-label="Move up"
-            style={{ width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{
+              width: "22px",
+              height: "22px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -80,7 +89,13 @@ export default function QuestionItem({
                 : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
             }`}
             aria-label="Move down"
-            style={{ width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{
+              width: "22px",
+              height: "22px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -142,7 +157,7 @@ export default function QuestionItem({
                   <EditableField
                     placeholder="Mô tả trợ giúp tuỳ chọn"
                     initialValue={question.helpText}
-                    inputClassName="text-sm text-gray-700 mt-1"
+                    inputClassName="text-sm text-gray-700 mt-1 mb-4"
                   />
                 </div>
               </div>
@@ -198,7 +213,7 @@ export default function QuestionItem({
                 <EditableField
                   placeholder="Mô tả trợ giúp tuỳ chọn"
                   initialValue={question.helpText}
-                  inputClassName="text-sm text-gray-700 mt-1"
+                  inputClassName="text-sm text-gray-700 mt-1 mb-4"
                 />
               </div>
             </div>

@@ -29,9 +29,19 @@ export default function App() {
   const [rightPanel, setRightPanel] = useState(null);
   const [activeQuestionId, setActiveQuestionId] = useState(null);
 
-  const [questionItems, setQuestionItems] = useState([
-    { id: 1, text: "", helpText: "", type: "Mặc định" },
+  // Cấu trúc: mảng các groups, mỗi group có id, title, và questions
+  const [questionGroups, setQuestionGroups] = useState([
+    {
+      id: 1,
+      title: "Nhóm câu hỏi đầu tiên của tôi",
+      questions: [{ id: 1, text: "", helpText: "", type: "Mặc định" }],
+    },
   ]);
+
+  // Helper: lấy tất cả questionItems từ tất cả groups (để tương thích với code cũ)
+  const getAllQuestionItems = () => {
+    return questionGroups.flatMap((group) => group.questions);
+  };
 
   // STATE: Tổng quát
   const [generalSettings, setGeneralSettings] = useState({
@@ -123,8 +133,13 @@ export default function App() {
 
   // Thay đổi văn bản câu hỏi
   const handleQuestionTextChange = (id, newText) => {
-    setQuestionItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, text: newText } : item))
+    setQuestionGroups((prev) =>
+      prev.map((group) => ({
+        ...group,
+        questions: group.questions.map((item) =>
+          item.id === id ? { ...item, text: newText } : item
+        ),
+      }))
     );
   };
 
@@ -158,7 +173,8 @@ export default function App() {
       setActiveQuestionId(questionId);
       // Khởi tạo cài đặt mặc định nếu chưa có
       if (!questionSettings[questionId]) {
-        const question = questionItems.find((q) => String(q.id) === questionId);
+        const allQuestions = getAllQuestionItems();
+        const question = allQuestions.find((q) => String(q.id) === questionId);
         setQuestionSettings((prev) => ({
           ...prev,
           [questionId]: {
@@ -202,72 +218,171 @@ export default function App() {
     });
   };
 
-  // Di chuyển câu hỏi
-  const moveQuestionItem = (index, direction) => {
-    setQuestionItems((prevItems) => {
-      const newItems = [...prevItems];
-      const [removed] = newItems.splice(index, 1);
-      if (direction === "up" && index > 0) {
-        newItems.splice(index - 1, 0, removed);
-      } else if (direction === "down" && index < prevItems.length - 1) {
-        newItems.splice(index + 1, 0, removed);
-      } else {
-        return prevItems;
-      }
-      setActiveSection(`question-${removed.id}`);
-      return newItems;
-    });
+  // Di chuyển câu hỏi trong group
+  const moveQuestionItem = (groupId, index, direction) => {
+    setQuestionGroups((prev) =>
+      prev.map((group) => {
+        if (group.id !== groupId) return group;
+        const newQuestions = [...group.questions];
+        const [removed] = newQuestions.splice(index, 1);
+        if (direction === "up" && index > 0) {
+          newQuestions.splice(index - 1, 0, removed);
+        } else if (direction === "down" && index < group.questions.length - 1) {
+          newQuestions.splice(index + 1, 0, removed);
+        } else {
+          return group;
+        }
+        setActiveSection(`question-${removed.id}`);
+        return { ...group, questions: newQuestions };
+      })
+    );
   };
 
-  // Thêm câu hỏi mới
-  const addQuestionItem = (questionType = "Mặc định") => {
-    setQuestionItems((prevItems) => {
-      const newId =
-        prevItems.length > 0 ? Math.max(...prevItems.map((i) => i.id)) + 1 : 1;
+  // Thêm câu hỏi mới vào group cuối cùng
+  const addQuestionItem = (questionType = "Mặc định", groupId = null) => {
+    setQuestionGroups((prev) => {
+      if (prev.length === 0) {
+        const newItem = { id: 1, text: "", helpText: "", type: questionType };
+        return [
+          {
+            id: 1,
+            title: "Nhóm câu hỏi đầu tiên của tôi",
+            questions: [newItem],
+          },
+        ];
+      }
+      
+      const targetGroup = groupId
+        ? prev.find((g) => g.id === groupId)
+        : prev[prev.length - 1];
+      
+      if (!targetGroup) return prev;
+      
+      // Tìm id lớn nhất của tất cả questions
+      const maxId = Math.max(
+        ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
+      );
+      const newId = maxId + 1;
       const newItem = { id: newId, text: "", helpText: "", type: questionType };
-      const newItems = [...prevItems, newItem];
+      
       setActiveSection(`question-${newId}`);
-      return newItems.map((item, index) => ({ ...item, id: index + 1 }));
+      
+      return prev.map((group) =>
+        group.id === targetGroup.id
+          ? { ...group, questions: [...group.questions, newItem] }
+          : group
+      );
     });
   };
 
   const handleSelectQuestionType = (questionType) => {
     handleToggleModal();
-    addQuestionItem(questionType);
+    const groupId = window.__currentGroupId || null;
+    addQuestionItem(questionType, groupId);
+    window.__currentGroupId = null;
   };
 
   // ===================== Duplicate & Delete =====================
-  const duplicateQuestionItem = (index) => {
-    setQuestionItems((prev) => {
-      const src = prev[index];
-      if (!src) return prev;
-      const clone = { ...src, text: "" };
-      const newItems = [...prev];
-      newItems.splice(index + 1, 0, clone);
-      const renumbered = newItems.map((it, i) => ({ ...it, id: i + 1 }));
-      setActiveSection(`question-${index + 2}`);
-      return renumbered;
-    });
+  const duplicateQuestionItem = (groupId, index) => {
+    setQuestionGroups((prev) =>
+      prev.map((group) => {
+        if (group.id !== groupId) return group;
+        const src = group.questions[index];
+        if (!src) return group;
+        
+        // Tìm id lớn nhất của tất cả questions để tạo id mới
+        const maxId = Math.max(
+          ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
+        );
+        const newId = maxId + 1;
+        
+        const clone = { ...src, id: newId, text: "" };
+        const newQuestions = [...group.questions];
+        newQuestions.splice(index + 1, 0, clone);
+        setActiveSection(`question-${newId}`);
+        return { ...group, questions: newQuestions };
+      })
+    );
     toast.success("Đã nhân bản câu hỏi");
   };
 
-  const deleteQuestionItem = (index) => {
+  // Duplicate toàn bộ group (duplicate group đầu tiên)
+  const duplicateGroup = (groupId = null) => {
+    setQuestionGroups((prev) => {
+      if (prev.length === 0) return prev;
+      
+      // Nếu không có groupId, duplicate group đầu tiên
+      const sourceGroup = groupId 
+        ? prev.find((g) => g.id === groupId) 
+        : prev[0];
+      
+      if (!sourceGroup) return prev;
+      
+      // Tìm id lớn nhất của groups và questions
+      const maxGroupId = Math.max(...prev.map((g) => g.id || 0));
+      const maxQuestionId = Math.max(
+        ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
+      );
+      
+      // Duplicate tất cả câu hỏi với id mới
+      const duplicatedQuestions = sourceGroup.questions.map((question, index) => ({
+        ...question,
+        id: maxQuestionId + index + 1,
+      }));
+      
+      // Tạo group mới
+      const newGroup = {
+        id: maxGroupId + 1,
+        title: sourceGroup.title,
+        questions: duplicatedQuestions,
+      };
+      
+      return [...prev, newGroup];
+    });
+    toast.success("Đã nhân bản nhóm câu hỏi");
+  };
+
+  // Delete group
+  const deleteGroup = (groupId) => {
+    const ok = window.confirm("Bạn có chắc muốn xoá nhóm câu hỏi này?");
+    if (!ok) return;
+    
+    setQuestionGroups((prev) => {
+      const filtered = prev.filter((g) => g.id !== groupId);
+      if (filtered.length === 0) {
+        // Nếu xóa hết, tạo group mặc định
+        return [
+          {
+            id: 1,
+            title: "Nhóm câu hỏi đầu tiên của tôi",
+            questions: [{ id: 1, text: "", helpText: "", type: "Mặc định" }],
+          },
+        ];
+      }
+      return filtered;
+    });
+    toast.success("Đã xoá nhóm câu hỏi");
+  };
+
+  const deleteQuestionItem = (groupId, index) => {
     const ok = window.confirm("Bạn có chắc muốn xoá câu hỏi này?");
     if (!ok) return;
 
-    setQuestionItems((prev) => {
-      if (index < 0 || index >= prev.length) return prev;
-      const newItems = prev.filter((_, i) => i !== index);
-      const renumbered = newItems.map((it, i) => ({ ...it, id: i + 1 }));
-
-      if (renumbered.length > 0) {
-        const next = Math.min(index, renumbered.length - 1);
-        setActiveSection(`question-${renumbered[next].id}`);
-      } else {
-        setActiveSection(null);
-      }
-      return renumbered;
-    });
+    setQuestionGroups((prev) =>
+      prev.map((group) => {
+        if (group.id !== groupId) return group;
+        if (index < 0 || index >= group.questions.length) return group;
+        const newQuestions = group.questions.filter((_, i) => i !== index);
+        
+        if (newQuestions.length > 0) {
+          const next = Math.min(index, newQuestions.length - 1);
+          setActiveSection(`question-${newQuestions[next].id}`);
+        } else {
+          setActiveSection(null);
+        }
+        return { ...group, questions: newQuestions };
+      })
+    );
     toast.success("Đã xoá câu hỏi");
   };
   // =============================================================
@@ -312,11 +427,15 @@ export default function App() {
           <div className="flex-1 overflow-y-auto px-4 pb-4">
             {openPanel === "structure" ? (
               <StructurePanel
-                questionItems={questionItems}
+                questionGroups={questionGroups}
                 activeSection={activeSection}
                 onSelect={handleSetSection}
-                onDuplicate={duplicateQuestionItem}
-                onDelete={deleteQuestionItem}
+                onDuplicate={(groupId, questionIndex) => {
+                  duplicateQuestionItem(groupId, questionIndex);
+                }}
+                onDelete={(groupId, questionIndex) => {
+                  deleteQuestionItem(groupId, questionIndex);
+                }}
               />
             ) : (
               <SettingsPanel tab={settingsTab} onSelect={setSettingsTab} />
@@ -373,12 +492,15 @@ export default function App() {
                   }));
 
                   // Đồng bộ sang danh sách câu hỏi
-                  setQuestionItems((prev) =>
-                    prev.map((q) =>
-                      String(q.id) === String(activeQuestionId)
-                        ? { ...q, ...newSettings }
-                        : q
-                    )
+                  setQuestionGroups((prev) =>
+                    prev.map((group) => ({
+                      ...group,
+                      questions: group.questions.map((q) =>
+                        String(q.id) === String(activeQuestionId)
+                          ? { ...q, ...newSettings }
+                          : q
+                      ),
+                    }))
                   );
 
                   setSavedAt(new Date());
@@ -388,7 +510,7 @@ export default function App() {
                   setActiveQuestionId(null);
                   setActiveSection(null);
                 }}
-                questionItems={questionItems}
+                questionItems={getAllQuestionItems()}
                 currentQuestionId={activeQuestionId}
               />
             </div>
@@ -430,23 +552,50 @@ export default function App() {
                         <WelcomeSection
                           isActive={activeSection === "welcome"}
                           onClick={() => handleSetSection("welcome")}
+                          questionCount={getAllQuestionItems().length}
                         />
                       </div>
 
-                      <QuestionSection
-                        questionItems={questionItems}
-                        moveQuestionItem={moveQuestionItem}
-                        activeSection={activeSection}
-                        handleSetSection={handleSetSection}
-                        onDuplicate={duplicateQuestionItem}
-                        onDelete={deleteQuestionItem}
-                        onTextChange={handleQuestionTextChange}
-                      />
-
-                      <AddSection
-                        onAddClick={handleToggleModal}
-                        isModalOpen={isModalOpen}
-                      />
+                      {questionGroups.map((group, groupIndex) => (
+                        <React.Fragment key={group.id}>
+                          <QuestionSection
+                            groupId={group.id}
+                            groupTitle={group.title}
+                            questionItems={group.questions}
+                            moveQuestionItem={(index, direction) =>
+                              moveQuestionItem(group.id, index, direction)
+                            }
+                            activeSection={activeSection}
+                            handleSetSection={handleSetSection}
+                            onDuplicate={(questionIndex) => {
+                              // Duplicate câu hỏi trong group hiện tại
+                              duplicateQuestionItem(group.id, questionIndex);
+                            }}
+                            onDuplicateGroup={() => duplicateGroup(group.id)}
+                            onDelete={(questionIndex) => {
+                              // Xóa câu hỏi trong group hiện tại
+                              deleteQuestionItem(group.id, questionIndex);
+                            }}
+                            onDeleteGroup={() => deleteGroup(group.id)}
+                            onTextChange={handleQuestionTextChange}
+                            onGroupTitleChange={(newTitle) => {
+                              setQuestionGroups((prev) =>
+                                prev.map((g) =>
+                                  g.id === group.id ? { ...g, title: newTitle } : g
+                                )
+                              );
+                            }}
+                          />
+                          <AddSection
+                            onAddClick={() => {
+                              handleToggleModal();
+                              // Lưu groupId tạm thời để addQuestionItem sử dụng
+                              window.__currentGroupId = group.id;
+                            }}
+                            isModalOpen={isModalOpen}
+                          />
+                        </React.Fragment>
+                      ))}
 
                       <div
                         id="end"

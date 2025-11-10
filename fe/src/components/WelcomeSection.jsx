@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function WelcomeSection({ isActive, onClick }) {
+export default function WelcomeSection({ isActive, onClick, questionCount = 0 }) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -100,7 +100,7 @@ export default function WelcomeSection({ isActive, onClick }) {
             ></textarea>
 
             <p className="text-gray-500 mb-6 text-left">
-              Có 1 câu hỏi trong cuộc khảo sát này.
+              Có {questionCount} câu hỏi trong cuộc khảo sát này.
             </p>
 
             <div className="flex items-center">

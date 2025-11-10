@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 
 export default function StructurePanel({
-  questionItems = [],
+  questionGroups = [],
   activeSection,
   onSelect,
-  groupTitle = "Nhóm câu hỏi đầu tiên...",
   onDuplicate,
   onDelete,
 }) {
-  const [collapsed, setCollapsed] = useState(false);
 
   // Bỏ-qua-đóng-menu 1 lần khi đổi activeSection do bấm ⋯
   const ignoreNextActiveChange = useRef(false);
+  
+  // State để quản lý collapsed cho từng group
+  const [collapsedGroups, setCollapsedGroups] = useState({});
 
   // ===================== MENU STATE =====================
   const [menu, setMenu] = useState({
@@ -163,7 +164,7 @@ export default function StructurePanel({
   );
 
   // Mở/toggle menu singleton tại toạ độ của nút ⋯
-  const openMenuAt = (btnEl, index) => {
+  const openMenuAt = (btnEl, menuData) => {
     if (!btnEl) return;
     const r = btnEl.getBoundingClientRect();
 
@@ -178,11 +179,11 @@ export default function StructurePanel({
 
     setMenu((prev) => {
       // Nhấn lại cùng 1 câu: toggle tắt
-      if (prev.open && prev.index === index) {
+      if (prev.open && prev.index?.groupId === menuData.groupId && prev.index?.questionIndex === menuData.questionIndex) {
         return { ...prev, open: false };
       }
       // Đang mở câu khác: chuyển sang mở câu mới ngay
-      return { open: true, top, left, index };
+      return { open: true, top, left, index: menuData };
     });
   };
 
@@ -202,133 +203,146 @@ export default function StructurePanel({
       />
 
       {/* Nhóm câu hỏi */}
-      <div className="px-1 py-2">
-        <div className="flex items-center gap-2 text-gray-700 px-2 mb-1">
-          {/* caret thu/mở */}
-          <button
-            type="button"
-            className="text-gray-500 hover:text-gray-700"
-            onClick={() => setCollapsed((v) => !v)}
-            aria-label="Thu gọn/Mở rộng"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className={[
-                "w-4 h-4 transition-transform",
-                collapsed ? " -rotate-90" : " rotate-0",
-              ].join("")}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 9l6 6 6-6"
-              />
-            </svg>
-          </button>
-
-          {/* icon clipboard */}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-4 h-4 text-gray-700"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M8 16h8M8 12h8M8 8h8M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"
-            />
-          </svg>
-
-          <div className="font-medium truncate">{groupTitle}</div>
-        </div>
-
-        {!collapsed && (
-          <div className="mt-1 text-sm">
-            {questionItems.map((q, idx) => {
-              const qid = q?.id ?? idx + 1;
-              const key = "question-" + qid;
-              const isActive = activeSection === key;
-
-              return (
-                <div
-                  key={key}
+      {questionGroups.map((group, groupIdx) => {
+        const groupCollapsed = collapsedGroups[group.id] || false;
+        return (
+          <div key={group.id} className="px-1 py-2">
+            <div className="flex items-center gap-2 text-gray-700 px-2 mb-1">
+              {/* caret thu/mở */}
+              <button
+                type="button"
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => {
+                  setCollapsedGroups((prev) => ({
+                    ...prev,
+                    [group.id]: !prev[group.id],
+                  }));
+                }}
+                aria-label="Thu gọn/Mở rộng"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
                   className={[
-                    "relative flex items-center justify-between rounded-md px-3 py-2 mb-1 transition-colors select-none text-sm",
-                    isActive
-                      ? "bg-violet-600 text-white"
-                      : "text-gray-800 hover:bg-gray-100",
-                  ].join(" ")}
-                  onClick={() => {
-                    onSelect?.(key);
-                    setMenu((m) => (m.open ? { ...m, open: false } : m));
-                  }}
+                    "w-4 h-4 transition-transform",
+                    groupCollapsed ? " -rotate-90" : " rotate-0",
+                  ].join("")}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
                 >
-                  {/* Trái: icon + tiêu đề */}
-                  <div className="flex items-center gap-2 truncate">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4 6h16M4 12h10M4 18h16"
-                      />
-                    </svg>
-                    <span className="truncate">
-                      {q?.title || q?.text || "Câu hỏi của bạn là gì?"}
-                    </span>
-                  </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 9l6 6 6-6"
+                  />
+                </svg>
+              </button>
 
-                  {/* Phải: nút 3 chấm — chọn dòng + mở menu singleton */}
-                  <button
-                    type="button"
-                    aria-label="Mở menu"
-                    className={[
-                      "p-1 rounded-md transition-colors",
-                      isActive
-                        ? "hover:bg-violet-700"
-                        : "hover:bg-gray-200 text-gray-600",
-                    ].join(" ")}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      ignoreNextActiveChange.current = true; // bỏ qua 1 lần auto-close
-                      onSelect?.(key); // đổi activeSection
-                      openMenuAt(e.currentTarget, idx); // mở / chuyển menu sang câu mới
-                    }}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="3"
+              {/* icon clipboard */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4 text-gray-700"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8 16h8M8 12h8M8 8h8M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"
+                />
+              </svg>
+
+              <div className="font-medium truncate">
+                {group.title || `Nhóm ${groupIdx + 1}`}
+              </div>
+            </div>
+
+            {!groupCollapsed && (
+              <div className="mt-1 text-sm">
+                {group.questions.map((q, idx) => {
+                  const qid = q?.id ?? idx + 1;
+                  const key = "question-" + qid;
+                  const isActive = activeSection === key;
+
+                  return (
+                    <div
+                      key={key}
+                      className={[
+                        "relative flex items-center justify-between rounded-md px-3 py-2 mb-1 transition-colors select-none text-sm",
+                        isActive
+                          ? "bg-violet-600 text-white"
+                          : "text-gray-800 hover:bg-gray-100",
+                      ].join(" ")}
+                      onClick={() => {
+                        onSelect?.(key);
+                        setMenu((m) => (m.open ? { ...m, open: false } : m));
+                      }}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 6h.01M12 12h.01M12 18h.01"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              );
-            })}
+                      {/* Trái: icon + tiêu đề */}
+                      <div className="flex items-center gap-2 truncate">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M4 6h16M4 12h10M4 18h16"
+                          />
+                        </svg>
+                        <span className="truncate">
+                          {q?.title || q?.text || "Câu hỏi của bạn là gì?"}
+                        </span>
+                      </div>
+
+                      {/* Phải: nút 3 chấm — chọn dòng + mở menu singleton */}
+                      <button
+                        type="button"
+                        aria-label="Mở menu"
+                        className={[
+                          "p-1 rounded-md transition-colors",
+                          isActive
+                            ? "hover:bg-violet-700"
+                            : "hover:bg-gray-200 text-gray-600",
+                        ].join(" ")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          ignoreNextActiveChange.current = true; // bỏ qua 1 lần auto-close
+                          onSelect?.(key); // đổi activeSection
+                          // Lưu groupId và questionIndex vào menu state
+                          openMenuAt(e.currentTarget, { groupId: group.id, questionIndex: idx });
+                        }}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-4 h-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 6h.01M12 12h.01M12 18h.01"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })}
 
       {/* Kết thúc */}
       <Row
@@ -363,7 +377,9 @@ export default function StructurePanel({
                 onClick={(e) => {
                   e.stopPropagation();
                   setMenu((m) => ({ ...m, open: false }));
-                  onDuplicate?.(menu.index);
+                  if (menu.index?.groupId !== undefined && menu.index?.questionIndex !== undefined) {
+                    onDuplicate?.(menu.index.groupId, menu.index.questionIndex);
+                  }
                 }}
               >
                 NHÂN BẢN CÂU HỎI
@@ -375,7 +391,9 @@ export default function StructurePanel({
                 onClick={(e) => {
                   e.stopPropagation();
                   setMenu((m) => ({ ...m, open: false }));
-                  onDelete?.(menu.index);
+                  if (menu.index?.groupId !== undefined && menu.index?.questionIndex !== undefined) {
+                    onDelete?.(menu.index.groupId, menu.index.questionIndex);
+                  }
                 }}
               >
                 XOÁ CÂU HỎI

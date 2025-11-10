@@ -10,11 +10,16 @@ import { DotsHorizontalIcon } from "../icons";
  *   không thay đổi font/line-height/layout.
  */
 export default function QuestionSection({
+  groupId,
+  groupTitle: initialGroupTitle,
   questionItems = [],
   activeSection,
   handleSetSection,
+  moveQuestionItem,
   onDuplicate,
+  onDuplicateGroup,
   onDelete,
+  onDeleteGroup,
   onGroupTitleChange, // optional: bắn tiêu đề ra ngoài nếu cần
   onTextChange,
 }) {
@@ -22,16 +27,24 @@ export default function QuestionSection({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const [groupTitle, setGroupTitle] = useState("Nhóm câu hỏi đầu tiên của tôi");
+  const [groupTitle, setGroupTitle] = useState(
+    initialGroupTitle || "Nhóm câu hỏi đầu tiên của tôi"
+  );
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
   const titleRef = useRef(null);
   const menuRef = useRef(null);
 
-  // Cập nhật local items khi số lượng phần tử thay đổi
+  // Cập nhật local items và title khi props thay đổi
   useEffect(() => {
     setItems(questionItems);
   }, [questionItems]);
+
+  useEffect(() => {
+    if (initialGroupTitle) {
+      setGroupTitle(initialGroupTitle);
+    }
+  }, [initialGroupTitle]);
 
   // Đóng menu khi click ra ngoài
   useEffect(() => {
@@ -75,6 +88,12 @@ export default function QuestionSection({
   // Di chuyển câu hỏi (local); App có thể xử lý phía ngoài nếu cần
   const handleMove = (index, direction) => {
     const movedId = items[index] ? items[index].id : null;
+
+    // Gọi moveQuestionItem từ App với groupId
+    if (typeof moveQuestionItem === "function" && groupId) {
+      moveQuestionItem(index, direction);
+      return;
+    }
 
     setItems((prev) => {
       const arr = [...prev];
@@ -158,30 +177,39 @@ export default function QuestionSection({
             <DotsHorizontalIcon />
           </button>
           {isMenuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-sm z-10 border border-gray-100">
-              <ul className="py-2">
+            <div
+              className="absolute bg-white rounded-md shadow-lg"
+              style={{
+                left: "calc(100% + 12px)",
+                top: "0",
+                width: "172px",
+                height: "92px",
+                zIndex: 10050,
+              }}
+            >
+              <ul className="py-1">
                 <li>
                   <button
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-semibold"
+                    className="w-full text-left px-4 py-2 text-sm text-gray-900 hover:bg-gray-100 font-semibold uppercase"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDuplicate?.();
+                      onDuplicateGroup?.();
                       setIsMenuOpen(false);
                     }}
                   >
-                    DUPLICATE GROUP
+                    Duplicate group
                   </button>
                 </li>
                 <li>
                   <button
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 font-semibold"
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 font-semibold uppercase"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDelete?.();
+                      onDeleteGroup?.();
                       setIsMenuOpen(false);
                     }}
                   >
-                    DELETE GROUP
+                    Delete group
                   </button>
                 </li>
               </ul>
@@ -193,17 +221,17 @@ export default function QuestionSection({
       {/* Vùng nội dung có hiệu ứng thu/mở mượt */}
       <div
         className={`transition-all duration-300 ease-in-out ${
-          isCollapsed 
-            ? "max-h-0 overflow-hidden" 
+          isCollapsed
+            ? "max-h-0 overflow-hidden"
             : "max-h-[9999px] overflow-hidden"
         }`}
-        style={{ position: 'relative' }}
+        style={{ position: "relative" }}
       >
-        <div 
+        <div
           className="bg-white rounded-sm shadow-lg border border-gray-200 divide-y divide-gray-200"
-          style={{ 
-            overflow: 'visible', 
-            position: 'relative'
+          style={{
+            overflow: "visible",
+            position: "relative",
           }}
         >
           {items.map((question, index) => {
@@ -216,9 +244,9 @@ export default function QuestionSection({
                 key={qid}
                 id={sectionId}
                 className={`scroll-mt-24 relative ${isActive ? "" : ""}`}
-                style={{ 
-                  overflow: 'visible', 
-                  position: 'relative'
+                style={{
+                  overflow: "visible",
+                  position: "relative",
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -232,8 +260,18 @@ export default function QuestionSection({
                   isActive={isActive}
                   onClick={() => handleSetSection(sectionId)}
                   moveQuestionItem={handleMove}
-                  onDuplicate={onDuplicate}
-                  onDelete={onDelete}
+                  onDuplicate={(questionIndex) => {
+                    // Duplicate câu hỏi trong group hiện tại, không tạo group mới
+                    if (typeof onDuplicate === "function") {
+                      onDuplicate(questionIndex);
+                    }
+                  }}
+                  onDelete={() => {
+                    // onDelete từ App đã được bind với groupId và index
+                    if (typeof onDelete === "function") {
+                      onDelete(index);
+                    }
+                  }}
                   onTextChange={onTextChange}
                 />
               </div>

@@ -1,24 +1,115 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { PlusIcon, TrashIcon } from "../icons";
 
-export default function ConditionDesigner({ 
-  value = {}, 
-  onChange, 
-  onClose, 
+// Custom Dropdown Component
+function CustomDropdown({
+  value,
+  onChange,
+  options,
+  placeholder,
+  className = "",
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const selectedOption = options.find(
+    (opt) => String(opt.value) === String(value)
+  );
+  const displayText = selectedOption ? selectedOption.label : placeholder;
+
+  const handleSelect = (optionValue) => {
+    onChange(optionValue);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-3 py-2 bg-white border-2 border-black rounded-sm focus:outline-none appearance-none text-left flex items-center justify-between"
+      >
+        <span className={value ? "text-black" : "text-gray-500"}>
+          {displayText}
+        </span>
+        <svg
+          className={`h-4 w-4 text-gray-400 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border-1 border-gray-200 rounded-sm max-h-60 overflow-auto">
+          <ul className="py-1">
+            {options.map((option) => (
+              <li
+                key={option.value}
+                onClick={() => handleSelect(option.value)}
+                className="px-3 py-2 cursor-pointer hover:bg-green-50 transition-colors text-black"
+              >
+                {option.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ConditionDesigner({
+  value = {},
+  onChange,
+  onClose,
   isEmbedded = false,
   questionItems = [],
-  currentQuestionId = null
+  currentQuestionId = null,
 }) {
   const [conditions, setConditions] = useState(value.conditions || []);
-  const [defaultScenario, setDefaultScenario] = useState(value.defaultScenario || 1);
+  const [defaultScenario, setDefaultScenario] = useState(
+    value.defaultScenario || 1
+  );
   const [currentConditionType, setCurrentConditionType] = useState("question"); // For new condition
 
   // Lấy danh sách câu hỏi trước câu hỏi hiện tại
   const getPreviousQuestions = () => {
     if (!currentQuestionId) return [];
-    const currentIndex = questionItems.findIndex(q => String(q.id) === String(currentQuestionId));
+    const currentIndex = questionItems.findIndex(
+      (q) => String(q.id) === String(currentQuestionId)
+    );
     if (currentIndex <= 0) return [];
     return questionItems.slice(0, currentIndex);
+  };
+
+  // Lấy index của câu hỏi trong danh sách
+  const getQuestionIndex = (questionId) => {
+    return questionItems.findIndex((q) => String(q.id) === String(questionId));
   };
 
   // Lấy options của câu hỏi (tạm thời giả sử mỗi câu hỏi có options)
@@ -26,14 +117,20 @@ export default function ConditionDesigner({
   const getQuestionOptions = (questionId) => {
     // Tạm thời trả về options mẫu
     // Trong thực tế, cần lấy từ question.options hoặc question.choices
-    const question = questionItems.find(q => String(q.id) === String(questionId));
+    const question = questionItems.find(
+      (q) => String(q.id) === String(questionId)
+    );
     if (!question) return [];
-    
+
     // Nếu question có options thì trả về, nếu không thì trả về options mẫu
-    if (question.options && Array.isArray(question.options) && question.options.length > 0) {
+    if (
+      question.options &&
+      Array.isArray(question.options) &&
+      question.options.length > 0
+    ) {
       return question.options;
     }
-    
+
     // Options mẫu (sẽ được thay thế khi có dữ liệu thực)
     return [
       { id: 1, text: "Lựa chọn 1" },
@@ -44,14 +141,16 @@ export default function ConditionDesigner({
 
   // Lấy tên câu hỏi
   const getQuestionText = (questionId) => {
-    const question = questionItems.find(q => String(q.id) === String(questionId));
+    const question = questionItems.find(
+      (q) => String(q.id) === String(questionId)
+    );
     return question?.text || `Câu hỏi ${questionId}`;
   };
 
   // Lấy tên option
   const getOptionText = (questionId, optionId) => {
     const options = getQuestionOptions(questionId);
-    const option = options.find(opt => String(opt.id) === String(optionId));
+    const option = options.find((opt) => String(opt.id) === String(optionId));
     return option?.text || `Lựa chọn ${optionId}`;
   };
 
@@ -61,8 +160,27 @@ export default function ConditionDesigner({
       const questionId = condition.field;
       const questionText = getQuestionText(questionId);
       const optionText = getOptionText(questionId, condition.value);
-      const currentQuestionNum = questionItems.findIndex(q => String(q.id) === String(currentQuestionId)) + 1;
-      return `Câu ${currentQuestionNum} sẽ hiển thị khi người dùng chọn ${questionText}: ${optionText}`;
+      const currentQuestionNum =
+        questionItems.findIndex(
+          (q) => String(q.id) === String(currentQuestionId)
+        ) + 1;
+      return (
+        <>
+          <strong>Câu {currentQuestionNum} sẽ hiển thị </strong> khi người dùng
+          chọn <strong>{questionText}</strong>: <strong>{optionText}</strong>
+        </>
+      );
+    }
+    if (condition.type === "participant" && condition.field && condition.value && condition.targetQuestionId) {
+      const questionId = condition.field;
+      const optionText = getOptionText(questionId, condition.value);
+      const targetQuestionNum = getQuestionIndex(condition.targetQuestionId) + 1;
+      const sourceQuestionNum = getQuestionIndex(questionId) + 1;
+      return (
+        <>
+          <strong>Câu {targetQuestionNum} sẽ hiển thị</strong> khi chọn câu {sourceQuestionNum}: <strong>{optionText}</strong>
+        </>
+      );
     }
     return null;
   };
@@ -74,6 +192,7 @@ export default function ConditionDesigner({
       field: "",
       operator: "equals",
       value: "",
+      targetQuestionId: "",
     };
     const updated = [...conditions, newCondition];
     setConditions(updated);
@@ -97,8 +216,8 @@ export default function ConditionDesigner({
   };
 
   const handleUpdateConditionType = (id, newType) => {
-    const updated = conditions.map((c) => 
-      c.id === id ? { ...c, type: newType, field: "", value: "" } : c
+    const updated = conditions.map((c) =>
+      c.id === id ? { ...c, type: newType, field: "", value: "", targetQuestionId: "" } : c
     );
     setConditions(updated);
     if (isEmbedded) {
@@ -110,8 +229,8 @@ export default function ConditionDesigner({
   };
 
   const handleUpdateConditionField = (id, field) => {
-    const updated = conditions.map((c) => 
-      c.id === id ? { ...c, field, value: "" } : c
+    const updated = conditions.map((c) =>
+      c.id === id ? { ...c, field, value: "", targetQuestionId: "" } : c
     );
     setConditions(updated);
     if (isEmbedded) {
@@ -123,9 +242,18 @@ export default function ConditionDesigner({
   };
 
   const handleUpdateConditionValue = (id, value) => {
-    const updated = conditions.map((c) => 
-      c.id === id ? { ...c, value } : c
-    );
+    const updated = conditions.map((c) => (c.id === id ? { ...c, value } : c));
+    setConditions(updated);
+    if (isEmbedded) {
+      onChange?.({
+        defaultScenario,
+        conditions: updated,
+      });
+    }
+  };
+
+  const handleUpdateConditionTargetQuestion = (id, targetQuestionId) => {
+    const updated = conditions.map((c) => (c.id === id ? { ...c, targetQuestionId } : c));
     setConditions(updated);
     if (isEmbedded) {
       onChange?.({
@@ -153,7 +281,7 @@ export default function ConditionDesigner({
     }
   }, [value.conditions, value.defaultScenario]);
 
-  const containerClass = isEmbedded 
+  const containerClass = isEmbedded
     ? "h-full flex flex-col bg-white"
     : "fixed inset-0 bg-white z-50 flex flex-col";
 
@@ -218,6 +346,15 @@ export default function ConditionDesigner({
       <div className="flex-1 overflow-y-auto">
         <div className="p-4">
           <div className="border-2 border-purple-200 rounded-lg p-4 space-y-6">
+            {/* Description */}
+            <div className="bg-blue-50 border border-blue-200 rounded-sm p-3 text-sm text-blue-800">
+              <p className="font-medium mb-1">Điều kiện hiển thị</p>
+              <p>
+                Điều kiện hiển thị cho phép bạn ẩn hoặc hiện các câu hỏi dựa
+                trên lựa chọn ở câu trước.
+              </p>
+            </div>
+
             {/* Default Scenario */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -236,7 +373,7 @@ export default function ConditionDesigner({
                     });
                   }
                 }}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full px-3 py-2 bg-white border-2 border-black rounded-sm focus:outline-none"
                 min="1"
               />
             </div>
@@ -261,7 +398,9 @@ export default function ConditionDesigner({
                 <div className="flex w-full h-10 rounded-sm overflow-hidden bg-gray-200 mb-3">
                   <button
                     type="button"
-                    onClick={() => handleUpdateConditionType(condition.id, "question")}
+                    onClick={() =>
+                      handleUpdateConditionType(condition.id, "question")
+                    }
                     className={`flex-1 text-sm font-semibold transition-colors ${
                       condition.type === "question"
                         ? "bg-gray-600 text-white"
@@ -272,110 +411,132 @@ export default function ConditionDesigner({
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleUpdateConditionType(condition.id, "participant")}
+                    onClick={() =>
+                      handleUpdateConditionType(condition.id, "participant")
+                    }
                     className={`flex-1 text-sm font-semibold transition-colors ${
                       condition.type === "participant"
                         ? "bg-gray-600 text-white"
                         : "bg-gray-200 text-gray-700 opacity-50"
                     }`}
                   >
-                    Dữ liệu người tham gia
+                    Điều hướng câu hỏi
                   </button>
                 </div>
 
                 {/* Dropdown chọn câu hỏi (khi type === "question") */}
                 {condition.type === "question" && (
-                  <div className="relative mb-3">
-                    <select
-                      className="w-full px-3 py-2 bg-white border-2 border-purple-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none"
+                  <div className="mb-3">
+                    <CustomDropdown
                       value={condition.field || ""}
-                      onChange={(e) => handleUpdateConditionField(condition.id, e.target.value)}
-                    >
-                      <option value="">Chọn câu hỏi</option>
-                      {getPreviousQuestions().map((q) => (
-                        <option key={q.id} value={String(q.id)}>
-                          Câu {q.id}: {q.text || `Câu hỏi ${q.id}`}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                      <svg
-                        className="h-4 w-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
+                      onChange={(value) =>
+                        handleUpdateConditionField(condition.id, value)
+                      }
+                      options={getPreviousQuestions().map((q) => {
+                        const questionIndex = getQuestionIndex(q.id);
+                        return {
+                          value: String(q.id),
+                          label: `${questionIndex + 1}. ${
+                            q.text || `Câu hỏi ${q.id}`
+                          }`,
+                        };
+                      })}
+                      placeholder="Câu hỏi trước"
+                    />
                   </div>
                 )}
 
                 {/* Dropdown chọn option (khi đã chọn câu hỏi) */}
                 {condition.type === "question" && condition.field && (
-                  <div className="relative mb-3">
-                    <select
-                      className="w-full px-3 py-2 bg-white border-2 border-purple-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none"
+                  <div className="mb-3">
+                    <CustomDropdown
                       value={condition.value || ""}
-                      onChange={(e) => handleUpdateConditionValue(condition.id, e.target.value)}
-                    >
-                      <option value="">Chọn đáp án</option>
-                      {getQuestionOptions(condition.field).map((opt) => (
-                        <option key={opt.id} value={String(opt.id)}>
-                          {opt.text}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                      <svg
-                        className="h-4 w-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
+                      onChange={(value) =>
+                        handleUpdateConditionValue(condition.id, value)
+                      }
+                      options={getQuestionOptions(condition.field).map(
+                        (opt) => ({
+                          value: String(opt.id),
+                          label: opt.text,
+                        })
+                      )}
+                      placeholder="Chọn đáp án"
+                    />
                   </div>
                 )}
 
-                {/* Dropdown cho participant data */}
+                {/* Dropdown cho participant data - Chọn đáp án */}
                 {condition.type === "participant" && (
-                  <div className="relative mb-3">
-                    <select
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none opacity-50"
+                  <div className="mb-3">
+                    <CustomDropdown
                       value={condition.field || ""}
-                      disabled
-                    >
-                      <option value="">Dữ liệu người tham gia</option>
-                      <option value="participant-name">Tên người tham gia</option>
-                      <option value="participant-email">Email</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                      <svg
-                        className="h-4 w-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
+                      onChange={(value) =>
+                        handleUpdateConditionField(condition.id, value)
+                      }
+                      options={getPreviousQuestions().map((q) => {
+                        const questionIndex = getQuestionIndex(q.id);
+                        return {
+                          value: String(q.id),
+                          label: `${questionIndex + 1}. ${
+                            q.text || `Câu hỏi ${q.id}`
+                          }`,
+                        };
+                      })}
+                      placeholder="Chọn đáp án"
+                    />
+                  </div>
+                )}
+
+                {/* Dropdown chọn đáp án (khi đã chọn câu hỏi trong participant) */}
+                {condition.type === "participant" && condition.field && (
+                  <div className="mb-3">
+                    <CustomDropdown
+                      value={condition.value || ""}
+                      onChange={(value) =>
+                        handleUpdateConditionValue(condition.id, value)
+                      }
+                      options={getQuestionOptions(condition.field).map(
+                        (opt) => ({
+                          value: String(opt.id),
+                          label: opt.text,
+                        })
+                      )}
+                      placeholder="Chọn đáp án"
+                    />
+                  </div>
+                )}
+
+                {/* Dropdown chọn câu hỏi hiển thị (khi đã chọn đáp án trong participant) */}
+                {condition.type === "participant" && condition.field && condition.value && (
+                  <div className="mb-3">
+                    <CustomDropdown
+                      value={condition.targetQuestionId || ""}
+                      onChange={(value) =>
+                        handleUpdateConditionTargetQuestion(condition.id, value)
+                      }
+                      options={questionItems
+                        .filter((q) => {
+                          // Chỉ hiển thị các câu hỏi sau câu hỏi hiện tại
+                          if (!currentQuestionId) return true;
+                          const currentIndex = questionItems.findIndex(
+                            (q) => String(q.id) === String(currentQuestionId)
+                          );
+                          const qIndex = questionItems.findIndex(
+                            (item) => String(item.id) === String(q.id)
+                          );
+                          return qIndex > currentIndex;
+                        })
+                        .map((q) => {
+                          const questionIndex = getQuestionIndex(q.id);
+                          return {
+                            value: String(q.id),
+                            label: `${questionIndex + 1}. ${
+                              q.text || `Câu hỏi ${q.id}`
+                            }`,
+                          };
+                        })}
+                      placeholder="Chọn câu hỏi hiển thị"
+                    />
                   </div>
                 )}
 
@@ -390,7 +551,7 @@ export default function ConditionDesigner({
                 {index === conditions.length - 1 && (
                   <button
                     onClick={handleAddCondition}
-                    className="flex items-center text-violet-600 text-sm hover:text-violet-800 transition-colors font-normal"
+                    className="flex items-center text-violet-600 text-sm hover:text-violet-800 transition-colors font-normal mt-3"
                   >
                     <PlusIcon className="h-5 w-5 mr-1 text-violet-600" />
                     Thêm điều kiện
@@ -430,23 +591,22 @@ export default function ConditionDesigner({
                         : "bg-gray-200 text-gray-700 opacity-50"
                     }`}
                   >
-                    Dữ liệu người tham gia
+                    Điều hướng câu hỏi
                   </button>
                 </div>
 
                 {/* Dropdown chọn câu hỏi (khi type === "question") */}
                 {currentConditionType === "question" && (
-                  <div className="relative mb-3">
-                    <select
-                      className="w-full px-3 py-2 bg-white border-2 border-purple-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none"
-                      defaultValue=""
-                      onChange={(e) => {
-                        if (e.target.value) {
+                  <div className="mb-3">
+                    <CustomDropdown
+                      value=""
+                      onChange={(value) => {
+                        if (value) {
                           // Khi chọn câu hỏi, tự động thêm condition
                           const newCondition = {
                             id: Date.now(),
                             type: "question",
-                            field: e.target.value,
+                            field: value,
                             operator: "equals",
                             value: "",
                           };
@@ -460,59 +620,57 @@ export default function ConditionDesigner({
                           }
                         }
                       }}
-                    >
-                      <option value="">Chọn câu hỏi</option>
-                      {getPreviousQuestions().map((q) => (
-                        <option key={q.id} value={String(q.id)}>
-                          Câu {q.id}: {q.text || `Câu hỏi ${q.id}`}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                      <svg
-                        className="h-4 w-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
+                      options={getPreviousQuestions().map((q) => {
+                        const questionIndex = getQuestionIndex(q.id);
+                        return {
+                          value: String(q.id),
+                          label: `${questionIndex + 1}. ${
+                            q.text || `Câu hỏi ${q.id}`
+                          }`,
+                        };
+                      })}
+                      placeholder="Câu hỏi trước"
+                    />
                   </div>
                 )}
 
-                {/* Dropdown cho participant data */}
+                {/* Dropdown cho participant data - Chọn đáp án */}
                 {currentConditionType === "participant" && (
-                  <div className="relative mb-3">
-                    <select
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none opacity-50"
-                      defaultValue=""
-                      disabled
-                    >
-                      <option value="">Dữ liệu người tham gia</option>
-                      <option value="participant-name">Tên người tham gia</option>
-                      <option value="participant-email">Email</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                      <svg
-                        className="h-4 w-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
+                  <div className="mb-3">
+                    <CustomDropdown
+                      value=""
+                      onChange={(value) => {
+                        if (value) {
+                          // Khi chọn câu hỏi, tự động thêm condition
+                          const newCondition = {
+                            id: Date.now(),
+                            type: "participant",
+                            field: value,
+                            operator: "equals",
+                            value: "",
+                            targetQuestionId: "",
+                          };
+                          const updated = [...conditions, newCondition];
+                          setConditions(updated);
+                          if (isEmbedded) {
+                            onChange?.({
+                              defaultScenario,
+                              conditions: updated,
+                            });
+                          }
+                        }
+                      }}
+                      options={getPreviousQuestions().map((q) => {
+                        const questionIndex = getQuestionIndex(q.id);
+                        return {
+                          value: String(q.id),
+                          label: `${questionIndex + 1}. ${
+                            q.text || `Câu hỏi ${q.id}`
+                          }`,
+                        };
+                      })}
+                      placeholder="Chọn đáp án"
+                    />
                   </div>
                 )}
 
@@ -544,4 +702,3 @@ export default function ConditionDesigner({
     </div>
   );
 }
-
