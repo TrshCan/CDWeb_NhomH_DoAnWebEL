@@ -202,6 +202,9 @@
 }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
   cursor: pointer;
@@ -212,6 +215,12 @@
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn svg {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .btn::before {
@@ -719,6 +728,187 @@
   font-weight: 700;
 }
 
+/* Download Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: slideUpModal 0.3s ease;
+  border: 2px solid #e5e7eb;
+}
+
+@keyframes slideUpModal {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 2rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.download-option {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 1rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.download-option:hover {
+  transform: translateX(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border-color: var(--option-color);
+}
+
+.download-option-excel {
+  --option-color: #10b981;
+}
+
+.download-option-excel:hover {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+}
+
+.download-option-pdf {
+  --option-color: #ef4444;
+}
+
+.download-option-pdf:hover {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+}
+
+.download-option-csv {
+  --option-color: #3b82f6;
+}
+
+.download-option-csv:hover {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+}
+
+.download-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--option-color), var(--option-color));
+  opacity: 0.1;
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.download-option:hover .download-option-icon {
+  opacity: 0.15;
+  transform: scale(1.1);
+}
+
+.download-option-icon svg {
+  position: absolute;
+  color: var(--option-color);
+  opacity: 1;
+}
+
+.download-option-content {
+  flex: 1;
+}
+
+.download-option-content h4 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+}
+
+.download-option-content p {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.download-option-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  transition: all 0.3s ease;
+}
+
+.download-option:hover .download-option-arrow {
+  color: var(--option-color);
+  transform: translateX(4px);
+}
+
 /* Loading Animation */
 @keyframes pulse {
   0%, 100% {
@@ -835,6 +1025,45 @@
 
   .action-bar .btn {
     width: 100%;
+  }
+
+  .modal-content {
+    width: 95%;
+  }
+
+  .modal-header {
+    padding: 1rem 1.5rem;
+  }
+
+  .modal-header h3 {
+    font-size: 1.125rem;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  .download-option {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .download-option-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .download-option-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .download-option-content h4 {
+    font-size: 1rem;
+  }
+
+  .download-option-content p {
+    font-size: 0.8125rem;
   }
 }
 
