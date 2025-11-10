@@ -23,6 +23,11 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
   })();
   const ownerId = post.userId || post.user_id || null;
   const isOwner = ownerId && String(ownerId) === String(currentUserId);
+  const handleCardClick = () => {
+    if (!disableCommentNavigate) {
+      navigate(`/post/${post.id}`);
+    }
+  };
 
   // Check if current user liked this post
   useEffect(() => {
@@ -132,7 +137,18 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
   if (hidden) return null;
 
   return (
-    <div className="post bg-white rounded-lg shadow p-4 relative">
+    <div
+      className="post bg-white rounded-lg shadow p-4 relative cursor-pointer hover:bg-gray-50 transition"
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && !disableCommentNavigate) {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center space-x-2">
@@ -157,7 +173,10 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
           <button
             aria-haspopup="true"
             aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((v) => !v);
+            }}
             className="p-1 rounded hover:bg-gray-100"
             title="More options"
           >
@@ -166,19 +185,27 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
             </svg>
           </button>
           {menuOpen && (
-            <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+            <div
+              className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="py-1 text-sm">
                 {isOwner ? (
                   <>
                     <button
                       className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                      onClick={() => { setIsEditing(true); setMenuOpen(false); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditing(true);
+                        setMenuOpen(false);
+                      }}
                     >
                       Edit
                     </button>
                     <button
                       className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50"
-                      onClick={async () => {
+                      onClick={async (e) => {
+                        e.stopPropagation();
                         try {
                           await deletePost(post.id);
                           if (onDeleted) onDeleted(post.id); else setHidden(true);
@@ -194,7 +221,11 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
                 ) : (
                   <button
                     className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                    onClick={() => { setMenuOpen(false); alert(`Following ${post.user} (mock)`); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      alert(`Following ${post.user} (mock)`);
+                    }}
                   >
                     Follow {post.user}
                   </button>
@@ -207,7 +238,7 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
 
       {/* Content / Edit */}
       {isEditing ? (
-        <div className="mt-2">
+        <div className="mt-2" onClick={(e) => e.stopPropagation()}>
           <textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
@@ -217,7 +248,8 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
           <div className="mt-2 flex gap-2">
             <button
               disabled={saving}
-              onClick={async () => {
+              onClick={async (e) => {
+                e.stopPropagation();
                 try {
                   setSaving(true);
                   const updated = await updatePost(post.id, editContent.trim());
@@ -234,7 +266,16 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
             >
               {saving ? "Saving..." : "Save"}
             </button>
-            <button onClick={() => { setIsEditing(false); setEditContent(post.content); }} className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(false);
+                setEditContent(post.content);
+              }}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       ) : (
@@ -244,21 +285,38 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
       {/* Media grid */}
       {visibleMedia.length > 0 && (
         <div className="mt-3 rounded-xl overflow-hidden border border-gray-200">
-          {visibleMedia.length === 1 && getMediaElement(visibleMedia[0], 0, "w-full h-auto max-h-[600px] object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(0))}
+          {visibleMedia.length === 1 && getMediaElement(
+            visibleMedia[0],
+            0,
+            "w-full h-auto max-h-[600px] object-cover cursor-pointer hover:opacity-90 transition",
+            (e) => {
+              e.stopPropagation();
+              handleOpen(0);
+            }
+          )}
 
           {visibleMedia.length === 2 && (
             <div className="grid grid-cols-2 gap-px bg-gray-200">
               {visibleMedia.map((media, i) =>
-                getMediaElement(media, i, "w-full h-80 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(i))
+                getMediaElement(media, i, "w-full h-80 object-cover cursor-pointer hover:opacity-90 transition", (e) => {
+                  e.stopPropagation();
+                  handleOpen(i);
+                })
               )}
             </div>
           )}
 
           {visibleMedia.length === 3 && (
             <div className="grid grid-cols-2 gap-px bg-gray-200">
-              {getMediaElement(visibleMedia[0], 0, "col-span-2 w-full h-72 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(0))}
+              {getMediaElement(visibleMedia[0], 0, "col-span-2 w-full h-72 object-cover cursor-pointer hover:opacity-90 transition", (e) => {
+                e.stopPropagation();
+                handleOpen(0);
+              })}
               {visibleMedia.slice(1).map((media, i) =>
-                getMediaElement(media, i + 1, "w-full h-64 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(i + 1))
+                getMediaElement(media, i + 1, "w-full h-64 object-cover cursor-pointer hover:opacity-90 transition", (e) => {
+                  e.stopPropagation();
+                  handleOpen(i + 1);
+                })
               )}
             </div>
           )}
@@ -269,12 +327,18 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
                 const isLast = i === 3 && hasExtra;
                 return (
                   <div key={i} className="relative">
-                    {getMediaElement(media, i, "w-full h-64 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(i))}
+                    {getMediaElement(media, i, "w-full h-64 object-cover cursor-pointer hover:opacity-90 transition", (e) => {
+                      e.stopPropagation();
+                      handleOpen(i);
+                    })}
                     {isLast && (
                       <div
                         className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center 
                                    text-white text-xl font-semibold cursor-pointer hover:bg-opacity-70"
-                        onClick={() => handleOpen(i)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpen(i);
+                        }}
                       >
                         +{post.media.length - maxVisible} more
                       </div>
@@ -335,7 +399,8 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
       <div className="flex space-x-4 mt-3 text-gray-500">
         <button 
           title="Like" 
-          onClick={async () => {
+          onClick={async (e) => {
+            e.stopPropagation();
             if (!currentUserId) {
               alert("Please log in to like posts");
               return;
@@ -370,7 +435,10 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
         {onReply ? (
           <button 
             title="Reply" 
-            onClick={() => onReply(post.id, post.user)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onReply(post.id, post.user);
+            }}
             className="flex items-center gap-1 hover:text-cyan-600 cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -386,7 +454,8 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
         ) : (
           <button 
             title="Comment" 
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (!disableCommentNavigate) {
                 navigate(`/post/${post.id}`);
               }
@@ -405,7 +474,11 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
           </button>
         )}
 
-        <button title="Share" className="hover:text-cyan-600">
+        <button
+          title="Share"
+          className="hover:text-cyan-600"
+          onClick={(e) => e.stopPropagation()}
+        >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"

@@ -401,7 +401,6 @@ export default function PostDetail() {
                 <div key={commentData.id} className={depth > 0 ? "ml-8 mt-2" : "ml-4"}>
                   <PostCard 
                     post={mapped} 
-                    disableCommentNavigate={true}
                     onReply={(replyId, replyUser) => setReplyingTo({ id: replyId, user: replyUser })}
                   />
                   {mapped.children && mapped.children.length > 0 && (
