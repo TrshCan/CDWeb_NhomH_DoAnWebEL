@@ -1,1 +1,79 @@
+
 @import "tailwindcss";
+:root {
+    background: linear-gradient(90deg, #1F0A95 0%, #3C0273 100%);
+
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes zoomIn {
+        from {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .animate-fadeIn {
+        animation: fadeIn 0.25s ease-out;
+    }
+
+    .animate-zoomIn {
+        animation: zoomIn 0.25s ease-out;
+    }
+
+    /* Add this to your index.css or globals.css file
+    */
+
+    /* --- Custom Scrollbar --- */
+
+    /* For Firefox */
+
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #94a3b8 transparent; /* thumb color track color */
+    }
+
+    /* For WebKit browsers (Chrome, Safari, Edge) */
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 1px;
+        /*
+         height: 6px; /* For horizontal scrollbars */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent; /* Make track invisible */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #aed0ff;
+        border-radius: 1px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #9dc5fd;
+    }
+}

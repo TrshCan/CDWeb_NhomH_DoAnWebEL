@@ -58,4 +58,10 @@ class Post extends Model
         return $this->belongsToMany(Group::class, 'group_posts')
             ->withPivot(['sender_id', 'sent_at']);
     }
+
+    public function media()
+    {
+        return $this->hasMany(PostMedia::class);
+    }
+
 }

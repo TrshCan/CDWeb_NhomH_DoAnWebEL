@@ -1,0 +1,23 @@
+type SurveySummary {
+  id: ID!
+  title: String!
+  created_at: DateTime
+  end_at: DateTime
+  status: String!
+  responses: Int!
+}
+
+type SurveyRawDataResponse {
+  id: ID!
+  studentId: String!
+  studentName: String!
+  khoa: String!
+  completedDate: String!
+}
+
+type SurveyRawData {
+  title: String!
+  responses: [SurveyRawDataResponse!]!
+}
+
+

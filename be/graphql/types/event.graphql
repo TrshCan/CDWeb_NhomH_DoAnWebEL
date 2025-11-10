@@ -1,0 +1,14 @@
+# Event Type Definition
+type Event {
+    id: ID!
+    title: String
+    event_date: DateTime
+    location: String
+    created_at: DateTime
+    created_by: ID!
+    deleted_at: DateTime
+
+    # Relationships (mirrors Post structure)
+    user: User
+    group: Group
+}
