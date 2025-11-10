@@ -16,6 +16,7 @@ export default function QuestionSection({
   onDuplicate,
   onDelete,
   onGroupTitleChange, // optional: bắn tiêu đề ra ngoài nếu cần
+  onTextChange,
 }) {
   const [items, setItems] = useState(questionItems);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -29,10 +30,7 @@ export default function QuestionSection({
 
   // Cập nhật local items khi số lượng phần tử thay đổi
   useEffect(() => {
-    if (questionItems.length !== items.length) {
-      setItems(questionItems);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setItems(questionItems);
   }, [questionItems]);
 
   // Đóng menu khi click ra ngoài
@@ -194,13 +192,18 @@ export default function QuestionSection({
 
       {/* Vùng nội dung có hiệu ứng thu/mở mượt */}
       <div
-        className={`transition-all duration-500 ease-in-out ${
-          isCollapsed
-            ? "max-h-0 overflow-hidden"
-            : "max-h-none overflow-visible"
-        }`}
+        className={`${
+          isCollapsed ? "max-h-0" : "max-h-[9999px]"
+        } transition-[max-height] duration-700 ease-in-out`}
+        style={{ overflowX: 'visible', overflowY: 'visible', position: 'relative' }}
       >
-        <div className="bg-white rounded-sm shadow-lg border border-gray-200 divide-y divide-gray-200 overflow-visible">
+        <div 
+          className="bg-white rounded-sm shadow-lg border border-gray-200 divide-y divide-gray-200" 
+          style={{ 
+            overflow: 'visible', 
+            position: 'relative'
+          }}
+        >
           {items.map((question, index) => {
             const qid = question.id ?? index + 1;
             const sectionId = `question-${qid}`;
@@ -210,7 +213,11 @@ export default function QuestionSection({
               <div
                 key={qid}
                 id={sectionId}
-                className={`scroll-mt-24 ${isActive ? "" : ""}`}
+                className={`scroll-mt-24 relative ${isActive ? "" : ""}`}
+                style={{ 
+                  overflow: 'visible', 
+                  position: 'relative'
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleSetSection(sectionId);
@@ -225,6 +232,7 @@ export default function QuestionSection({
                   moveQuestionItem={handleMove}
                   onDuplicate={onDuplicate}
                   onDelete={onDelete}
+                  onTextChange={onTextChange}
                 />
               </div>
             );

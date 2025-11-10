@@ -12,6 +12,7 @@ import GeneralSettingsForm from "./components/GeneralSettingsForm";
 import PublishAccessForm from "./components/PublishAccessForm";
 
 import WelcomeSettingsPanel from "./components/WelcomeSettingsPanel";
+import QuestionSettingsPanel from "./components/QuestionSettingsPanel";
 import HeaderBar from "./components/HeaderBar";
 
 import { Toaster, toast } from "react-hot-toast";
@@ -24,8 +25,9 @@ export default function App() {
   const [openPanel, setOpenPanel] = useState(null);
   const [settingsTab, setSettingsTab] = useState("general");
 
-  // panel phải: null | 'welcome'
+  // panel phải: null | 'welcome' | 'question-{id}'
   const [rightPanel, setRightPanel] = useState(null);
+  const [activeQuestionId, setActiveQuestionId] = useState(null);
 
   const [questionItems, setQuestionItems] = useState([
     { id: 1, text: "", helpText: "", type: "Mặc định" },
@@ -52,6 +54,9 @@ export default function App() {
     showXQuestions: true,
   });
 
+  // STATE: Cài đặt câu hỏi (panel phải) - lưu theo question id
+  const [questionSettings, setQuestionSettings] = useState({});
+
   // Log “Đã lưu lúc …” trên Header
   const [savedAt, setSavedAt] = useState(null);
   const handleGeneralChange = (v) => {
@@ -67,6 +72,14 @@ export default function App() {
   const centerWidth = openPanel === "settings" ? "900px" : "750px";
 
   const [prevRightPanel, setPrevRightPanel] = useState(null);
+  const [savedRightPanel, setSavedRightPanel] = useState(null); // Lưu rightPanel khi mở modal thêm
+
+  // Thay đổi văn bản câu hỏi
+  const handleQuestionTextChange = (id, newText) => {
+    setQuestionItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, text: newText } : item))
+    );
+  };
 
   const handleOpenPanel = (panel) => {
     // Nếu mở settings => lưu panel phải hiện tại và ẩn nó tạm thời
@@ -89,16 +102,58 @@ export default function App() {
 
   const handleSetSection = (sectionId) => {
     setActiveSection(sectionId);
-    // Khi chọn Welcome -> mở panel phải
-    if (sectionId === "welcome") setRightPanel("welcome");
+    if (sectionId === "welcome") {
+      setRightPanel("welcome");
+      setActiveQuestionId(null);
+    } else if (sectionId?.startsWith("question-")) {
+      const questionId = sectionId.replace("question-", "");
+      setRightPanel(`question-${questionId}`);
+      setActiveQuestionId(questionId);
+      // Khởi tạo cài đặt mặc định nếu chưa có
+      if (!questionSettings[questionId]) {
+        const question = questionItems.find((q) => String(q.id) === questionId);
+        setQuestionSettings((prev) => ({
+          ...prev,
+          [questionId]: {
+            questionCode: `Q${String(questionId).padStart(3, "0")}`,
+            type: question?.type || "Danh sách (nút chọn)",
+            required: "soft",
+            image: null,
+          },
+        }));
+      }
+    } else {
+      setRightPanel(null);
+      setActiveQuestionId(null);
+    }
 
     requestAnimationFrame(() => {
       const el = document.getElementById(sectionId);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (el) {
+        const yOffset = -100; // ⚙️ offset theo chiều cao header (60px) + margin
+        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
     });
   };
 
-  const handleToggleModal = () => setIsModalOpen((prev) => !prev);
+  const handleToggleModal = () => {
+    setIsModalOpen((prev) => {
+      const newValue = !prev;
+      // Khi mở modal: lưu rightPanel hiện tại và ẩn nó
+      if (newValue) {
+        setSavedRightPanel(rightPanel);
+        setRightPanel(null);
+      } else {
+        // Khi đóng modal: khôi phục rightPanel
+        if (savedRightPanel) {
+          setRightPanel(savedRightPanel);
+          setSavedRightPanel(null);
+        }
+      }
+      return newValue;
+    });
+  };
 
   // Di chuyển câu hỏi
   const moveQuestionItem = (index, direction) => {
@@ -213,6 +268,8 @@ export default function App() {
                 questionItems={questionItems}
                 activeSection={activeSection}
                 onSelect={handleSetSection}
+                onDuplicate={duplicateQuestionItem}
+                onDelete={deleteQuestionItem}
               />
             ) : (
               <SettingsPanel tab={settingsTab} onSelect={setSettingsTab} />
@@ -247,8 +304,8 @@ export default function App() {
         <SidebarRail active={openPanel} onOpen={handleOpenPanel} />
         {renderLeftPanel()}
 
-        {/* Panel phải: Welcome settings (1 lần) */}
-        {rightPanel === "welcome" && (
+        {/* Panel phải: Welcome settings (1 lần) - ẩn khi modal thêm mở */}
+        {rightPanel === "welcome" && !isModalOpen && (
           <div className="fixed top-[60px] right-0 h-[calc(100vh-60px)] w-[300px] z-40 bg-white border-l border-gray-300">
             <WelcomeSettingsPanel
               value={welcomeSettings}
@@ -260,6 +317,40 @@ export default function App() {
             />
           </div>
         )}
+
+        {/* Panel phải: Question settings - ẩn khi modal thêm mở */}
+        {rightPanel?.startsWith("question-") &&
+          activeQuestionId &&
+          !isModalOpen && (
+            <div className="fixed top-[60px] right-0 h-[calc(100vh-60px)] w-[300px] z-40 bg-white border-l border-gray-300">
+              <QuestionSettingsPanel
+                value={questionSettings[activeQuestionId] || {}}
+                onChange={(newSettings) => {
+                  // Cập nhật cài đặt panel
+                  setQuestionSettings((prev) => ({
+                    ...prev,
+                    [activeQuestionId]: newSettings,
+                  }));
+
+                  // Đồng bộ sang danh sách câu hỏi
+                  setQuestionItems((prev) =>
+                    prev.map((q) =>
+                      String(q.id) === String(activeQuestionId)
+                        ? { ...q, ...newSettings }
+                        : q
+                    )
+                  );
+
+                  setSavedAt(new Date());
+                }}
+                onClose={() => {
+                  setRightPanel(null);
+                  setActiveQuestionId(null);
+                  setActiveSection(null);
+                }}
+              />
+            </div>
+          )}
 
         {/* ===== Trung tâm: 3 vùng cố định, KHÔNG xê dịch ===== */}
         <div className="overflow-visible" onClick={(e) => e.stopPropagation()}>
@@ -307,6 +398,7 @@ export default function App() {
                         handleSetSection={handleSetSection}
                         onDuplicate={duplicateQuestionItem}
                         onDelete={deleteQuestionItem}
+                        onTextChange={handleQuestionTextChange}
                       />
 
                       <AddSection
