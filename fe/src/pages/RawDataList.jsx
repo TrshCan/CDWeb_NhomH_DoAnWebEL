@@ -19,6 +19,7 @@ export default function RawDataList() {
   const [filterKhoa, setFilterKhoa] = useState("all");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("raw-data");
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
   
   const pieChartRef = useRef(null);
   const barChartRef = useRef(null);
@@ -93,9 +94,18 @@ export default function RawDataList() {
     }
   };
 
-  const handleExportData = () => {
-    toast.success(`Đang xử lý xuất ${totalResponses} hàng dữ liệu thô sang Excel/CSV...`);
-    // TODO: Implement actual export functionality
+  const handleOpenDownloadModal = () => {
+    setShowDownloadModal(true);
+  };
+
+  const handleCloseDownloadModal = () => {
+    setShowDownloadModal(false);
+  };
+
+  const handleDownload = (format) => {
+    toast.success(`Đang tải xuống dữ liệu dạng ${format.toUpperCase()}...`);
+    setShowDownloadModal(false);
+    // TODO: Implement actual download logic
   };
 
   const handleViewDetail = (responseId) => {
@@ -297,10 +307,23 @@ export default function RawDataList() {
           <div className="controls">
             <button
               className="btn btn-success"
-              onClick={handleExportData}
-              aria-label="Xuất dữ liệu thô"
+              onClick={handleOpenDownloadModal}
+              aria-label="Tải dữ liệu"
             >
-              Xuất Dữ liệu Thô (Excel/CSV)
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Tải dữ liệu
             </button>
             <button
               className="btn btn-secondary"
@@ -410,6 +433,149 @@ export default function RawDataList() {
           </tbody>
         </table>
       </div>
+
+      {/* Download Modal */}
+      {showDownloadModal && (
+        <div className="modal-overlay" onClick={handleCloseDownloadModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Chọn định dạng tải xuống</h3>
+              <button className="modal-close" onClick={handleCloseDownloadModal}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <button
+                className="download-option download-option-excel"
+                onClick={() => handleDownload('excel')}
+              >
+                <div className="download-option-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                </div>
+                <div className="download-option-content">
+                  <h4>Excel</h4>
+                  <p>Tải xuống dạng bảng tính (.xlsx)</p>
+                </div>
+                <div className="download-option-arrow">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+              </button>
+
+              <button
+                className="download-option download-option-pdf"
+                onClick={() => handleDownload('pdf')}
+              >
+                <div className="download-option-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                </div>
+                <div className="download-option-content">
+                  <h4>PDF</h4>
+                  <p>Tải xuống báo cáo đầy đủ (.pdf)</p>
+                </div>
+                <div className="download-option-arrow">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+              </button>
+
+              <button
+                className="download-option download-option-csv"
+                onClick={() => handleDownload('csv')}
+              >
+                <div className="download-option-icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="9" y1="12" x2="15" y2="12" />
+                    <line x1="9" y1="16" x2="15" y2="16" />
+                  </svg>
+                </div>
+                <div className="download-option-content">
+                  <h4>CSV</h4>
+                  <p>Tải xuống dữ liệu thô (.csv)</p>
+                </div>
+                <div className="download-option-arrow">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
