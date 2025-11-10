@@ -4,6 +4,9 @@ import { Chart, registerables } from "chart.js";
 import toast from "react-hot-toast";
 import { getSurveyRawData } from "../api/graphql/survey";
 import "../assets/css/RawDataList.css";
+import { exportSurveyOverviewCSV } from "../utils/exports/overview/csv";
+import { exportSurveyOverviewExcel } from "../utils/exports/overview/excel";
+import { exportSurveyOverviewPDF } from "../utils/exports/overview/pdf";
 
 Chart.register(...registerables);
 
@@ -101,10 +104,38 @@ export default function SurveyOverview() {
     setShowDownloadModal(false);
   };
 
+  const prepareExportData = () => {
+    return filteredData.map((item) => ({
+      "Mã SV": item.studentId,
+      "Tên Sinh viên": item.studentName,
+      "Khoa": item.khoa,
+      "Ngày Hoàn thành": item.completedDate,
+    }));
+  };
+
   const handleDownload = (format) => {
-    toast.success(`Đang tải xuống dữ liệu dạng ${format.toUpperCase()}...`);
     setShowDownloadModal(false);
-    // TODO: Implement actual download logic
+    setTimeout(() => {
+      try {
+        if (format === 'csv') {
+          const rows = prepareExportData();
+          if (!rows.length) throw new Error('Không có dữ liệu để xuất');
+          exportSurveyOverviewCSV({ rows, title: surveyTitle });
+          toast.success('Đã tải xuống CSV');
+        } else if (format === 'excel') {
+          exportSurveyOverviewExcel({ title: surveyTitle, filteredData });
+          toast.success('Đã tải xuống Excel');
+        } else if (format === 'pdf') {
+          exportSurveyOverviewPDF({ title: surveyTitle, filteredData });
+          toast.success('Đã tải xuống PDF');
+        } else {
+          toast.error('Định dạng không hỗ trợ');
+        }
+      } catch (e) {
+        console.error(e);
+        toast.error(e.message || 'Không thể xuất dữ liệu');
+      }
+    }, 100);
   };
 
   const handleApplyFilter = () => {
