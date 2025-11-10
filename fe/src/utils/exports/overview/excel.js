@@ -1,80 +1,60 @@
 import * as XLSX from "xlsx";
 import { sanitizeFileName } from "./csv";
 
-export function exportSurveyOverviewExcel({ title, filteredData }) {
-  const rows = Array.isArray(filteredData) ? filteredData : [];
-  // Build export table from filteredData (overview exports a respondent list summary)
-  const data = rows.map((item) => ({
-    "Mã SV": item.studentId,
-    "Tên Sinh viên": item.studentName,
-    "Khoa": item.khoa,
-    "Ngày Hoàn thành": item.completedDate,
-  }));
+// Export overview aggregated data: per-question options with counts and percentages
+export function exportSurveyOverviewExcel({ overviewData }) {
+  if (!overviewData || !overviewData.questions || overviewData.questions.length === 0) {
+    throw new Error("Không có dữ liệu tổng quan để xuất");
+  }
 
+  const { title = "Khảo sát", totalResponses = 0, questions = [] } = overviewData;
   const wb = XLSX.utils.book_new();
 
   // Summary sheet
-  const total = rows.length;
-  const facultyCounts = rows.reduce((acc, item) => {
-    const k = item.khoa || "Khác";
-    acc[k] = (acc[k] || 0) + 1;
-    return acc;
-  }, {});
-
-  const yearCounts = {
-    "Sinh viên Năm nhất": 0,
-    "Sinh viên Năm hai": 0,
-    "Sinh viên Năm ba": 0,
-    "Khác": 0,
-  };
-  const currentYear = new Date().getFullYear();
-  rows.forEach((item) => {
-    const codeStr = String(item?.studentId || "");
-    const firstTwo = codeStr.substring(0, 2);
-    const yy = parseInt(firstTwo, 10);
-    if (!isNaN(yy) && firstTwo.length === 2) {
-      const enrollYear = 2000 + yy;
-      const diff = currentYear - enrollYear;
-      if (diff === 0) yearCounts["Sinh viên Năm nhất"]++;
-      else if (diff === 1) yearCounts["Sinh viên Năm hai"]++;
-      else if (diff === 2) yearCounts["Sinh viên Năm ba"]++;
-      else yearCounts["Khác"]++;
-    } else yearCounts["Khác"]++;
-  });
-
   const summaryRows = [
     ["Báo cáo Tổng quan Khảo sát"],
     ["Khảo sát", title],
     ["Ngày xuất", new Date().toLocaleString("vi-VN")],
-    ["Tổng số phản hồi", total],
-    [],
-    ["Phân bố theo Khoa"],
-    ["Khoa", "Số lượng"],
-    ...Object.keys(facultyCounts).sort().map((k) => [k, facultyCounts[k]]),
-    [],
-    ["Phân bố theo Niên khóa"],
-    ["Nhóm", "Số lượng"],
-    ...Object.entries(yearCounts).map(([k, v]) => [k, v]),
+    ["Tổng số phản hồi", totalResponses],
+    ["Số lượng câu hỏi", questions.length],
   ];
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
   XLSX.utils.book_append_sheet(wb, wsSummary, "Tổng quan");
 
-  // Data sheet with widths + autofilter
-  const ws = XLSX.utils.json_to_sheet(data);
-  ws["!cols"] = [
-    { wch: 15 },
-    { wch: 30 },
-    { wch: 20 },
-    { wch: 22 },
+  // Flatten per-question stats for a single filterable sheet
+  const dataRows = [];
+  questions.forEach((q, idx) => {
+    const total = (q.answer_stats || []).reduce((sum, s) => sum + (s.count || 0), 0) || 1;
+    (q.answer_stats || []).forEach((s) => {
+      const pct = Math.round(((s.count || 0) / total) * 100);
+      dataRows.push({
+        "#": idx + 1,
+        "Câu hỏi": q.question_text,
+        "Loại": q.question_type,
+        "Lựa chọn": s.option_text || "(Không có)",
+        "Số lượng": s.count || 0,
+        "Phần trăm": `${pct}%`,
+      });
+    });
+  });
+
+  const wsData = XLSX.utils.json_to_sheet(dataRows);
+  wsData["!cols"] = [
+    { wch: 4 },
+    { wch: 60 },
+    { wch: 16 },
+    { wch: 36 },
+    { wch: 12 },
+    { wch: 12 },
   ];
-  if (ws["!ref"]) {
-    const headerCount = Object.keys(data[0] || { a: 1 }).length;
-    const range = XLSX.utils.decode_range(ws["!ref"]);
-    ws["!autofilter"] = {
+  if (wsData["!ref"]) {
+    const headerCount = Object.keys(dataRows[0] || { a: 1 }).length;
+    const range = XLSX.utils.decode_range(wsData["!ref"]);
+    wsData["!autofilter"] = {
       ref: XLSX.utils.encode_range({ s: { r: range.s.r, c: range.s.c }, e: { r: range.e.r, c: range.s.c + headerCount - 1 } }),
     };
   }
-  XLSX.utils.book_append_sheet(wb, ws, "Danh sách");
+  XLSX.utils.book_append_sheet(wb, wsData, "Câu hỏi");
 
   const fileName = `${sanitizeFileName(title)}_overview_${Date.now()}.xlsx`;
   XLSX.writeFile(wb, fileName);

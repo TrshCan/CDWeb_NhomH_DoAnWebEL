@@ -110,29 +110,21 @@ export default function SurveyOverview() {
     setShowDownloadModal(false);
   };
 
-  const prepareExportData = () => {
-    return filteredData.map((item) => ({
-      "Mã SV": item.studentId,
-      "Tên Sinh viên": item.studentName,
-      "Khoa": item.khoa,
-      "Ngày Hoàn thành": item.completedDate,
-    }));
-  };
-
   const handleDownload = (format) => {
     setShowDownloadModal(false);
     setTimeout(() => {
       try {
+        if (!overviewData || !overviewData.questions || overviewData.questions.length === 0) {
+          throw new Error('Không có dữ liệu tổng quan để xuất');
+        }
         if (format === 'csv') {
-          const rows = prepareExportData();
-          if (!rows.length) throw new Error('Không có dữ liệu để xuất');
-          exportSurveyOverviewCSV({ rows, title: surveyTitle });
+          exportSurveyOverviewCSV({ overviewData });
           toast.success('Đã tải xuống CSV');
         } else if (format === 'excel') {
-          exportSurveyOverviewExcel({ title: surveyTitle, filteredData });
+          exportSurveyOverviewExcel({ overviewData });
           toast.success('Đã tải xuống Excel');
         } else if (format === 'pdf') {
-          exportSurveyOverviewPDF({ title: surveyTitle, filteredData });
+          exportSurveyOverviewPDF({ overviewData });
           toast.success('Đã tải xuống PDF');
         } else {
           toast.error('Định dạng không hỗ trợ');
