@@ -20,7 +20,7 @@ export default function EndSection({ isActive, onClick }) {
           aria-label={collapsed ? "Mở rộng" : "Thu gọn"}
         >
           <div
-            className={`transition-transform duration-300 ${
+            className={`transition-transform duration-500 ease-in-out ${
               collapsed ? "rotate-180" : "rotate-0"
             }`}
           >
@@ -52,12 +52,14 @@ export default function EndSection({ isActive, onClick }) {
         <div
           className={`transition-all duration-500 ease-in-out ${
             collapsed
-              ? "max-h-0 overflow-hidden"
-              : "max-h-[1000px] overflow-hidden"
+              ? "max-h-0 overflow-hidden opacity-0"
+              : "max-h-[1000px] overflow-hidden opacity-100"
           }`}
         >
           <div
-            className={`bg-sky-100 rounded-lg p-8 transition-all duration-300 border-2 ${
+            className={`bg-sky-100 rounded-lg transition-all duration-500 ease-in-out border-2 ${
+              collapsed ? "p-0" : "p-8"
+            } ${
               isActive
                 ? "border-violet-600"
                 : "border-transparent group-hover:border-violet-600"

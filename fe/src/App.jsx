@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import WelcomeSection from "./components/WelcomeSection";
 import QuestionSection from "./components/QuestionSection";
 import AddSection from "./components/AddSection";
@@ -22,7 +22,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // panel trái: null | 'structure' | 'settings'
-  const [openPanel, setOpenPanel] = useState(null);
+  const [openPanel, setOpenPanel] = useState("structure");
   const [settingsTab, setSettingsTab] = useState("general");
 
   // panel phải: null | 'welcome' | 'question-{id}'
@@ -73,6 +73,53 @@ export default function App() {
 
   const [prevRightPanel, setPrevRightPanel] = useState(null);
   const [savedRightPanel, setSavedRightPanel] = useState(null); // Lưu rightPanel khi mở modal thêm
+
+  // Ref cho các phần tử không muốn bỏ chọn khi click vào
+  const centerContentRef = useRef(null);
+
+  // Xử lý click outside để bỏ chọn câu hỏi
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // Nếu click vào center content, panel, hoặc các phần tử interactive thì không bỏ chọn
+      const centerContent = document.getElementById("center-750");
+      const leftPanel = document.querySelector('[class*="fixed"][class*="left-"]');
+      const rightPanel = document.querySelector('[class*="fixed"][class*="right-"]');
+      const header = document.querySelector('header');
+      const sidebarRail = document.querySelector('[class*="fixed"][class*="left-0"]');
+      
+      const clickedElement = e.target;
+      const isClickOnContent = centerContent?.contains(clickedElement);
+      const isClickOnLeftPanel = leftPanel?.contains(clickedElement);
+      const isClickOnRightPanel = rightPanel?.contains(clickedElement);
+      const isClickOnHeader = header?.contains(clickedElement);
+      const isClickOnSidebarRail = sidebarRail?.contains(clickedElement);
+      const isClickOnModal = clickedElement.closest('[role="dialog"]') || clickedElement.closest('.modal');
+
+      // Chỉ bỏ chọn khi click vào background (gray area)
+      if (
+        !isClickOnContent &&
+        !isClickOnLeftPanel &&
+        !isClickOnRightPanel &&
+        !isClickOnHeader &&
+        !isClickOnSidebarRail &&
+        !isClickOnModal &&
+        activeSection !== null
+      ) {
+        // Kiểm tra xem có phải click vào background gray không
+        const bgElement = clickedElement.closest('.bg-gray-100');
+        if (bgElement || clickedElement.classList.contains('bg-gray-100')) {
+          setActiveSection(null);
+          setRightPanel(null);
+          setActiveQuestionId(null);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [activeSection]);
 
   // Thay đổi văn bản câu hỏi
   const handleQuestionTextChange = (id, newText) => {
@@ -284,13 +331,6 @@ export default function App() {
     <>
       <div
         className="min-h-screen bg-gray-100 font-sans overflow-visible pt-[60px]"
-        onClick={(e) => {
-          // ✅ chỉ reset nếu click TRỰC TIẾP vào wrapper (nền),
-          //    không phải click vào con (Sidebar, Header, buttons...)
-          if (e.target === e.currentTarget) {
-            setActiveSection(null);
-          }
-        }}
       >
         {/* Header 60px (full width, cố định) */}
         <HeaderBar
@@ -348,6 +388,8 @@ export default function App() {
                   setActiveQuestionId(null);
                   setActiveSection(null);
                 }}
+                questionItems={questionItems}
+                currentQuestionId={activeQuestionId}
               />
             </div>
           )}

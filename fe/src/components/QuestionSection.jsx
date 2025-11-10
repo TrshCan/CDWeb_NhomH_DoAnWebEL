@@ -192,13 +192,15 @@ export default function QuestionSection({
 
       {/* Vùng nội dung có hiệu ứng thu/mở mượt */}
       <div
-        className={`${
-          isCollapsed ? "max-h-0" : "max-h-[9999px]"
-        } transition-[max-height] duration-700 ease-in-out`}
-        style={{ overflowX: 'visible', overflowY: 'visible', position: 'relative' }}
+        className={`transition-all duration-300 ease-in-out ${
+          isCollapsed 
+            ? "max-h-0 overflow-hidden" 
+            : "max-h-[9999px] overflow-hidden"
+        }`}
+        style={{ position: 'relative' }}
       >
         <div 
-          className="bg-white rounded-sm shadow-lg border border-gray-200 divide-y divide-gray-200" 
+          className="bg-white rounded-sm shadow-lg border border-gray-200 divide-y divide-gray-200"
           style={{ 
             overflow: 'visible', 
             position: 'relative'

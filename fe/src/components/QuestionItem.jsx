@@ -183,7 +183,7 @@ export default function QuestionItem({
           </div>
         ) : (
           /* ======================= BỐ CỤC MẶC ĐỊNH (KHÔNG ẢNH) ======================= */
-          <div className="p-6 pb-12">
+          <div className="p-6 pb-5">
             <div className="flex items-baseline">
               <span className="text-violet-600 font-semibold mr-2 whitespace-nowrap">
                 {index + 1} →

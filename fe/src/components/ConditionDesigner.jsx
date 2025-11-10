@@ -1,30 +1,138 @@
 import React, { useState, useEffect } from "react";
 import { PlusIcon, TrashIcon } from "../icons";
 
-export default function ConditionDesigner({ value = {}, onChange, onClose, isEmbedded = false }) {
+export default function ConditionDesigner({ 
+  value = {}, 
+  onChange, 
+  onClose, 
+  isEmbedded = false,
+  questionItems = [],
+  currentQuestionId = null
+}) {
   const [conditions, setConditions] = useState(value.conditions || []);
   const [defaultScenario, setDefaultScenario] = useState(value.defaultScenario || 1);
   const [currentConditionType, setCurrentConditionType] = useState("question"); // For new condition
+
+  // Lấy danh sách câu hỏi trước câu hỏi hiện tại
+  const getPreviousQuestions = () => {
+    if (!currentQuestionId) return [];
+    const currentIndex = questionItems.findIndex(q => String(q.id) === String(currentQuestionId));
+    if (currentIndex <= 0) return [];
+    return questionItems.slice(0, currentIndex);
+  };
+
+  // Lấy options của câu hỏi (tạm thời giả sử mỗi câu hỏi có options)
+  // Trong tương lai, options sẽ được lưu trong question object
+  const getQuestionOptions = (questionId) => {
+    // Tạm thời trả về options mẫu
+    // Trong thực tế, cần lấy từ question.options hoặc question.choices
+    const question = questionItems.find(q => String(q.id) === String(questionId));
+    if (!question) return [];
+    
+    // Nếu question có options thì trả về, nếu không thì trả về options mẫu
+    if (question.options && Array.isArray(question.options) && question.options.length > 0) {
+      return question.options;
+    }
+    
+    // Options mẫu (sẽ được thay thế khi có dữ liệu thực)
+    return [
+      { id: 1, text: "Lựa chọn 1" },
+      { id: 2, text: "Lựa chọn 2" },
+      { id: 3, text: "Lựa chọn 3" },
+    ];
+  };
+
+  // Lấy tên câu hỏi
+  const getQuestionText = (questionId) => {
+    const question = questionItems.find(q => String(q.id) === String(questionId));
+    return question?.text || `Câu hỏi ${questionId}`;
+  };
+
+  // Lấy tên option
+  const getOptionText = (questionId, optionId) => {
+    const options = getQuestionOptions(questionId);
+    const option = options.find(opt => String(opt.id) === String(optionId));
+    return option?.text || `Lựa chọn ${optionId}`;
+  };
+
+  // Tạo preview message
+  const getPreviewMessage = (condition) => {
+    if (condition.type === "question" && condition.field && condition.value) {
+      const questionId = condition.field;
+      const questionText = getQuestionText(questionId);
+      const optionText = getOptionText(questionId, condition.value);
+      const currentQuestionNum = questionItems.findIndex(q => String(q.id) === String(currentQuestionId)) + 1;
+      return `Câu ${currentQuestionNum} sẽ hiển thị khi người dùng chọn ${questionText}: ${optionText}`;
+    }
+    return null;
+  };
 
   const handleAddCondition = () => {
     const newCondition = {
       id: Date.now(),
       type: currentConditionType,
       field: "",
-      operator: "",
+      operator: "equals",
       value: "",
     };
-    setConditions([...conditions, newCondition]);
+    const updated = [...conditions, newCondition];
+    setConditions(updated);
+    if (isEmbedded) {
+      onChange?.({
+        defaultScenario,
+        conditions: updated,
+      });
+    }
   };
 
   const handleDeleteCondition = (id) => {
-    setConditions(conditions.filter((c) => c.id !== id));
+    const updated = conditions.filter((c) => c.id !== id);
+    setConditions(updated);
+    if (isEmbedded) {
+      onChange?.({
+        defaultScenario,
+        conditions: updated,
+      });
+    }
   };
 
   const handleUpdateConditionType = (id, newType) => {
-    setConditions(
-      conditions.map((c) => (c.id === id ? { ...c, type: newType } : c))
+    const updated = conditions.map((c) => 
+      c.id === id ? { ...c, type: newType, field: "", value: "" } : c
     );
+    setConditions(updated);
+    if (isEmbedded) {
+      onChange?.({
+        defaultScenario,
+        conditions: updated,
+      });
+    }
+  };
+
+  const handleUpdateConditionField = (id, field) => {
+    const updated = conditions.map((c) => 
+      c.id === id ? { ...c, field, value: "" } : c
+    );
+    setConditions(updated);
+    if (isEmbedded) {
+      onChange?.({
+        defaultScenario,
+        conditions: updated,
+      });
+    }
+  };
+
+  const handleUpdateConditionValue = (id, value) => {
+    const updated = conditions.map((c) => 
+      c.id === id ? { ...c, value } : c
+    );
+    setConditions(updated);
+    if (isEmbedded) {
+      onChange?.({
+        defaultScenario,
+        conditions: updated,
+      });
+    }
   };
 
   const handleAccept = () => {
@@ -35,15 +143,15 @@ export default function ConditionDesigner({ value = {}, onChange, onClose, isEmb
     onClose?.();
   };
 
-  // Auto-save khi có thay đổi (nếu embedded)
+  // Cập nhật conditions khi value thay đổi từ bên ngoài
   useEffect(() => {
-    if (isEmbedded) {
-      onChange?.({
-        defaultScenario,
-        conditions,
-      });
+    if (value.conditions) {
+      setConditions(value.conditions);
     }
-  }, [defaultScenario, conditions, isEmbedded, onChange]);
+    if (value.defaultScenario !== undefined) {
+      setDefaultScenario(value.defaultScenario);
+    }
+  }, [value.conditions, value.defaultScenario]);
 
   const containerClass = isEmbedded 
     ? "h-full flex flex-col bg-white"
@@ -118,7 +226,16 @@ export default function ConditionDesigner({ value = {}, onChange, onClose, isEmb
               <input
                 type="number"
                 value={defaultScenario}
-                onChange={(e) => setDefaultScenario(parseInt(e.target.value) || 1)}
+                onChange={(e) => {
+                  const newValue = parseInt(e.target.value) || 1;
+                  setDefaultScenario(newValue);
+                  if (isEmbedded) {
+                    onChange?.({
+                      defaultScenario: newValue,
+                      conditions,
+                    });
+                  }
+                }}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                 min="1"
               />
@@ -148,7 +265,7 @@ export default function ConditionDesigner({ value = {}, onChange, onClose, isEmb
                     className={`flex-1 text-sm font-semibold transition-colors ${
                       condition.type === "question"
                         ? "bg-gray-600 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        : "bg-gray-200 text-gray-700 opacity-50"
                     }`}
                   >
                     Câu hỏi
@@ -159,53 +276,115 @@ export default function ConditionDesigner({ value = {}, onChange, onClose, isEmb
                     className={`flex-1 text-sm font-semibold transition-colors ${
                       condition.type === "participant"
                         ? "bg-gray-600 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        : "bg-gray-200 text-gray-700 opacity-50"
                     }`}
                   >
                     Dữ liệu người tham gia
                   </button>
                 </div>
 
-                {/* Dropdown */}
-                <div className="relative mb-3">
-                  <select
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none"
-                    value={condition.field || ""}
-                    onChange={(e) => {
-                      const updated = conditions.map((c) =>
-                        c.id === condition.id ? { ...c, field: e.target.value } : c
-                      );
-                      setConditions(updated);
-                    }}
-                  >
-                    <option value="">
-                      {condition.type === "question"
-                        ? "Chọn câu hỏi"
-                        : "Dữ liệu người tham gia"}
-                    </option>
-                    {condition.type === "participant" && (
-                      <>
-                        <option value="participant-name">Tên người tham gia</option>
-                        <option value="participant-email">Email</option>
-                      </>
-                    )}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                    <svg
-                      className="h-4 w-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                {/* Dropdown chọn câu hỏi (khi type === "question") */}
+                {condition.type === "question" && (
+                  <div className="relative mb-3">
+                    <select
+                      className="w-full px-3 py-2 bg-white border-2 border-purple-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none"
+                      value={condition.field || ""}
+                      onChange={(e) => handleUpdateConditionField(condition.id, e.target.value)}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
+                      <option value="">Chọn câu hỏi</option>
+                      {getPreviousQuestions().map((q) => (
+                        <option key={q.id} value={String(q.id)}>
+                          Câu {q.id}: {q.text || `Câu hỏi ${q.id}`}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg
+                        className="h-4 w-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Dropdown chọn option (khi đã chọn câu hỏi) */}
+                {condition.type === "question" && condition.field && (
+                  <div className="relative mb-3">
+                    <select
+                      className="w-full px-3 py-2 bg-white border-2 border-purple-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none"
+                      value={condition.value || ""}
+                      onChange={(e) => handleUpdateConditionValue(condition.id, e.target.value)}
+                    >
+                      <option value="">Chọn đáp án</option>
+                      {getQuestionOptions(condition.field).map((opt) => (
+                        <option key={opt.id} value={String(opt.id)}>
+                          {opt.text}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg
+                        className="h-4 w-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                )}
+
+                {/* Dropdown cho participant data */}
+                {condition.type === "participant" && (
+                  <div className="relative mb-3">
+                    <select
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none opacity-50"
+                      value={condition.field || ""}
+                      disabled
+                    >
+                      <option value="">Dữ liệu người tham gia</option>
+                      <option value="participant-name">Tên người tham gia</option>
+                      <option value="participant-email">Email</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg
+                        className="h-4 w-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview message */}
+                {getPreviewMessage(condition) && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-sm text-sm text-blue-800">
+                    {getPreviewMessage(condition)}
+                  </div>
+                )}
 
                 {/* Add Condition Button - only show on last condition */}
                 {index === conditions.length - 1 && (
@@ -237,7 +416,7 @@ export default function ConditionDesigner({ value = {}, onChange, onClose, isEmb
                     className={`flex-1 text-sm font-semibold transition-colors ${
                       currentConditionType === "question"
                         ? "bg-gray-600 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        : "bg-gray-200 text-gray-700 opacity-50"
                     }`}
                   >
                     Câu hỏi
@@ -248,47 +427,94 @@ export default function ConditionDesigner({ value = {}, onChange, onClose, isEmb
                     className={`flex-1 text-sm font-semibold transition-colors ${
                       currentConditionType === "participant"
                         ? "bg-gray-600 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        : "bg-gray-200 text-gray-700 opacity-50"
                     }`}
                   >
                     Dữ liệu người tham gia
                   </button>
                 </div>
 
-                {/* Dropdown */}
-                <div className="relative mb-3">
-                  <select
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none"
-                    defaultValue=""
-                  >
-                    <option value="">
-                      {currentConditionType === "question"
-                        ? "Chọn câu hỏi"
-                        : "Dữ liệu người tham gia"}
-                    </option>
-                    {currentConditionType === "participant" && (
-                      <>
-                        <option value="participant-name">Tên người tham gia</option>
-                        <option value="participant-email">Email</option>
-                      </>
-                    )}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                    <svg
-                      className="h-4 w-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                {/* Dropdown chọn câu hỏi (khi type === "question") */}
+                {currentConditionType === "question" && (
+                  <div className="relative mb-3">
+                    <select
+                      className="w-full px-3 py-2 bg-white border-2 border-purple-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none"
+                      defaultValue=""
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          // Khi chọn câu hỏi, tự động thêm condition
+                          const newCondition = {
+                            id: Date.now(),
+                            type: "question",
+                            field: e.target.value,
+                            operator: "equals",
+                            value: "",
+                          };
+                          const updated = [...conditions, newCondition];
+                          setConditions(updated);
+                          if (isEmbedded) {
+                            onChange?.({
+                              defaultScenario,
+                              conditions: updated,
+                            });
+                          }
+                        }
+                      }}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
+                      <option value="">Chọn câu hỏi</option>
+                      {getPreviousQuestions().map((q) => (
+                        <option key={q.id} value={String(q.id)}>
+                          Câu {q.id}: {q.text || `Câu hỏi ${q.id}`}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg
+                        className="h-4 w-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Dropdown cho participant data */}
+                {currentConditionType === "participant" && (
+                  <div className="relative mb-3">
+                    <select
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none opacity-50"
+                      defaultValue=""
+                      disabled
+                    >
+                      <option value="">Dữ liệu người tham gia</option>
+                      <option value="participant-name">Tên người tham gia</option>
+                      <option value="participant-email">Email</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg
+                        className="h-4 w-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                )}
 
                 {/* Add Condition Button */}
                 <button

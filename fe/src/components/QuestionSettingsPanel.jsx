@@ -45,6 +45,8 @@ export default function QuestionSettingsPanel({
   value = {},
   onChange,
   onClose,
+  questionItems = [],
+  currentQuestionId = null,
 }) {
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [showConditionDesigner, setShowConditionDesigner] = useState(false);
@@ -97,6 +99,8 @@ export default function QuestionSettingsPanel({
         }}
         onClose={() => setShowConditionDesigner(false)}
         isEmbedded={true}
+        questionItems={questionItems}
+        currentQuestionId={currentQuestionId}
       />
     );
   }
