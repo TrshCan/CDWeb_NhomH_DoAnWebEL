@@ -1,27 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { graphqlRequest } from '../api/graphql';
 
-const surveys = [
-  {
-    id: 1,
-    name: 'Khảo sát hài lòng nhân viên Quý 4',
-    status: 'ongoing',
-  },
-  {
-    id: 2,
-    name: 'Bài quiz kiến thức an toàn thông tin',
-    status: 'finished',
-  },
-  {
-    id: 3,
-    name: 'Đánh giá khóa học "Lập trình Web Nâng cao"',
-    status: 'not-started',
-  },
-  {
-    id: 4,
-    name: 'Khảo sát hệ thống cũ (Gây lỗi CSDL)',
-    status: 'not-started',
-  },
-];
+// Map status từ backend sang frontend
+const mapStatusToFrontend = (status) => {
+  const statusMap = {
+    'active': 'ongoing',
+    'closed': 'finished',
+    'pending': 'not-started',
+    'paused': 'ongoing', // Tạm dừng cũng coi như đang diễn ra
+  };
+  return statusMap[status] || 'not-started';
+};
 
 const statusConfig = {
   ongoing: { label: 'Đang diễn ra', class: 'bg-green-100 text-green-800' },
@@ -30,38 +19,98 @@ const statusConfig = {
 };
 
 const DuplicateSurvey = () => {
+  const [surveys, setSurveys] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [isProcessing, setIsProcessing] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSurvey, setSelectedSurvey] = useState(null);
 
-  const showNotification = (message, type) => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification({ message: '', type: '' }), 2000);
+  // Load danh sách surveys từ API
+  useEffect(() => {
+    loadSurveys();
+  }, []);
+
+  const loadSurveys = async () => {
+    try {
+      setLoading(true);
+      const result = await graphqlRequest(`
+        query {
+          surveys {
+            id
+            title
+            status
+            description
+            start_at
+            end_at
+            time_limit
+            points
+            type
+            object
+            allow_review
+            categories_id
+          }
+        }
+      `);
+
+      if (result.errors) {
+        console.error('GraphQL Errors:', result.errors);
+        showNotification('Lỗi tải danh sách khảo sát', 'error');
+        return;
+      }
+
+      const surveysData = result.data?.surveys || [];
+      // Map dữ liệu từ API sang format của component
+      const mappedSurveys = surveysData.map(s => ({
+        id: Number(s.id),
+        name: s.title,
+        status: mapStatusToFrontend(s.status),
+        description: s.description,
+        start_at: s.start_at,
+        end_at: s.end_at,
+        type: s.type,
+        object: s.object,
+        time_limit: s.time_limit,
+        points: s.points,
+        categories_id: s.categories_id,
+        allow_review: s.allow_review,
+      }));
+
+      setSurveys(mappedSurveys);
+    } catch (error) {
+      console.error('Lỗi tải surveys:', error);
+      showNotification('Không thể tải danh sách khảo sát', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const simulateApiCall = (surveyId) => {
-    console.log(`[API SIM] Bắt đầu sao chép khảo sát với ID: ${surveyId}`);
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        switch (surveyId) {
-          case 1:
-            resolve({ message: 'Khảo sát đã được sao chép thành công.', newSurveyId: 125 });
-            break;
-          case 2:
-            reject({ message: 'Khảo sát không tồn tại hoặc đã bị xóa.' });
-            break;
-          case 3:
-            reject({ message: 'Bạn không có quyền sao chép khảo sát này.' });
-            break;
-          case 4:
-            reject({ message: 'Không thể sao chép khảo sát, vui lòng thử lại sau.' });
-            break;
-          default:
-            reject({ message: 'Đã xảy ra lỗi không xác định.' });
+  const showNotification = (message, type) => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification({ message: '', type: '' }), 3000);
+  };
+
+  // Gọi GraphQL mutation để sao chép survey
+  const duplicateSurveyApi = async (surveyId) => {
+    const result = await graphqlRequest(`
+      mutation DuplicateSurvey($id: ID!) {
+        duplicateSurvey(id: $id) {
+          id
+          title
+          status
+          description
         }
-      }, 1500);
+      }
+    `, {
+      id: String(surveyId)
     });
+
+    if (result.errors) {
+      const errorMessage = result.errors[0]?.message || 'Không thể sao chép khảo sát';
+      throw new Error(errorMessage);
+    }
+
+    return result.data?.duplicateSurvey;
   };
 
   const handleDuplicate = async (surveyId, surveyName) => {
@@ -73,15 +122,24 @@ const DuplicateSurvey = () => {
 
     setIsProcessing((prev) => ({ ...prev, [surveyId]: true }));
     try {
-      const result = await simulateApiCall(surveyId);
-      showNotification(result.message, 'success');
-      console.log(`[SUCCESS] Sao chép thành công. ID mới: ${result.newSurveyId}`);
-      setTimeout(() => {
-        alert(`(Giả lập) Chuyển hướng đến trang chỉnh sửa khảo sát: /surveys/edit/${result.newSurveyId}`);
-      }, 2000);
+      const duplicatedSurvey = await duplicateSurveyApi(surveyId);
+      
+      if (duplicatedSurvey) {
+        showNotification(`Khảo sát "${duplicatedSurvey.title}" đã được sao chép thành công.`, 'success');
+        console.log(`[SUCCESS] Sao chép thành công. ID mới: ${duplicatedSurvey.id}`);
+        
+        // Reload danh sách surveys để hiển thị survey mới
+        await loadSurveys();
+        
+        // Có thể chuyển hướng đến trang chỉnh sửa nếu cần
+        // window.location.href = `/surveys/edit/${duplicatedSurvey.id}`;
+      } else {
+        throw new Error('Không nhận được dữ liệu từ server');
+      }
     } catch (error) {
-      showNotification(error.message, 'error');
-      console.error(`[ERROR] ${error.message}`);
+      const errorMessage = error.message || 'Không thể sao chép khảo sát, vui lòng thử lại sau.';
+      showNotification(errorMessage, 'error');
+      console.error(`[ERROR] ${errorMessage}`, error);
     } finally {
       setIsProcessing((prev) => ({ ...prev, [surveyId]: false }));
     }
@@ -164,14 +222,24 @@ const DuplicateSurvey = () => {
           </div>
         )}
 
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="grid grid-cols-[2fr_1fr_1fr] bg-gray-50 text-gray-500 text-xs font-semibold uppercase py-3 px-6 border-b border-gray-200">
-            <span className="text-left">Tên Khảo Sát</span>
-            <span className="text-left">Trạng Thái</span>
-            <span className="text-left">Hành Động</span>
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-2 text-gray-600">Đang tải danh sách khảo sát...</p>
           </div>
+        ) : surveys.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-gray-600">Không có khảo sát nào</p>
+          </div>
+        ) : (
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="grid grid-cols-[2fr_1fr_1fr] bg-gray-50 text-gray-500 text-xs font-semibold uppercase py-3 px-6 border-b border-gray-200">
+              <span className="text-left">Tên Khảo Sát</span>
+              <span className="text-left">Trạng Thái</span>
+              <span className="text-left">Hành Động</span>
+            </div>
 
-          {surveys.map((survey) => (
+            {surveys.map((survey) => (
             <div
               key={survey.id}
               className="grid grid-cols-[2fr_1fr_1fr] py-3 px-6 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors duration-200"
@@ -233,63 +301,201 @@ const DuplicateSurvey = () => {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
         {isModalOpen && selectedSurvey && (
           <div
-            id="default-modal"
-            tabindex="-1"
-            aria-hidden="true"
-            class="fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setIsModalOpen(false);
+              }
+            }}
           >
-            <div class="relative p-4 w-full max-w-2xl max-h-full">
-              <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
-                <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600 border-gray-200">
-                  <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                    Chi tiết khảo sát
-                  </h3>
-                  <button
-                    type="button"
-                    class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
-                    data-modal-hide="default-modal"
-                    onClick={() => setIsModalOpen(false)}
-                  >
-                    <CloseIcon className="w-3 h-3" />
-                    <span class="sr-only">Close modal</span>
-                  </button>
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Chi tiết khảo sát</h3>
+                    <p className="text-sm text-gray-500">Thông tin đầy đủ về khảo sát</p>
+                  </div>
                 </div>
-                <div class="p-4 md:p-5 space-y-4">
-                  <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400">
-                    <strong>ID:</strong> {selectedSurvey.id}
-                  </p>
-                  <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400">
-                    <strong>Tên:</strong> {selectedSurvey.name}
-                  </p>
-                  <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400">
-                    <strong>Trạng thái:</strong> {statusConfig[selectedSurvey.status].label}
-                  </p>
+                <button
+                  type="button"
+                  className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-colors"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  <CloseIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                <div className="space-y-6">
+                  {/* Thông tin cơ bản */}
+                  <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Thông tin cơ bản
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase">ID Khảo sát</label>
+                        <p className="mt-1 text-sm font-semibold text-gray-900">#{selectedSurvey.id}</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase">Trạng thái</label>
+                        <div className="mt-1">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusConfig[selectedSurvey.status].class}`}>
+                            {statusConfig[selectedSurvey.status].label}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tiêu đề và mô tả */}
+                  <div className="bg-white rounded-lg p-5 border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h10m-7 4h7" />
+                      </svg>
+                      Nội dung
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase">Tên khảo sát</label>
+                        <p className="mt-1 text-base font-semibold text-gray-900">{selectedSurvey.name}</p>
+                      </div>
+                      {selectedSurvey.description && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase">Mô tả</label>
+                          <p className="mt-1 text-sm text-gray-700 leading-relaxed">{selectedSurvey.description}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Thông tin thời gian */}
+                  <div className="bg-white rounded-lg p-5 border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Thời gian
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedSurvey.start_at && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase">Thời gian bắt đầu</label>
+                          <p className="mt-1 text-sm text-gray-900 font-medium">
+                            {new Date(selectedSurvey.start_at).toLocaleString('vi-VN', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      {selectedSurvey.end_at && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase">Thời gian kết thúc</label>
+                          <p className="mt-1 text-sm text-gray-900 font-medium">
+                            {new Date(selectedSurvey.end_at).toLocaleString('vi-VN', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      {selectedSurvey.time_limit && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase">Giới hạn thời gian</label>
+                          <p className="mt-1 text-sm text-gray-900 font-medium">{selectedSurvey.time_limit} phút</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Thông tin khác */}
+                  <div className="bg-white rounded-lg p-5 border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      Thông tin khác
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase">Loại</label>
+                        <p className="mt-1 text-sm text-gray-900 font-medium capitalize">
+                          {selectedSurvey.type === 'survey' ? 'Khảo sát' : 'Câu đố'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 uppercase">Đối tượng</label>
+                        <p className="mt-1 text-sm text-gray-900 font-medium capitalize">
+                          {selectedSurvey.object === 'public' ? 'Công khai' : 
+                           selectedSurvey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}
+                        </p>
+                      </div>
+                      {selectedSurvey.points !== undefined && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase">Điểm</label>
+                          <p className="mt-1 text-sm text-gray-900 font-medium">{selectedSurvey.points} điểm</p>
+                        </div>
+                      )}
+                      {selectedSurvey.allow_review !== undefined && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 uppercase">Cho phép xem lại</label>
+                          <p className="mt-1 text-sm text-gray-900 font-medium">
+                            {selectedSurvey.allow_review ? (
+                              <span className="text-green-600 font-semibold">✓ Có</span>
+                            ) : (
+                              <span className="text-gray-400">✗ Không</span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div class="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
-                  <button
-                    data-modal-hide="default-modal"
-                    type="button"
-                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-                    onClick={() => setIsModalOpen(false)}
-                  >
-                    Đóng
-                  </button>
-                  <button
-                    data-modal-hide="default-modal"
-                    type="button"
-                    class="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      handleDuplicate(selectedSurvey.id, selectedSurvey.name);
-                    }}
-                  >
-                    Sao chép lại
-                  </button>
-                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center space-x-2"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    handleDuplicate(selectedSurvey.id, selectedSurvey.name);
+                  }}
+                >
+                  <DuplicateIcon className="w-4 h-4" />
+                  <span>Sao chép khảo sát</span>
+                </button>
               </div>
             </div>
           </div>

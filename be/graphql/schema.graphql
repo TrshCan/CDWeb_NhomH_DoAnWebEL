@@ -1,4 +1,1 @@
-type Query {
-  hello: String! @field(resolver: "App\\GraphQL\\Queries\\HelloResolver")
-}
-
+#import duplicate.graphql
