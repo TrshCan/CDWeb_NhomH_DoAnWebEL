@@ -23,8 +23,10 @@ export default function RawDataList() {
   
   const pieChartRef = useRef(null);
   const barChartRef = useRef(null);
+  const lineChartRef = useRef(null);
   const pieChartInstance = useRef(null);
   const barChartInstance = useRef(null);
+  const lineChartInstance = useRef(null);
 
   // Fetch data from API
   useEffect(() => {
@@ -173,6 +175,22 @@ export default function RawDataList() {
     const pieChartLabels = Object.keys(yearCounts);
     const pieChartData = Object.values(yearCounts);
 
+    // Calculate data for line chart - responses timeline by day
+    const timelineCounts = rawData.reduce((acc, item) => {
+      const completed = item.completedDate; // format like 'dd/mm/YYYY HH:MM'
+      if (completed) {
+        const [datePart] = completed.split(" ");
+        const [dd, mm, yyyy] = datePart.split("/");
+        if (dd && mm && yyyy) {
+          const key = `${yyyy}-${mm}-${dd}`; // sortable
+          acc[key] = (acc[key] || 0) + 1;
+        }
+      }
+      return acc;
+    }, {});
+    const lineLabels = Object.keys(timelineCounts).sort();
+    const lineData = lineLabels.map(l => timelineCounts[l]);
+
     // Initialize or update pie chart
     if (pieChartRef.current) {
       if (pieChartInstance.current) {
@@ -254,6 +272,53 @@ export default function RawDataList() {
       });
     }
 
+    // Initialize or update line chart
+    if (lineChartRef.current) {
+      if (lineChartInstance.current) {
+        lineChartInstance.current.destroy();
+      }
+      const lineCtx = lineChartRef.current.getContext("2d");
+      lineChartInstance.current = new Chart(lineCtx, {
+        type: "line",
+        data: {
+          labels: lineLabels,
+          datasets: [
+            {
+              label: "Số câu trả lời theo thời gian",
+              data: lineData,
+              borderColor: "#10b981",
+              backgroundColor: "rgba(16, 185, 129, 0.2)",
+              tension: 0.3,
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: "Dòng thời gian số lượng phản hồi",
+              color: "#e0e0e0",
+            },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#a0aec0" },
+              grid: { color: "#4b5563" },
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: "#a0aec0" },
+              grid: { color: "#4b5563" },
+            },
+          },
+        },
+      });
+    }
+
     // Cleanup function
     return () => {
       if (pieChartInstance.current) {
@@ -263,6 +328,10 @@ export default function RawDataList() {
       if (barChartInstance.current) {
         barChartInstance.current.destroy();
         barChartInstance.current = null;
+      }
+      if (lineChartInstance.current) {
+        lineChartInstance.current.destroy();
+        lineChartInstance.current = null;
       }
     };
   }, [rawData]);
@@ -350,7 +419,7 @@ export default function RawDataList() {
           <p>Tổng số Phản hồi: <span>{totalResponses}</span></p>
           <div className="controls">
             <button
-              className="btn btn-success"
+              className="btn btn-success download-btn"
               onClick={handleOpenDownloadModal}
               aria-label="Tải dữ liệu"
             >
@@ -369,13 +438,6 @@ export default function RawDataList() {
               </svg>
               Tải dữ liệu
             </button>
-            <button
-              className="btn btn-secondary"
-              onClick={handleGoBack}
-              aria-label="Quay lại kết quả tổng quan"
-            >
-              Quay lại Kết quả Tổng quan
-            </button>
           </div>
         </div>
 
@@ -385,6 +447,9 @@ export default function RawDataList() {
           </div>
           <div className="chart-container">
             <canvas id="barChart" ref={barChartRef}></canvas>
+          </div>
+          <div className="chart-container chart-container--full">
+            <canvas id="lineChart" ref={lineChartRef}></canvas>
           </div>
         </div>
 
