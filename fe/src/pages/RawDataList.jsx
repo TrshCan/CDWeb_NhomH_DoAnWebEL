@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Chart, registerables } from "chart.js";
 import toast from "react-hot-toast";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import "../assets/css/RawDataList.css";
 import { getSurveyRawData } from "../api/graphql/survey";
+import { exportSurveyRawCSV as exportCSV, sanitizeFileName } from "../utils/exports/surveyRaw/csv";
+import { exportSurveyRawExcel as exportExcel } from "../utils/exports/surveyRaw/excel";
+import { exportSurveyRawPDF as exportPDF } from "../utils/exports/surveyRaw/pdf";
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -107,14 +107,6 @@ export default function RawDataList() {
     setShowDownloadModal(false);
   };
 
-  // Sanitize filename
-  const sanitizeFileName = (name) => {
-    return name
-      .replace(/[<>:"/\\|?*]/g, "_") // Replace invalid characters
-      .replace(/\s+/g, "_") // Replace spaces with underscores
-      .substring(0, 100); // Limit length
-  };
-
   // Prepare data for export
   const prepareExportData = () => {
     return filteredData.map((item) => ({
@@ -130,47 +122,11 @@ export default function RawDataList() {
   const downloadCSV = () => {
     try {
       const data = prepareExportData();
-      if (data.length === 0) {
-        toast.error("Không có dữ liệu để xuất");
-        return;
-      }
-
-      // Get headers
-      const headers = Object.keys(data[0]);
-      
-      // Create CSV content
-      let csvContent = headers.join(",") + "\n";
-      
-      data.forEach((row) => {
-        const values = headers.map((header) => {
-          const value = row[header] || "";
-          // Escape commas and quotes in values
-          if (value.toString().includes(",") || value.toString().includes('"')) {
-            return `"${value.toString().replace(/"/g, '""')}"`;
-          }
-          return value;
-        });
-        csvContent += values.join(",") + "\n";
-      });
-
-      // Create blob and download
-      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      const fileName = `${sanitizeFileName(surveyTitle)}_${new Date().getTime()}.csv`;
-      link.setAttribute("download", fileName);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      // Clean up the URL to prevent memory leaks
-      setTimeout(() => URL.revokeObjectURL(url), 100);
-      
+      exportCSV({ rows: data, title: surveyTitle });
       toast.success("Đã tải xuống file CSV thành công!");
     } catch (error) {
       console.error("Error downloading CSV:", error);
-      toast.error("Có lỗi xảy ra khi tải xuống CSV");
+      toast.error(error.message || "Có lỗi xảy ra khi tải xuống CSV");
     }
   };
 
@@ -178,34 +134,11 @@ export default function RawDataList() {
   const downloadExcel = () => {
     try {
       const data = prepareExportData();
-      if (data.length === 0) {
-        toast.error("Không có dữ liệu để xuất");
-        return;
-      }
-
-      // Create workbook and worksheet
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Dữ liệu khảo sát");
-
-      // Set column widths
-      const colWidths = [
-        { wch: 15 }, // ID Phản hồi
-        { wch: 15 }, // Mã SV
-        { wch: 30 }, // Tên Sinh viên
-        { wch: 20 }, // Khoa
-        { wch: 20 }, // Ngày Hoàn thành
-      ];
-      ws["!cols"] = colWidths;
-
-      // Write file
-      const fileName = `${sanitizeFileName(surveyTitle)}_${new Date().getTime()}.xlsx`;
-      XLSX.writeFile(wb, fileName);
-      
+      exportExcel({ rows: data, title: surveyTitle, filteredRawData: filteredData, getKhoaLabel });
       toast.success("Đã tải xuống file Excel thành công!");
     } catch (error) {
       console.error("Error downloading Excel:", error);
-      toast.error("Có lỗi xảy ra khi tải xuống Excel");
+      toast.error(error.message || "Có lỗi xảy ra khi tải xuống Excel");
     }
   };
 
@@ -213,63 +146,11 @@ export default function RawDataList() {
   const downloadPDF = () => {
     try {
       const data = prepareExportData();
-      if (data.length === 0) {
-        toast.error("Không có dữ liệu để xuất");
-        return;
-      }
-
-      // Create PDF document
-      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-      
-      // Add title
-      doc.setFontSize(16);
-      doc.text(surveyTitle, 14, 15);
-      doc.setFontSize(10);
-      doc.text(`Tổng số phản hồi: ${data.length}`, 14, 22);
-      doc.text(`Ngày xuất: ${new Date().toLocaleDateString("vi-VN")}`, 14, 27);
-
-      // Prepare table data
-      const tableData = data.map((row) => [
-        row["ID Phản hồi"],
-        row["Mã SV"],
-        row["Tên Sinh viên"],
-        row["Khoa"],
-        row["Ngày Hoàn thành"],
-      ]);
-
-      // Add table
-      autoTable(doc, {
-        startY: 32,
-        head: [["ID Phản hồi", "Mã SV", "Tên Sinh viên", "Khoa", "Ngày Hoàn thành"]],
-        body: tableData,
-        theme: "striped",
-        headStyles: {
-          fillColor: [59, 130, 246], // Blue color
-          textColor: 255,
-          fontStyle: "bold",
-        },
-        styles: {
-          fontSize: 8,
-          cellPadding: 2,
-        },
-        columnStyles: {
-          0: { cellWidth: 30 },
-          1: { cellWidth: 35 },
-          2: { cellWidth: 60 },
-          3: { cellWidth: 40 },
-          4: { cellWidth: 40 },
-        },
-        margin: { top: 32, left: 14, right: 14 },
-      });
-
-      // Save PDF
-      const fileName = `${sanitizeFileName(surveyTitle)}_${new Date().getTime()}.pdf`;
-      doc.save(fileName);
-      
+      exportPDF({ rows: data, title: surveyTitle });
       toast.success("Đã tải xuống file PDF thành công!");
     } catch (error) {
       console.error("Error downloading PDF:", error);
-      toast.error("Có lỗi xảy ra khi tải xuống PDF");
+      toast.error(error.message || "Có lỗi xảy ra khi tải xuống PDF");
     }
   };
 
