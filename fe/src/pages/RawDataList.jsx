@@ -116,19 +116,62 @@ export default function RawDataList() {
 
   // Initialize and update charts with real data
   useEffect(() => {
-    // Calculate data for charts
-    const khoaCounts = rawData.reduce((acc, item) => {
-      const khoa = item.khoa || "other";
-      acc[khoa] = (acc[khoa] || 0) + 1;
+    // Calculate data for bar chart - responses by faculty
+    const facultyCounts = rawData.reduce((acc, item) => {
+      const faculty = item.khoa || "Khác";
+      acc[faculty] = (acc[faculty] || 0) + 1;
       return acc;
     }, {});
 
-    const barChartLabels = ["CNTT", "Kinh tế", "Khác"];
-    const barChartData = [
-      khoaCounts.cntt || 0,
-      khoaCounts.kinhte || 0,
-      khoaCounts.other || 0,
-    ];
+    // Get all unique faculty names and sort them
+    const facultyLabels = Object.keys(facultyCounts).sort();
+    const barChartData = facultyLabels.map(faculty => facultyCounts[faculty]);
+
+    // Calculate data for pie chart - users' responses by year
+    const currentYear = new Date().getFullYear(); // 2025
+    const yearCounts = {
+      "Sinh viên Năm nhất": 0,
+      "Sinh viên Năm hai": 0,
+      "Sinh viên Năm ba": 0,
+      "Khác": 0,
+    };
+
+    rawData.forEach((item) => {
+      const studentCode = item.studentId || "";
+      
+      // Extract first 2 digits from student_code
+      // Handle cases where student_code might be a number or string
+      const codeStr = String(studentCode);
+      const firstTwoDigits = codeStr.substring(0, 2);
+      const yearCode = parseInt(firstTwoDigits, 10);
+
+      // Check if we have a valid 2-digit year code
+      if (!isNaN(yearCode) && firstTwoDigits.length === 2) {
+        // Calculate the year the student enrolled
+        // If first 2 digits are "25", it means 2025, which is current year = 1st year
+        // If first 2 digits are "24", it means 2024 = 2nd year
+        // If first 2 digits are "23", it means 2023 = 3rd year
+        const enrollmentYear = 2000 + yearCode;
+        const yearDifference = currentYear - enrollmentYear;
+
+        if (yearDifference === 0) {
+          yearCounts["Sinh viên Năm nhất"]++;
+        } else if (yearDifference === 1) {
+          yearCounts["Sinh viên Năm hai"]++;
+        } else if (yearDifference === 2) {
+          yearCounts["Sinh viên Năm ba"]++;
+        } else {
+          // Older than 3rd year or future year (invalid)
+          yearCounts["Khác"]++;
+        }
+      } else {
+        // No valid student code or doesn't start with 2 digits
+        yearCounts["Khác"]++;
+      }
+    });
+
+    const pieChartLabels = Object.keys(yearCounts);
+    const pieChartData = Object.values(yearCounts);
 
     // Initialize or update pie chart
     if (pieChartRef.current) {
@@ -139,10 +182,10 @@ export default function RawDataList() {
       pieChartInstance.current = new Chart(pieCtx, {
         type: "pie",
         data: {
-          labels: ["Sinh viên Năm nhất", "Sinh viên Năm hai", "Sinh viên Năm ba", "Khách"],
+          labels: pieChartLabels,
           datasets: [
             {
-              data: [50, 40, 30, 30], // TODO: Calculate from actual data if available
+              data: pieChartData,
               backgroundColor: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"],
             },
           ],
@@ -174,11 +217,11 @@ export default function RawDataList() {
       barChartInstance.current = new Chart(barCtx, {
         type: "bar",
         data: {
-          labels: barChartLabels,
+          labels: facultyLabels.length > 0 ? facultyLabels : ["Không có dữ liệu"],
           datasets: [
             {
               label: "Số lượng Phản hồi",
-              data: barChartData,
+              data: facultyLabels.length > 0 ? barChartData : [0],
               backgroundColor: "#3b82f6",
             },
           ],
@@ -204,6 +247,7 @@ export default function RawDataList() {
             y: {
               ticks: { color: "#a0aec0" },
               grid: { color: "#4b5563" },
+              beginAtZero: true,
             },
           },
         },
