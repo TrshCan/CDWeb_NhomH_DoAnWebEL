@@ -59,6 +59,95 @@ class SurveyRepository
             ->where('id', $surveyId)
             ->value('title');
     }
+
+    public function getSurveyOverviewData(int $surveyId)
+    {
+        // Get all questions for the survey with their options
+        $questions = DB::table('survey_questions')
+            ->where('survey_id', $surveyId)
+            ->orderBy('id')
+            ->get();
+
+        $questionsData = [];
+
+        foreach ($questions as $question) {
+            // Get options for this question
+            $options = DB::table('survey_options')
+                ->where('question_id', $question->id)
+                ->orderBy('id')
+                ->get();
+
+            // Get answer statistics
+            $answerStats = [];
+            
+            if ($question->question_type === 'single_choice' || $question->question_type === 'multiple_choice') {
+                // Count answers by option
+                foreach ($options as $option) {
+                    $count = DB::table('survey_answers')
+                        ->where('question_id', $question->id)
+                        ->where('selected_option_id', $option->id)
+                        ->whereNull('deleted_at')
+                        ->count();
+                    
+                    $answerStats[] = [
+                        'option_text' => $option->option_text,
+                        'count' => $count,
+                    ];
+                }
+            } else if ($question->question_type === 'text') {
+                // Get all text answers and process them into word counts
+                $textAnswers = DB::table('survey_answers')
+                    ->where('question_id', $question->id)
+                    ->whereNotNull('answer_text')
+                    ->whereNull('deleted_at')
+                    ->select('answer_text')
+                    ->limit(1000)
+                    ->get()
+                    ->pluck('answer_text')
+                    ->toArray();
+                
+                // Process text answers into word frequency
+                $wordCounts = [];
+                foreach ($textAnswers as $text) {
+                    if (empty($text)) continue;
+                    
+                    // Split by common delimiters and extract words
+                    $words = preg_split('/[\s,\.;:!?\-\(\)\[\]]+/', strtolower(trim($text)));
+                    foreach ($words as $word) {
+                        $word = trim($word);
+                        if (strlen($word) >= 2) { // Only words with 2+ characters
+                            $wordCounts[$word] = ($wordCounts[$word] ?? 0) + 1;
+                        }
+                    }
+                }
+                
+                // Sort by frequency and take top words
+                arsort($wordCounts);
+                $answerStats = [];
+                foreach (array_slice($wordCounts, 0, 20, true) as $word => $count) {
+                    $answerStats[] = [
+                        'option_text' => ucfirst($word),
+                        'count' => $count,
+                    ];
+                }
+            }
+
+            $questionsData[] = [
+                'id' => $question->id,
+                'question_text' => $question->question_text,
+                'question_type' => $question->question_type,
+                'options' => $options->map(function ($opt) {
+                    return [
+                        'id' => $opt->id,
+                        'option_text' => $opt->option_text,
+                    ];
+                })->toArray(),
+                'answer_stats' => $answerStats,
+            ];
+        }
+
+        return $questionsData;
+    }
 }
 
 

@@ -57,4 +57,40 @@ export async function getSurveyRawData(surveyId) {
   return response.data.data.surveyRawData;
 }
 
+// Query survey overview data with questions and answer statistics
+export async function getSurveyOverview(surveyId) {
+  const query = `
+    query ($surveyId: Int!) {
+      surveyOverview(surveyId: $surveyId) {
+        title
+        totalResponses
+        questions {
+          id
+          question_text
+          question_type
+          options {
+            id
+            option_text
+          }
+          answer_stats {
+            option_text
+            count
+          }
+        }
+      }
+    }
+  `;
+
+  const response = await graphqlClient.post("", {
+    query,
+    variables: { surveyId: parseInt(surveyId) },
+  });
+
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+
+  return response.data.data.surveyOverview;
+}
+
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Chart, registerables } from "chart.js";
 import toast from "react-hot-toast";
-import { getSurveyRawData } from "../api/graphql/survey";
+import { getSurveyRawData, getSurveyOverview } from "../api/graphql/survey";
 import "../assets/css/RawDataList.css";
 import { exportSurveyOverviewCSV } from "../utils/exports/overview/csv";
 import { exportSurveyOverviewExcel } from "../utils/exports/overview/excel";
@@ -17,9 +17,10 @@ export default function SurveyOverview() {
   const [surveyTitle, setSurveyTitle] = useState("Khảo sát");
   const [surveyStatus, setSurveyStatus] = useState("Đã đóng");
   const [totalResponses, setTotalResponses] = useState(0);
-  const [completionRate, setCompletionRate] = useState("85%");
+  const [completionRate, setCompletionRate] = useState("0%");
   const [rawData, setRawData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
+  const [overviewData, setOverviewData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [filterKhoa, setFilterKhoa] = useState("all");
@@ -35,25 +36,29 @@ export default function SurveyOverview() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const data = await getSurveyRawData(parseInt(surveyId));
-
-        if (data && data.responses) {
-          setRawData(data.responses);
-          setFilteredData(data.responses);
-          setTotalResponses(data.responses.length);
-          setSurveyTitle(data.title || "Khảo sát");
+        // Fetch overview data for charts
+        const overview = await getSurveyOverview(parseInt(surveyId));
+        
+        if (overview) {
+          setOverviewData(overview);
+          setTotalResponses(overview.totalResponses || 0);
+          setSurveyTitle(overview.title || "Khảo sát");
           
-          // Calculate completion rate (mock for now)
-          const rate = data.responses.length > 0 
-            ? Math.min(100, Math.round((data.responses.length / 150) * 100))
+          // Calculate completion rate (can be improved with target responses)
+          const rate = overview.totalResponses > 0 
+            ? Math.min(100, Math.round((overview.totalResponses / 150) * 100))
             : 0;
           setCompletionRate(`${rate}%`);
+        }
+
+        // Also fetch raw data for filters and export
+        const rawDataResponse = await getSurveyRawData(parseInt(surveyId));
+        if (rawDataResponse && rawDataResponse.responses) {
+          setRawData(rawDataResponse.responses);
+          setFilteredData(rawDataResponse.responses);
         } else {
           setRawData([]);
           setFilteredData([]);
-          setTotalResponses(0);
-          setSurveyTitle("Khảo sát");
-          setCompletionRate("0%");
         }
       } catch (err) {
         console.error(err);
@@ -61,6 +66,7 @@ export default function SurveyOverview() {
         setRawData([]);
         setFilteredData([]);
         setTotalResponses(0);
+        setOverviewData(null);
       } finally {
         setLoading(false);
       }
@@ -146,9 +152,10 @@ export default function SurveyOverview() {
     }
 
     // TODO: Add filter by khoa-hoc (course year) when available
+    // Note: Filtering by faculty doesn't affect overview charts as they show all responses
+    // If you want to filter charts, you'd need to refetch overview data with filters
 
     setFilteredData(filtered);
-    updateChartsWithFilteredData(filtered);
     toast.success(`Đã áp dụng lọc: ${filtered.length} lượt phản hồi`);
   };
 
@@ -156,91 +163,115 @@ export default function SurveyOverview() {
     setFilterKhoa("all");
     setFilterKhoaHoc("all");
     setFilteredData(rawData);
-    updateChartsWithFilteredData(rawData);
     toast.success("Đã đặt lại bộ lọc");
   };
 
-  // Mock question data - Replace with actual API data later
-  const getQuestionData = (filteredData) => {
-    // Mock data structure - replace with real question/answer data from API
-    return {
-      q1: {
-        question: "Bạn thường truy cập trang social bao nhiêu lần một tuần?",
-        type: "single_choice",
-        labels: ["1 lần hoặc ít hơn", "2-3 lần", "4-5 lần", "Hơn 5 lần"],
-        data: [Math.floor(filteredData.length * 0.13), Math.floor(filteredData.length * 0.5), Math.floor(filteredData.length * 0.27), Math.floor(filteredData.length * 0.1)],
-        highlight: `50% (${Math.floor(filteredData.length * 0.5)} lượt) chọn "2-3 lần"`,
-      },
-      q2: {
-        question: "Mức độ hữu ích của chức năng 'Nhóm học tập'?",
-        type: "single_choice",
-        labels: ["Rất không hữu ích", "Không hữu ích", "Bình thường", "Hữu ích", "Rất hữu ích"],
-        data: [Math.floor(filteredData.length * 0.03), Math.floor(filteredData.length * 0.07), Math.floor(filteredData.length * 0.17), Math.floor(filteredData.length * 0.27), Math.floor(filteredData.length * 0.46)],
-        highlight: `60% chọn "Rất hữu ích"`,
-      },
-      q3: {
-        question: "Bạn có đề xuất tính năng nào khác không?",
-        type: "text",
-        words: [
-          ["Sách cũ", Math.floor(filteredData.length * 0.33)],
-          ["Dark mode", Math.floor(filteredData.length * 0.27)],
-          ["Thông báo", Math.floor(filteredData.length * 0.2)],
-          ["Tìm kiếm", Math.floor(filteredData.length * 0.13)],
-          ["Nhóm học", Math.floor(filteredData.length * 0.1)],
-        ],
-        highlight: `Từ khóa nổi bật: "Sách cũ", "Dark mode", "Thông báo"`,
-      },
-      q4: {
-        question: "Bạn có muốn trang web thông báo về sự kiện Đoàn trường không?",
-        type: "single_choice",
-        labels: ["Có", "Không"],
-        data: [Math.floor(filteredData.length * 0.92), Math.floor(filteredData.length * 0.08)],
-        highlight: `92% trả lời "Có"`,
-      },
-    };
+  // Convert overview data to chart-friendly format
+  const getQuestionData = (overviewData) => {
+    if (!overviewData || !overviewData.questions) {
+      return null;
+    }
+
+    const questionsMap = {};
+    
+    overviewData.questions.forEach((question, index) => {
+      const key = `q${index + 1}`;
+      
+      if (question.question_type === 'text') {
+        // Text question - word cloud data
+        const words = question.answer_stats.map(stat => [stat.option_text, stat.count]);
+        const topWords = words.slice(0, 5).map(w => w[0]).join('", "');
+        
+        questionsMap[key] = {
+          question: question.question_text,
+          type: "text",
+          words: words,
+          highlight: words.length > 0 
+            ? `Từ khóa nổi bật: "${topWords}"`
+            : "Chưa có dữ liệu",
+        };
+      } else {
+        // Single or multiple choice question
+        const labels = question.answer_stats.map(stat => stat.option_text || 'Không có');
+        const data = question.answer_stats.map(stat => stat.count || 0);
+        const total = data.reduce((sum, val) => sum + val, 0);
+        
+        // Find the most popular answer
+        const maxIndex = data.indexOf(Math.max(...data));
+        const maxLabel = labels[maxIndex] || '';
+        const maxCount = data[maxIndex] || 0;
+        const maxPercentage = total > 0 ? Math.round((maxCount / total) * 100) : 0;
+        
+        questionsMap[key] = {
+          question: question.question_text,
+          type: question.question_type,
+          labels: labels,
+          data: data,
+          highlight: total > 0
+            ? `${maxPercentage}% (${maxCount} lượt) chọn "${maxLabel}"`
+            : "Chưa có dữ liệu",
+        };
+      }
+    });
+    
+    return questionsMap;
   };
 
-  const updateChartsWithFilteredData = (data) => {
-    const questionData = getQuestionData(data);
+  const updateChartsWithFilteredData = (overviewData) => {
+    const questionData = getQuestionData(overviewData);
+    if (!questionData) return;
     
-    // Update Q1 chart (pie)
-    if (chartInstances.current.q1) {
-      chartInstances.current.q1.data.datasets[0].data = questionData.q1.data;
-      chartInstances.current.q1.update();
-    }
-
-    // Update Q2 chart (bar)
-    if (chartInstances.current.q2) {
-      chartInstances.current.q2.data.datasets[0].data = questionData.q2.data;
-      chartInstances.current.q2.update();
-    }
-
-    // Update Q4 chart (bar)
-    if (chartInstances.current.q4) {
-      chartInstances.current.q4.data.datasets[0].data = questionData.q4.data;
-      chartInstances.current.q4.update();
-    }
-
-    // Update word cloud for Q3 (if implemented)
-    // TODO: Implement word cloud update
+    // Update all charts dynamically based on available questions
+    Object.keys(questionData).forEach((key, index) => {
+      const qData = questionData[key];
+      if (chartInstances.current[key]) {
+        if (qData.type !== 'text') {
+          // Update chart data for choice questions
+          chartInstances.current[key].data.labels = qData.labels;
+          chartInstances.current[key].data.datasets[0].data = qData.data;
+          chartInstances.current[key].update();
+        }
+        // Text questions don't have charts, they use word clouds
+      }
+    });
   };
 
   // Initialize charts
   useEffect(() => {
-    if (loading || filteredData.length === 0) return;
+    if (loading || !overviewData) return;
 
-    const questionData = getQuestionData(filteredData);
+    const questionData = getQuestionData(overviewData);
+    if (!questionData) return;
 
-    // Initialize Q1 Pie Chart
-    if (!chartInstances.current.q1 && chartRefs.current.q1) {
-      const ctx = chartRefs.current.q1.getContext("2d");
-      chartInstances.current.q1 = new Chart(ctx, {
-        type: "pie",
+    const colors = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
+
+    // Initialize charts for each question
+    Object.keys(questionData).forEach((key) => {
+      const qData = questionData[key];
+      const chartRef = chartRefs.current[key];
+      
+      if (!chartRef || chartInstances.current[key]) return;
+      
+      // Skip text questions (they use word clouds, not charts)
+      if (qData.type === 'text') return;
+
+      const ctx = chartRef.getContext("2d");
+      
+      // Determine chart type: use pie for questions with 2-4 options, bar for others
+      const usePie = qData.labels.length >= 2 && qData.labels.length <= 4;
+      const chartType = usePie ? "pie" : "bar";
+      
+      chartInstances.current[key] = new Chart(ctx, {
+        type: chartType,
         data: {
-          labels: questionData.q1.labels,
+          labels: qData.labels,
           datasets: [{
-            data: questionData.q1.data,
-            backgroundColor: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"],
+            label: "Số lượt",
+            data: qData.data,
+            backgroundColor: chartType === "pie" 
+              ? colors.slice(0, qData.labels.length)
+              : "#3b82f6",
+            borderRadius: chartType === "bar" ? 8 : 0,
           }],
         },
         options: {
@@ -248,47 +279,19 @@ export default function SurveyOverview() {
           maintainAspectRatio: false,
           plugins: {
             legend: {
+              display: chartType === "pie",
               position: "top",
-              labels: { color: "#6b7280", font: { size: 12 } },
+              labels: { 
+                color: "#6b7280", 
+                font: { size: 12 },
+                padding: 10,
+              },
             },
             title: {
-              display: true,
-              text: "Tần suất truy cập",
-              color: "#374151",
-              font: { size: 14, weight: "bold" },
+              display: false, // Question text is shown in the card header
             },
           },
-        },
-      });
-    }
-
-    // Initialize Q2 Bar Chart
-    if (!chartInstances.current.q2 && chartRefs.current.q2) {
-      const ctx = chartRefs.current.q2.getContext("2d");
-      chartInstances.current.q2 = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: questionData.q2.labels,
-          datasets: [{
-            label: "Số lượt",
-            data: questionData.q2.data,
-            backgroundColor: "#3b82f6",
-            borderRadius: 8,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            title: {
-              display: true,
-              text: "Mức độ hữu ích",
-              color: "#374151",
-              font: { size: 14, weight: "bold" },
-            },
-          },
-          scales: {
+          scales: chartType === "bar" ? {
             x: {
               ticks: { color: "#6b7280" },
               grid: { color: "#e5e7eb" },
@@ -298,51 +301,10 @@ export default function SurveyOverview() {
               grid: { color: "#e5e7eb" },
               beginAtZero: true,
             },
-          },
+          } : {},
         },
       });
-    }
-
-    // Initialize Q4 Bar Chart
-    if (!chartInstances.current.q4 && chartRefs.current.q4) {
-      const ctx = chartRefs.current.q4.getContext("2d");
-      chartInstances.current.q4 = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: questionData.q4.labels,
-          datasets: [{
-            label: "Số lượt",
-            data: questionData.q4.data,
-            backgroundColor: "#3b82f6",
-            borderRadius: 8,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            title: {
-              display: true,
-              text: "Thông báo sự kiện",
-              color: "#374151",
-              font: { size: 14, weight: "bold" },
-            },
-          },
-          scales: {
-            x: {
-              ticks: { color: "#6b7280" },
-              grid: { color: "#e5e7eb" },
-            },
-            y: {
-              ticks: { color: "#6b7280" },
-              grid: { color: "#e5e7eb" },
-              beginAtZero: true,
-            },
-          },
-        },
-      });
-    }
+    });
 
     return () => {
       Object.values(chartInstances.current).forEach((chart) => {
@@ -350,9 +312,9 @@ export default function SurveyOverview() {
       });
       chartInstances.current = {};
     };
-  }, [loading, filteredData]);
+  }, [loading, overviewData]);
 
-  const questionData = filteredData.length > 0 ? getQuestionData(filteredData) : null;
+  const questionData = overviewData ? getQuestionData(overviewData) : null;
 
   return (
     <div className="raw-data-list-page">
@@ -675,126 +637,76 @@ export default function SurveyOverview() {
           <div style={{ textAlign: "center", padding: "3rem" }}>
             <p style={{ color: "#6b7280" }}>Đang tải...</p>
           </div>
-        ) : questionData ? (
+        ) : questionData && Object.keys(questionData).length > 0 ? (
           <>
             <h2 className="section-title">Chi tiết Kết quả Câu hỏi</h2>
 
             {/* Question Results */}
             <div className="question-results">
-              {/* Q1 */}
-              <div className="question-card">
-                <div className="question-header">
-                  <span className="question-number">1</span>
-                  <h3 className="question-text">{questionData.q1.question}</h3>
-                </div>
-                <div className="question-chart">
-                  <canvas ref={(el) => (chartRefs.current.q1 = el)}></canvas>
-                </div>
-                <div className="question-insight">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M9 11l3 3L22 4" />
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                  </svg>
-                  <span>{questionData.q1.highlight}</span>
-                </div>
-              </div>
+              {Object.keys(questionData).map((key, index) => {
+                const qData = questionData[key];
+                const isTextQuestion = qData.type === 'text';
+                const maxCount = isTextQuestion 
+                  ? (qData.words.length > 0 ? Math.max(...qData.words.map(w => w[1]), 1) : 1)
+                  : (qData.data.length > 0 ? Math.max(...qData.data, 1) : 1);
 
-              {/* Q2 */}
-              <div className="question-card">
-                <div className="question-header">
-                  <span className="question-number">2</span>
-                  <h3 className="question-text">{questionData.q2.question}</h3>
-                </div>
-                <div className="question-chart">
-                  <canvas ref={(el) => (chartRefs.current.q2 = el)}></canvas>
-                </div>
-                <div className="question-insight">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+                return (
+                  <div 
+                    key={key} 
+                    className={`question-card ${isTextQuestion ? 'question-card-wide' : ''}`}
                   >
-                    <path d="M9 11l3 3L22 4" />
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                  </svg>
-                  <span>{questionData.q2.highlight}</span>
-                </div>
-              </div>
-
-              {/* Q3 - Word Cloud */}
-              <div className="question-card question-card-wide">
-                <div className="question-header">
-                  <span className="question-number">3</span>
-                  <h3 className="question-text">{questionData.q3.question}</h3>
-                </div>
-                <div className="word-cloud">
-                  {questionData.q3.words.map(([word, count], idx) => (
-                    <span
-                      key={idx}
-                      className="word-tag"
-                      style={{
-                        fontSize: `${0.9 + (count / filteredData.length) * 2}rem`,
-                      }}
-                    >
-                      {word}
-                      <span className="word-count">{count}</span>
-                    </span>
-                  ))}
-                </div>
-                <div className="question-insight">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M9 11l3 3L22 4" />
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                  </svg>
-                  <span>{questionData.q3.highlight}</span>
-                </div>
-              </div>
-
-              {/* Q4 */}
-              <div className="question-card">
-                <div className="question-header">
-                  <span className="question-number">4</span>
-                  <h3 className="question-text">{questionData.q4.question}</h3>
-                </div>
-                <div className="question-chart">
-                  <canvas ref={(el) => (chartRefs.current.q4 = el)}></canvas>
-                </div>
-                <div className="question-insight">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M9 11l3 3L22 4" />
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                  </svg>
-                  <span>{questionData.q4.highlight}</span>
-                </div>
-              </div>
+                    <div className="question-header">
+                      <span className="question-number">{index + 1}</span>
+                      <h3 className="question-text">{qData.question}</h3>
+                    </div>
+                    
+                    {isTextQuestion ? (
+                      // Text question - Word Cloud
+                      <div className="word-cloud">
+                        {qData.words.length > 0 ? (
+                          qData.words.map(([word, count], idx) => (
+                            <span
+                              key={idx}
+                              className="word-tag"
+                              style={{
+                                fontSize: `${0.9 + (count / maxCount) * 2}rem`,
+                              }}
+                            >
+                              {word}
+                              <span className="word-count">{count}</span>
+                            </span>
+                          ))
+                        ) : (
+                          <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
+                            Chưa có câu trả lời
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      // Choice question - Chart
+                      <div className="question-chart">
+                        <canvas ref={(el) => (chartRefs.current[key] = el)}></canvas>
+                      </div>
+                    )}
+                    
+                    <div className="question-insight">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M9 11l3 3L22 4" />
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                      </svg>
+                      <span>{qData.highlight}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </>
         ) : (
