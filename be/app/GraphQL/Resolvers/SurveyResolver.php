@@ -41,6 +41,23 @@ class SurveyResolver
         }
         return $this->service->getRawData($surveyId);
     }
+
+    /**
+     * @param  null  $_
+     * @param  array<string, mixed>  $args
+     */
+    public function surveyOverview($_, array $args)
+    {
+        $surveyId = (int) ($args['surveyId'] ?? 0);
+        if ($surveyId <= 0) {
+            return [
+                'title' => 'Khảo sát',
+                'totalResponses' => 0,
+                'questions' => [],
+            ];
+        }
+        return $this->service->getSurveyOverview($surveyId);
+    }
 }
 
 

@@ -20,4 +20,28 @@ type SurveyRawData {
   responses: [SurveyRawDataResponse!]!
 }
 
+type SurveyOption {
+  id: ID!
+  option_text: String!
+}
+
+type QuestionAnswerStat {
+  option_text: String
+  count: Int
+}
+
+type SurveyQuestionOverview {
+  id: ID!
+  question_text: String!
+  question_type: String!
+  options: [SurveyOption!]!
+  answer_stats: [QuestionAnswerStat!]!
+}
+
+type SurveyOverview {
+  title: String!
+  totalResponses: Int!
+  questions: [SurveyQuestionOverview!]!
+}
+
 

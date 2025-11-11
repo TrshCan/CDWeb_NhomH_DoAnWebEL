@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\SurveyRepository;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class SurveyService
 {
@@ -68,6 +69,26 @@ class SurveyService
                     'completedDate' => $completedDate,
                 ];
             })->values()->all(),
+        ];
+    }
+
+    public function getSurveyOverview(int $surveyId): array
+    {
+        $surveyTitle = $this->repo->getSurveyTitle($surveyId);
+        $questionsData = $this->repo->getSurveyOverviewData($surveyId);
+        
+        // Get total unique responses (count distinct users who answered)
+        $totalResponses = DB::table('survey_answers')
+            ->join('survey_questions', 'survey_questions.id', '=', 'survey_answers.question_id')
+            ->where('survey_questions.survey_id', $surveyId)
+            ->whereNull('survey_answers.deleted_at')
+            ->select(DB::raw('COUNT(DISTINCT survey_answers.user_id) as total'))
+            ->value('total') ?? 0;
+
+        return [
+            'title' => $surveyTitle ?? 'Khảo sát',
+            'totalResponses' => $totalResponses,
+            'questions' => $questionsData,
         ];
     }
 }
