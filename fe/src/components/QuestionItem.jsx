@@ -12,8 +12,12 @@ export default function QuestionItem({
   onDuplicate,
   onDelete,
   onTextChange,
+  onAnswerSelect,
+  selectedAnswer,
+  conditionInfo,
 }) {
   const hasImage = !!question?.image;
+  const options = question?.options || [];
 
   return (
     <div
@@ -125,6 +129,34 @@ export default function QuestionItem({
             : "z-0 bg-white",
         ].join(" ")}
       >
+        {/* Badge điều kiện hiển thị */}
+        {conditionInfo && conditionInfo.length > 0 && (
+          <div className="absolute top-3 right-3 z-20">
+            <div className="bg-blue-100 border border-blue-300 rounded-md px-3 py-1.5 shadow-sm">
+              <div className="flex items-start gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div className="text-xs text-blue-800">
+                  {conditionInfo.map((msg, idx) => (
+                    <div key={idx} className="leading-tight">
+                      {msg}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {hasImage ? (
           /* ======================= BỐ CỤC 2 CỘT (CÓ ẢNH) ======================= */
           <div
@@ -145,7 +177,7 @@ export default function QuestionItem({
             <div className="flex-1 flex flex-col">
               <div className="flex items-baseline">
                 <span className="text-violet-600 font-semibold mr-2 whitespace-nowrap">
-                  {index + 1} →
+                  {question.id} →
                 </span>
                 <div className="w-full">
                   <EditableField
@@ -161,6 +193,31 @@ export default function QuestionItem({
                   />
                 </div>
               </div>
+
+              {/* Danh sách đáp án */}
+              {options.length > 0 && (
+                <div className="mt-4 ml-[28px] space-y-2">
+                  {options.map((option) => (
+                    <label
+                      key={option.id}
+                      className="flex items-center space-x-3 cursor-pointer group"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${question.id}`}
+                        value={option.id}
+                        checked={String(selectedAnswer) === String(option.id)}
+                        onChange={() => onAnswerSelect?.(question.id, option.id)}
+                        className="w-4 h-4 text-violet-600 focus:ring-violet-500"
+                      />
+                      <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                        {option.text}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
 
               {/* Actions: thu theo nội dung (không absolute) */}
               {isActive && (
@@ -201,7 +258,7 @@ export default function QuestionItem({
           <div className="p-6 pb-5">
             <div className="flex items-baseline">
               <span className="text-violet-600 font-semibold mr-2 whitespace-nowrap">
-                {index + 1} →
+                {question.id} →
               </span>
               <div className="w-full">
                 <EditableField
@@ -217,6 +274,31 @@ export default function QuestionItem({
                 />
               </div>
             </div>
+
+            {/* Danh sách đáp án */}
+            {options.length > 0 && (
+              <div className="mt-4 ml-[28px] space-y-2">
+                {options.map((option) => (
+                  <label
+                    key={option.id}
+                    className="flex items-center space-x-3 cursor-pointer group"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="radio"
+                      name={`question-${question.id}`}
+                      value={option.id}
+                      checked={String(selectedAnswer) === String(option.id)}
+                      onChange={() => onAnswerSelect?.(question.id, option.id)}
+                      className="w-4 h-4 text-violet-600 focus:ring-violet-500"
+                    />
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                      {option.text}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
 
             {/* Actions: đặt inline bên dưới nội dung */}
             {isActive && (

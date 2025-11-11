@@ -34,7 +34,17 @@ export default function App() {
     {
       id: 1,
       title: "Nhóm câu hỏi đầu tiên của tôi",
-      questions: [{ id: 1, text: "", helpText: "", type: "Mặc định" }],
+      questions: [{ 
+        id: 1, 
+        text: "", 
+        helpText: "", 
+        type: "Mặc định",
+        options: [
+          { id: 1, text: "Lựa chọn 1" },
+          { id: 2, text: "Lựa chọn 2" },
+          { id: 3, text: "Lựa chọn 3" },
+        ]
+      }],
     },
   ]);
 
@@ -66,6 +76,12 @@ export default function App() {
 
   // STATE: Cài đặt câu hỏi (panel phải) - lưu theo question id
   const [questionSettings, setQuestionSettings] = useState({});
+
+  // STATE: Đáp án đã chọn cho mỗi câu hỏi (để xử lý logic hiển thị)
+  const [selectedAnswers, setSelectedAnswers] = useState({});
+
+  // STATE: Chế độ xem (design/preview)
+  const [viewMode, setViewMode] = useState("design"); // "design" | "preview"
 
   // Log “Đã lưu lúc …” trên Header
   const [savedAt, setSavedAt] = useState(null);
@@ -242,7 +258,17 @@ export default function App() {
   const addQuestionItem = (questionType = "Mặc định", groupId = null) => {
     setQuestionGroups((prev) => {
       if (prev.length === 0) {
-        const newItem = { id: 1, text: "", helpText: "", type: questionType };
+        const newItem = { 
+          id: 1, 
+          text: "", 
+          helpText: "", 
+          type: questionType,
+          options: [
+            { id: 1, text: "Lựa chọn 1" },
+            { id: 2, text: "Lựa chọn 2" },
+            { id: 3, text: "Lựa chọn 3" },
+          ]
+        };
         return [
           {
             id: 1,
@@ -263,7 +289,17 @@ export default function App() {
         ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
       );
       const newId = maxId + 1;
-      const newItem = { id: newId, text: "", helpText: "", type: questionType };
+      const newItem = { 
+        id: newId, 
+        text: "", 
+        helpText: "", 
+        type: questionType,
+        options: [
+          { id: 1, text: "Lựa chọn 1" },
+          { id: 2, text: "Lựa chọn 2" },
+          { id: 3, text: "Lựa chọn 3" },
+        ]
+      };
       
       setActiveSection(`question-${newId}`);
       
@@ -296,7 +332,16 @@ export default function App() {
         );
         const newId = maxId + 1;
         
-        const clone = { ...src, id: newId, text: "" };
+        const clone = { 
+          ...src, 
+          id: newId, 
+          text: "",
+          options: src.options || [
+            { id: 1, text: "Lựa chọn 1" },
+            { id: 2, text: "Lựa chọn 2" },
+            { id: 3, text: "Lựa chọn 3" },
+          ]
+        };
         const newQuestions = [...group.questions];
         newQuestions.splice(index + 1, 0, clone);
         setActiveSection(`question-${newId}`);
@@ -384,6 +429,81 @@ export default function App() {
       })
     );
     toast.success("Đã xoá câu hỏi");
+  };
+
+  // ===================== LOGIC HIỂN THỊ/ẨN CÂU HỎI =====================
+  // Xử lý khi người dùng chọn đáp án
+  const handleAnswerSelect = (questionId, optionId) => {
+    setSelectedAnswers((prev) => ({
+      ...prev,
+      [questionId]: optionId,
+    }));
+  };
+
+  // Kiểm tra xem câu hỏi có nên hiển thị không dựa trên điều kiện
+  const shouldShowQuestion = (questionId) => {
+    // Trong chế độ thiết kế, luôn hiển thị tất cả câu hỏi
+    if (viewMode === "design") {
+      return true;
+    }
+
+    // Trong chế độ preview, áp dụng logic điều kiện
+    const settings = questionSettings[questionId];
+    if (!settings || !settings.conditions || settings.conditions.length === 0) {
+      return true; // Không có điều kiện => luôn hiển thị
+    }
+
+    // Kiểm tra từng điều kiện
+    for (const condition of settings.conditions) {
+      if (condition.type === "question" && condition.field && condition.value) {
+        // Kiểm tra xem đáp án đã chọn có khớp với điều kiện không
+        const selectedAnswer = selectedAnswers[condition.field];
+        if (String(selectedAnswer) === String(condition.value)) {
+          return true; // Điều kiện thỏa mãn
+        }
+      } else if (condition.type === "participant" && condition.field && condition.value && condition.targetQuestionId) {
+        // Kiểm tra điều hướng câu hỏi
+        const selectedAnswer = selectedAnswers[condition.field];
+        if (String(selectedAnswer) === String(condition.value) && String(condition.targetQuestionId) === String(questionId)) {
+          return true; // Điều kiện thỏa mãn
+        }
+      }
+    }
+
+    return false; // Không có điều kiện nào thỏa mãn
+  };
+
+  // Lấy thông tin điều kiện hiển thị của câu hỏi (để hiển thị badge)
+  const getQuestionConditionInfo = (questionId) => {
+    const settings = questionSettings[questionId];
+    if (!settings || !settings.conditions || settings.conditions.length === 0) {
+      return null;
+    }
+
+    const allQuestions = getAllQuestionItems();
+    const messages = [];
+
+    for (const condition of settings.conditions) {
+      if (condition.type === "question" && condition.field && condition.value) {
+        const sourceQuestion = allQuestions.find((q) => String(q.id) === String(condition.field));
+        const sourceQuestionIndex = allQuestions.findIndex((q) => String(q.id) === String(condition.field));
+        const option = sourceQuestion?.options?.find((opt) => String(opt.id) === String(condition.value));
+        
+        if (sourceQuestion && option) {
+          messages.push(`Hiển thị khi Câu ${sourceQuestionIndex + 1} chọn: ${option.text}`);
+        }
+      } else if (condition.type === "participant" && condition.field && condition.value && condition.targetQuestionId) {
+        const sourceQuestion = allQuestions.find((q) => String(q.id) === String(condition.field));
+        const sourceQuestionIndex = allQuestions.findIndex((q) => String(q.id) === String(condition.field));
+        const option = sourceQuestion?.options?.find((opt) => String(opt.id) === String(condition.value));
+        
+        if (sourceQuestion && option && String(condition.targetQuestionId) === String(questionId)) {
+          messages.push(`Hiển thị khi Câu ${sourceQuestionIndex + 1} chọn: ${option.text}`);
+        }
+      }
+    }
+
+    return messages.length > 0 ? messages : null;
   };
   // =============================================================
 
@@ -561,7 +681,7 @@ export default function App() {
                           <QuestionSection
                             groupId={group.id}
                             groupTitle={group.title}
-                            questionItems={group.questions}
+                            questionItems={group.questions.filter((q) => shouldShowQuestion(q.id))}
                             moveQuestionItem={(index, direction) =>
                               moveQuestionItem(group.id, index, direction)
                             }
@@ -585,6 +705,9 @@ export default function App() {
                                 )
                               );
                             }}
+                            onAnswerSelect={handleAnswerSelect}
+                            selectedAnswers={selectedAnswers}
+                            getQuestionConditionInfo={getQuestionConditionInfo}
                           />
                           <AddSection
                             onAddClick={() => {

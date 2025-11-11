@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import SectionHeader from "./SectionHeader";
 import QuestionItem from "./QuestionItem";
 import { DotsHorizontalIcon } from "../icons";
@@ -22,10 +23,15 @@ export default function QuestionSection({
   onDeleteGroup,
   onGroupTitleChange, // optional: bắn tiêu đề ra ngoài nếu cần
   onTextChange,
+  onAnswerSelect,
+  selectedAnswers,
+  getQuestionConditionInfo,
 }) {
   const [items, setItems] = useState(questionItems);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const menuButtonRef = useRef(null);
 
   const [groupTitle, setGroupTitle] = useState(
     initialGroupTitle || "Nhóm câu hỏi đầu tiên của tôi"
@@ -34,6 +40,18 @@ export default function QuestionSection({
 
   const titleRef = useRef(null);
   const menuRef = useRef(null);
+  const handlersRef = useRef({
+    onDuplicateGroup: onDuplicateGroup,
+    onDeleteGroup: onDeleteGroup,
+  });
+
+  // Cập nhật handlers khi props thay đổi
+  useEffect(() => {
+    handlersRef.current = {
+      onDuplicateGroup: onDuplicateGroup,
+      onDeleteGroup: onDeleteGroup,
+    };
+  }, [onDuplicateGroup, onDeleteGroup]);
 
   // Cập nhật local items và title khi props thay đổi
   useEffect(() => {
@@ -48,14 +66,25 @@ export default function QuestionSection({
 
   // Đóng menu khi click ra ngoài
   useEffect(() => {
+    if (!isMenuOpen) return;
+
     const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+      // Kiểm tra xem click có phải vào button hoặc menu không
+      const isClickOnButton = menuButtonRef.current?.contains(event.target);
+      const isClickOnMenu = event.target.closest(".group-menu-portal");
+
+      if (!isClickOnButton && !isClickOnMenu) {
         setIsMenuOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
+
+    // Delay để tránh đóng ngay khi mở
+    setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isMenuOpen]);
 
   // Đồng bộ tiêu đề ra ngoài nếu cần
   useEffect(() => {
@@ -169,52 +198,86 @@ export default function QuestionSection({
         {/* Actions bên phải (menu 3 chấm) */}
         <div className="relative" ref={menuRef}>
           <button
+            ref={menuButtonRef}
             onClick={(e) => {
               e.stopPropagation();
+              if (!isMenuOpen && menuButtonRef.current) {
+                const rect = menuButtonRef.current.getBoundingClientRect();
+                const scrollTop =
+                  window.pageYOffset || document.documentElement.scrollTop;
+                setMenuPosition({
+                  top: rect.top + scrollTop,
+                  left: rect.right + 12,
+                });
+              }
               setIsMenuOpen((p) => !p);
             }}
           >
             <DotsHorizontalIcon />
           </button>
-          {isMenuOpen && (
-            <div
-              className="absolute bg-white rounded-md shadow-lg"
-              style={{
-                left: "calc(100% + 12px)",
-                top: "0",
-                width: "172px",
-                height: "92px",
-                zIndex: 10050,
-              }}
-            >
-              <ul className="py-1">
-                <li>
-                  <button
-                    className="w-full text-left px-4 py-2 text-sm text-gray-900 hover:bg-gray-100 font-semibold uppercase"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDuplicateGroup?.();
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Duplicate group
-                  </button>
-                </li>
-                <li>
-                  <button
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 font-semibold uppercase"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteGroup?.();
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Delete group
-                  </button>
-                </li>
-              </ul>
-            </div>
-          )}
+          {isMenuOpen &&
+            createPortal(
+              <div
+                className="group-menu-portal absolute bg-white rounded-md shadow-lg border border-gray-200"
+                style={{
+                  left: `${menuPosition.left}px`,
+                  top: `${menuPosition.top}px`,
+                  width: "140px",
+                  height: "80px",
+                  zIndex: 99999,
+                }}
+              >
+                <ul className="py-1">
+                  <li>
+                    <button
+                      type="button"
+                      className="w-full text-left px-4 py-2 text-[11px] text-gray-900 hover:text-purple-700 font-semibold uppercase"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsMenuOpen(false);
+                        // Gọi hàm sau khi đóng menu
+                        setTimeout(() => {
+                          if (onDuplicateGroup) {
+                            onDuplicateGroup();
+                          }
+                        }, 0);
+                      }}
+                    >
+                      Duplicate group
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      className="w-full text-left px-4 py-2 text-[11px] text-red-600 hover:text-red-400 font-semibold uppercase"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsMenuOpen(false);
+                        // Gọi hàm sau khi đóng menu
+                        setTimeout(() => {
+                          if (onDeleteGroup) {
+                            onDeleteGroup();
+                          }
+                        }, 0);
+                      }}
+                    >
+                      Delete group
+                    </button>
+                  </li>
+                </ul>
+              </div>,
+              document.body
+            )}
         </div>
       </SectionHeader>
 
@@ -235,7 +298,7 @@ export default function QuestionSection({
           }}
         >
           {items.map((question, index) => {
-            const qid = question.id ?? index + 1;
+            const qid = question.id;
             const sectionId = `question-${qid}`;
             const isActive = activeSection === sectionId;
 
@@ -273,6 +336,9 @@ export default function QuestionSection({
                     }
                   }}
                   onTextChange={onTextChange}
+                  onAnswerSelect={onAnswerSelect}
+                  selectedAnswer={selectedAnswers?.[qid]}
+                  conditionInfo={getQuestionConditionInfo?.(qid)}
                 />
               </div>
             );
