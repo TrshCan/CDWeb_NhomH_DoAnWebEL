@@ -102,6 +102,8 @@ export default function Feed() {
                     : { filename: m.filename }
                 )
               : [],
+            likes: p.likes || [],
+            children: p.children || [],
           }))
         setAllPosts(mapped);
         setVisibleCount(10);
@@ -204,6 +206,8 @@ export default function Feed() {
                   : { filename: m.filename }
               )
             : [],
+          likes: [],
+          children: [],
         },
         ...prev,
       ]);

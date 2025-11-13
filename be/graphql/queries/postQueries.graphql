@@ -10,7 +10,13 @@ extend type Query {
 
     postsByGroup(group_id: ID!): [Post!]!
         @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@byGroup")
-        
+
     postsByType(type: String!): [Post!]!
         @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@byType")
+
+    repliesByUser(user_id: ID!): [Post!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@repliesByUser")
+
+    likedPostsByUser(user_id: ID!): [Post!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@likedPostsByUser")
 }

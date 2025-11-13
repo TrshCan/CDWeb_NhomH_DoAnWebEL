@@ -1,0 +1,9 @@
+# be/graphql/types/postLike.graphql
+type PostLike {
+    id: ID!
+    post_id: ID!
+    user_id: ID!
+    created_at: DateTime!
+    user: User
+}
+

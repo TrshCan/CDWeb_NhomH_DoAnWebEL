@@ -1,22 +1,48 @@
 import React, { useState, useEffect } from "react";
-import { updatePost, deletePost } from "../api/graphql/post";
+import { useNavigate } from "react-router-dom";
+import { updatePost, deletePost, toggleLike } from "../api/graphql/post";
 
-export default function PostCard({ post, onDeleted }) {
+export default function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = false, onReply = null }) {
+  const navigate = useNavigate();
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [saving, setSaving] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(post.likes?.length || 0);
+  const [commentsCount, setCommentsCount] = useState(post.children?.length || 0);
 
   const currentUserId = (() => {
     try {
       const u = localStorage.getItem("user");
-      return u ? JSON.parse(u)?.id : null;
+      const userId = localStorage.getItem("userId");
+      return userId || (u ? JSON.parse(u)?.id : null);
     } catch { return null; }
   })();
   const ownerId = post.userId || post.user_id || null;
   const isOwner = ownerId && String(ownerId) === String(currentUserId);
+  const handleCardClick = () => {
+    if (!disableCommentNavigate) {
+      navigate(`/post/${post.id}`);
+    }
+  };
+
+  // Check if current user liked this post
+  useEffect(() => {
+    if (currentUserId && post.likes) {
+      const liked = post.likes.some(like => 
+        String(like.user_id || like.user?.id) === String(currentUserId)
+      );
+      setIsLiked(liked);
+    }
+  }, [currentUserId, post.likes]);
+
+  useEffect(() => {
+    setLikesCount(post.likes?.length || 0);
+    setCommentsCount(post.children?.length || 0);
+  }, [post.likes, post.children]);
 
   const maxVisible = 4;
   const hasExtra = post.media?.length > maxVisible;
@@ -111,14 +137,35 @@ export default function PostCard({ post, onDeleted }) {
   if (hidden) return null;
 
   return (
-    <div className="post bg-white rounded-lg shadow p-4 relative">
+    <div
+      className="post bg-white rounded-lg shadow p-4 relative cursor-pointer hover:bg-gray-50 transition"
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && !disableCommentNavigate) {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center space-x-2">
         <div className="w-10 h-10 bg-cyan-600 rounded-full"></div>
         <div>
           <p className="font-semibold text-cyan-600">{post.user}</p>
-          <p className="text-gray-500 text-sm">{post.time}</p>
+          <div className="flex items-center gap-1 text-gray-500 text-sm">
+            <span>{post.time}</span>
+            {post.parent_id && post.parent_user && (
+              <>
+                <span>·</span>
+                <span className="text-cyan-600">
+                  Replying to <span className="font-semibold">@{post.parent_user}</span>
+                </span>
+              </>
+            )}
+          </div>
         </div>
         </div>
         {/* 3-dots menu */}
@@ -126,7 +173,10 @@ export default function PostCard({ post, onDeleted }) {
           <button
             aria-haspopup="true"
             aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((v) => !v);
+            }}
             className="p-1 rounded hover:bg-gray-100"
             title="More options"
           >
@@ -135,19 +185,27 @@ export default function PostCard({ post, onDeleted }) {
             </svg>
           </button>
           {menuOpen && (
-            <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+            <div
+              className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="py-1 text-sm">
                 {isOwner ? (
                   <>
                     <button
                       className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                      onClick={() => { setIsEditing(true); setMenuOpen(false); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditing(true);
+                        setMenuOpen(false);
+                      }}
                     >
                       Edit
                     </button>
                     <button
                       className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50"
-                      onClick={async () => {
+                      onClick={async (e) => {
+                        e.stopPropagation();
                         try {
                           await deletePost(post.id);
                           if (onDeleted) onDeleted(post.id); else setHidden(true);
@@ -163,7 +221,11 @@ export default function PostCard({ post, onDeleted }) {
                 ) : (
                   <button
                     className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                    onClick={() => { setMenuOpen(false); alert(`Following ${post.user} (mock)`); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      alert(`Following ${post.user} (mock)`);
+                    }}
                   >
                     Follow {post.user}
                   </button>
@@ -176,7 +238,7 @@ export default function PostCard({ post, onDeleted }) {
 
       {/* Content / Edit */}
       {isEditing ? (
-        <div className="mt-2">
+        <div className="mt-2" onClick={(e) => e.stopPropagation()}>
           <textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
@@ -186,7 +248,8 @@ export default function PostCard({ post, onDeleted }) {
           <div className="mt-2 flex gap-2">
             <button
               disabled={saving}
-              onClick={async () => {
+              onClick={async (e) => {
+                e.stopPropagation();
                 try {
                   setSaving(true);
                   const updated = await updatePost(post.id, editContent.trim());
@@ -203,7 +266,16 @@ export default function PostCard({ post, onDeleted }) {
             >
               {saving ? "Saving..." : "Save"}
             </button>
-            <button onClick={() => { setIsEditing(false); setEditContent(post.content); }} className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(false);
+                setEditContent(post.content);
+              }}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       ) : (
@@ -213,21 +285,38 @@ export default function PostCard({ post, onDeleted }) {
       {/* Media grid */}
       {visibleMedia.length > 0 && (
         <div className="mt-3 rounded-xl overflow-hidden border border-gray-200">
-          {visibleMedia.length === 1 && getMediaElement(visibleMedia[0], 0, "w-full h-auto max-h-[600px] object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(0))}
+          {visibleMedia.length === 1 && getMediaElement(
+            visibleMedia[0],
+            0,
+            "w-full h-auto max-h-[600px] object-cover cursor-pointer hover:opacity-90 transition",
+            (e) => {
+              e.stopPropagation();
+              handleOpen(0);
+            }
+          )}
 
           {visibleMedia.length === 2 && (
             <div className="grid grid-cols-2 gap-px bg-gray-200">
               {visibleMedia.map((media, i) =>
-                getMediaElement(media, i, "w-full h-80 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(i))
+                getMediaElement(media, i, "w-full h-80 object-cover cursor-pointer hover:opacity-90 transition", (e) => {
+                  e.stopPropagation();
+                  handleOpen(i);
+                })
               )}
             </div>
           )}
 
           {visibleMedia.length === 3 && (
             <div className="grid grid-cols-2 gap-px bg-gray-200">
-              {getMediaElement(visibleMedia[0], 0, "col-span-2 w-full h-72 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(0))}
+              {getMediaElement(visibleMedia[0], 0, "col-span-2 w-full h-72 object-cover cursor-pointer hover:opacity-90 transition", (e) => {
+                e.stopPropagation();
+                handleOpen(0);
+              })}
               {visibleMedia.slice(1).map((media, i) =>
-                getMediaElement(media, i + 1, "w-full h-64 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(i + 1))
+                getMediaElement(media, i + 1, "w-full h-64 object-cover cursor-pointer hover:opacity-90 transition", (e) => {
+                  e.stopPropagation();
+                  handleOpen(i + 1);
+                })
               )}
             </div>
           )}
@@ -238,12 +327,18 @@ export default function PostCard({ post, onDeleted }) {
                 const isLast = i === 3 && hasExtra;
                 return (
                   <div key={i} className="relative">
-                    {getMediaElement(media, i, "w-full h-64 object-cover cursor-pointer hover:opacity-90 transition", () => handleOpen(i))}
+                    {getMediaElement(media, i, "w-full h-64 object-cover cursor-pointer hover:opacity-90 transition", (e) => {
+                      e.stopPropagation();
+                      handleOpen(i);
+                    })}
                     {isLast && (
                       <div
                         className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center 
                                    text-white text-xl font-semibold cursor-pointer hover:bg-opacity-70"
-                        onClick={() => handleOpen(i)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpen(i);
+                        }}
                       >
                         +{post.media.length - maxVisible} more
                       </div>
@@ -302,8 +397,31 @@ export default function PostCard({ post, onDeleted }) {
 
       {/* Actions */}
       <div className="flex space-x-4 mt-3 text-gray-500">
-        <button title="Like" className="hover:text-cyan-600">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button 
+          title="Like" 
+          onClick={async (e) => {
+            e.stopPropagation();
+            if (!currentUserId) {
+              alert("Please log in to like posts");
+              return;
+            }
+            try {
+              const newLikedState = await toggleLike(post.id, currentUserId);
+              setIsLiked(newLikedState);
+              setLikesCount(prev => newLikedState ? prev + 1 : Math.max(0, prev - 1));
+              if (onLikeUpdate) onLikeUpdate(post.id, newLikedState);
+            } catch (e) {
+              console.error("Failed to toggle like:", e);
+              alert(e.message || "Failed to like post");
+            }
+          }}
+          className={`flex items-center gap-1 hover:text-cyan-600 transition-colors ${isLiked ? "text-cyan-600" : ""}`}
+        >
+          <svg 
+            className={`w-5 h-5 ${isLiked ? "fill-current" : "fill-none"}`} 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -311,20 +429,56 @@ export default function PostCard({ post, onDeleted }) {
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
             />
           </svg>
+          {likesCount > 0 && <span className="text-sm">{likesCount}</span>}
         </button>
 
-        <button title="Comment" className="hover:text-cyan-600">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-        </button>
+        {onReply ? (
+          <button 
+            title="Reply" 
+            onClick={(e) => {
+              e.stopPropagation();
+              onReply(post.id, post.user);
+            }}
+            className="flex items-center gap-1 hover:text-cyan-600 cursor-pointer"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+              />
+            </svg>
+            <span className="text-sm">Reply</span>
+          </button>
+        ) : (
+          <button 
+            title="Comment" 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!disableCommentNavigate) {
+                navigate(`/post/${post.id}`);
+              }
+            }}
+            className={`flex items-center gap-1 hover:text-cyan-600 ${disableCommentNavigate ? 'cursor-default opacity-50' : 'cursor-pointer'}`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              />
+            </svg>
+            {commentsCount > 0 && <span className="text-sm">{commentsCount}</span>}
+          </button>
+        )}
 
-        <button title="Share" className="hover:text-cyan-600">
+        <button
+          title="Share"
+          className="hover:text-cyan-600"
+          onClick={(e) => e.stopPropagation()}
+        >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
