@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import "../assets/css/ResponseDetail.css";
+import { getSurveyResponseDetail } from "../api/graphql/survey";
 
 export default function ResponseDetail() {
   const navigate = useNavigate();
@@ -12,66 +13,90 @@ export default function ResponseDetail() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Mock data - replace with actual API call
+  const participant = responseData?.participant ?? {};
+  const stats = responseData?.stats ?? {};
+  const questions = responseData?.questions ?? [];
+  const navigation = responseData?.navigation ?? null;
+
+  const completionTimeDisplay = stats?.completionTime || "N/A";
+  const answeredSummary = `${stats?.answeredQuestions ?? 0} / ${
+    stats?.totalQuestions ?? 0
+  }`;
+
+  const formatScore = (value) => {
+    if (typeof value !== "number" || Number.isNaN(value)) {
+      return "0";
+    }
+    const fixed = value.toFixed(2);
+    return fixed.endsWith(".00") ? fixed.slice(0, -3) : fixed;
+  };
+
+  const scoreSummary =
+    typeof stats?.maxScore === "number" && stats.maxScore > 0
+      ? `${formatScore(stats?.totalScore ?? 0)} / ${formatScore(stats.maxScore)}`
+      : "N/A";
+
+  const scorePercentageDisplay =
+    typeof stats?.scorePercentage === "number"
+      ? `${formatScore(stats.scorePercentage)}%`
+      : null;
+
   useEffect(() => {
     const fetchResponseDetail = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with actual API call
-        // const data = await getResponseDetail(surveyId, responseId);
-        
-        // Mock data
-        const mockData = {
-          responseId: responseId,
-          surveyTitle: "Student Satisfaction Survey",
-          participant: {
-            name: "Nguyen Van A",
-            studentId: "20210123",
-            faculty: "Computer Science",
-            class: "21T1",
-            completedAt: "10:30, 10/09/2025"
-          },
-          stats: {
-            completionTime: "12m 34s",
-            answeredQuestions: "15 / 15",
-            averageScore: "8.5 / 10"
-          },
-          questions: Array.from({ length: 25 }, (_, i) => ({
-            id: i + 1,
-            question: `Question ${i + 1}: What do you think about feature ${i + 1}?`,
-            type: i % 3 === 0 ? "text" : "single_choice",
-            answer: i % 3 === 0 
-              ? "This is a detailed text response explaining my thoughts about this feature."
-              : i % 2 === 0 
-                ? "Very useful" 
-                : "Needs improvement",
-            options: i % 3 !== 0 ? ["Very useful", "Useful", "Neutral", "Needs improvement", "Not useful"] : null,
-            selectedOption: i % 3 !== 0 ? (i % 2 === 0 ? "Very useful" : "Needs improvement") : null
-          }))
-        };
-
-        setResponseData(mockData);
+        const data = await getSurveyResponseDetail(parseInt(surveyId, 10), responseId);
+        if (!data) {
+          setResponseData(null);
+          toast.error("Response not found");
+          return;
+        }
+        setResponseData(data);
       } catch (err) {
         console.error(err);
         toast.error("Failed to load response details");
+        setResponseData(null);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchResponseDetail();
+    if (surveyId && responseId) {
+      fetchResponseDetail();
+    }
   }, [surveyId, responseId]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setExpandedQuestions(new Set());
+  }, [responseData]);
 
   const handleGoBack = () => {
     navigate(`/surveys/${surveyId}/raw-data`);
   };
 
   const handleNavigateResponse = (direction) => {
-    const newId = direction === "prev" 
-      ? parseInt(responseId) - 1 
-      : parseInt(responseId) + 1;
-    navigate(`/surveys/${surveyId}/responses/${newId}`);
-    toast.success(`Viewing ${direction === "prev" ? "previous" : "next"} response`);
+    if (!responseData?.navigation) {
+      toast.error("No other responses available");
+      return;
+    }
+
+    const targetId =
+      direction === "prev"
+        ? responseData.navigation.previous
+        : responseData.navigation.next;
+
+    if (!targetId) {
+      toast.error(
+        `No ${direction === "prev" ? "previous" : "next"} response available`
+      );
+      return;
+    }
+
+    navigate(`/surveys/${surveyId}/responses/${targetId}`);
+    toast.success(
+      `Viewing ${direction === "prev" ? "previous" : "next"} response`
+    );
   };
 
   const handleDownloadPDF = () => {
@@ -90,8 +115,8 @@ export default function ResponseDetail() {
   };
 
   const expandAll = () => {
-    if (!responseData) return;
-    const allIds = new Set(responseData.questions.map(q => q.id));
+    if (!questions || questions.length === 0) return;
+    const allIds = new Set(questions.map((q) => q.id));
     setExpandedQuestions(allIds);
   };
 
@@ -124,10 +149,10 @@ export default function ResponseDetail() {
   }
 
   // Pagination
-  const totalPages = Math.ceil(responseData.questions.length / itemsPerPage);
+  const totalPages = Math.ceil(questions.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentQuestions = responseData.questions.slice(startIndex, endIndex);
+  const currentQuestions = questions.slice(startIndex, endIndex);
 
   return (
     <div className="response-detail-page">
@@ -139,6 +164,8 @@ export default function ResponseDetail() {
             onClick={() => handleNavigateResponse("prev")}
             className="icon-button"
             title="Previous response"
+            disabled={!navigation?.previous}
+            aria-disabled={!navigation?.previous}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -156,6 +183,8 @@ export default function ResponseDetail() {
             onClick={() => handleNavigateResponse("next")}
             className="icon-button"
             title="Next response"
+            disabled={!navigation?.next}
+            aria-disabled={!navigation?.next}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -214,15 +243,20 @@ export default function ResponseDetail() {
           <div className="stat-widgets">
             <div className="stat-widget stat-widget-blue">
               <h3>Completion Time</h3>
-              <p>{responseData.stats.completionTime}</p>
+              <p>{completionTimeDisplay}</p>
             </div>
             <div className="stat-widget stat-widget-green">
               <h3>Questions Answered</h3>
-              <p>{responseData.stats.answeredQuestions}</p>
+              <p>{answeredSummary}</p>
             </div>
             <div className="stat-widget stat-widget-purple">
               <h3>Average Score</h3>
-              <p>{responseData.stats.averageScore}</p>
+              <p>
+                {scoreSummary}
+                {scorePercentageDisplay ? (
+                  <span className="stat-subtext"> ({scorePercentageDisplay})</span>
+                ) : null}
+              </p>
             </div>
           </div>
 
@@ -230,23 +264,23 @@ export default function ResponseDetail() {
             <h2>Participant Information</h2>
             <div className="info-item">
               <span className="info-label">Name:</span>
-              <span className="info-value">{responseData.participant.name}</span>
+              <span className="info-value">{participant.name || "N/A"}</span>
             </div>
             <div className="info-item">
               <span className="info-label">Student ID:</span>
-              <span className="info-value">{responseData.participant.studentId}</span>
+              <span className="info-value">{participant.studentId || "N/A"}</span>
             </div>
             <div className="info-item">
               <span className="info-label">Faculty:</span>
-              <span className="info-value">{responseData.participant.faculty}</span>
+              <span className="info-value">{participant.faculty || "N/A"}</span>
             </div>
             <div className="info-item">
               <span className="info-label">Class:</span>
-              <span className="info-value">{responseData.participant.class}</span>
+              <span className="info-value">{participant.class || "N/A"}</span>
             </div>
             <div className="info-item">
               <span className="info-label">Completed:</span>
-              <span className="info-value">{responseData.participant.completedAt}</span>
+              <span className="info-value">{participant.completedAt || "N/A"}</span>
             </div>
           </div>
         </aside>
@@ -291,22 +325,34 @@ export default function ResponseDetail() {
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
+                <div className="question-meta">
+                  <span>
+                    Score: {formatScore(question.score ?? 0)} /{" "}
+                    {formatScore(question.points ?? 0)}
+                  </span>
+                </div>
                 <div className="question-answer">
                   {question.type === "text" ? (
-                    <div className="answer-text">{question.answer}</div>
-                  ) : (
+                    <div className="answer-text">
+                      {question.answerText || "No response provided."}
+                    </div>
+                  ) : question.options && question.options.length > 0 ? (
                     <div className="answer-options">
-                      {question.options.map((option, index) => (
+                      {question.options.map((option) => (
                         <div
-                          key={index}
+                          key={option.id}
                           className={`answer-option ${
-                            option === question.selectedOption ? "selected" : ""
+                            option.selected ? "selected" : ""
                           }`}
                         >
-                          {option}
+                          {option.text}
+                          {option.selected ? " (selected)" : ""}
+                          {option.isCorrect ? " (correct)" : ""}
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <div className="answer-text">No options available.</div>
                   )}
                 </div>
               </div>

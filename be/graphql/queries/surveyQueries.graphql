@@ -4,6 +4,9 @@ extend type Query {
   
   surveyRawData(surveyId: Int!): SurveyRawData!
     @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@surveyRawData")
+
+  surveyResponseDetail(surveyId: Int!, responseId: String!): SurveyResponseDetail
+    @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@surveyResponseDetail")
 }
 
 

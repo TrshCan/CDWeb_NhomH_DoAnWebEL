@@ -14,7 +14,7 @@ class SurveyResolver
     }
 
     /**
-     * @param  null  $_
+     * @param  mixed  $_
      * @param  array<string, mixed>  $args
      */
     public function surveysMade($_, array $args)
@@ -27,7 +27,7 @@ class SurveyResolver
     }
 
     /**
-     * @param  null  $_
+     * @param  mixed  $_
      * @param  array<string, mixed>  $args
      */
     public function surveyRawData($_, array $args)
@@ -40,6 +40,22 @@ class SurveyResolver
             ];
         }
         return $this->service->getRawData($surveyId);
+    }
+
+    /**
+     * @param  mixed  $_
+     * @param  array<string, mixed>  $args
+     */
+    public function surveyResponseDetail($_, array $args)
+    {
+        $surveyId = (int) ($args['surveyId'] ?? 0);
+        $responseId = (string) ($args['responseId'] ?? '');
+
+        if ($surveyId <= 0 || $responseId === '') {
+            return null;
+        }
+
+        return $this->service->getResponseDetail($surveyId, $responseId);
     }
 }
 

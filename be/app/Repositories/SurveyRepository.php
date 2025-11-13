@@ -3,6 +3,8 @@
 namespace App\Repositories;
 
 use App\Models\Survey;
+use App\Models\SurveyAnswer;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SurveyRepository
@@ -59,6 +61,62 @@ class SurveyRepository
             ->where('id', $surveyId)
             ->value('title');
     }
-}
 
+    public function findSurveyWithQuestions(int $surveyId): ?Survey
+    {
+        return Survey::query()
+            ->with(['questions' => function ($query) {
+                $query->orderBy('id')
+                    ->with(['options' => function ($optionQuery) {
+                        $optionQuery->orderBy('id');
+                    }]);
+            }])
+            ->find($surveyId);
+    }
+
+    public function getAnswersForSurveyAndUser(int $surveyId, int $userId): Collection
+    {
+        return SurveyAnswer::query()
+            ->where('user_id', $userId)
+            ->whereIn('question_id', function ($query) use ($surveyId) {
+                $query->select('id')
+                    ->from('survey_questions')
+                    ->where('survey_id', $surveyId);
+            })
+            ->with('selectedOption')
+            ->orderBy('question_id')
+            ->get();
+    }
+
+    public function getParticipantProfile(int $userId): ?object
+    {
+        return DB::table('users')
+            ->select([
+                'users.id',
+                'users.name',
+                'users.student_code',
+                'users.email',
+                'classes.name as class_name',
+                'faculties.name as faculty_name',
+            ])
+            ->leftJoin('classes', 'classes.id', '=', 'users.class_id')
+            ->leftJoin('faculties', 'faculties.id', '=', 'users.faculty_id')
+            ->where('users.id', $userId)
+            ->first();
+    }
+
+    public function getResponseIdsForSurvey(int $surveyId): array
+    {
+        return DB::table('survey_answers')
+            ->selectRaw('CONCAT(survey_questions.survey_id, "-", survey_answers.user_id) as response_id')
+            ->selectRaw('MAX(survey_answers.answered_at) as completed_at')
+            ->join('survey_questions', 'survey_questions.id', '=', 'survey_answers.question_id')
+            ->where('survey_questions.survey_id', $surveyId)
+            ->whereNull('survey_answers.deleted_at')
+            ->groupBy('survey_answers.user_id', 'survey_questions.survey_id')
+            ->orderByDesc('completed_at')
+            ->pluck('response_id')
+            ->toArray();
+    }
+}
 

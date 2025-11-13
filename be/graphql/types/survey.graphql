@@ -20,4 +20,53 @@ type SurveyRawData {
   responses: [SurveyRawDataResponse!]!
 }
 
+type SurveyResponseParticipant {
+  name: String!
+  studentId: String
+  faculty: String
+  class: String
+  completedAt: String
+}
+
+type SurveyResponseStats {
+  completionTime: String
+  answeredQuestions: Int!
+  totalQuestions: Int!
+  totalScore: Float
+  maxScore: Float
+  scorePercentage: Float
+}
+
+type SurveyResponseOption {
+  id: ID!
+  text: String!
+  selected: Boolean!
+  isCorrect: Boolean
+}
+
+type SurveyResponseQuestion {
+  id: ID!
+  question: String!
+  type: String!
+  answerText: String
+  options: [SurveyResponseOption!]
+  score: Float
+  points: Float
+}
+
+type SurveyResponseNavigation {
+  previous: String
+  next: String
+}
+
+type SurveyResponseDetail {
+  responseId: ID!
+  surveyId: ID!
+  surveyTitle: String!
+  participant: SurveyResponseParticipant!
+  stats: SurveyResponseStats!
+  questions: [SurveyResponseQuestion!]!
+  navigation: SurveyResponseNavigation
+}
+
 
