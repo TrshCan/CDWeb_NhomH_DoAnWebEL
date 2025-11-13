@@ -93,4 +93,61 @@ export async function getSurveyOverview(surveyId) {
   return response.data.data.surveyOverview;
 }
 
+export async function getSurveyResponseDetail(surveyId, responseId) {
+  const query = `
+    query ($surveyId: Int!, $responseId: String!) {
+      surveyResponseDetail(surveyId: $surveyId, responseId: $responseId) {
+        responseId
+        surveyId
+        surveyTitle
+        participant {
+          name
+          studentId
+          faculty
+          class
+          completedAt
+        }
+        stats {
+          completionTime
+          answeredQuestions
+          totalQuestions
+          totalScore
+          maxScore
+          scorePercentage
+        }
+        navigation {
+          previous
+          next
+        }
+        questions {
+          id
+          question
+          type
+          answerText
+          score
+          points
+          options {
+            id
+            text
+            selected
+            isCorrect
+          }
+        }
+      }
+    }
+  `;
 
+  const response = await graphqlClient.post("", {
+    query,
+    variables: {
+      surveyId: parseInt(surveyId, 10),
+      responseId,
+    },
+  });
+
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+
+  return response.data.data.surveyResponseDetail;
+}
