@@ -311,25 +311,28 @@ export default function ResponseDetail() {
                   className="question-header"
                   onClick={() => toggleQuestion(question.id)}
                 >
-                  <h3>{question.question}</h3>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="chevron-icon"
-                  >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
-                <div className="question-meta">
-                  <span>
-                    Score: {formatScore(question.score ?? 0)} /{" "}
-                    {formatScore(question.points ?? 0)}
-                  </span>
+                  <div className="question-header-content">
+                    <h3>{question.question}</h3>
+                  </div>
+                  <div className="question-header-right">
+                    {question.points > 0 && (
+                      <span className="question-points">
+                        {formatScore(question.score ?? 0)} / {formatScore(question.points)} pts
+                      </span>
+                    )}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="chevron-icon"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
                 </div>
                 <div className="question-answer">
                   {question.type === "text" ? (
@@ -338,18 +341,37 @@ export default function ResponseDetail() {
                     </div>
                   ) : question.options && question.options.length > 0 ? (
                     <div className="answer-options">
-                      {question.options.map((option) => (
-                        <div
-                          key={option.id}
-                          className={`answer-option ${
-                            option.selected ? "selected" : ""
-                          }`}
-                        >
-                          {option.text}
-                          {option.selected ? " (selected)" : ""}
-                          {option.isCorrect ? " (correct)" : ""}
-                        </div>
-                      ))}
+                      {question.options.map((option) => {
+                        const isSelected = option.selected;
+                        const isCorrect = option.isCorrect;
+                        const isCorrectAndSelected = isSelected && isCorrect;
+                        const isWrong = isSelected && !isCorrect;
+                        
+                        return (
+                          <div
+                            key={option.id}
+                            className={`answer-option ${
+                              isCorrectAndSelected ? "correct-selected" : ""
+                            } ${isWrong ? "wrong-selected" : ""}`}
+                          >
+                            <span className="option-text">{option.text}</span>
+                            {isCorrect && (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                className="check-icon"
+                              >
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="answer-text">No options available.</div>
