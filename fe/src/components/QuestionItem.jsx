@@ -243,6 +243,26 @@ export default function QuestionItem({
                       setDraggedIndex(optionIndex);
                       e.dataTransfer.effectAllowed = "move";
                       e.dataTransfer.setData("text/plain", optionIndex.toString());
+                      
+                      // Tạo custom drag image từ cả dòng đáp án
+                      const rowElement = e.currentTarget.closest('.flex.items-center.group');
+                      if (rowElement) {
+                        const dragImage = rowElement.cloneNode(true);
+                        dragImage.style.position = "absolute";
+                        dragImage.style.top = "-9999px";
+                        dragImage.style.left = "-9999px";
+                        dragImage.style.width = rowElement.offsetWidth + "px";
+                        dragImage.style.backgroundColor = "#ffffff";
+                        dragImage.style.border = "3px solid #7c3aed";
+                        dragImage.style.borderRadius = "8px";
+                        dragImage.style.padding = "10px";
+                        dragImage.style.boxShadow = "0 8px 24px rgba(124, 58, 237, 0.3), 0 4px 8px rgba(0,0,0,0.1)";
+                        dragImage.style.transform = "scale(1.02)";
+                        dragImage.style.fontWeight = "600";
+                        document.body.appendChild(dragImage);
+                        e.dataTransfer.setDragImage(dragImage, 30, 20);
+                        setTimeout(() => document.body.removeChild(dragImage), 0);
+                      }
                     };
 
                     const handleDragOver = (e) => {
@@ -285,14 +305,17 @@ export default function QuestionItem({
                     return (
                       <div
                         key={option.id}
-                        className="flex items-center group"
+                        className="inline-flex items-center group"
                         onClick={(e) => e.stopPropagation()}
                         style={{
                           gap: "8px",
                           minHeight: "40px",
-                          opacity: isDragging ? 0.5 : 1,
-                          transition: "opacity 0.2s",
-                          backgroundColor: isDragOver ? "#f3f4f6" : "transparent",
+                          opacity: isDragging ? 1 : 1,
+                          transition: "all 0.2s",
+                          backgroundColor: isDragging ? "#ffffff" : (isDragOver ? "#f3f4f6" : "transparent"),
+                          border: isDragging ? "2px solid #7c3aed" : "2px solid transparent",
+                          borderRadius: isDragging ? "6px" : "0px",
+                          padding: isDragging ? "4px" : "0px",
                         }}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
@@ -335,7 +358,7 @@ export default function QuestionItem({
                                 <line x1="6" y1="6" x2="18" y2="18" />
                               </svg>
                             </button>
-                            {/* Icon grid để di chuyển - 14x14, có thể drag and drop */}
+                            {/* Icon 6 chấm nằm ngang để di chuyển */}
                             <div
                               draggable={isActive}
                               onDragStart={handleDragStart}
@@ -343,7 +366,7 @@ export default function QuestionItem({
                               className="cursor-move flex-shrink-0 hover:bg-gray-200 rounded transition-colors"
                               title="Nhấn giữ và kéo để di chuyển đáp án"
                               style={{
-                                width: "14px",
+                                width: "18px",
                                 height: "14px",
                                 display: "flex",
                                 alignItems: "center",
@@ -354,20 +377,18 @@ export default function QuestionItem({
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                width="14"
-                                height="14"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+                                width="18"
+                                height="10"
+                                viewBox="0 0 18 10"
+                                fill="currentColor"
                                 className="text-gray-600"
                               >
-                                <rect x="3" y="3" width="7" height="7" />
-                                <rect x="14" y="3" width="7" height="7" />
-                                <rect x="3" y="14" width="7" height="7" />
-                                <rect x="14" y="14" width="7" height="7" />
+                                <circle cx="2" cy="2" r="1.5" />
+                                <circle cx="9" cy="2" r="1.5" />
+                                <circle cx="16" cy="2" r="1.5" />
+                                <circle cx="2" cy="8" r="1.5" />
+                                <circle cx="9" cy="8" r="1.5" />
+                                <circle cx="16" cy="8" r="1.5" />
                               </svg>
                             </div>
                           </>
@@ -511,6 +532,26 @@ export default function QuestionItem({
                     setDraggedIndex(optionIndex);
                     e.dataTransfer.effectAllowed = "move";
                     e.dataTransfer.setData("text/plain", optionIndex.toString());
+                    
+                    // Tạo custom drag image từ cả dòng đáp án
+                    const rowElement = e.currentTarget.closest('.flex.items-center.group');
+                    if (rowElement) {
+                      const dragImage = rowElement.cloneNode(true);
+                      dragImage.style.position = "absolute";
+                      dragImage.style.top = "-9999px";
+                      dragImage.style.left = "-9999px";
+                      dragImage.style.width = rowElement.offsetWidth + "px";
+                      dragImage.style.backgroundColor = "#ffffff";
+                      dragImage.style.border = "3px solid #7c3aed";
+                      dragImage.style.borderRadius = "8px";
+                      dragImage.style.padding = "10px";
+                      dragImage.style.boxShadow = "0 8px 24px rgba(124, 58, 237, 0.3), 0 4px 8px rgba(0,0,0,0.1)";
+                      dragImage.style.transform = "scale(1.02)";
+                      dragImage.style.fontWeight = "600";
+                      document.body.appendChild(dragImage);
+                      e.dataTransfer.setDragImage(dragImage, 30, 20);
+                      setTimeout(() => document.body.removeChild(dragImage), 0);
+                    }
                   };
 
                   const handleDragOver = (e) => {
@@ -552,14 +593,17 @@ export default function QuestionItem({
                   return (
                     <div
                       key={option.id}
-                      className="flex items-center group"
+                      className="inline-flex items-center group"
                       onClick={(e) => e.stopPropagation()}
                       style={{
                         gap: "8px",
                         minHeight: "40px",
-                        opacity: isDragging ? 0.5 : 1,
-                        transition: "opacity 0.2s",
-                        backgroundColor: isDragOver ? "#f3f4f6" : "transparent",
+                        opacity: isDragging ? 1 : 1,
+                        transition: "all 0.2s",
+                        backgroundColor: isDragging ? "#ffffff" : (isDragOver ? "#f3f4f6" : "transparent"),
+                        border: isDragging ? "2px solid #7c3aed" : "2px solid transparent",
+                        borderRadius: isDragging ? "6px" : "0px",
+                        padding: isDragging ? "4px" : "0px",
                       }}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
@@ -602,7 +646,7 @@ export default function QuestionItem({
                               <line x1="6" y1="6" x2="18" y2="18" />
                             </svg>
                           </button>
-                          {/* Icon grid để di chuyển - 14x14, có thể drag and drop */}
+                          {/* Icon 6 chấm nằm ngang để di chuyển */}
                           <div
                             draggable={isActive}
                             onDragStart={handleDragStart}
@@ -610,7 +654,7 @@ export default function QuestionItem({
                             className="cursor-move flex-shrink-0 hover:bg-gray-200 rounded transition-colors"
                             title="Nhấn giữ và kéo để di chuyển đáp án"
                             style={{
-                              width: "14px",
+                              width: "18px",
                               height: "14px",
                               display: "flex",
                               alignItems: "center",
@@ -621,20 +665,18 @@ export default function QuestionItem({
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
+                              width="18"
+                              height="10"
+                              viewBox="0 0 18 10"
+                              fill="currentColor"
                               className="text-gray-600"
                             >
-                              <rect x="3" y="3" width="7" height="7" />
-                              <rect x="14" y="3" width="7" height="7" />
-                              <rect x="3" y="14" width="7" height="7" />
-                              <rect x="14" y="14" width="7" height="7" />
+                              <circle cx="2" cy="2" r="1.5" />
+                              <circle cx="9" cy="2" r="1.5" />
+                              <circle cx="16" cy="2" r="1.5" />
+                              <circle cx="2" cy="8" r="1.5" />
+                              <circle cx="9" cy="8" r="1.5" />
+                              <circle cx="16" cy="8" r="1.5" />
                             </svg>
                           </div>
                         </>
