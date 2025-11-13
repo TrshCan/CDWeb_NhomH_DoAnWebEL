@@ -176,9 +176,7 @@ export default function RawDataList() {
   };
 
   const handleViewDetail = (responseId) => {
-    toast.success(`Chuyển hướng đến Chi tiết Câu trả lời cho Phản hồi ID: #${responseId}`);
-    // TODO: Navigate to detail page
-    // navigate(`/surveys/${surveyId}/responses/${responseId}`);
+    navigate(`/surveys/${surveyId}/responses/${responseId}`);
   };
 
   // Initialize and update charts with real data
