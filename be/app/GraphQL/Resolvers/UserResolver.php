@@ -28,6 +28,16 @@ class UserResolver
         return $user;
     }
 
+    public function forgotPassword($_, array $args)
+    {
+        return $this->userService->forgotPassword($args['email']);
+    }
+
+    public function resetPassword($_, array $args)
+    {
+        return $this->userService->resetPassword($args);
+    }
+
     // Resolver cho stats
     public function stats(User $user)
     {

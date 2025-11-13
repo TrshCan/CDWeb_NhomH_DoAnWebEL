@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Mail;
 
 class User extends Authenticatable
 {
@@ -99,5 +100,38 @@ class User extends Authenticatable
     public function isStudent(): bool
     {
         return $this->role === 'student';
+    }
+
+    // ============================
+    // 🔹 PASSWORD RESET
+    // ============================
+
+    /**
+     * Send the password reset notification.
+     * This follows industry standard by using Laravel's notification system
+     * but with our custom email template.
+     *
+     * @param  string  $token
+     * @param  string  $resetUrl
+     * @return void
+     */
+    public function sendPasswordResetNotification($token, $resetUrl = null)
+    {
+        // If no custom URL provided, build the default one
+        if (!$resetUrl) {
+            $resetUrl = config('app.frontend_url', 'http://localhost:3000')
+                      . '/reset-password?token=' . $token
+                      . '&email=' . urlencode($this->email);
+        }
+
+        // Send email using our custom template
+        Mail::send('emails.reset-password', [
+            'user' => $this,
+            'resetUrl' => $resetUrl,
+            'token' => $token
+        ], function ($message) {
+            $message->to($this->email, $this->name)
+                    ->subject('Đặt lại mật khẩu - TDC SocialSphere');
+        });
     }
 }

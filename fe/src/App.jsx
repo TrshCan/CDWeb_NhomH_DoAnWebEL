@@ -8,6 +8,8 @@ import Feed from "./components/Feed.jsx";
 import Profile from "./pages/Profile.jsx";
 import MainLayout from "./layouts/MainLayout.jsx";
 import UserManagement from "./pages/UserManagement.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 
 export default function App() {
   return (
@@ -18,12 +20,13 @@ export default function App() {
         <Route index element={<Feed />} /> {/* mặc định là Feed */}
         <Route path="profile" element={<Profile />} />
         <Route path="edit-profile" element={<UserManagement />} />
-
         {/* sau này sẽ thêm các route như profile expole v.v*/}
       </Route>
-      
+
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
   );
 }

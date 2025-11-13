@@ -34,6 +34,17 @@ type Mutation {
       address: String
     ): User
       @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@registerUser")
+
+  forgotPassword(
+    email: String!
+  ): String @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@forgotPassword")
+
+  resetPassword(
+    token: String!
+    email: String!
+    password: String!
+    passwordConfirmation: String!
+  ): String @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@resetPassword")
 }
 
 type AuthPayload {
