@@ -2,7 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import "../assets/css/ResponseDetail.css";
+import "../assets/css/RawDataList.css";
 import { getSurveyResponseDetail } from "../api/graphql/survey";
+import { exportResponseDetailCSV } from "../utils/exports/responseDetail/csv";
+import { exportResponseDetailExcel } from "../utils/exports/responseDetail/excel";
+import { exportResponseDetailPDF } from "../utils/exports/responseDetail/pdf";
 
 export default function ResponseDetail() {
   const navigate = useNavigate();
@@ -11,6 +15,7 @@ export default function ResponseDetail() {
   const [responseData, setResponseData] = useState(null);
   const [expandedQuestions, setExpandedQuestions] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const itemsPerPage = 10;
 
   const participant = responseData?.participant ?? {};
@@ -100,8 +105,36 @@ export default function ResponseDetail() {
   };
 
   const handleDownloadPDF = () => {
-    toast.success("Downloading response as PDF...");
-    // TODO: Implement PDF download
+    setShowDownloadModal(true);
+  };
+
+  const handleCloseDownloadModal = () => {
+    setShowDownloadModal(false);
+  };
+
+  const handleDownload = (format) => {
+    setShowDownloadModal(false);
+    if (!responseData) {
+      toast.error("Không có dữ liệu để xuất");
+      return;
+    }
+    try {
+      if (format === "csv") {
+        exportResponseDetailCSV({ responseData });
+        toast.success("Đã tải xuống CSV");
+      } else if (format === "excel") {
+        exportResponseDetailExcel({ responseData });
+        toast.success("Đã tải xuống Excel");
+      } else if (format === "pdf") {
+        exportResponseDetailPDF({ responseData });
+        toast.success("Đã tải xuống PDF");
+      } else {
+        toast.error("Định dạng không hỗ trợ");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || "Không thể xuất dữ liệu");
+    }
   };
 
   const toggleQuestion = (questionId) => {
@@ -236,6 +269,83 @@ export default function ResponseDetail() {
           </button>
         </div>
       </header>
+
+      {showDownloadModal && (
+        <div className="modal-overlay" onClick={handleCloseDownloadModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Chọn định dạng tải xuống</h3>
+              <button className="modal-close" onClick={handleCloseDownloadModal}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <button className="download-option download-option-excel" onClick={() => handleDownload('excel')}>
+                <div className="download-option-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                </div>
+                <div className="download-option-content">
+                  <h4>Excel</h4>
+                  <p>Tải xuống dạng bảng tính (.xlsx)</p>
+                </div>
+                <div className="download-option-arrow">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+              </button>
+
+              <button className="download-option download-option-pdf" onClick={() => handleDownload('pdf')}>
+                <div className="download-option-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                </div>
+                <div className="download-option-content">
+                  <h4>PDF</h4>
+                  <p>Tải xuống báo cáo chi tiết (.pdf)</p>
+                </div>
+                <div className="download-option-arrow">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+              </button>
+
+              <button className="download-option download-option-csv" onClick={() => handleDownload('csv')}>
+                <div className="download-option-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="9" y1="12" x2="15" y2="12" />
+                    <line x1="9" y1="16" x2="15" y2="16" />
+                  </svg>
+                </div>
+                <div className="download-option-content">
+                  <h4>CSV</h4>
+                  <p>Tải xuống dữ liệu (.csv)</p>
+                </div>
+                <div className="download-option-arrow">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="response-layout">
         {/* Sidebar */}
