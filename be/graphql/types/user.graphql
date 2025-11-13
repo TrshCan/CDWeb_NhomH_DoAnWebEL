@@ -1,5 +1,14 @@
 type User {
   id: ID!
-  name: String
-  email: String
+  name: String!
+  email: String!
+  phone: String
+  address: String
+  created_at: DateTime!
+  role: String
+  avatar: String
+  email_verified_at: DateTime
+  emailVerified: Boolean! @method(name: "hasVerifiedEmail")
+  stats: UserStats @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@stats")
+  badges: [UserBadge!]! @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@badges")
 }

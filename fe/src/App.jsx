@@ -8,6 +8,7 @@ import Feed from "./components/Feed.jsx";
 import Profile from "./pages/Profile.jsx";
 import MainLayout from "./layouts/MainLayout.jsx";
 import UserManagement from "./pages/UserManagement.jsx";
+import EmailVerificationResult from "./pages/EmailVerificationResult.jsx";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
       
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/email-verified" element={<EmailVerificationResult />} />
     </Routes>
   );
 }

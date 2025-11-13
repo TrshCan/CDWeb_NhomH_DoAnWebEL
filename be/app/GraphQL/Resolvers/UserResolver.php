@@ -28,6 +28,11 @@ class UserResolver
         return $user;
     }
 
+    public function resendVerificationEmail($_, array $args): bool
+    {
+        return $this->userService->resendVerificationEmail($args['email']);
+    }
+
     // Resolver cho stats
     public function stats(User $user)
     {

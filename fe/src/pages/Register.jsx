@@ -97,12 +97,12 @@ function RegisterForm() {
                 // Mutation thành công
                 let second = 3;
                 setCountdown(second);
-                setMessage(`Đăng ký thành công! Bạn sẽ được chuyển trang trong vòng ${second} giây...`);
+                setMessage(`Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`);
 
                 const interval = setInterval(() => {
                     second -= 1;
                     setCountdown(second);
-                    setMessage(`Đăng ký thành công! Bạn sẽ được chuyển trang trong vòng ${second} giây...`);
+                    setMessage(`Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`);
 
                     if (second === 0) {
                         clearInterval(interval);

@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 use Exception;
+use Illuminate\Auth\Events\Registered;
 
 class UserServices
 {
@@ -42,6 +43,12 @@ class UserServices
         if (!Hash::check($password, $user->password)) {
             throw ValidationException::withMessages([
                 'password' => 'Mật khẩu không đúng.',
+            ]);
+        }
+
+        if (!$user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'email' => 'Email chưa được xác thực. Vui lòng kiểm tra hộp thư để kích hoạt tài khoản.',
             ]);
         }
 
@@ -157,6 +164,9 @@ class UserServices
                 throw new Exception('Không thể tạo tài khoản, vui lòng thử lại.');
             }
 
+            event(new Registered($user));
+            $user->sendEmailVerificationNotification();
+
             $token = Str::random(60);
 
             return [
@@ -176,5 +186,26 @@ class UserServices
             Log::error('Lỗi hệ thống khi đăng ký: ' . $e->getMessage());
             throw new Exception('Đăng ký thất bại: ' . $e->getMessage());
         }
+    }
+
+    public function resendVerificationEmail(string $email): bool
+    {
+        $user = $this->userRepo->findByEmail($email);
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => 'Email không tồn tại trong hệ thống.',
+            ]);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'email' => 'Email đã được xác thực trước đó.',
+            ]);
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return true;
     }
 }
