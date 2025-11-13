@@ -115,25 +115,25 @@ export default function ResponseDetail() {
   const handleDownload = (format) => {
     setShowDownloadModal(false);
     if (!responseData) {
-      toast.error("Không có dữ liệu để xuất");
+      toast.error("No data to export");
       return;
     }
     try {
       if (format === "csv") {
         exportResponseDetailCSV({ responseData });
-        toast.success("Đã tải xuống CSV");
+        toast.success("CSV downloaded successfully");
       } else if (format === "excel") {
         exportResponseDetailExcel({ responseData });
-        toast.success("Đã tải xuống Excel");
+        toast.success("Excel downloaded successfully");
       } else if (format === "pdf") {
         exportResponseDetailPDF({ responseData });
-        toast.success("Đã tải xuống PDF");
+        toast.success("PDF downloaded successfully");
       } else {
-        toast.error("Định dạng không hỗ trợ");
+        toast.error("Unsupported format");
       }
     } catch (e) {
       console.error(e);
-      toast.error(e.message || "Không thể xuất dữ liệu");
+      toast.error(e.message || "Failed to export data");
     }
   };
 
@@ -274,7 +274,7 @@ export default function ResponseDetail() {
         <div className="modal-overlay" onClick={handleCloseDownloadModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Chọn định dạng tải xuống</h3>
+              <h3>Select Download Format</h3>
               <button className="modal-close" onClick={handleCloseDownloadModal}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -293,7 +293,7 @@ export default function ResponseDetail() {
                 </div>
                 <div className="download-option-content">
                   <h4>Excel</h4>
-                  <p>Tải xuống dạng bảng tính (.xlsx)</p>
+                  <p>Download as spreadsheet (.xlsx)</p>
                 </div>
                 <div className="download-option-arrow">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -314,7 +314,7 @@ export default function ResponseDetail() {
                 </div>
                 <div className="download-option-content">
                   <h4>PDF</h4>
-                  <p>Tải xuống báo cáo chi tiết (.pdf)</p>
+                  <p>Download detailed report (.pdf)</p>
                 </div>
                 <div className="download-option-arrow">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -334,7 +334,7 @@ export default function ResponseDetail() {
                 </div>
                 <div className="download-option-content">
                   <h4>CSV</h4>
-                  <p>Tải xuống dữ liệu (.csv)</p>
+                  <p>Download data file (.csv)</p>
                 </div>
                 <div className="download-option-arrow">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -2,9 +2,9 @@ import * as XLSX from "xlsx";
 import { sanitizeFileName } from "./csv";
 
 export function exportResponseDetailExcel({ responseData }) {
-  if (!responseData) throw new Error("Không có dữ liệu để xuất");
+  if (!responseData) throw new Error("No data to export");
 
-  const { surveyTitle = "Khảo sát", responseId } = responseData;
+  const { surveyTitle = "Survey", responseId } = responseData;
   const p = responseData.participant || {};
   const s = responseData.stats || {};
   const questions = Array.isArray(responseData.questions) ? responseData.questions : [];
@@ -13,27 +13,27 @@ export function exportResponseDetailExcel({ responseData }) {
 
   // Summary sheet
   const summary = [
-    ["Báo cáo Phản hồi"],
-    ["Khảo sát", surveyTitle],
-    ["Mã phản hồi", responseId],
-    ["Ngày xuất", new Date().toLocaleString("vi-VN")],
+    ["Response Report"],
+    ["Survey", surveyTitle],
+    ["Response ID", responseId],
+    ["Export Date", new Date().toLocaleString("en-US")],
     [],
-    ["Thông tin người tham gia"],
-    ["Họ tên", p.name || ""],
-    ["MSSV", p.studentId || ""],
-    ["Khoa", p.faculty || ""],
-    ["Lớp", p.class || ""],
-    ["Hoàn thành lúc", p.completedAt || ""],
+    ["Participant Information"],
+    ["Name", p.name || ""],
+    ["Student ID", p.studentId || ""],
+    ["Faculty", p.faculty || ""],
+    ["Class", p.class || ""],
+    ["Completed At", p.completedAt || ""],
     [],
-    ["Thống kê"],
-    ["Thời gian hoàn thành", s.completionTime || ""],
-    ["Số câu đã trả lời/Tổng câu", `${s.answeredQuestions || 0}/${s.totalQuestions || 0}`],
-    ["Điểm", s.totalScore || 0],
-    ["Điểm tối đa", s.maxScore || 0],
-    ["Phần trăm", s.scorePercentage != null ? `${s.scorePercentage}%` : ""],
+    ["Statistics"],
+    ["Completion Time", s.completionTime || ""],
+    ["Answered/Total Questions", `${s.answeredQuestions || 0}/${s.totalQuestions || 0}`],
+    ["Score", s.totalScore || 0],
+    ["Max Score", s.maxScore || 0],
+    ["Percentage", s.scorePercentage != null ? `${s.scorePercentage}%` : ""],
   ];
   const wsSummary = XLSX.utils.aoa_to_sheet(summary);
-  XLSX.utils.book_append_sheet(wb, wsSummary, "Tổng quan");
+  XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
 
   // Questions sheet
   const rows = questions.map((q, idx) => {
@@ -45,11 +45,11 @@ export function exportResponseDetailExcel({ responseData }) {
     }
     return {
       "#": idx + 1,
-      "Câu hỏi": q.question,
-      "Loại": q.type,
-      "Câu trả lời": answer,
-      "Điểm": q.score || 0,
-      "Điểm tối đa": q.points || 0,
+      "Question": q.question,
+      "Type": q.type,
+      "Answer": answer,
+      "Score": q.score || 0,
+      "Max Score": q.points || 0,
     };
   });
   const wsQ = XLSX.utils.json_to_sheet(rows);
@@ -66,7 +66,7 @@ export function exportResponseDetailExcel({ responseData }) {
     const range = XLSX.utils.decode_range(wsQ["!ref"]);
     wsQ["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: range.s.r, c: range.s.c }, e: { r: range.e.r, c: range.s.c + headerCount - 1 } }) };
   }
-  XLSX.utils.book_append_sheet(wb, wsQ, "Câu trả lời");
+  XLSX.utils.book_append_sheet(wb, wsQ, "Answers");
 
   const fileName = `${sanitizeFileName(surveyTitle)}_response_${sanitizeFileName(responseId)}_${Date.now()}.xlsx`;
   XLSX.writeFile(wb, fileName);

@@ -7,7 +7,7 @@ export function sanitizeFileName(name) {
 }
 
 export function exportResponseDetailCSV({ responseData }) {
-  if (!responseData) throw new Error("Không có dữ liệu để xuất");
+  if (!responseData) throw new Error("No data to export");
 
   const escape = (str) => {
     const s = String(str ?? "");
@@ -16,26 +16,26 @@ export function exportResponseDetailCSV({ responseData }) {
       : s;
   };
 
-  const { surveyTitle = "Khảo sát", responseId } = responseData;
+  const { surveyTitle = "Survey", responseId } = responseData;
   const p = responseData.participant || {};
   const s = responseData.stats || {};
   const questions = Array.isArray(responseData.questions) ? responseData.questions : [];
 
   let csv = "";
-  csv += `Tiêu đề,${escape(surveyTitle)}\n`;
-  csv += `Mã phản hồi,${escape(responseId)}\n\n`;
+  csv += `Title,${escape(surveyTitle)}\n`;
+  csv += `Response ID,${escape(responseId)}\n\n`;
 
-  csv += `Thông tin người tham gia\n`;
-  csv += `Họ tên,MSSV,Khoa,Lớp,Hoàn thành lúc\n`;
+  csv += `Participant Information\n`;
+  csv += `Name,Student ID,Faculty,Class,Completed At\n`;
   csv += `${escape(p.name||"")},${escape(p.studentId||"")},${escape(p.faculty||"")},${escape(p.class||"")},${escape(p.completedAt||"")}\n\n`;
 
-  csv += `Thống kê\n`;
-  csv += `Thời gian hoàn thành,Số câu đã trả lời/Tổng câu,Điểm,Tối đa,Phần trăm\n`;
+  csv += `Statistics\n`;
+  csv += `Completion Time,Answered/Total Questions,Score,Max Score,Percentage\n`;
   const answered = `${s.answeredQuestions||0}/${s.totalQuestions||0}`;
   csv += `${escape(s.completionTime||"")},${answered},${s.totalScore||0},${s.maxScore||0},${s.scorePercentage!=null?s.scorePercentage+"%":""}\n\n`;
 
-  csv += `Chi tiết câu hỏi\n`;
-  csv += `#,Câu hỏi,Loại,Câu trả lời,Điểm,Điểm tối đa\n`;
+  csv += `Question Details\n`;
+  csv += `#,Question,Type,Answer,Score,Max Score\n`;
   questions.forEach((q, idx) => {
     let answer = "";
     if (q.type === "text") {

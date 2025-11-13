@@ -3,9 +3,9 @@ import autoTable from "jspdf-autotable";
 import { sanitizeFileName } from "./csv";
 
 export function exportResponseDetailPDF({ responseData }) {
-  if (!responseData) throw new Error("Không có dữ liệu để xuất");
+  if (!responseData) throw new Error("No data to export");
 
-  const { surveyTitle = "Khảo sát", responseId } = responseData;
+  const { surveyTitle = "Survey", responseId } = responseData;
   const p = responseData.participant || {};
   const s = responseData.stats || {};
   const questions = Array.isArray(responseData.questions) ? responseData.questions : [];
@@ -16,7 +16,7 @@ export function exportResponseDetailPDF({ responseData }) {
   doc.rect(0, 0, doc.internal.pageSize.getWidth(), 20, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(14);
-  doc.text(`Báo cáo Phản hồi`, 14, 12);
+  doc.text(`Response Report`, 14, 12);
   doc.setFontSize(10);
   doc.text(`${surveyTitle} — #${responseId}`, 14, 18);
   doc.setTextColor(0, 0, 0);
@@ -25,10 +25,10 @@ export function exportResponseDetailPDF({ responseData }) {
     startY: 26,
     theme: 'plain',
     body: [
-      [{ content: `Họ tên: ${p.name || ''} | MSSV: ${p.studentId || ''} | Khoa: ${p.faculty || ''}` }],
-      [{ content: `Lớp: ${p.class || ''} | Hoàn thành lúc: ${p.completedAt || ''}` }],
-      [{ content: `Thời gian: ${s.completionTime || ''} | Trả lời: ${(s.answeredQuestions||0)}/${(s.totalQuestions||0)} | Điểm: ${(s.totalScore||0)}/${(s.maxScore||0)} (${s.scorePercentage!=null ? s.scorePercentage+'%' : ''})` }],
-      [{ content: `Ngày xuất: ${new Date().toLocaleString('vi-VN')}` }],
+      [{ content: `Name: ${p.name || ''} | Student ID: ${p.studentId || ''} | Faculty: ${p.faculty || ''}` }],
+      [{ content: `Class: ${p.class || ''} | Completed at: ${p.completedAt || ''}` }],
+      [{ content: `Time: ${s.completionTime || ''} | Answered: ${(s.answeredQuestions||0)}/${(s.totalQuestions||0)} | Score: ${(s.totalScore||0)}/${(s.maxScore||0)} (${s.scorePercentage!=null ? s.scorePercentage+'%' : ''})` }],
+      [{ content: `Export date: ${new Date().toLocaleString('en-US')}` }],
     ],
     styles: { fontSize: 10, cellPadding: 2 },
     margin: { top: 26, left: 14, right: 14 },
@@ -46,17 +46,17 @@ export function exportResponseDetailPDF({ responseData }) {
 
     doc.setFontSize(12);
     doc.setTextColor(55, 65, 81);
-    doc.text(`Câu hỏi ${idx + 1}: ${q.question}`, 14, currentY);
+    doc.text(`Question ${idx + 1}: ${q.question}`, 14, currentY);
     doc.setTextColor(0, 0, 0);
 
     const rows = [
-      ["Câu trả lời", answer || '(Không có)'],
-      ["Điểm", `${q.score || 0} / ${q.points || 0}`],
+      ["Answer", answer || '(No response)'],
+      ["Score", `${q.score || 0} / ${q.points || 0}`],
     ];
 
     autoTable(doc, {
       startY: currentY + 3,
-      head: [["Trường", "Giá trị"]],
+      head: [["Field", "Value"]],
       body: rows,
       theme: "striped",
       headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: "bold" },
@@ -69,7 +69,7 @@ export function exportResponseDetailPDF({ responseData }) {
         doc.setFontSize(9);
         doc.setTextColor(100);
         doc.text(
-          `Trang ${dataHook.pageNumber} / ${pageCount} — Xuất: ${new Date().toLocaleString('vi-VN')}`,
+          `Page ${dataHook.pageNumber} / ${pageCount} — Exported: ${new Date().toLocaleString('en-US')}`,
           pageWidth - 14,
           doc.internal.pageSize.getHeight() - 10,
           { align: 'right' }
