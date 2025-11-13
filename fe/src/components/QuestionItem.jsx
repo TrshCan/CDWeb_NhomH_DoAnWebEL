@@ -306,7 +306,6 @@ export default function QuestionItem({
                       <div
                         key={option.id}
                         className="inline-flex items-center group"
-                        onClick={(e) => e.stopPropagation()}
                         style={{
                           gap: "8px",
                           minHeight: "40px",
@@ -402,6 +401,7 @@ export default function QuestionItem({
                             onChange={() =>
                               onAnswerSelect?.(question.id, option.id, question.type)
                             }
+                            onClick={(e) => e.stopPropagation()}
                             className="text-violet-600 focus:ring-violet-500 border-2 border-gray-400 rounded cursor-pointer flex-shrink-0"
                             style={{
                               accentColor: "#7c3aed",
@@ -594,7 +594,6 @@ export default function QuestionItem({
                     <div
                       key={option.id}
                       className="inline-flex items-center group"
-                      onClick={(e) => e.stopPropagation()}
                       style={{
                         gap: "8px",
                         minHeight: "40px",
@@ -690,6 +689,7 @@ export default function QuestionItem({
                           onChange={() =>
                             onAnswerSelect?.(question.id, option.id, question.type)
                           }
+                          onClick={(e) => e.stopPropagation()}
                           className="text-violet-600 focus:ring-violet-500 border-2 border-gray-400 rounded cursor-pointer flex-shrink-0"
                           style={{
                             accentColor: "#7c3aed",

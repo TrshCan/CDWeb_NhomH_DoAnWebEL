@@ -383,9 +383,9 @@ export default function App() {
         helpText: "",
         type: questionType,
         options: [
-          { id: 1, text: "Subquestion 1" },
-          { id: 2, text: "Subquestion 2" },
-          { id: 3, text: "Subquestion 3" },
+          { id: 1, text: "" },
+          { id: 2, text: "" },
+          { id: 3, text: "" },
         ],
       };
 
