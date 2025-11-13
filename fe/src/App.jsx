@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import WelcomeSection from "./components/WelcomeSection";
 import QuestionSection from "./components/QuestionSection";
 import AddSection from "./components/AddSection";
@@ -50,10 +50,14 @@ export default function App() {
     },
   ]);
 
-  // Helper: lấy tất cả questionItems từ tất cả groups (để tương thích với code cũ)
-  const getAllQuestionItems = () => {
-    return questionGroups.flatMap((group) => group.questions);
-  };
+  // ✅ Memo hóa tất cả câu hỏi để tránh flatMap lặp lại
+  const allQuestions = useMemo(
+    () => questionGroups.flatMap((group) => group.questions),
+    [questionGroups]
+  );
+
+  // Helper: lấy tất cả questionItems từ tất cả groups (giữ API cũ)
+  const getAllQuestionItems = () => allQuestions;
 
   // STATE: Tổng quát
   const [generalSettings, setGeneralSettings] = useState({
@@ -141,7 +145,6 @@ export default function App() {
         !isClickOnModal &&
         activeSection !== null
       ) {
-        // Kiểm tra xem có phải click vào background gray không
         const bgElement = clickedElement.closest(".bg-gray-100");
         if (bgElement || clickedElement.classList.contains("bg-gray-100")) {
           setActiveSection(null);
@@ -235,7 +238,11 @@ export default function App() {
         questions: group.questions.map((q) => {
           if (q.id === questionId) {
             const newOptions = [...q.options];
-            if (fromIndex !== toIndex && toIndex >= 0 && toIndex < newOptions.length) {
+            if (
+              fromIndex !== toIndex &&
+              toIndex >= 0 &&
+              toIndex < newOptions.length
+            ) {
               const [removed] = newOptions.splice(fromIndex, 1);
               newOptions.splice(toIndex, 0, removed);
               return { ...q, options: newOptions };
@@ -248,17 +255,15 @@ export default function App() {
   };
 
   const handleOpenPanel = (panel) => {
-    // Nếu mở settings => lưu panel phải hiện tại và ẩn nó tạm thời
     if (panel === "settings") {
-      if (rightPanel) setPrevRightPanel(rightPanel); // ✅ nhớ lại panel đang mở
-      setRightPanel(null); // ẩn tạm
+      if (rightPanel) setPrevRightPanel(rightPanel);
+      setRightPanel(null);
       setSettingsTab("general");
     }
 
-    // Nếu rời khỏi settings => khôi phục panel phải trước đó
     if (openPanel === "settings" && panel !== "settings") {
       if (prevRightPanel) {
-        setRightPanel(prevRightPanel); // ✅ bật lại panel cũ (vd: welcome)
+        setRightPanel(prevRightPanel);
         setPrevRightPanel(null);
       }
     }
@@ -275,10 +280,10 @@ export default function App() {
       const questionId = sectionId.replace("question-", "");
       setRightPanel(`question-${questionId}`);
       setActiveQuestionId(questionId);
-      // Khởi tạo cài đặt mặc định nếu chưa có
       if (!questionSettings[questionId]) {
-        const allQuestions = getAllQuestionItems();
-        const question = allQuestions.find((q) => String(q.id) === questionId);
+        const question = allQuestions.find(
+          (q) => String(q.id) === String(questionId)
+        );
         setQuestionSettings((prev) => ({
           ...prev,
           [questionId]: {
@@ -297,8 +302,9 @@ export default function App() {
     requestAnimationFrame(() => {
       const el = document.getElementById(sectionId);
       if (el) {
-        const yOffset = -100; // ⚙️ offset theo chiều cao header (60px) + margin
-        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        const yOffset = -100;
+        const y =
+          el.getBoundingClientRect().top + window.pageYOffset + yOffset;
         window.scrollTo({ top: y, behavior: "smooth" });
       }
     });
@@ -307,12 +313,10 @@ export default function App() {
   const handleToggleModal = () => {
     setIsModalOpen((prev) => {
       const newValue = !prev;
-      // Khi mở modal: lưu rightPanel hiện tại và ẩn nó
       if (newValue) {
         setSavedRightPanel(rightPanel);
         setRightPanel(null);
       } else {
-        // Khi đóng modal: khôi phục rightPanel
         if (savedRightPanel) {
           setRightPanel(savedRightPanel);
           setSavedRightPanel(null);
@@ -342,23 +346,25 @@ export default function App() {
     );
   };
 
+  const createDefaultOptions = (questionType) =>
+    questionType === "Danh sách (nút chọn)" || questionType === "Danh sách có nhận xét (Radio)"
+      ? [
+        { id: 1, text: "" },
+        { id: 2, text: "" },
+        { id: 3, text: "" },
+        { id: 4, text: "Không có câu trả lời" },
+      ]
+      : [
+        { id: 1, text: "" },
+        { id: 2, text: "" },
+        { id: 3, text: "" },
+      ];
+
   // Thêm câu hỏi mới vào group cuối cùng
   const addQuestionItem = (questionType = "Mặc định", groupId = null) => {
     setQuestionGroups((prev) => {
       if (prev.length === 0) {
-        // Tạo options dựa trên loại câu hỏi
-        const defaultOptions = questionType === "Danh sách (nút chọn)"
-          ? [
-              { id: 1, text: "" },
-              { id: 2, text: "" },
-              { id: 3, text: "" },
-              { id: 4, text: "Không có câu trả lời" },
-            ]
-          : [
-              { id: 1, text: "" },
-              { id: 2, text: "" },
-              { id: 3, text: "" },
-            ];
+        const defaultOptions = createDefaultOptions(questionType);
 
         const newItem = {
           id: 1,
@@ -382,24 +388,12 @@ export default function App() {
 
       if (!targetGroup) return prev;
 
-      // Tìm id lớn nhất của tất cả questions
       const maxId = Math.max(
         ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
       );
       const newId = maxId + 1;
-      // Tạo options dựa trên loại câu hỏi
-      const defaultOptions = questionType === "Danh sách (nút chọn)"
-        ? [
-            { id: 1, text: "" },
-            { id: 2, text: "" },
-            { id: 3, text: "" },
-            { id: 4, text: "Không có câu trả lời" },
-          ]
-        : [
-            { id: 1, text: "" },
-            { id: 2, text: "" },
-            { id: 3, text: "" },
-          ];
+
+      const defaultOptions = createDefaultOptions(questionType);
 
       const newItem = {
         id: newId,
@@ -434,7 +428,6 @@ export default function App() {
         const src = group.questions[index];
         if (!src) return group;
 
-        // Tìm id lớn nhất của tất cả questions để tạo id mới
         const maxId = Math.max(
           ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
         );
@@ -444,11 +437,12 @@ export default function App() {
           ...src,
           id: newId,
           text: "",
-          options: src.options || [
-            { id: 1, text: "Subquestion 1" },
-            { id: 2, text: "Subquestion 2" },
-            { id: 3, text: "Subquestion 3" },
-          ],
+          options:
+            src.options || [
+              { id: 1, text: "Subquestion 1" },
+              { id: 2, text: "Subquestion 2" },
+              { id: 3, text: "Subquestion 3" },
+            ],
         };
         const newQuestions = [...group.questions];
         newQuestions.splice(index + 1, 0, clone);
@@ -459,25 +453,21 @@ export default function App() {
     toast.success("Đã nhân bản câu hỏi");
   };
 
-  // Duplicate toàn bộ group (duplicate group đầu tiên)
   const duplicateGroup = (groupId = null) => {
     setQuestionGroups((prev) => {
       if (prev.length === 0) return prev;
 
-      // Nếu không có groupId, duplicate group đầu tiên
       const sourceGroup = groupId
         ? prev.find((g) => g.id === groupId)
         : prev[0];
 
       if (!sourceGroup) return prev;
 
-      // Tìm id lớn nhất của groups và questions
       const maxGroupId = Math.max(...prev.map((g) => g.id || 0));
       const maxQuestionId = Math.max(
         ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
       );
 
-      // Duplicate tất cả câu hỏi với id mới
       const duplicatedQuestions = sourceGroup.questions.map(
         (question, index) => ({
           ...question,
@@ -485,7 +475,6 @@ export default function App() {
         })
       );
 
-      // Tạo group mới
       const newGroup = {
         id: maxGroupId + 1,
         title: sourceGroup.title,
@@ -497,7 +486,6 @@ export default function App() {
     toast.success("Đã nhân bản nhóm câu hỏi");
   };
 
-  // Delete group
   const deleteGroup = (groupId) => {
     const ok = window.confirm("Bạn có chắc muốn xoá nhóm câu hỏi này?");
     if (!ok) return;
@@ -505,7 +493,6 @@ export default function App() {
     setQuestionGroups((prev) => {
       const filtered = prev.filter((g) => g.id !== groupId);
       if (filtered.length === 0) {
-        // Nếu xóa hết, tạo group mặc định
         return [
           {
             id: 1,
@@ -542,14 +529,10 @@ export default function App() {
   };
 
   // ===================== LOGIC HIỂN THỊ/ẨN CÂU HỎI =====================
-  // Xử lý khi người dùng chọn đáp án
-  // Xử lý khi người dùng chọn đáp án
-  // ✅ Hỗ trợ chọn nhiều đáp án nếu type === "Nhiều lựa chọn"
   const handleAnswerSelect = (questionId, optionId, questionType) => {
     setSelectedAnswers((prev) => {
       const prevValue = prev[questionId];
 
-      // Nếu là câu "Nhiều lựa chọn" => cho phép nhiều đáp án (mảng)
       if (questionType === "Nhiều lựa chọn") {
         const optionIdStr = String(optionId);
         const prevArray = Array.isArray(prevValue)
@@ -560,10 +543,8 @@ export default function App() {
 
         let newArray;
         if (prevArray.includes(optionIdStr)) {
-          // Bỏ chọn nếu đang được chọn
           newArray = prevArray.filter((id) => id !== optionIdStr);
         } else {
-          // Thêm nếu chưa được chọn
           newArray = [...prevArray, optionIdStr];
         }
 
@@ -573,7 +554,6 @@ export default function App() {
         };
       }
 
-      // Các loại câu khác: vẫn là một đáp án duy nhất
       return {
         ...prev,
         [questionId]: optionId,
@@ -581,21 +561,16 @@ export default function App() {
     });
   };
 
-  // Kiểm tra xem câu hỏi có nên hiển thị không dựa trên điều kiện
-  // ✅ Hỗ trợ cả trường hợp selectedAnswers[field] là mảng (câu nhiều lựa chọn)
   const shouldShowQuestion = (questionId) => {
-    // Trong chế độ thiết kế, luôn hiển thị tất cả câu hỏi
     if (viewMode === "design") {
       return true;
     }
 
-    // Trong chế độ preview, áp dụng logic điều kiện
     const settings = questionSettings[questionId];
     if (!settings || !settings.conditions || settings.conditions.length === 0) {
-      return true; // Không có điều kiện => luôn hiển thị
+      return true;
     }
 
-    // Helper nhỏ: kiểm tra selected có chứa value (dù là scalar hay array)
     const matchSelected = (selected, value) => {
       if (Array.isArray(selected)) {
         return selected.map(String).includes(String(value));
@@ -603,12 +578,11 @@ export default function App() {
       return String(selected) === String(value);
     };
 
-    // Kiểm tra từng điều kiện
     for (const condition of settings.conditions) {
       if (condition.type === "question" && condition.field && condition.value) {
         const selected = selectedAnswers[condition.field];
         if (matchSelected(selected, condition.value)) {
-          return true; // Điều kiện thỏa mãn
+          return true;
         }
       } else if (
         condition.type === "participant" &&
@@ -621,22 +595,20 @@ export default function App() {
           matchSelected(selected, condition.value) &&
           String(condition.targetQuestionId) === String(questionId)
         ) {
-          return true; // Điều kiện thỏa mãn
+          return true;
         }
       }
     }
 
-    return false; // Không có điều kiện nào thỏa mãn
+    return false;
   };
 
-  // Lấy thông tin điều kiện hiển thị của câu hỏi (để hiển thị badge)
   const getQuestionConditionInfo = (questionId) => {
     const settings = questionSettings[questionId];
     if (!settings || !settings.conditions || settings.conditions.length === 0) {
       return null;
     }
 
-    const allQuestions = getAllQuestionItems();
     const messages = [];
 
     for (const condition of settings.conditions) {
@@ -686,7 +658,6 @@ export default function App() {
 
     return messages.length > 0 ? messages : null;
   };
-  // =============================================================
 
   const renderLeftPanel = () => {
     if (!openPanel) return null;
@@ -750,19 +721,15 @@ export default function App() {
   return (
     <>
       <div className="min-h-screen bg-gray-100 font-sans overflow-visible pt-[60px]">
-        {/* Header 60px (full width, cố định) */}
         <HeaderBar
           title={generalSettings?.title}
           savedAt={savedAt}
           onActivate={() => toast.success("Đã kích hoạt")}
-        // logoSrc="/logo.svg"
         />
 
-        {/* Panel trái (1 lần) */}
         <SidebarRail active={openPanel} onOpen={handleOpenPanel} />
         {renderLeftPanel()}
 
-        {/* Panel phải: Welcome settings (1 lần) - ẩn khi modal thêm mở */}
         {rightPanel === "welcome" && !isModalOpen && (
           <div className="fixed top-[60px] right-0 h-[calc(100vh-60px)] w-[300px] z-40 bg-white border-l border-gray-300">
             <WelcomeSettingsPanel
@@ -770,13 +737,12 @@ export default function App() {
               onChange={setWelcomeSettings}
               onClose={() => {
                 setRightPanel(null);
-                setActiveSection(null); // ⬅️ khi nhấn X thì tắt panel và bỏ chọn
+                setActiveSection(null);
               }}
             />
           </div>
         )}
 
-        {/* Panel phải: Question settings - ẩn khi modal thêm mở */}
         {rightPanel?.startsWith("question-") &&
           activeQuestionId &&
           !isModalOpen && (
@@ -784,21 +750,50 @@ export default function App() {
               <QuestionSettingsPanel
                 value={questionSettings[activeQuestionId] || {}}
                 onChange={(newSettings) => {
-                  // Cập nhật cài đặt panel
                   setQuestionSettings((prev) => ({
                     ...prev,
                     [activeQuestionId]: newSettings,
                   }));
 
-                  // Đồng bộ sang danh sách câu hỏi
-                  setQuestionGroups((prev) =>
-                    prev.map((group) => ({
+                  setQuestionGroups((prevGroups) =>
+                    prevGroups.map((group) => ({
                       ...group,
-                      questions: group.questions.map((q) =>
-                        String(q.id) === String(activeQuestionId)
-                          ? { ...q, ...newSettings }
-                          : q
-                      ),
+                      questions: group.questions.map((q) => {
+                        if (String(q.id) !== String(activeQuestionId)) return q;
+
+                        let updated = { ...q, ...newSettings };
+                        const newType = newSettings.type || q.type;
+
+                        if (newType === "Danh sách (nút chọn)") {
+                          const options = updated.options || [];
+
+                          const hasNoAnswer = options.some(
+                            (opt) =>
+                              (opt.text || "").trim() === "Không có câu trả lời"
+                          );
+
+                          if (!hasNoAnswer) {
+                            const maxOptionId =
+                              options.length > 0
+                                ? Math.max(
+                                  ...options.map((opt) => opt.id || 0)
+                                )
+                                : 0;
+
+                            const noAnswerOption = {
+                              id: maxOptionId + 1,
+                              text: "Không có câu trả lời",
+                            };
+
+                            updated = {
+                              ...updated,
+                              options: [...options, noAnswerOption],
+                            };
+                          }
+                        }
+
+                        return updated;
+                      }),
                     }))
                   );
 
@@ -809,26 +804,22 @@ export default function App() {
                   setActiveQuestionId(null);
                   setActiveSection(null);
                 }}
-                questionItems={getAllQuestionItems()}
+                questionItems={allQuestions}
                 currentQuestionId={activeQuestionId}
               />
             </div>
           )}
 
-        {/* ===== Trung tâm: 3 vùng cố định, KHÔNG xê dịch ===== */}
         <div className="overflow-visible" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start">
-            {/* Spacer trái: 55px (offset) + 18rem (w-72) = 343px */}
             <div className="shrink-0 w-[343px]" />
 
-            {/* Khối giữa: 750/900 "net", KHÔNG padding ngang, luôn giữa 2 spacer */}
             <div className="flex-1 flex justify-center">
               <div
                 id="center-750"
                 className="relative isolate"
                 style={{ width: centerWidth, boxSizing: "content-box" }}
               >
-                {/* KHÔNG đặt px-4 ở đây để khỏi mất width net */}
                 <div className="flex flex-col space-y-6">
                   {openPanel === "settings" ? (
                     settingsTab === "general" ? (
@@ -851,7 +842,7 @@ export default function App() {
                         <WelcomeSection
                           isActive={activeSection === "welcome"}
                           onClick={() => handleSetSection("welcome")}
-                          questionCount={getAllQuestionItems().length}
+                          questionCount={allQuestions.length}
                         />
                       </div>
 
@@ -869,12 +860,10 @@ export default function App() {
                             activeSection={activeSection}
                             handleSetSection={handleSetSection}
                             onDuplicate={(questionIndex) => {
-                              // Duplicate câu hỏi trong group hiện tại
                               duplicateQuestionItem(group.id, questionIndex);
                             }}
                             onDuplicateGroup={() => duplicateGroup(group.id)}
                             onDelete={(questionIndex) => {
-                              // Xóa câu hỏi trong group hiện tại
                               deleteQuestionItem(group.id, questionIndex);
                             }}
                             onDeleteGroup={() => deleteGroup(group.id)}
@@ -899,7 +888,6 @@ export default function App() {
                           <AddSection
                             onAddClick={() => {
                               handleToggleModal();
-                              // Lưu groupId tạm thời để addQuestionItem sử dụng
                               window.__currentGroupId = group.id;
                             }}
                             isModalOpen={isModalOpen}
@@ -922,7 +910,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Spacer phải: đúng bằng chiều rộng panel phải */}
             <div className="shrink-0 w-[300px]" />
           </div>
         </div>

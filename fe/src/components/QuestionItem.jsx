@@ -46,6 +46,11 @@ export default function QuestionItem({
     return String(selectedAnswer) === String(optionId);
   };
 
+  // ✅ Helper: kiểm tra xem có phải loại radio button không
+  const isRadioType = () => {
+    return question.type === "Danh sách (nút chọn)" || question.type === "Danh sách có nhận xét (Radio)";
+  };
+
   return (
     <div
       className="relative"
@@ -58,7 +63,7 @@ export default function QuestionItem({
     >
       {/* Dấu * cho câu hỏi bắt buộc (chỉ hiện khi Bật/true) */}
       {question?.required === true && (
-        <span className="absolute top-2 right-4 z-50 text-red-500 text-[25px] font-semibold select-none pointer-events-none">
+        <span className="absolute top-2 right-4 z-50 text-red-500 text-[30px] font-bold select-none pointer-events-none">
           *
         </span>
       )}
@@ -215,7 +220,7 @@ export default function QuestionItem({
             {/* Cột phải - Nội dung câu hỏi (50%) */}
             <div className="flex-1 flex flex-col">
               <div className="flex items-baseline">
-                <span className="text-violet-600 font-semibold mr-2 whitespace-nowrap">
+                <span className="text-violet-600 font-medium mr-2 whitespace-nowrap">
                   {question.id} →
                 </span>
                 <div className="w-full">
@@ -395,7 +400,7 @@ export default function QuestionItem({
                         ) : (
                           /* Khi không active: hiển thị checkbox hoặc radio tùy loại */
                           <input
-                            type={question.type === "Danh sách (nút chọn)" ? "radio" : "checkbox"}
+                            type={isRadioType() ? "radio" : "checkbox"}
                             name={`question-${question.id}`}
                             value={option.id}
                             checked={isOptionChecked(selectedAnswer, option.id)}
@@ -408,7 +413,7 @@ export default function QuestionItem({
                               accentColor: "#7c3aed",
                               width: "24px",
                               height: "24px",
-                              borderRadius: question.type === "Danh sách (nút chọn)" ? "50%" : "4px",
+                              borderRadius: isRadioType() ? "50%" : "4px",
                             }}
                           />
                         )}
@@ -424,9 +429,9 @@ export default function QuestionItem({
                               }}
                             >
                               <EditableField
-                                placeholder={question.type === "Danh sách (nút chọn)" ? "Answer option" : "Subquestion"}
+                                placeholder={isRadioType() ? "Answer option" : "Subquestion"}
                                 initialValue={option.text}
-                                inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-semibold"
+                                inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium"
                                 isTextarea={true}
                                 onChange={(value) =>
                                   onOptionChange?.(question.id, option.id, value)
@@ -441,7 +446,7 @@ export default function QuestionItem({
                               }}
                             >
                               <span
-                                className={`text-sm text-gray-700 font-semibold ${!option.text ? "italic text-gray-400" : ""} inline-block whitespace-normal break-words leading-relaxed`}
+                                className={`text-sm text-gray-700 font-medium ${!option.text ? "italic text-gray-400" : ""} inline-block whitespace-normal break-words leading-relaxed`}
                                 style={{
                                   width: answerWidth,
                                   padding: "8px",
@@ -455,7 +460,7 @@ export default function QuestionItem({
                                   verticalAlign: "top",
                                 }}
                               >
-                                {option.text || (question.type === "Danh sách (nút chọn)" ? "Answer option" : "Subquestion")}
+                                {option.text || (isRadioType() ? "Answer option" : "Subquestion")}
                               </span>
                             </div>
                           )}
@@ -463,6 +468,18 @@ export default function QuestionItem({
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Ô nhận xét cho loại "Danh sách có nhận xét (Radio)" - chỉ hiện khi không active */}
+              {!isActive && question.type === "Danh sách có nhận xét (Radio)" && (
+                <div className="ml-[28px] mt-4">
+                  <textarea
+                    placeholder="Nhập nhận xét của bạn tại đây."
+                    className="w-full border-2 border-gray-700 rounded-md p-3 text-sm text-gray-700 placeholder:italic placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
+                    rows="3"
+                    style={{ width: answerWidth }}
+                  />
                 </div>
               )}
 
@@ -510,7 +527,7 @@ export default function QuestionItem({
           /* ======================= BỐ CỤC MẶC ĐỊNH (KHÔNG ẢNH) ======================= */
           <div className="p-6 pb-[35px]">
             <div className="flex items-baseline">
-              <span className="text-violet-600 font-semibold mr-2 whitespace-nowrap">
+              <span className="text-violet-600 font-medium mr-2 whitespace-nowrap">
                 {question.id} →
               </span>
               <div className="w-full">
@@ -689,7 +706,7 @@ export default function QuestionItem({
                       ) : (
                         /* Khi không active: hiển thị checkbox hoặc radio tùy loại */
                         <input
-                          type={question.type === "Danh sách (nút chọn)" ? "radio" : "checkbox"}
+                          type={isRadioType() ? "radio" : "checkbox"}
                           name={`question-${question.id}`}
                           value={option.id}
                           checked={isOptionChecked(selectedAnswer, option.id)}
@@ -702,7 +719,7 @@ export default function QuestionItem({
                             accentColor: "#7c3aed",
                             width: "24px",
                             height: "24px",
-                            borderRadius: question.type === "Danh sách (nút chọn)" ? "50%" : "4px",
+                            borderRadius: isRadioType() ? "50%" : "4px",
                           }}
                         />
 
@@ -719,9 +736,9 @@ export default function QuestionItem({
                             }}
                           >
                             <EditableField
-                              placeholder={question.type === "Danh sách (nút chọn)" ? "Answer option" : "Subquestion"}
+                              placeholder={isRadioType() ? "Answer option" : "Subquestion"}
                               initialValue={option.text}
-                              inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-semibold"
+                              inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium"
                               isTextarea={true}
                               onChange={(value) =>
                                 onOptionChange?.(question.id, option.id, value)
@@ -736,7 +753,7 @@ export default function QuestionItem({
                             }}
                           >
                             <span
-                              className={`text-sm text-gray-700 font-semibold ${!option.text ? "italic text-gray-400" : ""
+                              className={`text-sm text-gray-700 font-medium ${!option.text ? "italic text-gray-400" : ""
                                 } inline-block whitespace-normal break-words leading-relaxed`}
                               style={{
                                 width: "300px",
@@ -751,7 +768,7 @@ export default function QuestionItem({
                                 verticalAlign: "top",
                               }}
                             >
-                              {option.text || (question.type === "Danh sách (nút chọn)" ? "Answer option" : "Subquestion")}
+                              {option.text || (isRadioType() ? "Answer option" : "Subquestion")}
                             </span>
                           </div>
                         )}
@@ -759,6 +776,18 @@ export default function QuestionItem({
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Ô nhận xét cho loại "Danh sách có nhận xét (Radio)" - chỉ hiện khi không active */}
+            {!isActive && question.type === "Danh sách có nhận xét (Radio)" && (
+              <div className="ml-[28px] mt-4">
+                <textarea
+                  placeholder="Nhập nhận xét của bạn tại đây."
+                  className="w-full border-2 border-gray-700 rounded-md p-3 text-sm text-gray-700 placeholder:italic placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
+                  rows="3"
+                  style={{ width: "300px" }}
+                />
               </div>
             )}
 

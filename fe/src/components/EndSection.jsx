@@ -67,8 +67,8 @@ export default function EndSection({ isActive, onClick }) {
             onClick={onClick}
           >
             <textarea
-              placeholder="Enter your end message here."
-              className="w-full bg-transparent focus:outline-none rounded-md p-2 -ml-2 focus:bg-black/5 transition-colors duration-200 resize-none text-lg text-gray-500 mb-6"
+              placeholder="Nhập thông báo kết thúc của bạn tại đây."
+              className="w-full bg-transparent focus:outline-none rounded-sm p-2 -ml-2 focus:bg-black/5 transition-colors duration-200 resize-none text-lg text-gray-900 mb-6 italic"
               rows="1"
             ></textarea>
 

@@ -64,32 +64,33 @@ export default function QuestionSection({
   // So sánh nội dung thực tế để tránh infinite loop khi array reference thay đổi
   useEffect(() => {
     const prevItems = prevQuestionItemsRef.current;
-    
+
     // Kiểm tra nhanh: length khác nhau => cập nhật
     if (!prevItems || prevItems.length !== questionItems.length) {
       setItems(questionItems);
       prevQuestionItemsRef.current = questionItems;
       return;
     }
-    
+
     // So sánh từng item để phát hiện thay đổi, bao gồm cả image
     // Kiểm tra xem có item nào thay đổi không (id, text, image, options)
     let hasChanges = false;
-    
+
     for (let i = 0; i < questionItems.length; i++) {
       const newItem = questionItems[i];
       const prevItem = prevItems[i];
-      
-      if (!prevItem || 
-          newItem.id !== prevItem.id ||
-          newItem.text !== prevItem.text ||
-          newItem.image !== prevItem.image || // ✅ Quan trọng: so sánh image
-          JSON.stringify(newItem.options) !== JSON.stringify(prevItem.options)) {
+
+      if (!prevItem ||
+        newItem.id !== prevItem.id ||
+        newItem.text !== prevItem.text ||
+        newItem.image !== prevItem.image || // ✅ Quan trọng: so sánh image
+        newItem.type !== prevItem.type ||
+        JSON.stringify(newItem.options) !== JSON.stringify(prevItem.options)) {
         hasChanges = true;
         break;
       }
     }
-    
+
     // Cập nhật nếu có thay đổi
     if (hasChanges) {
       setItems(questionItems);
@@ -186,9 +187,8 @@ export default function QuestionSection({
         renderTitle={
           <span
             ref={titleRef}
-            className={`text-md font-semibold px-2 py-1 rounded cursor-text inline-block transition-colors ${
-              isEditingTitle ? "bg-gray-200" : "bg-transparent"
-            } focus:outline-none`}
+            className={`text-md font-semibold px-2 py-1 rounded cursor-text inline-block transition-colors ${isEditingTitle ? "bg-gray-200" : "bg-transparent"
+              } focus:outline-none`}
             // contentEditable giữ nguyên kiểu chữ/layout; chỉ đổi bg khi edit
             contentEditable={isEditingTitle}
             suppressContentEditableWarning={true}
@@ -323,11 +323,10 @@ export default function QuestionSection({
 
       {/* Vùng nội dung có hiệu ứng thu/mở mượt */}
       <div
-        className={`transition-all duration-300 ease-in-out ${
-          isCollapsed
+        className={`transition-all duration-300 ease-in-out ${isCollapsed
             ? "max-h-0 overflow-hidden"
             : "max-h-[9999px] overflow-hidden"
-        }`}
+          }`}
         style={{ position: "relative" }}
       >
         <div
