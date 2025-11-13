@@ -26,6 +26,10 @@ export default function QuestionSection({
   onAnswerSelect,
   selectedAnswers,
   getQuestionConditionInfo,
+  onOptionChange,
+  onAddOption,
+  onRemoveOption,
+  onMoveOption,
 }) {
   const [items, setItems] = useState(questionItems);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -44,6 +48,8 @@ export default function QuestionSection({
     onDuplicateGroup: onDuplicateGroup,
     onDeleteGroup: onDeleteGroup,
   });
+  const prevQuestionItemsRef = useRef(questionItems);
+  const onGroupTitleChangeRef = useRef(onGroupTitleChange);
 
   // Cập nhật handlers khi props thay đổi
   useEffect(() => {
@@ -51,11 +57,44 @@ export default function QuestionSection({
       onDuplicateGroup: onDuplicateGroup,
       onDeleteGroup: onDeleteGroup,
     };
-  }, [onDuplicateGroup, onDeleteGroup]);
+    onGroupTitleChangeRef.current = onGroupTitleChange;
+  }, [onDuplicateGroup, onDeleteGroup, onGroupTitleChange]);
 
-  // Cập nhật local items và title khi props thay đổi
+  // Cập nhật local items khi props thay đổi
+  // So sánh nội dung thực tế để tránh infinite loop khi array reference thay đổi
   useEffect(() => {
-    setItems(questionItems);
+    const prevItems = prevQuestionItemsRef.current;
+    
+    // Kiểm tra nhanh: length khác nhau => cập nhật
+    if (!prevItems || prevItems.length !== questionItems.length) {
+      setItems(questionItems);
+      prevQuestionItemsRef.current = questionItems;
+      return;
+    }
+    
+    // So sánh từng item để phát hiện thay đổi, bao gồm cả image
+    // Kiểm tra xem có item nào thay đổi không (id, text, image, options)
+    let hasChanges = false;
+    
+    for (let i = 0; i < questionItems.length; i++) {
+      const newItem = questionItems[i];
+      const prevItem = prevItems[i];
+      
+      if (!prevItem || 
+          newItem.id !== prevItem.id ||
+          newItem.text !== prevItem.text ||
+          newItem.image !== prevItem.image || // ✅ Quan trọng: so sánh image
+          JSON.stringify(newItem.options) !== JSON.stringify(prevItem.options)) {
+        hasChanges = true;
+        break;
+      }
+    }
+    
+    // Cập nhật nếu có thay đổi
+    if (hasChanges) {
+      setItems(questionItems);
+      prevQuestionItemsRef.current = questionItems;
+    }
   }, [questionItems]);
 
   useEffect(() => {
@@ -86,12 +125,13 @@ export default function QuestionSection({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMenuOpen]);
 
-  // Đồng bộ tiêu đề ra ngoài nếu cần
+  // Đồng bộ tiêu đề ra ngoài nếu cần (chỉ khi groupTitle thay đổi)
+  // Sử dụng ref để tránh re-run khi callback function reference thay đổi
   useEffect(() => {
-    if (typeof onGroupTitleChange === "function") {
-      onGroupTitleChange(groupTitle);
+    if (typeof onGroupTitleChangeRef.current === "function") {
+      onGroupTitleChangeRef.current(groupTitle);
     }
-  }, [groupTitle, onGroupTitleChange]);
+  }, [groupTitle]);
 
   // Đảm bảo hiển thị text = groupTitle khi không ở chế độ edit
   useEffect(() => {
@@ -339,6 +379,10 @@ export default function QuestionSection({
                   onAnswerSelect={onAnswerSelect}
                   selectedAnswer={selectedAnswers?.[qid]}
                   conditionInfo={getQuestionConditionInfo?.(qid)}
+                  onOptionChange={onOptionChange}
+                  onAddOption={onAddOption}
+                  onRemoveOption={onRemoveOption}
+                  onMoveOption={onMoveOption}
                 />
               </div>
             );

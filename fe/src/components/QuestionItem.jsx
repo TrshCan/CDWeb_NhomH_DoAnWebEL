@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import EditableField from "./EditableField";
 import { PlusIcon, DuplicateIcon, TrashIcon } from "../icons";
 
@@ -15,14 +15,45 @@ export default function QuestionItem({
   onAnswerSelect,
   selectedAnswer,
   conditionInfo,
+  onOptionChange,
+  onRemoveOption,
+  onMoveOption,
 }) {
-  const hasImage = !!question?.image;
+  // Kiểm tra image từ question object
+  const imageValue = question?.image;
   const options = question?.options || [];
+
+  // Width của phần đáp án: 260px khi có ảnh, 300px khi không có ảnh
+  const answerWidth = imageValue ? "260px" : "300px";
+
+  // State cho drag and drop
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  // Debug: log image value để kiểm tra
+  if (imageValue) {
+    console.log(`Question ${question.id} has image:`, imageValue.substring(0, 50));
+  }
+
+  // ✅ Helper: kiểm tra xem option có đang được chọn không
+  const isOptionChecked = (selectedAnswer, optionId) => {
+    if (Array.isArray(selectedAnswer)) {
+      return selectedAnswer
+        .map(String)
+        .includes(String(optionId));
+    }
+    return String(selectedAnswer) === String(optionId);
+  };
 
   return (
     <div
       className="relative"
-      style={{ overflow: "visible", position: "relative", width: "100%" }}
+      style={{
+        overflow: "visible",
+        position: "relative",
+        width: "100%",
+        isolation: "isolate", // Tạo stacking context mới để tránh ảnh hưởng layout
+      }}
     >
       {/* Dấu * cho câu hỏi bắt buộc (chỉ hiện khi Bật/true) */}
       {question?.required === true && (
@@ -42,6 +73,7 @@ export default function QuestionItem({
             zIndex: 1000,
             pointerEvents: "auto",
             position: "absolute",
+            willChange: "transform", // Tối ưu rendering
           }}
         >
           {/* Up */}
@@ -51,11 +83,10 @@ export default function QuestionItem({
               moveQuestionItem(index, "up");
             }}
             disabled={index === 0}
-            className={`rounded p-0.5 transition-colors duration-150 shadow ${
-              index === 0
-                ? "bg-gray-400 opacity-50 cursor-not-allowed"
-                : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
-            }`}
+            className={`rounded p-0.5 transition-colors duration-150 shadow ${index === 0
+              ? "bg-gray-400 opacity-50 cursor-not-allowed"
+              : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
+              }`}
             aria-label="Move up"
             style={{
               width: "22px",
@@ -87,11 +118,10 @@ export default function QuestionItem({
               moveQuestionItem(index, "down");
             }}
             disabled={index === totalQuestions - 1}
-            className={`rounded p-0.5 transition-colors duration-150 shadow ${
-              index === totalQuestions - 1
-                ? "bg-gray-400 opacity-50 cursor-not-allowed"
-                : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
-            }`}
+            className={`rounded p-0.5 transition-colors duration-150 shadow ${index === totalQuestions - 1
+              ? "bg-gray-400 opacity-50 cursor-not-allowed"
+              : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
+              }`}
             aria-label="Move down"
             style={{
               width: "22px",
@@ -128,48 +158,56 @@ export default function QuestionItem({
             ? "ring-2 ring-inset ring-violet-600 z-10 bg-white"
             : "z-0 bg-white",
         ].join(" ")}
+        style={{ minHeight: imageValue ? "350px" : "250px" }}
       >
-        {/* Badge điều kiện hiển thị */}
+        {/* Thông báo điều kiện hiển thị */}
         {conditionInfo && conditionInfo.length > 0 && (
-          <div className="absolute top-3 right-3 z-20">
-            <div className="bg-blue-100 border border-blue-300 rounded-md px-3 py-1.5 shadow-sm">
-              <div className="flex items-start gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <div className="text-xs text-blue-800">
-                  {conditionInfo.map((msg, idx) => (
-                    <div key={idx} className="leading-tight">
-                      {msg}
-                    </div>
-                  ))}
+          <div className="absolute top-1 right-[50px] z-20">
+            <div className="text-xs text-red-500 italic">
+              {conditionInfo.map((msg, idx) => (
+                <div key={idx} className="leading-tight">
+                  {msg}
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         )}
-        {hasImage ? (
+        {imageValue ? (
           /* ======================= BỐ CỤC 2 CỘT (CÓ ẢNH) ======================= */
           <div
             className="flex justify-between gap-[16px] px-[28px] py-[38px] pb-[38px]"
-            style={{ alignItems: "stretch" }}
+            style={{ alignItems: "flex-start" }}
           >
             {/* Cột trái - Ảnh (50%) */}
-            <div className="flex-1 flex items-center justify-center">
+            <div
+              className="flex-1 flex items-center justify-center bg-gray-50"
+              style={{
+                height: "350px",
+                minHeight: "350px",
+                maxHeight: "350px",
+                overflow: "hidden",
+                position: "relative"
+              }}
+            >
               <img
-                src={question.image}
+                key={imageValue}
+                src={imageValue}
                 alt="Question"
-                className="w-full h-auto object-contain"
-                style={{ maxWidth: "100%", maxHeight: "100%" }}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "350px",
+                  width: "auto",
+                  height: "auto",
+                  objectFit: "contain",
+                  display: "block"
+                }}
+                onLoad={() => {
+                  console.log("✅ Image loaded successfully for question:", question.id);
+                }}
+                onError={(e) => {
+                  console.error("❌ Image error for question:", question.id, "Image URL:", imageValue?.substring(0, 100));
+                  e.target.style.display = "none";
+                }}
               />
             </div>
 
@@ -189,33 +227,220 @@ export default function QuestionItem({
                   <EditableField
                     placeholder="Mô tả trợ giúp tuỳ chọn"
                     initialValue={question.helpText}
-                    inputClassName="text-sm text-gray-700 mt-1 mb-4"
+                    inputClassName="text-sm text-gray-800 mt-1 mb-4 italic font-medium"
                   />
                 </div>
               </div>
 
               {/* Danh sách đáp án */}
               {options.length > 0 && (
-                <div className="mt-4 ml-[28px] space-y-2">
-                  {options.map((option) => (
-                    <label
-                      key={option.id}
-                      className="flex items-center space-x-3 cursor-pointer group"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        type="radio"
-                        name={`question-${question.id}`}
-                        value={option.id}
-                        checked={String(selectedAnswer) === String(option.id)}
-                        onChange={() => onAnswerSelect?.(question.id, option.id)}
-                        className="w-4 h-4 text-violet-600 focus:ring-violet-500"
-                      />
-                      <span className="text-sm text-gray-700 group-hover:text-gray-900">
-                        {option.text}
-                      </span>
-                    </label>
-                  ))}
+                <div className="ml-[28px] space-y-1">
+                  {options.map((option, optionIndex) => {
+                    const isDragging = draggedIndex === optionIndex;
+                    const isDragOver = dragOverIndex === optionIndex;
+
+                    const handleDragStart = (e) => {
+                      setDraggedIndex(optionIndex);
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", optionIndex.toString());
+                    };
+
+                    const handleDragOver = (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.dataTransfer.dropEffect = "move";
+                      if (dragOverIndex !== optionIndex) {
+                        setDragOverIndex(optionIndex);
+                      }
+                    };
+
+                    const handleDragLeave = (e) => {
+                      e.preventDefault();
+                      // Chỉ xóa dragOverIndex nếu không còn ở trong container
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = e.clientX;
+                      const y = e.clientY;
+                      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                        setDragOverIndex(null);
+                      }
+                    };
+
+                    const handleDrop = (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+
+                      if (draggedIndex !== null && draggedIndex !== optionIndex && onMoveOption) {
+                        onMoveOption(question.id, draggedIndex, optionIndex);
+                      }
+
+                      setDraggedIndex(null);
+                      setDragOverIndex(null);
+                    };
+
+                    const handleDragEnd = () => {
+                      setDraggedIndex(null);
+                      setDragOverIndex(null);
+                    };
+
+                    return (
+                      <div
+                        key={option.id}
+                        className="flex items-center group"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          gap: "8px",
+                          minHeight: "40px",
+                          opacity: isDragging ? 0.5 : 1,
+                          transition: "opacity 0.2s",
+                          backgroundColor: isDragOver ? "#f3f4f6" : "transparent",
+                        }}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                      >
+                        {/* Khi active: hiển thị icon X (hình tròn 13x13) và icon grid (14x14) */}
+                        {isActive ? (
+                          <>
+                            {/* Icon X để xóa - hình tròn 13x13 */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRemoveOption?.(question.id, option.id);
+                              }}
+                              className="flex-shrink-0 hover:bg-red-100 rounded-full transition-colors"
+                              title="Xóa đáp án"
+                              style={{
+                                width: "13px",
+                                height: "13px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                backgroundColor: "#ef4444",
+                                border: "none",
+                                padding: "0",
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="8"
+                                height="8"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="white"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                            {/* Icon grid để di chuyển - 14x14, có thể drag and drop */}
+                            <div
+                              draggable={isActive}
+                              onDragStart={handleDragStart}
+                              onDragEnd={handleDragEnd}
+                              className="cursor-move flex-shrink-0 hover:bg-gray-200 rounded transition-colors"
+                              title="Nhấn giữ và kéo để di chuyển đáp án"
+                              style={{
+                                width: "14px",
+                                height: "14px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: "2px",
+                                userSelect: "none",
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="text-gray-600"
+                              >
+                                <rect x="3" y="3" width="7" height="7" />
+                                <rect x="14" y="3" width="7" height="7" />
+                                <rect x="3" y="14" width="7" height="7" />
+                                <rect x="14" y="14" width="7" height="7" />
+                              </svg>
+                            </div>
+                          </>
+                        ) : (
+                          /* Khi không active: hiển thị checkbox bình thường */
+                          <input
+                            type="checkbox"
+                            name={`question-${question.id}`}
+                            value={option.id}
+                            checked={isOptionChecked(selectedAnswer, option.id)}
+                            onChange={() =>
+                              onAnswerSelect?.(question.id, option.id, question.type)
+                            }
+                            className="text-violet-600 focus:ring-violet-500 border-2 border-gray-400 rounded cursor-pointer flex-shrink-0"
+                            style={{
+                              accentColor: "#7c3aed",
+                              width: "24px",
+                              height: "24px",
+                            }}
+                          />
+                        )}
+                        <div
+                          className="flex items-start space-x-2 ml-2"
+                          style={{ width: answerWidth, flexShrink: 0 }}
+                        >
+                          {isActive ? (
+                            <div
+                              style={{
+                                width: answerWidth,
+                                flexShrink: 0,
+                              }}
+                            >
+                              <EditableField
+                                placeholder="Subquestion"
+                                initialValue={option.text}
+                                inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-semibold"
+                                isTextarea={true}
+                                onChange={(value) =>
+                                  onOptionChange?.(question.id, option.id, value)
+                                }
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                width: answerWidth,
+                                flexShrink: 0,
+                              }}
+                            >
+                              <span
+                                className={`text-sm text-gray-700 font-semibold ${!option.text ? "italic text-gray-400" : ""
+                                  } inline-block whitespace-normal break-words leading-relaxed`}
+                                style={{
+                                  width: answerWidth,
+                                  padding: "8px",
+                                  marginLeft: "-8px",
+                                  marginTop: "0",
+                                  marginBottom: "0",
+                                  boxSizing: "border-box",
+                                  minHeight: "24px",
+                                  lineHeight: "1.625",
+                                  display: "inline-block",
+                                  verticalAlign: "top",
+                                }}
+                              >
+                                {option.text || "Subquestion"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -255,7 +480,7 @@ export default function QuestionItem({
           </div>
         ) : (
           /* ======================= BỐ CỤC MẶC ĐỊNH (KHÔNG ẢNH) ======================= */
-          <div className="p-6 pb-5">
+          <div className="p-6 pb-[35px]">
             <div className="flex items-baseline">
               <span className="text-violet-600 font-semibold mr-2 whitespace-nowrap">
                 {question.id} →
@@ -264,39 +489,226 @@ export default function QuestionItem({
                 <EditableField
                   placeholder="Nhập câu hỏi của bạn ở đây"
                   initialValue={question.text}
-                  inputClassName="text-gray-800 font-thin text-[25px]"
+                  inputClassName="text-gray-900 font-thin text-[25px]"
                   onChange={(value) => onTextChange?.(question.id, value)}
                 />
                 <EditableField
                   placeholder="Mô tả trợ giúp tuỳ chọn"
                   initialValue={question.helpText}
-                  inputClassName="text-sm text-gray-700 mt-1 mb-4"
+                  inputClassName="text-sm text-gray-800 mt-1 mb-4 italic font-medium"
                 />
               </div>
             </div>
 
             {/* Danh sách đáp án */}
             {options.length > 0 && (
-              <div className="mt-4 ml-[28px] space-y-2">
-                {options.map((option) => (
-                  <label
-                    key={option.id}
-                    className="flex items-center space-x-3 cursor-pointer group"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <input
-                      type="radio"
-                      name={`question-${question.id}`}
-                      value={option.id}
-                      checked={String(selectedAnswer) === String(option.id)}
-                      onChange={() => onAnswerSelect?.(question.id, option.id)}
-                      className="w-4 h-4 text-violet-600 focus:ring-violet-500"
-                    />
-                    <span className="text-sm text-gray-700 group-hover:text-gray-900">
-                      {option.text}
-                    </span>
-                  </label>
-                ))}
+              <div className="ml-[28px] space-y-1">
+                {options.map((option, optionIndex) => {
+                  const isDragging = draggedIndex === optionIndex;
+                  const isDragOver = dragOverIndex === optionIndex;
+
+                  const handleDragStart = (e) => {
+                    setDraggedIndex(optionIndex);
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", optionIndex.toString());
+                  };
+
+                  const handleDragOver = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = "move";
+                    if (dragOverIndex !== optionIndex) {
+                      setDragOverIndex(optionIndex);
+                    }
+                  };
+
+                  const handleDragLeave = (e) => {
+                    e.preventDefault();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = e.clientX;
+                    const y = e.clientY;
+                    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                      setDragOverIndex(null);
+                    }
+                  };
+
+                  const handleDrop = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    if (draggedIndex !== null && draggedIndex !== optionIndex && onMoveOption) {
+                      onMoveOption(question.id, draggedIndex, optionIndex);
+                    }
+
+                    setDraggedIndex(null);
+                    setDragOverIndex(null);
+                  };
+
+                  const handleDragEnd = () => {
+                    setDraggedIndex(null);
+                    setDragOverIndex(null);
+                  };
+
+                  return (
+                    <div
+                      key={option.id}
+                      className="flex items-center group"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        gap: "8px",
+                        minHeight: "40px",
+                        opacity: isDragging ? 0.5 : 1,
+                        transition: "opacity 0.2s",
+                        backgroundColor: isDragOver ? "#f3f4f6" : "transparent",
+                      }}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
+                      {/* Khi active: hiển thị icon X (hình tròn 13x13) và icon grid (14x14) */}
+                      {isActive ? (
+                        <>
+                          {/* Icon X để xóa - hình tròn 13x13 */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRemoveOption?.(question.id, option.id);
+                            }}
+                            className="flex-shrink-0 hover:bg-red-100 rounded-full transition-colors"
+                            title="Xóa đáp án"
+                            style={{
+                              width: "13px",
+                              height: "13px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              backgroundColor: "#ef4444",
+                              border: "none",
+                              padding: "0",
+                            }}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="8"
+                              height="8"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="white"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                          </button>
+                          {/* Icon grid để di chuyển - 14x14, có thể drag and drop */}
+                          <div
+                            draggable={isActive}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
+                            className="cursor-move flex-shrink-0 hover:bg-gray-200 rounded transition-colors"
+                            title="Nhấn giữ và kéo để di chuyển đáp án"
+                            style={{
+                              width: "14px",
+                              height: "14px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "2px",
+                              userSelect: "none",
+                            }}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-gray-600"
+                            >
+                              <rect x="3" y="3" width="7" height="7" />
+                              <rect x="14" y="3" width="7" height="7" />
+                              <rect x="3" y="14" width="7" height="7" />
+                              <rect x="14" y="14" width="7" height="7" />
+                            </svg>
+                          </div>
+                        </>
+                      ) : (
+                        /* Khi không active: hiển thị checkbox bình thường */
+                        <input
+                          type="checkbox"
+                          name={`question-${question.id}`}
+                          value={option.id}
+                          checked={isOptionChecked(selectedAnswer, option.id)}
+                          onChange={() =>
+                            onAnswerSelect?.(question.id, option.id, question.type)
+                          }
+                          className="text-violet-600 focus:ring-violet-500 border-2 border-gray-400 rounded cursor-pointer flex-shrink-0"
+                          style={{
+                            accentColor: "#7c3aed",
+                            width: "24px",
+                            height: "24px",
+                          }}
+                        />
+
+                      )}
+                      <div
+                        className="flex items-start space-x-2 ml-4"
+                        style={{ width: "300px", flexShrink: 0 }}
+                      >
+                        {isActive ? (
+                          <div
+                            style={{
+                              width: "300px",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <EditableField
+                              placeholder="Subquestion"
+                              initialValue={option.text}
+                              inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-semibold"
+                              isTextarea={true}
+                              onChange={(value) =>
+                                onOptionChange?.(question.id, option.id, value)
+                              }
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              width: "300px",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <span
+                              className={`text-sm text-gray-700 font-semibold ${!option.text ? "italic text-gray-400" : ""
+                                } inline-block whitespace-normal break-words leading-relaxed`}
+                              style={{
+                                width: "300px",
+                                padding: "8px",
+                                marginLeft: "-8px",
+                                marginTop: "0",
+                                marginBottom: "0",
+                                boxSizing: "border-box",
+                                minHeight: "24px",
+                                lineHeight: "1.625",
+                                display: "inline-block",
+                                verticalAlign: "top",
+                              }}
+                            >
+                              {option.text || "Subquestion"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -308,7 +720,7 @@ export default function QuestionItem({
                   Thêm câu hỏi phụ
                 </button>
 
-                <div className="flex items-center space-x-1 mt-[45px]">
+                <div className="flex items-center space-x-1 mt-[70px]">
                   <button
                     className="p-1"
                     title="Duplicate"

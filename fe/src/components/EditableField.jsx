@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export default function EditableField({
   placeholder,
@@ -8,31 +8,65 @@ export default function EditableField({
   onChange, // ✅ callback ra ngoài
 }) {
   const [value, setValue] = useState(initialValue);
+  const textareaRef = useRef(null);
   const InputComponent = isTextarea ? "textarea" : "input";
 
   const commonClasses =
-    "w-full bg-transparent focus:outline-none rounded-md p-2 -ml-2 focus:bg-black/5 transition-colors duration-200 resize-none";
+    "bg-transparent focus:outline-none rounded-md p-2 -ml-2 focus:bg-black/5 transition-colors duration-200 resize-none";
 
   // 🔄 Đồng bộ lại khi initialValue thay đổi (từ App)
   useEffect(() => {
     setValue(initialValue || "");
   }, [initialValue]);
 
+  // Auto-grow textarea height - đảm bảo height tối thiểu là 24px
+  useEffect(() => {
+    if (isTextarea && textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const scrollHeight = textareaRef.current.scrollHeight;
+      // Đảm bảo height tối thiểu là 24px (minHeight)
+      textareaRef.current.style.height = `${Math.max(scrollHeight, 24)}px`;
+    }
+  }, [value, isTextarea]);
+
   const handleChange = (e) => {
     const newVal = e.target.value;
     setValue(newVal); // cập nhật local
     onChange?.(newVal); // 🔔 báo App biết để cập nhật panel trái
+    
+    // Auto-grow textarea - đảm bảo height tối thiểu là 24px
+    if (isTextarea && textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const scrollHeight = textareaRef.current.scrollHeight;
+      // Đảm bảo height tối thiểu là 24px (minHeight)
+      textareaRef.current.style.height = `${Math.max(scrollHeight, 24)}px`;
+    }
   };
 
   return (
     <InputComponent
+      ref={isTextarea ? textareaRef : null}
       type={isTextarea ? undefined : "text"}
       value={value}
       onChange={handleChange}
       onBlur={(e) => onChange?.(e.target.value)} // ✅ backup khi mất focus
       placeholder={placeholder}
-      className={`${commonClasses} ${inputClassName}`}
+      className={`${commonClasses} ${inputClassName} ${isTextarea ? "w-full" : "w-full"}`}
       rows={isTextarea ? 1 : undefined}
+      style={isTextarea ? {
+        width: "100%",
+        maxWidth: "100%",
+        minHeight: "24px",
+        wordWrap: "break-word",
+        overflowWrap: "break-word",
+        whiteSpace: "pre-wrap",
+        overflow: "hidden",
+        boxSizing: "border-box",
+        lineHeight: "1.625",
+        marginTop: "0",
+        marginBottom: "0",
+        verticalAlign: "top",
+      } : {}}
     />
   );
 }
