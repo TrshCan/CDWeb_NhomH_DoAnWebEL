@@ -46,6 +46,10 @@ type Mutation {
     password: String!
     passwordConfirmation: String!
   ): String @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@resetPassword")
+  resendVerificationEmail(
+      email: String!
+    ): Boolean!
+      @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@resendVerificationEmail")
 }
 
 type AuthPayload {
@@ -55,19 +59,6 @@ type AuthPayload {
 }
 
 
-
-type User {
-  id: ID!
-  name: String!
-  email: String!
-  phone: String
-  address: String
-  created_at: DateTime!
-  role: String
-  avatar: String
-  stats: UserStats @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@stats")
-  badges: [UserBadge!]! @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@badges")
-}
 
 type UserStats {
   posts: Int!

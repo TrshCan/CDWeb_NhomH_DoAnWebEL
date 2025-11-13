@@ -11,6 +11,7 @@ import UserManagement from "./pages/UserManagement.jsx";
 import PostDetail from "./pages/PostDetail.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
+import EmailVerificationResult from "./pages/EmailVerificationResult.jsx";
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/email-verified" element={<EmailVerificationResult />} />
     </Routes>
   );
 }

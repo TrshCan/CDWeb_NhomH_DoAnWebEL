@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password as PasswordBroker;
 use Illuminate\Auth\Events\PasswordReset;
 use Exception;
+use Illuminate\Auth\Events\Registered;
 
 class UserServices
 {
@@ -45,6 +46,12 @@ class UserServices
         if (!Hash::check($password, $user->password)) {
             throw ValidationException::withMessages([
                 'password' => 'Mật khẩu không đúng.',
+            ]);
+        }
+
+        if (!$user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'email' => 'Email chưa được xác thực. Vui lòng kiểm tra hộp thư để kích hoạt tài khoản.',
             ]);
         }
 
@@ -333,5 +340,26 @@ class UserServices
             Log::error('Reset password error: ' . $e->getMessage());
             throw new Exception('Không thể đặt lại mật khẩu. Vui lòng thử lại sau.');
         }
+    }
+
+    public function resendVerificationEmail(string $email): bool
+    {
+        $user = $this->userRepo->findByEmail($email);
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => 'Email không tồn tại trong hệ thống.',
+            ]);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'email' => 'Email đã được xác thực trước đó.',
+            ]);
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return true;
     }
 }
