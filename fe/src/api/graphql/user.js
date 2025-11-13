@@ -30,7 +30,15 @@ export const getUserProfile = async (id) => {
     }
 };
 
-export const updateProfile = async (name, email, address = null, password = null, password_confirmation = null, avatarFile = null, current_password) => {
+export const updateProfile = async (
+    name,
+    email,
+    address = null,
+    password = null,
+    password_confirmation = null,
+    avatarFile = null,
+    current_password = null
+) => {
     // Lấy userId từ localStorage
     const userId = parseInt(localStorage.getItem("userId"));
 
@@ -87,8 +95,8 @@ export const updateProfile = async (name, email, address = null, password = null
         formData.append('0', avatarFile);
 
         try {
-            const response = await graphqlClient.post('', formData, {
-                headers: {'Content-Type': 'multipart/form-data'},
+            const response = await graphqlClient.post("", formData, {
+                headers: {"Content-Type": "multipart/form-data"},
             });
 
             if (response.data.errors) {
@@ -114,7 +122,7 @@ export const updateProfile = async (name, email, address = null, password = null
 
     // Nếu không có avatar, gửi JSON bình thường
     try {
-        const response = await graphqlClient.post('', {
+        const response = await graphqlClient.post("", {
             query: mutation,
             variables: {
                 user_id: userId,
@@ -155,36 +163,8 @@ export const updateProfile = async (name, email, address = null, password = null
         // Nếu không có message, throw error mới
         throw new Error(error.message || "Cập nhật thất bại. Vui lòng thử lại.");
     }
-      console.error("Failed to update profile:", error);
-      throw error;
-    }
-  }
-
-  // Nếu không có avatar, gửi JSON bình thường
-  try {
-    const response = await graphqlClient.post('', {
-      query: mutation,
-      variables: {
-        user_id: userId,
-        name,
-        email,
-        address,
-        password,
-        password_confirmation,
-      },
-    });
-
-    if (response.data.errors) {
-      console.error("GraphQL errors:", response.data.errors);
-      throw new Error(response.data.errors[0].message);
-    }
-
-    return response.data.data.updateProfile;
-  } catch (error) {
-    console.error("Failed to update profile:", error);
-    throw error;
-  }
 };
+
 
 // --- GRAPHQL QUERIES ---
  export const PROFILE_QUERY = `

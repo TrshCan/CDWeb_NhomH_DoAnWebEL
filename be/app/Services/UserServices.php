@@ -177,6 +177,8 @@ class UserServices
                     throw new Exception('Không thể tạo tài khoản, vui lòng thử lại.');
                 }
 
+                event(new Registered($user));
+
                 $token = Str::random(60);
 
                 return [

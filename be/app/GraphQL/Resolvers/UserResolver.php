@@ -36,6 +36,7 @@ class UserResolver
     public function resetPassword($_, array $args)
     {
         return $this->userService->resetPassword($args);
+    }
     public function resendVerificationEmail($_, array $args): bool
     {
         return $this->userService->resendVerificationEmail($args['email']);

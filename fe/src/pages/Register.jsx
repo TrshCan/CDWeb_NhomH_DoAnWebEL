@@ -51,310 +51,204 @@ function SocialSphereHeader() {
 
 function RegisterForm() {
   const navigate = useNavigate();
+  const [countdown, setCountdown] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const REGISTER_USER = `
-  mutation($name: String!, $email: String!, $password: String!,$phone: String,$address: String) {
-    registerUser(name: $name, email: $email, password: $password,phone: $phone, address: $address) {
-      id
-      name
-      email
-      phone
-      address
-    }
+mutation($name: String!, $email: String!, $password: String!,$phone: String,$address: String) {
+  registerUser(name: $name, email: $email, password: $password,phone: $phone, address: $address) {
+    id
+    name
+    email
+    phone
+    address
   }
+}
 `;
   // Quản lý State
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    password: "",
-    remember: true,
+      name: '',
+      email: '',
+      phone:'',
+      address:'',
+      password: '',
+      remember: true,
   });
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("success"); // 'success' or 'error'
+  const [message, setMessage] = useState('');
 
   // Xử lý thay đổi Input
   const handleChange = (e) => {
-    const { id, value, type, checked } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [id]: type === "checkbox" ? checked : value,
-    }));
-
-    // Clear message when user starts typing
-    if (message) {
-      setMessage("");
-    }
+      const { id, value, type, checked } = e.target;
+      setFormData(prevData => ({
+          ...prevData,
+          [id]: type === 'checkbox' ? checked : value
+      }));
   };
 
   // Xử lý Submit
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
+      e.preventDefault();
+      try {
+          const variables = {
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone,
+              address: formData.address,
+              password: formData.password
+          };
+  
+          const response = await graphqlRequest(REGISTER_USER, variables);
+          console.log("Full response:", response); // log để debug
 
-    // Prevent double submission
-    if (isSubmitting) {
-      return;
-    }
+          if (response.data && response.data.registerUser) {
+              // Mutation thành công
+              let second = 3;
+              setCountdown(second);
+              setMessage(`Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`);
 
-    setIsSubmitting(true);
-    setMessage("");
+              const interval = setInterval(() => {
+                  second -= 1;
+                  setCountdown(second);
+                  setMessage(`Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`);
 
-    try {
-      const variables = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        password: formData.password,
-      };
+                  if (second === 0) {
+                      clearInterval(interval);
+                      navigate('/login');
+                  }
+              }, 1000);
 
-      console.log("Sending variables:", variables); // Debug log
-      const response = await graphqlRequest(REGISTER_USER, variables);
-      console.log("Full response:", response); // Debug log
-
-      if (response.data && response.data.registerUser) {
-        // Mutation thành công
-        setMessageType("success");
-        let second = 3;
-        setMessage(
-          `Đăng ký thành công! Bạn sẽ được chuyển trang trong vòng ${second} giây...`,
-        );
-
-        const interval = setInterval(() => {
-          second -= 1;
-          setMessage(
-            `Đăng ký thành công! Bạn sẽ được chuyển trang trong vòng ${second} giây...`,
-          );
-
-          if (second === 0) {
-            clearInterval(interval);
-            navigate("/login");
+              // Reset form
+              setFormData({ name: '', email: '', phone: '', address: '', password: '', remember: false });
+          } else if (response.errors) {
+              console.error("GraphQL errors:", response.errors);
+              setMessage(response.errors[0].message);
+          } else {
+              setMessage("Có lỗi xảy ra, vui lòng thử lại");
           }
-        }, 1000);
-
-        // Reset form
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          address: "",
-          password: "",
-          remember: false,
-        });
-      } else if (response.errors) {
-        console.error("GraphQL errors:", response.errors);
-        setMessageType("error");
-
-        // Handle specific validation errors
-        const firstError = response.errors[0];
-        if (firstError.extensions && firstError.extensions.validation) {
-          // Laravel validation errors
-          const validationErrors = firstError.extensions.validation;
-          const firstField = Object.keys(validationErrors)[0];
-          const firstFieldError = validationErrors[firstField][0];
-          setMessage(firstFieldError);
-    // Quản lý State
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone:'',
-        address:'',
-        password: '',
-        remember: true,
-    });
-    const [message, setMessage] = useState('');
-
-    // Xử lý thay đổi Input
-    const handleChange = (e) => {
-        const { id, value, type, checked } = e.target;
-        setFormData(prevData => ({
-            ...prevData,
-            [id]: type === 'checkbox' ? checked : value
-        }));
-    };
-
-    // Xử lý Submit
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const variables = {
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone,
-                address: formData.address,
-                password: formData.password
-            };
-    
-            const response = await graphqlRequest(REGISTER_USER, variables);
-            console.log("Full response:", response); // log để debug
-
-            if (response.data && response.data.registerUser) {
-                // Mutation thành công
-                let second = 3;
-                setCountdown(second);
-                setMessage(`Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`);
-
-                const interval = setInterval(() => {
-                    second -= 1;
-                    setCountdown(second);
-                    setMessage(`Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`);
-
-                    if (second === 0) {
-                        clearInterval(interval);
-                        navigate('/login');
-                    }
-                }, 1000);
-
-                // Reset form
-                setFormData({ name: '', email: '', phone: '', address: '', password: '', remember: false });
-            } else if (response.errors) {
-                console.error("GraphQL errors:", response.errors);
-                setMessage(response.errors[0].message);
-            } else {
-                setMessage("Có lỗi xảy ra, vui lòng thử lại");
-            }
 
 
-        } catch (err) {
-            console.error(err);
-            setMessage("Network hoặc server error");
-        }
-    };
-    
+      } catch (err) {
+          console.error(err);
+          setMessage("Network hoặc server error");
+      }
+  };
+  
 
-    return (
-        <form 
-            className="w-full max-w-sm mx-auto p-8"
-            onSubmit={handleSubmit}
-        >
-            <h2 className="text-3xl font-bold mb-8 text-center text-white">
-                Đăng ký tài khoản
-            </h2>
-
-            {/* Thông báo */}
-            {message && (
-                <div className="p-3 mb-4 text-sm font-medium text-green-800 bg-green-100 rounded-lg" role="alert">
-                    {message}
-                </div>
-            )}
-            
-            {/* Trường Họ Tên */}
-            <div className="mb-5">
-                <label htmlFor="name" className="block mb-2 text-sm font-medium text-white text-left">Nhập Họ Tên:</label>
-                <input 
-                    type="text" 
-                    id="name" 
-                    className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-3 shadow-sm" 
-                    placeholder="Nguyễn Văn A" 
-                    required 
-                    value={formData.name}
-                    onChange={handleChange}
-                />
-            </div>
-            
-            {/* Trường Email */}
-            <div className="mb-5">
-                <label htmlFor="email" className="block mb-2 text-sm font-medium text-white text-left">Nhập Email:</label>
-                <input 
-                    type="email" 
-                    id="email" 
-                    className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-3 shadow-sm" 
-                    placeholder="nguyenvana@gmail.com" 
-                    required 
-                    value={formData.email}
-                    onChange={handleChange}
-                />
-            </div>
-            <div className="mb-5">
-                <label htmlFor="phone" className="block mb-2 text-sm font-medium text-white text-left">Nhập SĐT:</label>
-                <input 
-                    type="text" 
-                    id="phone" 
-                    className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-3 shadow-sm" 
-                    placeholder="08666xxxxx" 
-                    required 
-                    value={formData.phone}
-                    onChange={handleChange}
-                />
-            </div>
-            <div className="mb-5">
-                <label htmlFor="address" className="block mb-2 text-sm font-medium text-white text-left">Nhập Địa chỉ:</label>
-                <input 
-                    type="text" 
-                    id="address" 
-                    className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-3 shadow-sm" 
-                    placeholder="34 Vũ Tùng,TP Hồ Chí Minh" 
-                    required 
-                    value={formData.address}
-                    onChange={handleChange}
-                />
-            </div>
-
-            {/* Mật khẩu + icon 👁️ */}
-            <div className="mb-6 relative">
-                <label htmlFor="password" className="block mb-2 text-sm font-medium text-white text-left">
-                    Nhập mật khẩu:
-                </label>
-                <input
-                    type={showPassword ? 'text' : 'password'}
-                    id="password"
-                    className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-3 pr-10 shadow-sm"
-                    placeholder="•••••••••"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                />
-                <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-10 text-gray-500 hover:text-gray-700"
-                >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-            </div>
-            
-            {/* Checkbox */}
-            <div className="flex items-start mb-6">
-                <div className="flex items-center h-5">
-                    <input 
-                        id="remember" 
-                        type="checkbox" 
-                        className="w-4 h-4 border border-gray-300 rounded accent-indigo-600 focus:ring-3 focus:ring-indigo-300" 
-                        checked={formData.remember}
-                        onChange={handleChange}
-                    />
-                </div>
-                <label htmlFor="remember" className="ms-2 text-sm font-medium text-white">
-                    Tôi đồng ý với điều khoản sử dụng
-                </label>
-            </div>
-            
-            {/* Nút Đăng ký */}
-            <button 
-                type="submit" 
-                className="text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:outline-none focus:ring-indigo-300 font-bold rounded-lg text-md w-full px-5 py-3.5 text-center shadow-lg transition duration-200"
-            >
-                Đăng ký
-            </button>
-
-            <p className="mt-4 text-center text-sm text-gray-500">
-                Đã có tài khoản? 
-                <a href="/login" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500 ml-1">
-                    Đăng nhập ngay
-                </a>
-            </p>
-        </form>
-    );
+  return (
+    <form className="w-full max-w-md mx-auto p-6" onSubmit={handleSubmit}>
+    <h2 className="text-2xl font-bold mb-6 text-center text-white">
+      Đăng ký tài khoản
+    </h2>
+  
+    {message && (
+      <div className="p-3 mb-4 text-sm font-medium text-green-800 bg-green-100 rounded-lg">
+        {message}
+      </div>
+    )}
+  
+    {/* GRID 2 CỘT */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+  
+      {/* Họ tên */}
+      <div>
+        <label className="block mb-2 text-sm font-medium text-white">Họ Tên</label>
+        <input
+          id="name"
+          type="text"
+          placeholder="Nguyen Van A"
+          value={formData.name}
+          onChange={handleChange}
+          className="w-full p-3 rounded-lg border bg-white text-gray-900"
+        />
+      </div>
+  
+      {/* Email */}
+      <div>
+        <label className="block mb-2 text-sm font-medium text-white">Email</label>
+        <input
+          id="email"
+          type="email"
+          placeholder="WQOZV@example.com"
+          value={formData.email}
+          onChange={handleChange}
+          className="w-full p-3 rounded-lg border bg-white text-gray-900"
+        />
+      </div>
+  
+      {/* SĐT */}
+      <div>
+        <label className="block mb-2 text-sm font-medium text-white">Số điện thoại</label>
+        <input
+          id="phone"
+          type="text"
+          placeholder="0123456789"
+          value={formData.phone}
+          onChange={handleChange}
+          className="w-full p-3 rounded-lg border bg-white text-gray-900"
+        />
+      </div>
+  
+      {/* Địa chỉ */}
+      <div>
+        <label className="block mb-2 text-sm font-medium text-white">Địa chỉ</label>
+        <input
+          id="address"
+          type="text"
+          placeholder="Thanh Xuan, Ha Noi"
+          value={formData.address}
+          onChange={handleChange}
+          className="w-full p-3 rounded-lg border bg-white text-gray-900"
+        />
+      </div>
+  
+    </div>
+  
+    {/* Mật khẩu full width */}
+    <div className="mt-5 relative">
+      <label className="block mb-2 text-sm font-medium text-white">Mật khẩu</label>
+      <input
+        id="password"
+        type={showPassword ? "text" : "password"}
+        placeholder="••••••••"
+        value={formData.password}
+        onChange={handleChange}
+        className="w-full p-3 pr-10 rounded-lg border bg-white text-gray-900"
+      />
+      <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+        className="absolute right-3 top-10 text-gray-500"
+      >
+        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+      </button>
+    </div>
+  
+    {/* Checkbox */}
+    <div className="flex items-center my-4">
+      <input id="remember" type="checkbox" checked={formData.remember} 
+        onChange={handleChange} className="w-4 h-4" />
+      <label htmlFor="remember" className="ml-2 text-sm text-white">
+        Tôi đồng ý với điều khoản sử dụng
+      </label>
+    </div>
+  
+    {/* Nút đăng ký */}
+    <button className="mt-2 w-full p-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">
+      Đăng ký
+    </button>
+  
+    <p className="mt-3 text-center text-sm text-gray-400">
+      Đã có tài khoản?  
+      <a href="/login" className="ml-1 text-indigo-400 hover:underline">
+        Đăng nhập
+      </a>
+    </p>
+  </form>  
+  );
 }
-
 function App() {
   return (
-    <div className="h-50% flex items-center justify-center">
+    <div className="h-screen flex items-center justify-center">
       <div className="flex  w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden">
         {/* 1. Phần SocialSphere Header (Trái, Ẩn trên Mobile) */}
         <div className="hidden md:block md:w-1/2 bg-indigo-50">
@@ -362,7 +256,7 @@ function App() {
         </div>
 
         {/* 2. Phần Form Đăng Ký (Phải, Chiếm 1/2 trên Desktop, Full trên Mobile) */}
-        <div className="w-full md:w-1/2 flex items-center bg-gray-900 justify-center">
+        <div className="w-full md:w-1/  flex items-center bg-gray-900 justify-center">
           <RegisterForm />
         </div>
       </div>
