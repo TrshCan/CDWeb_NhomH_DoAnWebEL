@@ -9,6 +9,9 @@ use Illuminate\Support\Str;
 use Illuminate\Database\QueryException;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Password as PasswordBroker;
+use Illuminate\Auth\Events\PasswordReset;
 use Exception;
 
 class UserServices
@@ -55,7 +58,8 @@ class UserServices
     }
     public function registerUser(array $data)
     {
-        try {
+        return DB::transaction(function () use ($data) {
+            try {
             /**
              * ==========================
              * 🧩 1️⃣ VALIDATION HỌ TÊN
@@ -145,36 +149,189 @@ class UserServices
                 throw ValidationException::withMessages(['address' => 'Địa chỉ phải dài hơn 5 ký tự']);
             }
 
-            /**
-             * ==========================
-             * 🧩 6️⃣ LƯU VÀO DB
-             * ==========================
-             */
-            $data['password'] = Hash::make($password);
-            $user = $this->userRepo->registerUser($data);
+                /**
+                 * ==========================
+                 * 🧩 6️⃣ LƯU VÀO DB
+                 * ==========================
+                 */
+                $data['password'] = Hash::make($password);
 
-            if (!$user) {
-                throw new Exception('Không thể tạo tài khoản, vui lòng thử lại.');
+                // Double-check for duplicates inside transaction
+                if ($this->userRepo->findByEmail($email)) {
+                    throw ValidationException::withMessages(['email' => 'Email đã được đăng ký']);
+                }
+                if ($this->userRepo->findByPhone($phone)) {
+                    throw ValidationException::withMessages(['phone' => 'Số điện thoại đã được đăng ký']);
+                }
+
+                $user = $this->userRepo->registerUser($data);
+
+                if (!$user) {
+                    throw new Exception('Không thể tạo tài khoản, vui lòng thử lại.');
+                }
+
+                $token = Str::random(60);
+
+                return [
+                    'token' => $token,
+                    'user' => $user,
+                ];
+            }
+            catch (ValidationException $e) {
+                Log::warning('Lỗi xác thực khi đăng ký: ' . json_encode($e->errors()));
+                throw $e; // GraphQL sẽ tự động trả lỗi này ra FE
+            }
+            catch (QueryException $e) {
+                Log::error('Lỗi truy vấn CSDL khi đăng ký: ' . $e->getMessage());
+
+                // Handle specific database constraint violations
+                if (str_contains($e->getMessage(), 'users_email_unique')) {
+                    throw ValidationException::withMessages(['email' => 'Email đã được đăng ký']);
+                }
+                if (str_contains($e->getMessage(), 'users_phone_unique')) {
+                    throw ValidationException::withMessages(['phone' => 'Số điện thoại đã được đăng ký']);
+                }
+
+                throw new Exception('Lỗi cơ sở dữ liệu, vui lòng thử lại sau.');
+            }
+            catch (Exception $e) {
+                Log::error('Lỗi hệ thống khi đăng ký: ' . $e->getMessage());
+                throw new Exception('Đăng ký thất bại: ' . $e->getMessage());
+            }
+        });
+    }
+
+    /**
+     * Send password reset link to user's email using Laravel's Password Broker
+     * This follows industry standard password reset flow
+     */
+    public function forgotPassword(string $email): string
+    {
+        try {
+            // Validate and sanitize email
+            $email = trim($email);
+            if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw ValidationException::withMessages(['email' => 'Email không hợp lệ']);
             }
 
-            $token = Str::random(60);
+            // Check if user exists first
+            $user = $this->userRepo->findByEmail($email);
+            if (!$user) {
+                throw ValidationException::withMessages(['email' => 'Email không tồn tại trong hệ thống']);
+            }
 
-            return [
-                'token' => $token,
-                'user' => $user,
-            ];
+            // Use Laravel's Password Broker to send reset link
+            // This is the industry standard approach used by Laravel and most applications
+            $status = PasswordBroker::sendResetLink(['email' => $email]);
+
+            // Handle response from Password Broker
+            if ($status === PasswordBroker::RESET_LINK_SENT) {
+                return 'Chúng tôi đã gửi link đặt lại mật khẩu qua email của bạn.';
+            }
+
+            // Handle error cases
+            if ($status === PasswordBroker::INVALID_USER) {
+                throw ValidationException::withMessages(['email' => 'Email không tồn tại trong hệ thống']);
+            }
+
+            if ($status === PasswordBroker::RESET_THROTTLED) {
+                throw ValidationException::withMessages(['email' => 'Vui lòng chờ trước khi yêu cầu lại']);
+            }
+
+            throw ValidationException::withMessages(['email' => 'Không thể gửi email. Vui lòng thử lại sau.']);
+
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            Log::error('Forgot password error: ' . $e->getMessage());
+            throw new Exception('Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại sau.');
         }
-        catch (ValidationException $e) {
-            Log::warning('Lỗi xác thực khi đăng ký: ' . json_encode($e->errors()));
-            throw $e; // GraphQL sẽ tự động trả lỗi này ra FE
-        }
-        catch (QueryException $e) {
-            Log::error('Lỗi truy vấn CSDL khi đăng ký: ' . $e->getMessage());
-            throw new Exception('Lỗi cơ sở dữ liệu, vui lòng thử lại sau.');
-        }
-        catch (Exception $e) {
-            Log::error('Lỗi hệ thống khi đăng ký: ' . $e->getMessage());
-            throw new Exception('Đăng ký thất bại: ' . $e->getMessage());
+    }
+
+    /**
+     * Reset user password using Laravel's Password Broker
+     * This is the industry standard approach for password reset
+     */
+    public function resetPassword(array $data): string
+    {
+        try {
+            // Validate inputs
+            $email = trim($data['email'] ?? '');
+            $password = $data['password'] ?? '';
+            $passwordConfirmation = $data['passwordConfirmation'] ?? '';
+            $token = trim($data['token'] ?? '');
+
+            // Basic validation
+            if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw ValidationException::withMessages(['email' => 'Email không hợp lệ']);
+            }
+
+            if (empty($password)) {
+                throw ValidationException::withMessages(['password' => 'Vui lòng nhập mật khẩu mới']);
+            }
+
+            if ($password !== $passwordConfirmation) {
+                throw ValidationException::withMessages(['password_confirmation' => 'Xác nhận mật khẩu không trùng khớp']);
+            }
+
+            // Password strength validation
+            if (strlen($password) < 8) {
+                throw ValidationException::withMessages(['password' => 'Mật khẩu phải có ít nhất 8 ký tự']);
+            }
+            if (!preg_match('/[A-Z]/', $password)) {
+                throw ValidationException::withMessages(['password' => 'Mật khẩu phải có ít nhất 1 chữ hoa']);
+            }
+            if (!preg_match('/[a-z]/', $password)) {
+                throw ValidationException::withMessages(['password' => 'Mật khẩu phải có ít nhất 1 chữ thường']);
+            }
+            if (!preg_match('/[0-9]/', $password)) {
+                throw ValidationException::withMessages(['password' => 'Mật khẩu phải có ít nhất 1 số']);
+            }
+            if (!preg_match('/[\W_]/', $password)) {
+                throw ValidationException::withMessages(['password' => 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt']);
+            }
+
+            // Use Laravel's Password Broker to reset password
+            // This is the industry standard and handles token validation, expiration, etc.
+            $status = PasswordBroker::reset(
+                [
+                    'email' => $email,
+                    'password' => $password,
+                    'password_confirmation' => $passwordConfirmation,
+                    'token' => $token,
+                ],
+                function ($user, $password) {
+                    // Update user password
+                    $user->forceFill([
+                        'password' => Hash::make($password)
+                    ])->save();
+
+                    // Fire password reset event
+                    event(new PasswordReset($user));
+                }
+            );
+
+            // Handle response from Password Broker
+            if ($status === PasswordBroker::PASSWORD_RESET) {
+                return 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập với mật khẩu mới.';
+            }
+
+            // Handle error cases
+            if ($status === PasswordBroker::INVALID_TOKEN) {
+                throw ValidationException::withMessages(['token' => 'Token không hợp lệ hoặc đã hết hạn']);
+            }
+
+            if ($status === PasswordBroker::INVALID_USER) {
+                throw ValidationException::withMessages(['email' => 'Email không tồn tại trong hệ thống']);
+            }
+
+            throw ValidationException::withMessages(['email' => 'Không thể đặt lại mật khẩu. Vui lòng thử lại.']);
+
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            Log::error('Reset password error: ' . $e->getMessage());
+            throw new Exception('Không thể đặt lại mật khẩu. Vui lòng thử lại sau.');
         }
     }
 }

@@ -47,87 +47,87 @@ function SocialSphereHeader() {
     </div>
   );
 }
-function LoginForm() {
+
+function ForgotPasswordForm() {
   const navigate = useNavigate();
-  const LOGIN_USER = `
-    mutation LoginUser($email: String!, $password: String!) {
-        loginUser(email: $email, password: $password) {
-          token
-          user {
-            id
-            name
-            email
-          }
-        }
-      }
-    `;
-  // Quản lý State
+  const FORGOT_PASSWORD = `
+    mutation ForgotPassword($email: String!) {
+      forgotPassword(email: $email)
+    }
+  `;
+
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
-    password: "",
-    remember: true,
   });
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Xử lý thay đổi Input
   const handleChange = (e) => {
-    const { id, value, type, checked } = e.target;
+    const { id, value } = e.target;
     setFormData((prevData) => ({
       ...prevData,
-      [id]: type === "checkbox" ? checked : value,
+      [id]: value,
     }));
+    // Clear errors when user types
+    setError("");
   };
 
-  // Xử lý Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage("");
+    setError("");
 
     try {
+      // Validation
+      if (!formData.email.trim()) {
+        setError("Vui lòng nhập email");
+        setIsLoading(false);
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setError("Email không hợp lệ");
+        setIsLoading(false);
+        return;
+      }
+
       const variables = {
-        email: formData.email,
-        password: formData.password,
+        email: formData.email.trim(),
       };
 
-      const response = await graphqlRequest(LOGIN_USER, variables);
-      console.log("Full response:", response); // log để debug
+      const response = await graphqlRequest(FORGOT_PASSWORD, variables);
 
-      if (response.data && response.data.loginUser) {
-        // Mutation thành công
-        const { token, user } = response.data.loginUser;
-        setMessage(`Đăng nhập thành công: ${user.name}`);
-        setFormData({
-          name: "",
-          email: "",
-          password: "",
-          remember: false,
-        });
-
-        // Lưu token và user ID vào localStorage để dùng cho request sau này
-        localStorage.setItem("token", token);
-        localStorage.setItem("userId", user.id.toString());
-
-        // Dispatch event để cập nhật sidebar
-        window.dispatchEvent(new Event("tokenChanged"));
-
-        // Chuyển hướng về trang chính sau 1 giây
-        setTimeout(() => {
-          navigate("/");
-        }, 1000);
+      if (response.data && response.data.forgotPassword) {
+        setMessage(response.data.forgotPassword);
+        setFormData({ email: "" });
       } else if (response.errors) {
-        // Mutation bị lỗi
-        console.error("GraphQL errors:", response.errors);
-        setMessage(response.errors[0].message);
+        // Handle Laravel validation errors
+        const firstError = response.errors[0];
+        if (firstError.extensions && firstError.extensions.validation) {
+          const validationErrors = firstError.extensions.validation;
+          const firstField = Object.keys(validationErrors)[0];
+          const firstFieldError = validationErrors[firstField][0];
+          setError(firstFieldError);
+        } else {
+          // Handle general errors
+          const errorMessage = firstError.message;
+          if (errorMessage.includes("chưa được đăng ký")) {
+            setError("Email chưa được đăng ký trong hệ thống");
+          } else if (errorMessage.includes("không hợp lệ")) {
+            setError("Email không hợp lệ");
+          } else {
+            setError(errorMessage);
+          }
+        }
       } else {
-        // Network error hoặc response không mong muốn
-        setMessage("Có lỗi xảy ra, vui lòng thử lại");
+        setError("Có lỗi xảy ra, vui lòng thử lại");
       }
     } catch (err) {
       console.error(err);
-      setMessage("Network hoặc server error");
+      setError("Lỗi kết nối mạng hoặc máy chủ");
     } finally {
       setTimeout(() => {
         setIsLoading(false);
@@ -138,10 +138,14 @@ function LoginForm() {
   return (
     <form className="w-full max-w-sm mx-auto p-8" onSubmit={handleSubmit}>
       <h2 className="text-3xl font-bold mb-8 text-center text-white">
-        Chào Mừng Bạn Đã Quay Lại
+        Quên Mật Khẩu
       </h2>
 
-      {/* Thông báo */}
+      <p className="text-sm text-gray-300 mb-6 text-center">
+        Nhập email đăng ký của bạn để nhận link đặt lại mật khẩu
+      </p>
+
+      {/* Thông báo thành công */}
       {message && (
         <div
           className="p-3 mb-4 text-sm font-medium text-green-800 bg-green-100 rounded-lg"
@@ -151,8 +155,18 @@ function LoginForm() {
         </div>
       )}
 
+      {/* Thông báo lỗi */}
+      {error && (
+        <div
+          className="p-3 mb-4 text-sm font-medium text-red-800 bg-red-100 rounded-lg"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
+
       {/* Trường Email */}
-      <div className="mb-5">
+      <div className="mb-6">
         <label
           htmlFor="email"
           className="block mb-2 text-sm font-medium text-white text-left"
@@ -171,47 +185,7 @@ function LoginForm() {
         />
       </div>
 
-      {/* Trường Mật khẩu */}
-      <div className="mb-6">
-        <label
-          htmlFor="password"
-          className="block mb-2 text-sm font-medium text-white text-left"
-        >
-          Nhập mật khẩu:
-        </label>
-        <input
-          type="password"
-          id="password"
-          className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-3 shadow-sm"
-          placeholder="•••••••••"
-          required
-          value={formData.password}
-          onChange={handleChange}
-          disabled={isLoading}
-        />
-      </div>
-
-      {/* Checkbox */}
-      <div className="flex items-start mb-6">
-        <div className="flex items-center h-5">
-          <input
-            id="remember"
-            type="checkbox"
-            className="w-4 h-4 border border-gray-300 rounded accent-indigo-600 focus:ring-3 focus:ring-indigo-300"
-            checked={formData.remember}
-            onChange={handleChange}
-            disabled={isLoading}
-          />
-        </div>
-        <label
-          htmlFor="remember"
-          className=" ms-2 text-sm font-medium text-white"
-        >
-          Tôi đồng ý với điều khoản sử dụng
-        </label>
-      </div>
-
-      {/* Nút Đăng ký */}
+      {/* Nút Gửi yêu cầu */}
       <button
         type="submit"
         className="
@@ -219,11 +193,10 @@ function LoginForm() {
           font-bold rounded-lg text-md w-full px-5 py-3.5 text-center shadow-lg transition duration-200
           flex items-center justify-center
         "
-        disabled={isLoading} // 👈 Vô hiệu hóa nút
+        disabled={isLoading}
       >
         {isLoading ? (
           <>
-            {/* Loading Spinner */}
             <svg
               className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
               xmlns="http://www.w3.org/2000/svg"
@@ -247,26 +220,16 @@ function LoginForm() {
             Đang xử lý...
           </>
         ) : (
-          "Đăng nhập"
+          "Gửi yêu cầu"
         )}
       </button>
 
       <p className="mt-4 text-center text-sm text-gray-500">
         <button
-          onClick={() => navigate("/forgot-password")}
+          onClick={() => navigate("/login")}
           className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
         >
-          Quên mật khẩu?
-        </button>
-      </p>
-
-      <p className="mt-2 text-center text-sm text-gray-500">
-        Chưa có tài khoản?
-        <button
-          onClick={() => navigate("/register")}
-          className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500 ml-1"
-        >
-          Đăng ký
+          ← Quay lại đăng nhập
         </button>
       </p>
     </form>
@@ -276,15 +239,15 @@ function LoginForm() {
 function App() {
   return (
     <div className="h-screen flex items-center justify-center">
-      <div className="flex  w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden">
+      <div className="flex w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden">
         {/* 1. Phần SocialSphere Header (Trái, Ẩn trên Mobile) */}
         <div className="hidden md:block md:w-1/2 bg-indigo-50">
           <SocialSphereHeader />
         </div>
 
-        {/* 2. Phần Form Đăng Ký (Phải, Chiếm 1/2 trên Desktop, Full trên Mobile) */}
+        {/* 2. Phần Form (Phải, Chiếm 1/2 trên Desktop, Full trên Mobile) */}
         <div className="w-full md:w-1/2 flex items-center bg-gray-900 justify-center">
-          <LoginForm />
+          <ForgotPasswordForm />
         </div>
       </div>
     </div>

@@ -9,6 +9,8 @@ import Profile from "./pages/Profile.jsx";
 import MainLayout from "./layouts/MainLayout.jsx";
 import UserManagement from "./pages/UserManagement.jsx";
 import PostDetail from "./pages/PostDetail.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 
 export default function App() {
   return (
@@ -23,9 +25,11 @@ export default function App() {
 
         {/* sau này sẽ thêm các route như profile expole v.v*/}
       </Route>
-      
+
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
   );
 }
