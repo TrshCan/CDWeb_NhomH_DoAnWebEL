@@ -18,6 +18,7 @@ export default function QuestionItem({
   onOptionChange,
   onRemoveOption,
   onMoveOption,
+  onAddOption,
 }) {
   // Kiểm tra image từ question object
   const imageValue = question?.image;
@@ -57,7 +58,7 @@ export default function QuestionItem({
     >
       {/* Dấu * cho câu hỏi bắt buộc (chỉ hiện khi Bật/true) */}
       {question?.required === true && (
-        <span className="absolute top-2 right-4 z-50 text-red-500 text-[25px] font-bold select-none pointer-events-none">
+        <span className="absolute top-2 right-4 z-50 text-red-500 text-[25px] font-semibold select-none pointer-events-none">
           *
         </span>
       )}
@@ -392,9 +393,9 @@ export default function QuestionItem({
                             </div>
                           </>
                         ) : (
-                          /* Khi không active: hiển thị checkbox bình thường */
+                          /* Khi không active: hiển thị checkbox hoặc radio tùy loại */
                           <input
-                            type="checkbox"
+                            type={question.type === "Danh sách (nút chọn)" ? "radio" : "checkbox"}
                             name={`question-${question.id}`}
                             value={option.id}
                             checked={isOptionChecked(selectedAnswer, option.id)}
@@ -402,11 +403,12 @@ export default function QuestionItem({
                               onAnswerSelect?.(question.id, option.id, question.type)
                             }
                             onClick={(e) => e.stopPropagation()}
-                            className="text-violet-600 focus:ring-violet-500 border-2 border-gray-400 rounded cursor-pointer flex-shrink-0"
+                            className="text-violet-600 focus:ring-violet-500 border-2 border-gray-400 cursor-pointer flex-shrink-0"
                             style={{
                               accentColor: "#7c3aed",
                               width: "24px",
                               height: "24px",
+                              borderRadius: question.type === "Danh sách (nút chọn)" ? "50%" : "4px",
                             }}
                           />
                         )}
@@ -422,7 +424,7 @@ export default function QuestionItem({
                               }}
                             >
                               <EditableField
-                                placeholder="Subquestion"
+                                placeholder={question.type === "Danh sách (nút chọn)" ? "Answer option" : "Subquestion"}
                                 initialValue={option.text}
                                 inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-semibold"
                                 isTextarea={true}
@@ -439,8 +441,7 @@ export default function QuestionItem({
                               }}
                             >
                               <span
-                                className={`text-sm text-gray-700 font-semibold ${!option.text ? "italic text-gray-400" : ""
-                                  } inline-block whitespace-normal break-words leading-relaxed`}
+                                className={`text-sm text-gray-700 font-semibold ${!option.text ? "italic text-gray-400" : ""} inline-block whitespace-normal break-words leading-relaxed`}
                                 style={{
                                   width: answerWidth,
                                   padding: "8px",
@@ -454,7 +455,7 @@ export default function QuestionItem({
                                   verticalAlign: "top",
                                 }}
                               >
-                                {option.text || "Subquestion"}
+                                {option.text || (question.type === "Danh sách (nút chọn)" ? "Answer option" : "Subquestion")}
                               </span>
                             </div>
                           )}
@@ -468,7 +469,13 @@ export default function QuestionItem({
               {/* Actions: thu theo nội dung (không absolute) */}
               {isActive && (
                 <div className="mt-6 flex items-start justify-between">
-                  <button className="flex items-center text-violet-600 text-sm hover:text-violet-800 transition-colors font-normal ml-[28px]">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddOption?.(question.id);
+                    }}
+                    className="flex items-center text-violet-600 text-sm hover:text-violet-800 transition-colors font-normal ml-[28px]"
+                  >
                     <PlusIcon className="h-5 w-5 mr-1" />
                     Thêm câu hỏi phụ
                   </button>
@@ -680,9 +687,9 @@ export default function QuestionItem({
                           </div>
                         </>
                       ) : (
-                        /* Khi không active: hiển thị checkbox bình thường */
+                        /* Khi không active: hiển thị checkbox hoặc radio tùy loại */
                         <input
-                          type="checkbox"
+                          type={question.type === "Danh sách (nút chọn)" ? "radio" : "checkbox"}
                           name={`question-${question.id}`}
                           value={option.id}
                           checked={isOptionChecked(selectedAnswer, option.id)}
@@ -690,11 +697,12 @@ export default function QuestionItem({
                             onAnswerSelect?.(question.id, option.id, question.type)
                           }
                           onClick={(e) => e.stopPropagation()}
-                          className="text-violet-600 focus:ring-violet-500 border-2 border-gray-400 rounded cursor-pointer flex-shrink-0"
+                          className="text-violet-600 focus:ring-violet-500 border-2 border-gray-400 cursor-pointer flex-shrink-0"
                           style={{
                             accentColor: "#7c3aed",
                             width: "24px",
                             height: "24px",
+                            borderRadius: question.type === "Danh sách (nút chọn)" ? "50%" : "4px",
                           }}
                         />
 
@@ -711,7 +719,7 @@ export default function QuestionItem({
                             }}
                           >
                             <EditableField
-                              placeholder="Subquestion"
+                              placeholder={question.type === "Danh sách (nút chọn)" ? "Answer option" : "Subquestion"}
                               initialValue={option.text}
                               inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-semibold"
                               isTextarea={true}
@@ -743,7 +751,7 @@ export default function QuestionItem({
                                 verticalAlign: "top",
                               }}
                             >
-                              {option.text || "Subquestion"}
+                              {option.text || (question.type === "Danh sách (nút chọn)" ? "Answer option" : "Subquestion")}
                             </span>
                           </div>
                         )}
@@ -757,7 +765,13 @@ export default function QuestionItem({
             {/* Actions: đặt inline bên dưới nội dung */}
             {isActive && (
               <div className="mt-6 flex items-start justify-between">
-                <button className="flex items-center text-violet-600 text-sm hover:text-violet-800 transition-colors font-normal ml-[28px]">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddOption?.(question.id);
+                  }}
+                  className="flex items-center text-violet-600 text-sm hover:text-violet-800 transition-colors font-normal ml-[28px]"
+                >
                   <PlusIcon className="h-5 w-5 mr-1" />
                   Thêm câu hỏi phụ
                 </button>

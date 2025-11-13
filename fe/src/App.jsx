@@ -346,16 +346,26 @@ export default function App() {
   const addQuestionItem = (questionType = "Mặc định", groupId = null) => {
     setQuestionGroups((prev) => {
       if (prev.length === 0) {
+        // Tạo options dựa trên loại câu hỏi
+        const defaultOptions = questionType === "Danh sách (nút chọn)"
+          ? [
+              { id: 1, text: "" },
+              { id: 2, text: "" },
+              { id: 3, text: "" },
+              { id: 4, text: "Không có câu trả lời" },
+            ]
+          : [
+              { id: 1, text: "" },
+              { id: 2, text: "" },
+              { id: 3, text: "" },
+            ];
+
         const newItem = {
           id: 1,
           text: "",
           helpText: "",
           type: questionType,
-          options: [
-            { id: 1, text: "" },
-            { id: 2, text: "" },
-            { id: 3, text: "" },
-          ],
+          options: defaultOptions,
         };
         return [
           {
@@ -377,16 +387,26 @@ export default function App() {
         ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
       );
       const newId = maxId + 1;
+      // Tạo options dựa trên loại câu hỏi
+      const defaultOptions = questionType === "Danh sách (nút chọn)"
+        ? [
+            { id: 1, text: "" },
+            { id: 2, text: "" },
+            { id: 3, text: "" },
+            { id: 4, text: "Không có câu trả lời" },
+          ]
+        : [
+            { id: 1, text: "" },
+            { id: 2, text: "" },
+            { id: 3, text: "" },
+          ];
+
       const newItem = {
         id: newId,
         text: "",
         helpText: "",
         type: questionType,
-        options: [
-          { id: 1, text: "" },
-          { id: 2, text: "" },
-          { id: 3, text: "" },
-        ],
+        options: defaultOptions,
       };
 
       setActiveSection(`question-${newId}`);
