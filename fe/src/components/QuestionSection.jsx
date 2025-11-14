@@ -86,6 +86,7 @@ export default function QuestionSection({
         newItem.text !== prevItem.text ||
         newItem.image !== prevItem.image || // ✅ Quan trọng: so sánh image
         newItem.type !== prevItem.type ||
+        newItem.required !== prevItem.required ||
         JSON.stringify(newItem.options) !== JSON.stringify(prevItem.options)) {
         hasChanges = true;
         break;

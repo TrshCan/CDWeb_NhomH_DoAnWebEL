@@ -770,8 +770,6 @@ export default function App() {
               <QuestionSettingsPanel
                 value={questionSettings[activeQuestionId] || {}}
                 onChange={(newSettings) => {
-                  console.log('🔄 App.jsx onChange called with:', newSettings);
-                  console.log('🔄 activeQuestionId:', activeQuestionId);
                   setQuestionSettings((prev) => ({
                     ...prev,
                     [activeQuestionId]: newSettings,
@@ -784,7 +782,6 @@ export default function App() {
                         if (String(q.id) !== String(activeQuestionId)) return q;
 
                         let updated = { ...q, ...newSettings };
-                        console.log('🔄 Updated question:', updated);
                         const newType = newSettings.type || q.type;
 
                         if (newType === "Danh sách (nút chọn)") {
