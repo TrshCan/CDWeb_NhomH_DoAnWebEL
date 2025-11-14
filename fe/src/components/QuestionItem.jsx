@@ -443,7 +443,7 @@ export default function QuestionItem({
                                   <img
                                     src={option.image}
                                     alt="Option"
-                                    className="border-2 border-gray-700 rounded-sm cursor-pointer hover:opacity-90 transition-opacity"
+                                    className="peer border-2 border-gray-700 rounded-sm cursor-pointer"
                                     style={{
                                       height: "160px",
                                       width: "auto",
@@ -460,7 +460,7 @@ export default function QuestionItem({
                                       e.stopPropagation();
                                       onOptionImageChange?.(question.id, option.id, null);
                                     }}
-                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-colors"
+                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-all opacity-0 peer-hover:opacity-100"
                                     title="Xóa ảnh"
                                   >
                                     <svg
@@ -867,7 +867,7 @@ export default function QuestionItem({
                                 <img
                                   src={option.image}
                                   alt="Option"
-                                  className="border-1 border-gray-900 rounded-sm cursor-pointer hover:opacity-90 transition-opacity"
+                                  className="peer border-1 border-gray-900 rounded-sm cursor-pointer"
                                   style={{
                                     height: "160px",
                                     width: "auto",
@@ -884,7 +884,7 @@ export default function QuestionItem({
                                     e.stopPropagation();
                                     onOptionImageChange?.(question.id, option.id, null);
                                   }}
-                                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-colors"
+                                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-all opacity-0 peer-hover:opacity-100"
                                   title="Xóa ảnh"
                                 >
                                   <svg
