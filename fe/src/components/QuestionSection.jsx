@@ -30,6 +30,7 @@ export default function QuestionSection({
   onAddOption,
   onRemoveOption,
   onMoveOption,
+  onOptionImageChange,
 }) {
   const [items, setItems] = useState(questionItems);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -324,10 +325,10 @@ export default function QuestionSection({
       {/* Vùng nội dung có hiệu ứng thu/mở mượt */}
       <div
         className={`transition-all duration-300 ease-in-out ${isCollapsed
-            ? "max-h-0 overflow-hidden"
-            : "max-h-[9999px] overflow-hidden"
+          ? "max-h-0 overflow-hidden"
+          : "max-h-[9999px]"
           }`}
-        style={{ position: "relative" }}
+        style={{ position: "relative", overflow: "visible" }}
       >
         <div
           className="bg-white rounded-sm shadow-lg border border-gray-200 divide-y divide-gray-200"
@@ -382,6 +383,7 @@ export default function QuestionSection({
                   onAddOption={onAddOption}
                   onRemoveOption={onRemoveOption}
                   onMoveOption={onMoveOption}
+                  onOptionImageChange={onOptionImageChange}
                 />
               </div>
             );

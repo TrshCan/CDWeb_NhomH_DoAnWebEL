@@ -191,6 +191,26 @@ export default function App() {
     );
   };
 
+  // Thay đổi ảnh cho từng option
+  const handleOptionImageChange = (questionId, optionId, imageDataUrl) => {
+    setQuestionGroups((prev) =>
+      prev.map((group) => ({
+        ...group,
+        questions: group.questions.map((q) => {
+          if (q.id !== questionId) return q;
+
+          return {
+            ...q,
+            options: (q.options || []).map((opt) =>
+              opt.id === optionId ? { ...opt, image: imageDataUrl } : opt
+            ),
+          };
+        }),
+      }))
+    );
+  };
+
+
   // Thêm option mới
   const handleAddOption = (questionId) => {
     setQuestionGroups((prev) =>
@@ -347,7 +367,7 @@ export default function App() {
   };
 
   const createDefaultOptions = (questionType) =>
-    questionType === "Danh sách (nút chọn)" || questionType === "Danh sách có nhận xét (Radio)"
+    questionType === "Danh sách (nút chọn)"
       ? [
         { id: 1, text: "" },
         { id: 2, text: "" },
@@ -750,6 +770,8 @@ export default function App() {
               <QuestionSettingsPanel
                 value={questionSettings[activeQuestionId] || {}}
                 onChange={(newSettings) => {
+                  console.log('🔄 App.jsx onChange called with:', newSettings);
+                  console.log('🔄 activeQuestionId:', activeQuestionId);
                   setQuestionSettings((prev) => ({
                     ...prev,
                     [activeQuestionId]: newSettings,
@@ -762,6 +784,7 @@ export default function App() {
                         if (String(q.id) !== String(activeQuestionId)) return q;
 
                         let updated = { ...q, ...newSettings };
+                        console.log('🔄 Updated question:', updated);
                         const newType = newSettings.type || q.type;
 
                         if (newType === "Danh sách (nút chọn)") {
@@ -884,6 +907,7 @@ export default function App() {
                             onAddOption={handleAddOption}
                             onRemoveOption={handleRemoveOption}
                             onMoveOption={handleMoveOption}
+                            onOptionImageChange={handleOptionImageChange}
                           />
                           <AddSection
                             onAddClick={() => {

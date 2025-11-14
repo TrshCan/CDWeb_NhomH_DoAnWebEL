@@ -196,11 +196,15 @@ export default function QuestionSettingsPanel({
               className="w-full border-2 border-dashed border-gray-300 rounded-sm p-8 text-center cursor-pointer hover:border-violet-500 transition-colors"
             >
               {image ? (
-                <div className="relative">
+                <div className="relative w-full">
                   <img
                     src={image}
                     alt="Question"
-                    className="max-w-full max-h-48 mx-auto rounded"
+                    className="w-full h-auto"
+                    style={{
+                      display: "block",
+                      objectFit: "contain",
+                    }}
                   />
                   <button
                     type="button"
@@ -208,9 +212,22 @@ export default function QuestionSettingsPanel({
                       e.stopPropagation();
                       onChange?.({ ...value, image: null });
                     }}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-colors"
                   >
-                    ×
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="1.5"
+                      strokeLinecap="square"
+                      strokeLinejoin="miter"
+                    >
+                      <path d="M15.5355339 15.5355339L8.46446609 8.46446609M15.5355339 8.46446609L8.46446609 15.5355339" />
+                      <path d="M4.92893219,19.0710678 C1.02368927,15.1658249 1.02368927,8.83417511 4.92893219,4.92893219 C8.83417511,1.02368927 15.1658249,1.02368927 19.0710678,4.92893219 C22.9763107,8.83417511 22.9763107,15.1658249 19.0710678,19.0710678 C15.1658249,22.9763107 8.83417511,22.9763107 4.92893219,19.0710678 Z" />
+                    </svg>
                   </button>
                 </div>
               ) : (
