@@ -44,8 +44,8 @@ class DuplicateService
             // Sử dụng database transaction để đảm bảo tính toàn vẹn dữ liệu
             // Nếu có lỗi xảy ra ở bất kỳ bước nào, tất cả thay đổi sẽ được rollback
             return DB::transaction(function () use ($surveyId) {
-                // 1. Lấy survey gốc cùng với questions và options
-                $original = $this->repository->findByIdWithRelations($surveyId);
+                // 1. Lấy survey gốc
+                $original = $this->repository->findById($surveyId);
 
                 // 2. Kiểm tra survey có bị soft-deleted không (findOrFail đã xử lý, nhưng kiểm tra thêm để rõ ràng)
                 if ($original->trashed()) {
@@ -91,11 +91,11 @@ class DuplicateService
                 // 5. Tạo bản sao survey
                 $duplicatedSurvey = $this->repository->createDuplicate($surveyData);
 
-                // 6. Sao chép questions và options
+                // 6. Sao chép questions và options từ database trực tiếp
                 $this->duplicateQuestions($original, $duplicatedSurvey);
 
-                // 7. Load lại relations để trả về đầy đủ dữ liệu
-                $duplicatedSurvey->load('questions.options');
+                // 7. Load lại survey với creator_name để trả về đầy đủ dữ liệu
+                $duplicatedSurvey->refresh();
 
                 return $duplicatedSurvey;
             });
@@ -132,40 +132,47 @@ class DuplicateService
     private function duplicateQuestions(\App\Models\Survey $original, \App\Models\Survey $duplicated): void
     {
         try {
-            // Duyệt qua từng question của survey gốc
-            foreach ($original->questions as $originalQuestion) {
-                // Validate question_text không được rỗng
+            // Lấy questions từ database trực tiếp
+            $questions = DB::table('survey_questions')
+                ->where('survey_id', $original->id)
+                ->get();
+
+            foreach ($questions as $originalQuestion) {
                 $questionText = $originalQuestion->question_text ?? '';
                 if (empty(trim($questionText))) {
                     \Log::warning('Skipping question with empty text', [
                         'question_id' => $originalQuestion->id,
                         'survey_id' => $original->id
                     ]);
-                    continue; // Bỏ qua question không có nội dung
+                    continue;
                 }
 
-                // Tạo question mới cho survey đã sao chép
-                $newQuestion = $duplicated->questions()->create([
+                // Tạo question mới
+                $newQuestionId = DB::table('survey_questions')->insertGetId([
+                    'survey_id' => $duplicated->id,
                     'question_text' => $questionText,
                     'question_type' => $originalQuestion->question_type ?? 'text',
                     'points' => $originalQuestion->points ?? 0,
                 ]);
 
                 // Sao chép options chỉ khi question_type không phải là 'text'
-                // Questions loại 'text' thường không có options
-                if ($newQuestion->question_type !== 'text' && $originalQuestion->options->isNotEmpty()) {
-                    foreach ($originalQuestion->options as $originalOption) {
-                        // Validate option_text không được rỗng
+                if (($originalQuestion->question_type ?? 'text') !== 'text') {
+                    $options = DB::table('survey_options')
+                        ->where('question_id', $originalQuestion->id)
+                        ->get();
+
+                    foreach ($options as $originalOption) {
                         $optionText = $originalOption->option_text ?? '';
                         if (empty(trim($optionText))) {
                             \Log::warning('Skipping option with empty text', [
                                 'option_id' => $originalOption->id,
                                 'question_id' => $originalQuestion->id
                             ]);
-                            continue; // Bỏ qua option không có nội dung
+                            continue;
                         }
 
-                        $newQuestion->options()->create([
+                        DB::table('survey_options')->insert([
+                            'question_id' => $newQuestionId,
                             'option_text' => $optionText,
                             'is_correct' => $originalOption->is_correct ?? false,
                         ]);

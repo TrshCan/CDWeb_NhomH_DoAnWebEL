@@ -1,4 +1,5 @@
 #import Survey.graphql
+#import duplicate.graphql
 type User {
     id: ID!
     name: String
@@ -42,3 +43,4 @@ type Mutation {
     deleteCategory(id: Int!, allowIfReferenced: Boolean): Boolean!
         @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@delete")
 }
+

@@ -28,7 +28,8 @@ class SurveyRepository
     // 🆕 Thêm hàm lấy danh sách khảo sát (có phân trang và filter)
     public function getAllPaginated(int $perPage = 10, array $filters = [])
     {
-        $query = Survey::with(['category', 'creator'])
+        $query = Survey::with(['creator'])
+            ->whereNull('surveys.deleted_at')
             ->leftJoin('users as u', 'u.id', '=', 'surveys.created_by')
             ->select('surveys.*')
             ->addSelect(['creator_name' => \DB::raw('u.name')]);

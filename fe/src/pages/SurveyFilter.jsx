@@ -16,10 +16,10 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' })
   isOpen && (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity" onClick={onClose}>
       <div
-        className={`relative ${size} w-full mx-auto rounded-xl bg-white shadow-2xl overflow-hidden max-h-[95vh] overflow-y-auto transform transition-all animate-in fade-in zoom-in-95`}
+        className={`relative ${size} w-full mx-auto rounded-xl bg-white shadow-2xl overflow-hidden max-h-[98vh] overflow-y-auto transform transition-all animate-in fade-in zoom-in-95`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-8 py-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-200">
+        <div className="flex items-center justify-between px-8 py-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-200 sticky top-0 z-10">
           <h3 className="text-3xl font-bold text-gray-900">{title}</h3>
           <button 
             onClick={onClose} 
@@ -33,7 +33,7 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' })
         </div>
         <div className="p-8">{children}</div>
         {footer && (
-          <div className="flex justify-end px-8 py-6 bg-gray-50 border-t-2 border-gray-200 gap-4">
+          <div className="flex justify-end px-8 py-6 bg-gray-50 border-t-2 border-gray-200 gap-4 sticky bottom-0 z-10">
             {footer}
           </div>
         )}
@@ -43,82 +43,82 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' })
 );
 
 const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
-  <div className="space-y-6">
+  <div className="space-y-4">
     {selectedSurvey && (
       <>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h4 className="text-2xl font-bold text-gray-900 mb-3">{selectedSurvey.title}</h4>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 border-2 border-gray-200">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <h4 className="text-lg font-bold text-gray-900 mb-2">{selectedSurvey.title}</h4>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-800 border-2 border-gray-200">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 {selectedSurvey.category}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-800 border-2 border-blue-200">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87V14.13a1 1 0 001.555.834l3.197-2.132a1 1 0 000-1.664z"/></svg>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-800 border-2 border-blue-200">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87V14.13a1 1 0 001.555.834l3.197-2.132a1 1 0 000-1.664z"/></svg>
                 {selectedSurvey.type === 'survey' ? 'Survey' : 'Quiz'}
               </span>
-              <span className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold border-2 ${statusConfig[selectedSurvey.status]?.class} ${statusConfig[selectedSurvey.status]?.class?.includes('green') ? 'border-green-300' : statusConfig[selectedSurvey.status]?.class?.includes('red') || statusConfig[selectedSurvey.status]?.class?.includes('amber') ? 'border-amber-300' : 'border-gray-300'}`}>
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold border-2 ${statusConfig[selectedSurvey.status]?.class} ${statusConfig[selectedSurvey.status]?.class?.includes('green') ? 'border-green-300' : statusConfig[selectedSurvey.status]?.class?.includes('red') || statusConfig[selectedSurvey.status]?.class?.includes('amber') ? 'border-amber-300' : 'border-gray-300'}`}>
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
                 {statusConfig[selectedSurvey.status]?.label}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6 shadow-sm">
-          <div className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Mô tả</div>
-          <div className="text-base text-gray-900 whitespace-pre-wrap leading-relaxed">{selectedSurvey.description || 'Chưa có mô tả'}</div>
+        <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-white p-4 shadow-sm">
+          <div className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Mô tả</div>
+          <div className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">{selectedSurvey.description || 'Chưa có mô tả'}</div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 shadow-sm">
-            <div className="text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-2">
-              <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 shadow-sm">
+            <div className="text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+              <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               Thời gian
             </div>
-            <div className="mt-2 text-base font-semibold text-gray-900">{formatTimeRange(selectedSurvey.startAt, selectedSurvey.endAt)}</div>
+            <div className="mt-1.5 text-sm font-semibold text-gray-900">{formatTimeRange(selectedSurvey.startAt, selectedSurvey.endAt)}</div>
           </div>
-          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-5 shadow-sm">
-            <div className="text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-2">
-              <svg className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-4 shadow-sm">
+            <div className="text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+              <svg className="h-4 w-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               Điểm thưởng
             </div>
-            <div className="mt-2 text-2xl font-bold text-amber-700">{selectedSurvey.type === 'quiz' ? `${selectedSurvey.points} điểm` : '—'}</div>
+            <div className="mt-1.5 text-lg font-bold text-amber-700">{selectedSurvey.type === 'quiz' ? `${selectedSurvey.points} điểm` : '—'}</div>
           </div>
-          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-emerald-50 to-green-50 p-5 shadow-sm">
-            <div className="text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-2">
-              <svg className="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8m4-4H8"/></svg>
+          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-emerald-50 to-green-50 p-4 shadow-sm">
+            <div className="text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+              <svg className="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8m4-4H8"/></svg>
               Giới hạn thời gian
             </div>
-            <div className="mt-2 text-base font-semibold text-gray-900">{selectedSurvey.timeLimit ? `${selectedSurvey.timeLimit} phút` : 'Không giới hạn'}</div>
+            <div className="mt-1.5 text-sm font-semibold text-gray-900">{selectedSurvey.timeLimit ? `${selectedSurvey.timeLimit} phút` : 'Không giới hạn'}</div>
           </div>
-          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-purple-50 to-pink-50 p-5 shadow-sm">
-            <div className="text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Đối tượng</div>
-            <div className="inline-flex items-center gap-3 rounded-full bg-purple-100 px-5 py-3 text-base font-semibold text-purple-800 border-2 border-purple-200">
-              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M9 20H4v-2a3 3 0 015.356-1.857M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <div className="rounded-xl border-2 border-gray-200 bg-gradient-to-br from-purple-50 to-pink-50 p-4 shadow-sm">
+            <div className="text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Đối tượng</div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-4 py-2 text-sm font-semibold text-purple-800 border-2 border-purple-200">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M9 20H4v-2a3 3 0 015.356-1.857M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               {selectedSurvey.object === 'public' ? 'Công khai' : selectedSurvey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl border-2 border-gray-200 bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+        <div className="rounded-xl border-2 border-gray-200 bg-white p-4 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Danh mục</div>
-              <div className="mt-1 text-sm font-medium text-gray-900">{selectedSurvey.category}</div>
+              <div className="mt-1 text-xs font-medium text-gray-900">{selectedSurvey.category}</div>
             </div>
-            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Loại</div>
-              <div className="mt-1 text-sm font-medium text-gray-900">{selectedSurvey.type === 'survey' ? 'Survey' : 'Quiz'}</div>
+              <div className="mt-1 text-xs font-medium text-gray-900">{selectedSurvey.type === 'survey' ? 'Survey' : 'Quiz'}</div>
             </div>
-            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Người tạo</div>
-              <div className="mt-1 text-sm font-medium text-gray-900">{selectedSurvey.creatorName}</div>
+              <div className="mt-1 text-xs font-medium text-gray-900">{selectedSurvey.creatorName}</div>
             </div>
-            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Trạng thái</div>
-              <div className="mt-1 text-sm font-medium text-gray-900">{statusConfig[selectedSurvey.status]?.label}</div>
+              <div className="mt-1 text-xs font-medium text-gray-900">{statusConfig[selectedSurvey.status]?.label}</div>
             </div>
           </div>
         </div>
@@ -128,38 +128,36 @@ const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
 );
 
 const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig }) => (
-  <form id="editForm" onSubmit={onSubmit} className="space-y-6">
-    <div>
-      <label className="block text-left font-semibold mb-2">Tiêu đề</label>
-      <input
-        type="text"
-        value={editForm.title}
-        onChange={(e) => onChange.title(e.target.value)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-        required
-        autoFocus
-      />
-    </div>
-
-    <div>
-      <label className="block text-left font-semibold mb-2">Mô tả</label>
-      <textarea
-        value={editForm.description}
-        onChange={(e) => onChange.description(e.target.value)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-        rows="4"
-        placeholder="Nhập mô tả cho khảo sát..."
-        required
-      />
-    </div>
-
+  <form id="editForm" onSubmit={onSubmit} className="space-y-4">
     <div className="grid grid-cols-2 gap-4">
+      <div className="col-span-2">
+        <label className="block text-left text-sm font-semibold mb-1.5">Tiêu đề</label>
+        <input
+          type="text"
+          value={editForm.title}
+          onChange={(e) => onChange.title(e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          required
+          autoFocus
+        />
+      </div>
+      <div className="col-span-2">
+        <label className="block text-left text-sm font-semibold mb-1.5">Mô tả</label>
+        <textarea
+          value={editForm.description}
+          onChange={(e) => onChange.description(e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          rows="3"
+          placeholder="Nhập mô tả cho khảo sát..."
+          required
+        />
+      </div>
       <div>
-        <label className="block text-left font-semibold mb-2">Danh mục</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Danh mục</label>
         <select
           value={editForm.category}
           onChange={(e) => onChange.category(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         >
           <option value="">Chọn danh mục</option>
@@ -167,11 +165,11 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
         </select>
       </div>
       <div>
-        <label className="block text-left font-semibold mb-2">Loại</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Loại</label>
         <select
           value={editForm.type}
           onChange={(e) => onChange.type(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         >
           <option value="">Chọn loại</option>
@@ -182,63 +180,54 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
           ))}
         </select>
       </div>
-    </div>
-
-    <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-left font-semibold mb-2">Bắt đầu</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Bắt đầu</label>
         <input
           type="date"
           value={editForm.startAt}
           onChange={(e) => onChange.startAt(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         />
       </div>
       <div>
-        <label className="block text-left font-semibold mb-2">Kết thúc</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Kết thúc</label>
         <input
           type="date"
           value={editForm.endAt}
           onChange={(e) => onChange.endAt(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         />
       </div>
-    </div>
-
-    <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-left font-semibold mb-2">Điểm thưởng</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Điểm thưởng</label>
         <input
           type="number"
           min="0"
           value={editForm.points}
           onChange={(e) => onChange.points(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         />
       </div>
       <div>
-        <label className="block text-left font-semibold mb-2">Giới hạn thời gian (phút)</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Giới hạn thời gian (phút)</label>
         <input
           type="number"
           min="1"
           value={editForm.timeLimit}
           onChange={(e) => onChange.timeLimit(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           placeholder="Ví dụ: 30"
         />
       </div>
-    </div>
-
-    <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-left font-semibold mb-2">Đối tượng</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Đối tượng</label>
         <select
           value={editForm.object}
           onChange={(e) => onChange.object(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         >
           <option value="">Chọn đối tượng</option>
@@ -248,11 +237,11 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
         </select>
       </div>
       <div>
-        <label className="block text-left font-semibold mb-2">Trạng thái</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Trạng thái</label>
         <select
           value={editForm.status}
           onChange={(e) => onChange.status(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         >
           <option value="">Chọn trạng thái</option>
@@ -266,38 +255,36 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
 );
 
 const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig }) => (
-  <form id="addForm" onSubmit={onSubmit} className="space-y-6">
-    <div>
-      <label className="block text-left font-semibold mb-2">Tiêu đề</label>
-      <input
-        type="text"
-        value={addForm.title}
-        onChange={(e) => onChange.title(e.target.value)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-        required
-        autoFocus
-      />
-    </div>
-
-    <div>
-      <label className="block text-left font-semibold mb-2">Mô tả</label>
-      <textarea
-        value={addForm.description}
-        onChange={(e) => onChange.description(e.target.value)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-        rows="4"
-        placeholder="Nhập mô tả cho khảo sát..."
-        required
-      />
-    </div>
-
+  <form id="addForm" onSubmit={onSubmit} className="space-y-4">
     <div className="grid grid-cols-2 gap-4">
+      <div className="col-span-2">
+        <label className="block text-left text-sm font-semibold mb-1.5">Tiêu đề</label>
+        <input
+          type="text"
+          value={addForm.title}
+          onChange={(e) => onChange.title(e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          required
+          autoFocus
+        />
+      </div>
+      <div className="col-span-2">
+        <label className="block text-left text-sm font-semibold mb-1.5">Mô tả</label>
+        <textarea
+          value={addForm.description}
+          onChange={(e) => onChange.description(e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          rows="3"
+          placeholder="Nhập mô tả cho khảo sát..."
+          required
+        />
+      </div>
       <div>
-        <label className="block text-left font-semibold mb-2">Danh mục</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Danh mục</label>
         <select
           value={addForm.category}
           onChange={(e) => onChange.category(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         >
           <option value="">Chọn danh mục</option>
@@ -305,11 +292,11 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
         </select>
       </div>
       <div>
-        <label className="block text-left font-semibold mb-2">Loại</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Loại</label>
         <select
           value={addForm.type}
           onChange={(e) => onChange.type(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         >
           <option value="">Chọn loại</option>
@@ -320,63 +307,54 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
           ))}
         </select>
       </div>
-    </div>
-
-    <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-left font-semibold mb-2">Bắt đầu</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Bắt đầu</label>
         <input
           type="date"
           value={addForm.startAt}
           onChange={(e) => onChange.startAt(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         />
       </div>
       <div>
-        <label className="block text-left font-semibold mb-2">Kết thúc</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Kết thúc</label>
         <input
           type="date"
           value={addForm.endAt}
           onChange={(e) => onChange.endAt(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         />
       </div>
-    </div>
-
-    <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-left font-semibold mb-2">Điểm thưởng</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Điểm thưởng</label>
         <input
           type="number"
           min="0"
           value={addForm.points}
           onChange={(e) => onChange.points(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         />
       </div>
       <div>
-        <label className="block text-left font-semibold mb-2">Giới hạn thời gian (phút)</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Giới hạn thời gian (phút)</label>
         <input
           type="number"
           min="1"
           value={addForm.timeLimit}
           onChange={(e) => onChange.timeLimit(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           placeholder="Ví dụ: 30"
         />
       </div>
-    </div>
-
-    <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-left font-semibold mb-2">Đối tượng</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Đối tượng</label>
         <select
           value={addForm.object}
           onChange={(e) => onChange.object(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         >
           <option value="">Chọn đối tượng</option>
@@ -386,11 +364,11 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
         </select>
       </div>
       <div>
-        <label className="block text-left font-semibold mb-2">Trạng thái</label>
+        <label className="block text-left text-sm font-semibold mb-1.5">Trạng thái</label>
         <select
           value={addForm.status}
           onChange={(e) => onChange.status(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
           required
         >
           <option value="">Chọn trạng thái</option>
@@ -414,6 +392,7 @@ const SurveyFilter = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -700,9 +679,64 @@ const SurveyFilter = () => {
   };
 
   const handleDuplicate = (survey) => {
-    // TODO: Implement duplicate functionality
-    console.log('Duplicate survey:', survey);
-    pushToast('Tính năng sao chép đang được phát triển', 'info');
+    setSelectedSurvey({
+      ...survey,
+      id: Number(survey.id)
+    });
+    setShowDuplicateModal(true);
+  };
+
+  const handleDuplicateConfirm = async () => {
+    if (!selectedSurvey) return;
+
+    try {
+      setLoading(true);
+      const result = await graphqlRequest(`
+        mutation DuplicateSurvey($id: Int!) {
+          duplicateSurvey(id: $id) {
+            id
+            title
+            description
+            categories_id
+            type
+            status
+            start_at
+            end_at
+            time_limit
+            points
+            object
+            created_by
+            creator_name
+          }
+        }
+      `, {
+        id: Number(selectedSurvey.id)
+      });
+
+      if (result.errors?.length > 0) {
+        const errorMessage = result.errors[0].message || 'Sao chép thất bại';
+        console.error('Lỗi sao chép survey:', result.errors);
+        pushToast(errorMessage, 'error');
+        return;
+      }
+
+      if (!result.data?.duplicateSurvey) {
+        pushToast('Sao chép thất bại: Không nhận được dữ liệu', 'error');
+        return;
+      }
+
+      const duplicated = result.data.duplicateSurvey;
+      closeDuplicateModal();
+      pushToast('Sao chép khảo sát thành công', 'success');
+      // Reload với filters hiện tại
+      loadSurveys(filters);
+    } catch (error) {
+      console.error('Lỗi sao chép:', error);
+      const errorMessage = error.message || 'Lỗi hệ thống khi sao chép khảo sát';
+      pushToast(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddClick = () => {
@@ -724,6 +758,7 @@ const SurveyFilter = () => {
   const closeViewModal = () => { setShowViewModal(false); setSelectedSurvey(null); };
   const closeEditModal = () => { setShowEditModal(false); setSelectedSurvey(null); };
   const closeDeleteModal = () => { setShowDeleteModal(false); setSelectedSurvey(null); };
+  const closeDuplicateModal = () => { setShowDuplicateModal(false); setSelectedSurvey(null); };
   const closeAddModal = () => setShowAddModal(false);
 
   // ADD SUBMIT
@@ -1044,6 +1079,24 @@ const SurveyFilter = () => {
     </>
   ), [closeDeleteModal, handleDelete]);
 
+  const duplicateFooter = useMemo(() => (
+    <>
+      <button 
+        onClick={closeDuplicateModal} 
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+      >
+        Hủy
+      </button>
+      <button 
+        onClick={handleDuplicateConfirm} 
+        disabled={loading}
+        className="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+      >
+        {loading ? 'Đang sao chép...' : 'Sao chép khảo sát'}
+      </button>
+    </>
+  ), [closeDuplicateModal, handleDuplicateConfirm, loading]);
+
   return (
     <div className="bg-gray-50 p-8">
       {/* Toasts */}
@@ -1273,11 +1326,11 @@ const SurveyFilter = () => {
         )}
 
         {/* MODALS */}
-        <Modal key="view-modal" isOpen={showViewModal} onClose={closeViewModal} title="Xem chi tiết" size="max-w-3xl" footer={viewFooter}>
+        <Modal key="view-modal" isOpen={showViewModal} onClose={closeViewModal} title="Xem chi tiết" size="max-w-5xl" footer={viewFooter}>
           <ViewModalBody selectedSurvey={selectedSurvey} statusConfig={statusConfig} formatTimeRange={formatTimeRange} />
         </Modal>
 
-        <Modal key="edit-modal" isOpen={showEditModal} onClose={closeEditModal} title="Chỉnh sửa khảo sát" size="max-w-4xl" footer={editFooter}>
+        <Modal key="edit-modal" isOpen={showEditModal} onClose={closeEditModal} title="Chỉnh sửa khảo sát" size="max-w-6xl" footer={editFooter}>
           <EditModalBody
             editForm={editForm}
             onSubmit={handleEditSubmit}
@@ -1301,7 +1354,7 @@ const SurveyFilter = () => {
           />
         </Modal>
 
-        <Modal key="add-modal" isOpen={showAddModal} onClose={closeAddModal} title="Thêm khảo sát mới" size="max-w-4xl" footer={addFooter}>
+        <Modal key="add-modal" isOpen={showAddModal} onClose={closeAddModal} title="Thêm khảo sát mới" size="max-w-6xl" footer={addFooter}>
           <AddModalBody
             addForm={addForm}
             onSubmit={handleAddSubmit}
@@ -1327,16 +1380,109 @@ const SurveyFilter = () => {
 
         <Modal key="delete-modal" isOpen={showDeleteModal} onClose={closeDeleteModal} title="Xác nhận xóa khảo sát" size="max-w-lg" footer={deleteFooter}>
           <div className="text-center py-4">
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
-              <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-red-100 to-rose-100 mb-4 shadow-lg ring-4 ring-red-50">
+              <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </div>
-            <p className="text-xl font-semibold text-gray-900 mb-2">Bạn có chắc chắn muốn xóa?</p>
-            <p className="text-base text-gray-600 mt-3 px-4 py-3 bg-gray-50 rounded-lg border-2 border-gray-200">
-              <span className="font-medium text-gray-800">"{selectedSurvey?.title}"</span>
-            </p>
-           
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Bạn có chắc chắn muốn xóa?</h3>
+            <p className="text-sm text-gray-600 mb-4">Hành động này không thể hoàn tác. Khảo sát sẽ bị xóa vĩnh viễn.</p>
+            <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl border-2 border-red-200 p-4 mb-4 shadow-sm">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <svg className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="text-sm font-semibold text-gray-900">"{selectedSurvey?.title}"</span>
+              </div>
+              <div className="flex items-center justify-center gap-3 mt-2 text-xs text-gray-600">
+                <span className="flex items-center gap-1">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  {selectedSurvey?.category}
+                </span>
+                <span className="flex items-center gap-1">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  {selectedSurvey?.type === 'survey' ? 'Survey' : 'Quiz'}
+                </span>
+              </div>
+            </div>
+            <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-lg">
+              <div className="flex items-start gap-2">
+                <svg className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-xs text-amber-800 text-left">
+                  <span className="font-semibold">Lưu ý:</span> Tất cả dữ liệu liên quan (câu hỏi, lựa chọn, câu trả lời) cũng sẽ bị xóa.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal key="duplicate-modal" isOpen={showDuplicateModal} onClose={closeDuplicateModal} title="Xác nhận sao chép khảo sát" size="max-w-lg" footer={duplicateFooter}>
+          <div className="text-center py-4">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-purple-100 via-indigo-100 to-purple-100 mb-4 shadow-lg ring-4 ring-purple-50">
+              <svg className="h-8 w-8 text-purple-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256">
+                <path d="M184,64H40A16,16,0,0,0,24,80V216a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V80A16,16,0,0,0,184,64Zm0,152H40V80H184V216ZM216,40V192a8,8,0,0,1-16,0V48H72a8,8,0,0,1,0-16H200A16,16,0,0,1,216,40Z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Bạn có muốn sao chép khảo sát này?</h3>
+            <p className="text-sm text-gray-600 mb-4">Một bản sao hoàn chỉnh sẽ được tạo với tất cả câu hỏi và lựa chọn.</p>
+            <div className="bg-gradient-to-br from-purple-50 via-indigo-50 to-purple-50 rounded-xl border-2 border-purple-200 p-4 mb-4 shadow-sm">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <svg className="h-4 w-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="text-sm font-semibold text-gray-900">"{selectedSurvey?.title}"</span>
+              </div>
+              <div className="flex items-center justify-center gap-3 mt-2 text-xs text-gray-600">
+                <span className="flex items-center gap-1">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  {selectedSurvey?.category}
+                </span>
+                <span className="flex items-center gap-1">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  {selectedSurvey?.type === 'survey' ? 'Survey' : 'Quiz'}
+                </span>
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border-2 border-purple-200 p-3 mb-2">
+              <div className="flex items-start gap-2 text-left">
+                <svg className="h-4 w-4 text-purple-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-purple-900 mb-1.5">Khảo sát mới sẽ có:</p>
+                  <ul className="text-xs text-purple-800 space-y-1">
+                    <li className="flex items-center gap-1.5">
+                      <svg className="h-3 w-3 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span>Tiêu đề: <span className="font-semibold text-purple-900">"[Bản sao] {selectedSurvey?.title}"</span></span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <svg className="h-3 w-3 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span>Tất cả câu hỏi và lựa chọn từ khảo sát gốc</span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <svg className="h-3 w-3 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span>Trạng thái mặc định: <span className="font-semibold">Chưa bắt đầu</span></span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </Modal>
       </div>
