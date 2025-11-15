@@ -1,11 +1,7 @@
 # graphql/duplicate.graphql
 
 extend type Mutation {
-    """
-    Sao chép một khảo sát với tất cả thông tin chính
-    - Không sao chép questions/options
-    - Trả về created_by dưới dạng ID (chưa có type User)
-    """
+
     duplicateSurvey(id: ID! @eq): Survey
         @field(resolver: "App\\GraphQL\\Resolvers\\DuplicateResolver@duplicateSurvey")
 }

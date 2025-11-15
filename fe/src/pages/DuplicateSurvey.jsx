@@ -25,6 +25,8 @@ const DuplicateSurvey = () => {
   const [isProcessing, setIsProcessing] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSurvey, setSelectedSurvey] = useState(null);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [surveyToDuplicate, setSurveyToDuplicate] = useState(null);
 
   // Load danh sách surveys từ API
   useEffect(() => {
@@ -113,14 +115,20 @@ const DuplicateSurvey = () => {
     return result.data?.duplicateSurvey;
   };
 
-  const handleDuplicate = async (surveyId, surveyName) => {
-    const message = `Bạn có chắc chắn muốn sao chép khảo sát '${surveyName}'?\n\nBản sao sẽ được tạo với cấu trúc và nội dung tương tự khảo sát gốc.`;
-    if (!window.confirm(message)) {
-      console.log('Người dùng đã hủy thao tác sao chép.');
-      return;
-    }
+  const handleDuplicateClick = (survey) => {
+    setSurveyToDuplicate(survey);
+    setIsDuplicateModalOpen(true);
+  };
 
+  const handleDuplicateConfirm = async () => {
+    if (!surveyToDuplicate) return;
+
+    const surveyId = surveyToDuplicate.id;
+    const surveyName = surveyToDuplicate.name;
+
+    setIsDuplicateModalOpen(false);
     setIsProcessing((prev) => ({ ...prev, [surveyId]: true }));
+    
     try {
       const duplicatedSurvey = await duplicateSurveyApi(surveyId);
       
@@ -142,7 +150,13 @@ const DuplicateSurvey = () => {
       console.error(`[ERROR] ${errorMessage}`, error);
     } finally {
       setIsProcessing((prev) => ({ ...prev, [surveyId]: false }));
+      setSurveyToDuplicate(null);
     }
+  };
+
+  const handleDuplicateCancel = () => {
+    setIsDuplicateModalOpen(false);
+    setSurveyToDuplicate(null);
   };
 
   // Icon Components
@@ -264,7 +278,7 @@ const DuplicateSurvey = () => {
                   <ViewIcon className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={() => handleDuplicate(survey.id, survey.name)}
+                  onClick={() => handleDuplicateClick(survey)}
                   disabled={isProcessing[survey.id]}
                   className={`${
                     isProcessing[survey.id]
@@ -490,11 +504,65 @@ const DuplicateSurvey = () => {
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center space-x-2"
                   onClick={() => {
                     setIsModalOpen(false);
-                    handleDuplicate(selectedSurvey.id, selectedSurvey.name);
+                    handleDuplicateClick(selectedSurvey);
                   }}
                 >
                   <DuplicateIcon className="w-4 h-4" />
                   <span>Sao chép khảo sát</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal xác nhận sao chép */}
+        {isDuplicateModalOpen && surveyToDuplicate && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                handleDuplicateCancel();
+              }
+            }}
+          >
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Xác nhận sao chép</h3>
+                <button
+                  type="button"
+                  className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1 transition-colors"
+                  onClick={handleDuplicateCancel}
+                >
+                  <CloseIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="px-6 py-5">
+                <p className="text-gray-700 mb-4">
+                  Bạn có chắc chắn muốn sao chép khảo sát <strong className="font-semibold text-gray-900">'{surveyToDuplicate.name}'</strong>?
+                </p>
+                <p className="text-sm text-gray-500">
+                  Bản sao sẽ được tạo với cấu trúc và nội dung tương tự khảo sát gốc.
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                  onClick={handleDuplicateCancel}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  onClick={handleDuplicateConfirm}
+                >
+                  Xác nhận
                 </button>
               </div>
             </div>

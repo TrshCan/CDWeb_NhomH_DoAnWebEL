@@ -23,18 +23,16 @@ class DuplicateRepository
     }
 
     /**
-     * TODO: Lấy survey theo ID cùng với questions và options
-     * Sẽ được sử dụng sau khi cần sao chép questions và options
+     * Lấy survey theo ID cùng với questions và options
      * 
      * @param int $id ID của survey
      * @return Survey Survey với relations
+     * @throws ModelNotFoundException Khi không tìm thấy survey
      */
-    /*
     public function findByIdWithRelations(int $id): Survey
     {
         return Survey::with('questions.options')->findOrFail($id);
     }
-    */
 
     /**
      * Tạo bản sao survey mới trong database
