@@ -14,12 +14,21 @@ import PublishAccessForm from "./components/PublishAccessForm";
 import WelcomeSettingsPanel from "./components/WelcomeSettingsPanel";
 import QuestionSettingsPanel from "./components/QuestionSettingsPanel";
 import HeaderBar from "./components/HeaderBar";
+import DeleteConfirmModal from "./components/DeleteConfirmModal";
 
 import { Toaster, toast } from "react-hot-toast";
 
 export default function App() {
   const [activeSection, setActiveSection] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    action: null,
+    title: "Xác nhận xoá",
+    message: "Bạn không thể hoàn tác thao tác này!",
+  });
 
   // panel trái: null | 'structure' | 'settings'
   const [openPanel, setOpenPanel] = useState("structure");
@@ -523,45 +532,53 @@ export default function App() {
   };
 
   const deleteGroup = (groupId) => {
-    const ok = window.confirm("Bạn có chắc muốn xoá nhóm câu hỏi này?");
-    if (!ok) return;
-
-    setQuestionGroups((prev) => {
-      const filtered = prev.filter((g) => g.id !== groupId);
-      if (filtered.length === 0) {
-        return [
-          {
-            id: 1,
-            title: "Nhóm câu hỏi đầu tiên của tôi",
-            questions: [{ id: 1, text: "", helpText: "", type: "Mặc định" }],
-          },
-        ];
-      }
-      return filtered;
+    setDeleteModal({
+      isOpen: true,
+      action: () => {
+        setQuestionGroups((prev) => {
+          const filtered = prev.filter((g) => g.id !== groupId);
+          if (filtered.length === 0) {
+            return [
+              {
+                id: 1,
+                title: "Nhóm câu hỏi đầu tiên của tôi",
+                questions: [{ id: 1, text: "", helpText: "", type: "Mặc định" }],
+              },
+            ];
+          }
+          return filtered;
+        });
+        toast.success("Đã xoá nhóm câu hỏi");
+      },
+      title: "Xác nhận xoá",
+      message: "Bạn có chắc muốn xoá nhóm câu hỏi này?",
     });
-    toast.success("Đã xoá nhóm câu hỏi");
   };
 
   const deleteQuestionItem = (groupId, index) => {
-    const ok = window.confirm("Bạn có chắc muốn xoá câu hỏi này?");
-    if (!ok) return;
+    setDeleteModal({
+      isOpen: true,
+      action: () => {
+        setQuestionGroups((prev) => {
+          return prev.map((group) => {
+            if (group.id !== groupId) return group;
+            if (index < 0 || index >= group.questions.length) return group;
+            const newQuestions = group.questions.filter((_, i) => i !== index);
 
-    setQuestionGroups((prev) => {
-      return prev.map((group) => {
-        if (group.id !== groupId) return group;
-        if (index < 0 || index >= group.questions.length) return group;
-        const newQuestions = group.questions.filter((_, i) => i !== index);
-
-        if (newQuestions.length > 0) {
-          const next = Math.min(index, newQuestions.length - 1);
-          setActiveSection(`question-${newQuestions[next].id}`);
-        } else {
-          setActiveSection(null);
-        }
-        return { ...group, questions: newQuestions };
-      });
+            if (newQuestions.length > 0) {
+              const next = Math.min(index, newQuestions.length - 1);
+              setActiveSection(`question-${newQuestions[next].id}`);
+            } else {
+              setActiveSection(null);
+            }
+            return { ...group, questions: newQuestions };
+          });
+        });
+        toast.success("Đã xoá câu hỏi");
+      },
+      title: "Xác nhận xoá",
+      message: "Bạn có chắc muốn xoá câu hỏi này?",
     });
-    toast.success("Đã xoá câu hỏi");
   };
 
   // ===================== LOGIC HIỂN THỊ/ẨN CÂU HỎI =====================
@@ -957,6 +974,18 @@ export default function App() {
         onClose={handleToggleModal}
         onSelectQuestionType={handleSelectQuestionType}
         onAddGroup={addQuestionGroup}
+      />
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+        onConfirm={() => {
+          if (deleteModal.action) {
+            deleteModal.action();
+          }
+        }}
+        title={deleteModal.title}
+        message={deleteModal.message}
       />
 
       <Toaster
