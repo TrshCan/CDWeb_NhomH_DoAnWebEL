@@ -699,6 +699,12 @@ const SurveyFilter = () => {
     setShowDeleteModal(true);
   };
 
+  const handleDuplicate = (survey) => {
+    // TODO: Implement duplicate functionality
+    console.log('Duplicate survey:', survey);
+    pushToast('Tính năng sao chép đang được phát triển', 'info');
+  };
+
   const handleAddClick = () => {
     setAddForm({
       title: '',
@@ -969,6 +975,12 @@ const SurveyFilter = () => {
     </svg>
   );
 
+  const DuplicateIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M184,64H40A16,16,0,0,0,24,80V216a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V80A16,16,0,0,0,184,64Zm0,152H40V80H184V216ZM216,40V192a8,8,0,0,1-16,0V48H72a8,8,0,0,1,0-16H200A16,16,0,0,1,216,40Z" />
+    </svg>
+  );
+
   // FOOTERS
   const viewFooter = useMemo(() => (
     <button 
@@ -1085,7 +1097,7 @@ const SurveyFilter = () => {
           </div>
         ))}
       </div>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Danh sách Khảo sát</h1>
           <button onClick={handleAddClick} className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors">
@@ -1207,8 +1219,8 @@ const SurveyFilter = () => {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Người tạo</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Điểm</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Đối tượng</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Thời gian</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">Trạng thái</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">Thời gian</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Hành động</th>
                 </tr>
               </thead>
@@ -1221,17 +1233,18 @@ const SurveyFilter = () => {
                     <td className="px-6 py-4 text-sm text-gray-500">{survey.creatorName}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{survey.points}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusConfig[survey.status]?.class}`}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2.5 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${statusConfig[survey.status]?.class}`}>
                         {statusConfig[survey.status]?.label}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{formatTimeRange(survey.startAt, survey.endAt)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{formatTimeRange(survey.startAt, survey.endAt)}</td>
                     <td className="px-6 py-4">
                       <div className="flex space-x-2">
-                        <button onClick={() => handleView(survey)} className="p-1 text-gray-500 hover:text-gray-900" title="Xem"><ViewIcon /></button>
-                        <button onClick={() => handleEdit(survey)} className="p-1 text-gray-500 hover:text-gray-900" title="Sửa"><EditIcon /></button>
-                        <button onClick={() => handleDeleteConfirm(survey)} className="p-1 text-gray-500 hover:text-red-600" title="Xóa"><DeleteIcon /></button>
+                        <button onClick={() => handleView(survey)} className="p-1 text-gray-500 hover:text-gray-900 transition-colors" title="Xem"><ViewIcon /></button>
+                        <button onClick={() => handleEdit(survey)} className="p-1 text-gray-500 hover:text-gray-900 transition-colors" title="Sửa"><EditIcon /></button>
+                        <button onClick={() => handleDuplicate(survey)} className="p-1 text-gray-500 hover:text-purple-600 transition-colors" title="Sao chép"><DuplicateIcon /></button>
+                        <button onClick={() => handleDeleteConfirm(survey)} className="p-1 text-gray-500 hover:text-red-600 transition-colors" title="Xóa"><DeleteIcon /></button>
                       </div>
                     </td>
                   </tr>
