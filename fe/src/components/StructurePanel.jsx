@@ -361,20 +361,29 @@ export default function StructurePanel({
       {menu.open && (
         <div
           id="sp-menu-fixed"
-          className="fixed w-45 bg-white rounded-sm shadow-[0_1px_1px_0_rgba(0,0,0,0.1)] border border-gray-50 z-50"
+          className="fixed bg-white rounded-sm shadow-lg border border-gray-200 z-[9999]"
           style={{
-            top: menu.top,
-            left: menu.left,
+            top: `${menu.top}px`,
+            left: `${menu.left}px`,
             transform: `translateY(${kickY}px)`,
             willChange: "transform",
+            minWidth: "180px",
+            width: "auto",
           }}
           onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
         >
-          <ul className="py-4">
+          <ul className="py-1">
             <li>
               <button
-                className="w-full text-left px-4 py-2 text-[11px] font-semibold hover:text-violet-700"
+                type="button"
+                className="w-full text-left px-4 py-2 text-[11px] font-semibold hover:bg-violet-50 hover:text-violet-700 transition-colors"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   setMenu((m) => ({ ...m, open: false }));
                   if (menu.index?.groupId !== undefined && menu.index?.questionIndex !== undefined) {
@@ -387,8 +396,14 @@ export default function StructurePanel({
             </li>
             <li>
               <button
-                className="w-full text-left px-4 py-2 text-[11px] text-red-700 hover:opacity-70"
+                type="button"
+                className="w-full text-left px-4 py-2 text-[11px] text-red-700 hover:bg-red-50 hover:opacity-100 transition-colors font-semibold"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   setMenu((m) => ({ ...m, open: false }));
                   if (menu.index?.groupId !== undefined && menu.index?.questionIndex !== undefined) {

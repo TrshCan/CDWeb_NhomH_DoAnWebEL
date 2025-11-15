@@ -440,10 +440,26 @@ export default function App() {
     window.__currentGroupId = null;
   };
 
+  // Thêm nhóm câu hỏi mới (không có câu hỏi)
+  const addQuestionGroup = () => {
+    setQuestionGroups((prev) => {
+      const maxGroupId = prev.length > 0 ? Math.max(...prev.map((g) => g.id || 0)) : 0;
+      const newGroupId = maxGroupId + 1;
+
+      const newGroup = {
+        id: newGroupId,
+        title: "Tiêu đề nhóm",
+        questions: [],
+      };
+
+      return [...prev, newGroup];
+    });
+  };
+
   // ===================== Duplicate & Delete =====================
   const duplicateQuestionItem = (groupId, index) => {
-    setQuestionGroups((prev) =>
-      prev.map((group) => {
+    setQuestionGroups((prev) => {
+      return prev.map((group) => {
         if (group.id !== groupId) return group;
         const src = group.questions[index];
         if (!src) return group;
@@ -468,8 +484,8 @@ export default function App() {
         newQuestions.splice(index + 1, 0, clone);
         setActiveSection(`question-${newId}`);
         return { ...group, questions: newQuestions };
-      })
-    );
+      });
+    });
     toast.success("Đã nhân bản câu hỏi");
   };
 
@@ -530,8 +546,8 @@ export default function App() {
     const ok = window.confirm("Bạn có chắc muốn xoá câu hỏi này?");
     if (!ok) return;
 
-    setQuestionGroups((prev) =>
-      prev.map((group) => {
+    setQuestionGroups((prev) => {
+      return prev.map((group) => {
         if (group.id !== groupId) return group;
         if (index < 0 || index >= group.questions.length) return group;
         const newQuestions = group.questions.filter((_, i) => i !== index);
@@ -543,8 +559,8 @@ export default function App() {
           setActiveSection(null);
         }
         return { ...group, questions: newQuestions };
-      })
-    );
+      });
+    });
     toast.success("Đã xoá câu hỏi");
   };
 
@@ -940,6 +956,7 @@ export default function App() {
         isOpen={isModalOpen}
         onClose={handleToggleModal}
         onSelectQuestionType={handleSelectQuestionType}
+        onAddGroup={addQuestionGroup}
       />
 
       <Toaster

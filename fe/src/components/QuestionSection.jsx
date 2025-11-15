@@ -327,9 +327,9 @@ export default function QuestionSection({
       <div
         className={`transition-all duration-300 ease-in-out ${isCollapsed
           ? "max-h-0 overflow-hidden"
-          : "max-h-[9999px]"
+          : "max-h-[9999px] overflow-visible"
           }`}
-        style={{ position: "relative", overflow: "visible" }}
+        style={{ position: "relative" }}
       >
         <div
           className="bg-white rounded-sm shadow-lg border border-gray-200 divide-y divide-gray-200"

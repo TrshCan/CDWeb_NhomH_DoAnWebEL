@@ -66,6 +66,7 @@ export default function QuestionTypeModal({
   isOpen,
   onClose,
   onSelectQuestionType,
+  onAddGroup,
 }) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -115,31 +116,58 @@ export default function QuestionTypeModal({
           />
         </div>
 
-        {/* Phần 2: Nội dung bên dưới (giữ nguyên, có scroll riêng) */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {modalOptions.map((cat) => (
-              <div key={cat.title}>
-                <div className="flex items-center mb-3">
-                  {cat.icon}
-                  <h3 className="font-bold text-black ml-2 text-[14px]">
-                    {cat.title}
-                  </h3>
+        {/* Phần 2: Nội dung bên dưới */}
+        <div className="flex-1 overflow-y-auto flex">
+          {/* Cột trái: Nút thêm nhóm câu hỏi */}
+          <div className="w-[200px] shrink-0 p-6 border-r border-gray-200">
+            <button
+              onClick={() => {
+                onAddGroup?.();
+                onClose();
+              }}
+              className="flex items-center text-violet-600 hover:text-violet-800 transition-colors text-[13px] font-medium"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Thêm nhóm câu hỏi
+            </button>
+          </div>
+
+          {/* Cột phải: Danh sách loại câu hỏi */}
+          <div className="flex-1 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {modalOptions.map((cat) => (
+                <div key={cat.title}>
+                  <div className="flex items-center mb-3">
+                    {cat.icon}
+                    <h3 className="font-bold text-black ml-2 text-[14px]">
+                      {cat.title}
+                    </h3>
+                  </div>
+                  <ul>
+                    {cat.options.map((opt) => (
+                      <li key={opt}>
+                        <button
+                          onClick={() => handleSelect(opt)}
+                          className="block text-violet-600 hover:underline py-1 text-left text-[13px]"
+                        >
+                          {opt}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul>
-                  {cat.options.map((opt) => (
-                    <li key={opt}>
-                      <button
-                        onClick={() => handleSelect(opt)}
-                        className="block text-violet-600 hover:underline py-1 text-left text-[13px]"
-                      >
-                        {opt}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
