@@ -1,0 +1,44 @@
+# graphql/duplicate.graphql
+
+extend type Mutation {
+
+    duplicateSurvey(id: ID! @eq): Survey
+        @field(resolver: "App\\GraphQL\\Resolvers\\DuplicateResolver@duplicateSurvey")
+}
+
+"""
+Thông tin khảo sát
+"""
+type Survey {
+    id: ID!
+    title: String!
+    description: String
+    categories_id: ID!
+    type: SurveyType!
+    start_at: String      # ISO 8601: "2025-11-15T00:00:00+07:00"
+    end_at: String        # null nếu không có
+    time_limit: Int
+    points: Int!
+    object: SurveyObject!
+    status: SurveyStatus!
+    allow_review: Boolean!
+    created_by: ID!       # ĐÃ SỬA: Dùng ID! thay vì "1"
+    created_at: String!
+    updated_at: String!
+}
+
+extend type Query {
+    """
+    Lấy danh sách tất cả surveys
+    """
+    surveys: [Survey!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\DuplicateResolver@listSurveys")
+}
+
+type Query {
+    _placeholder: String @deprecated(reason: "Required for schema")
+}
+
+enum SurveyType { survey quiz }
+enum SurveyObject { public students lecturers }
+enum SurveyStatus { pending active paused closed }

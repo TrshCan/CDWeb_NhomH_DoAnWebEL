@@ -21,42 +21,24 @@ class Survey extends Model
         'points',
         'object',
         'created_by',
-        'status', // ✅ thêm dòng này
+        'status',
+        'allow_review', // ✅ thêm dòng này
     ];
 
 
     protected $casts = [
         'start_at' => 'datetime',
         'end_at' => 'datetime',
+        'allow_review' => 'boolean',
     ];
-
-    public function category()
-    {
-        return $this->belongsTo(Category::class, 'categories_id');
-    }
 
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Accessor để lấy creator_name
-     * Nếu đã có trong attributes (từ join query) thì dùng, nếu không thì load từ relationship
-     */
-    public function getCreatorNameAttribute()
+    public function questions()
     {
-        // Nếu đã có creator_name từ join query (như trong getAllPaginated)
-        if (isset($this->attributes['creator_name'])) {
-            return $this->attributes['creator_name'];
-        }
-
-        // Nếu không có, load từ relationship
-        if ($this->relationLoaded('creator')) {
-            return $this->creator?->name;
-        }
-
-        // Load relationship nếu chưa được load
-        return $this->creator?->name;
+        return $this->hasMany(SurveyQuestion::class, 'survey_id');
     }
 }
