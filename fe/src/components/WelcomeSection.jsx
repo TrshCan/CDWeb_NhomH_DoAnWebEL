@@ -1,7 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-export default function WelcomeSection({ isActive, onClick, questionCount = 0 }) {
-  const [collapsed, setCollapsed] = useState(false);
+export default function WelcomeSection({ 
+  isActive, 
+  onClick, 
+  questionCount = 0,
+  showWelcome = true,
+  showXQuestions = true 
+}) {
+  const [collapsed, setCollapsed] = useState(!showWelcome);
+
+  // Đồng bộ collapsed với showWelcome
+  useEffect(() => {
+    setCollapsed(!showWelcome);
+  }, [showWelcome]);
 
   return (
     <div className="mb-8 group">
@@ -99,9 +110,11 @@ export default function WelcomeSection({ isActive, onClick, questionCount = 0 })
               rows="1"
             ></textarea>
 
-            <p className="text-gray-500 mb-6 text-left">
-              Có {questionCount} câu hỏi trong cuộc khảo sát này.
-            </p>
+            {showXQuestions && (
+              <p className="text-gray-500 mb-6 text-left">
+                Có {questionCount} câu hỏi trong cuộc khảo sát này.
+              </p>
+            )}
 
             <div className="flex items-center">
               <button className="bg-emerald-500 text-white font-bold py-2 px-4 rounded-md hover:bg-emerald-600 transition-colors">

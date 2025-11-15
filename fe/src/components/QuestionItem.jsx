@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import EditableField from "./EditableField";
 import { PlusIcon, DuplicateIcon, TrashIcon } from "../icons";
+import FivePointScale from "./FivePointScale";
 
 export default function QuestionItem({
   isActive,
@@ -50,6 +51,11 @@ export default function QuestionItem({
   // ✅ Helper: kiểm tra xem có phải loại image option không
   const isImageOptionType = () => {
     return question.type === "Chọn hình ảnh từ danh sách (Radio)";
+  };
+
+  // ✅ Helper: kiểm tra xem có phải loại 5 điểm không
+  const isFivePointScale = () => {
+    return question.type === "Lựa chọn 5 điểm";
   };
 
   // ✅ Handler: Upload ảnh cho option
@@ -251,9 +257,18 @@ export default function QuestionItem({
                 </div>
               </div>
 
-              {/* Danh sách đáp án */}
-              {options.length > 0 && (
-                <div className="ml-[28px] space-y-4">
+              {/* Render 5 điểm nếu là loại Lựa chọn 5 điểm */}
+              {isFivePointScale() ? (
+                <FivePointScale
+                  questionId={question.id}
+                  selectedAnswer={selectedAnswer}
+                  onAnswerSelect={onAnswerSelect}
+                  isActive={isActive}
+                />
+              ) : (
+                /* Danh sách đáp án */
+                options.length > 0 && (
+                  <div className="ml-[28px] space-y-4">
                   {options.map((option, optionIndex) => {
                     const isDragging = draggedIndex === optionIndex;
                     const isDragOver = dragOverIndex === optionIndex;
@@ -599,6 +614,7 @@ export default function QuestionItem({
                     );
                   })}
                 </div>
+                )
               )}
 
               {/* Ô nhận xét cho loại "Danh sách có nhận xét (Radio)" - chỉ hiện khi không active */}
@@ -675,9 +691,18 @@ export default function QuestionItem({
               </div>
             </div>
 
-            {/* Danh sách đáp án */}
-            {options.length > 0 && (
-              <div className="ml-[28px] space-y-4">
+            {/* Render 5 điểm nếu là loại Lựa chọn 5 điểm */}
+            {isFivePointScale() ? (
+              <FivePointScale
+                questionId={question.id}
+                selectedAnswer={selectedAnswer}
+                onAnswerSelect={onAnswerSelect}
+                isActive={isActive}
+              />
+            ) : (
+              /* Danh sách đáp án */
+              options.length > 0 && (
+                <div className="ml-[28px] space-y-4">
                 {options.map((option, optionIndex) => {
                   const isDragging = draggedIndex === optionIndex;
                   const isDragOver = dragOverIndex === optionIndex;
@@ -1024,6 +1049,7 @@ export default function QuestionItem({
                   );
                 })}
               </div>
+              )
             )}
 
             {/* Ô nhận xét cho loại "Danh sách có nhận xét (Radio)" - chỉ hiện khi không active */}

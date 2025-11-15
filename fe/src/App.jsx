@@ -375,19 +375,24 @@ export default function App() {
     );
   };
 
-  const createDefaultOptions = (questionType) =>
-    questionType === "Danh sách (nút chọn)"
-      ? [
+  const createDefaultOptions = (questionType) => {
+    if (questionType === "Danh sách (nút chọn)") {
+      return [
         { id: 1, text: "" },
         { id: 2, text: "" },
         { id: 3, text: "" },
         { id: 4, text: "Không có câu trả lời" },
-      ]
-      : [
-        { id: 1, text: "" },
-        { id: 2, text: "" },
-        { id: 3, text: "" },
       ];
+    }
+    if (questionType === "Lựa chọn 5 điểm") {
+      return []; // Không cần options cho loại 5 điểm
+    }
+    return [
+      { id: 1, text: "" },
+      { id: 2, text: "" },
+      { id: 3, text: "" },
+    ];
+  };
 
   // Thêm câu hỏi mới vào group cuối cùng
   const addQuestionItem = (questionType = "Mặc định", groupId = null) => {
@@ -586,7 +591,8 @@ export default function App() {
     setSelectedAnswers((prev) => {
       const prevValue = prev[questionId];
 
-      if (questionType === "Nhiều lựa chọn") {
+      // Cho phép chọn nhiều với "Nhiều lựa chọn" và "Lựa chọn 5 điểm"
+      if (questionType === "Nhiều lựa chọn" || questionType === "Lựa chọn 5 điểm") {
         const optionIdStr = String(optionId);
         const prevArray = Array.isArray(prevValue)
           ? prevValue.map(String)
@@ -896,6 +902,8 @@ export default function App() {
                           isActive={activeSection === "welcome"}
                           onClick={() => handleSetSection("welcome")}
                           questionCount={allQuestions.length}
+                          showWelcome={welcomeSettings.showWelcome}
+                          showXQuestions={welcomeSettings.showXQuestions}
                         />
                       </div>
 

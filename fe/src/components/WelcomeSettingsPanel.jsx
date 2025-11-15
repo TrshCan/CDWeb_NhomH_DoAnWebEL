@@ -3,17 +3,25 @@ import React from "react";
 function SegSwitch({ value, onChange }) {
   const on = value === true;
   return (
-    <div className="flex w-40 h-10 rounded-sm overflow-hidden border border-gray-300">
+    <div className="flex rounded-sm bg-gray-500 p-1" style={{ width: '263px', height: '42px' }}>
       <button
         type="button"
-        className={`flex-1 text-sm font-semibold ${on ? "bg-gray-200" : "bg-transparent"} `}
+        className={`flex-1 text-sm font-semibold transition-colors ${
+          on 
+            ? "bg-white text-gray-800" 
+            : "bg-gray-500 text-white"
+        }`}
         onClick={() => onChange(true)}
       >
         Bật
       </button>
       <button
         type="button"
-        className={`flex-1 text-sm font-semibold ${!on ? "bg-gray-500 text-white" : "bg-gray-500/60 text-white/80"} `}
+        className={`flex-1 text-sm font-semibold transition-colors ${
+          !on 
+            ? "bg-white text-gray-800" 
+            : "bg-gray-500 text-white"
+        }`}
         onClick={() => onChange(false)}
       >
         Tắt
