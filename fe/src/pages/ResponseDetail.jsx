@@ -454,15 +454,17 @@ export default function ResponseDetail() {
                       {question.options.map((option) => {
                         const isSelected = option.selected;
                         const isCorrect = option.isCorrect;
+                        const hasCorrectAnswer = question.options.some(opt => opt.isCorrect);
                         const isCorrectAndSelected = isSelected && isCorrect;
-                        const isWrong = isSelected && !isCorrect;
+                        const isWrong = isSelected && !isCorrect && hasCorrectAnswer;
+                        const isSelectedNoCorrect = isSelected && !hasCorrectAnswer;
                         
                         return (
                           <div
                             key={option.id}
                             className={`answer-option ${
                               isCorrectAndSelected ? "correct-selected" : ""
-                            } ${isWrong ? "wrong-selected" : ""}`}
+                            } ${isWrong ? "wrong-selected" : ""} ${isSelectedNoCorrect ? "selected-no-correct" : ""}`}
                           >
                             <span className="option-text">{option.text}</span>
                             {isCorrect && (
