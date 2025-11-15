@@ -153,7 +153,7 @@ class SurveyService
             // Chỉ kiểm tra nếu có cả start_at và end_at và status là active
             // Bỏ qua kiểm tra này tạm thời để đảm bảo xóa hoạt động
             // Có thể bật lại sau khi xác định được nguyên nhân lỗi
-            /*
+            
             if ($survey->status === 'active' && $survey->start_at && $survey->end_at) {
                 try {
                     $now = Carbon::now();
@@ -177,7 +177,7 @@ class SurveyService
                     ]);
                 }
             }
-            */
+            
 
             $survey->delete(); // Soft delete
             DB::commit();

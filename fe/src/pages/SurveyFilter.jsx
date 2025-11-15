@@ -423,7 +423,7 @@ const SurveyFilter = () => {
     timeLimit: ''
   });
 
-  const itemsPerPage = 3;
+  const itemsPerPage = 10;
 
   // HANDLERS
   const handleEditTitleChange = useCallback((value) => setEditForm(prev => ({ ...prev, title: value })), []);
