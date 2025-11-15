@@ -18,8 +18,10 @@ type Query {
 #import queries/eventQueries.graphql
 #import queries/deadlineQueries.graphql
 #import queries/getProfileQueries.graphql
+#import queries/adminUserQueries.graphql
 #import mutations/postMutations.graphql
 #import mutations/userMutations.graphql
+#import mutations/adminUserMutations.graphql
 
 type Mutation {
   loginUser(

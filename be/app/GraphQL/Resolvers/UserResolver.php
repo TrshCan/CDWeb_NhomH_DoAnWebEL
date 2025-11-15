@@ -64,6 +64,12 @@ class UserResolver
             ];
         })->toArray();
     }
+
+    // Resolver cho status
+    public function status(User $user)
+    {
+        return $user->status;
+    }
 }
 
 ?>

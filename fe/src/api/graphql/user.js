@@ -255,3 +255,260 @@ export const USER_REPLIES_QUERY = `
     }
   }
 `;
+
+// ==================== ADMIN USER MANAGEMENT ====================
+
+/**
+ * Lấy danh sách người dùng với phân trang và sắp xếp
+ */
+export const getAdminUsers = async (page = 1, perPage = 5, sortBy = 'id', sortOrder = 'asc') => {
+    const query = `
+        query ($page: Int, $perPage: Int, $sortBy: String, $sortOrder: String) {
+            adminUsers(page: $page, perPage: $perPage, sortBy: $sortBy, sortOrder: $sortOrder) {
+                data {
+                    id
+                    name
+                    email
+                    role
+                    status_id
+                    status {
+                        id
+                        name
+                    }
+                    ban_reason
+                    created_at
+                    updated_at
+                }
+                pagination {
+                    currentPage
+                    perPage
+                    total
+                    totalPages
+                    hasNextPage
+                    hasPrevPage
+                }
+            }
+        }
+    `;
+
+    try {
+        const response = await graphqlClient.post("", {
+            query,
+            variables: { page, perPage, sortBy, sortOrder },
+        });
+
+        if (response.data.errors) {
+            console.error("GraphQL errors:", response.data.errors);
+            throw new Error(response.data.errors[0].message);
+        }
+
+        return response.data.data.adminUsers;
+    } catch (error) {
+        console.error("Failed to get admin users:", error);
+        throw error;
+    }
+};
+
+/**
+ * Lấy thông tin chi tiết một người dùng
+ */
+export const getAdminUser = async (id) => {
+    const query = `
+        query ($id: Int!) {
+            adminUser(id: $id) {
+                id
+                name
+                email
+                phone
+                address
+                role
+                status_id
+                status {
+                    id
+                    name
+                }
+                ban_reason
+                created_at
+                updated_at
+            }
+        }
+    `;
+
+    try {
+        const response = await graphqlClient.post("", {
+            query,
+            variables: { id: parseInt(id, 10) },
+        });
+
+        if (response.data.errors) {
+            console.error("GraphQL errors:", response.data.errors);
+            throw new Error(response.data.errors[0].message);
+        }
+
+        return response.data.data.adminUser;
+    } catch (error) {
+        console.error("Failed to get admin user:", error);
+        throw error;
+    }
+};
+
+/**
+ * Tạo người dùng mới
+ */
+export const createAdminUser = async (name, email, password, role = 'student', status_id = null) => {
+    const mutation = `
+        mutation ($name: String!, $email: String!, $password: String!, $role: String, $status_id: Int) {
+            adminCreateUser(name: $name, email: $email, password: $password, role: $role, status_id: $status_id) {
+                id
+                name
+                email
+                role
+                status_id
+                status {
+                    id
+                    name
+                }
+                created_at
+            }
+        }
+    `;
+
+    try {
+        // Parse status_id nếu có
+        const variables = { name, email, password, role };
+        if (status_id !== null && status_id !== undefined) {
+            variables.status_id = parseInt(status_id, 10);
+        }
+        
+        const response = await graphqlClient.post("", {
+            query: mutation,
+            variables,
+        });
+
+        if (response.data.errors) {
+            console.error("GraphQL errors:", response.data.errors);
+            throw new Error(response.data.errors[0].message);
+        }
+
+        return response.data.data.adminCreateUser;
+    } catch (error) {
+        console.error("Failed to create admin user:", error);
+        throw error;
+    }
+};
+
+/**
+ * Cập nhật thông tin người dùng
+ */
+export const updateAdminUser = async (id, data) => {
+    const mutation = `
+        mutation ($id: Int!, $name: String, $email: String, $role: String, $status_id: Int) {
+            adminUpdateUser(id: $id, name: $name, email: $email, role: $role, status_id: $status_id) {
+                id
+                name
+                email
+                role
+                status_id
+                status {
+                    id
+                    name
+                }
+                updated_at
+            }
+        }
+    `;
+
+    try {
+        // Parse status_id nếu có
+        const variables = { id: parseInt(id, 10), ...data };
+        if (variables.status_id !== null && variables.status_id !== undefined) {
+            variables.status_id = parseInt(variables.status_id, 10);
+        }
+        
+        const response = await graphqlClient.post("", {
+            query: mutation,
+            variables,
+        });
+
+        if (response.data.errors) {
+            console.error("GraphQL errors:", response.data.errors);
+            throw new Error(response.data.errors[0].message);
+        }
+
+        return response.data.data.adminUpdateUser;
+    } catch (error) {
+        console.error("Failed to update admin user:", error);
+        throw error;
+    }
+};
+
+/**
+ * Xóa người dùng
+ */
+export const deleteAdminUser = async (id) => {
+    const mutation = `
+        mutation ($id: Int!) {
+            adminDeleteUser(id: $id)
+        }
+    `;
+
+    try {
+        const response = await graphqlClient.post("", {
+            query: mutation,
+            variables: { id: parseInt(id, 10) },
+        });
+
+        if (response.data.errors) {
+            console.error("GraphQL errors:", response.data.errors);
+            throw new Error(response.data.errors[0].message);
+        }
+
+        return response.data.data.adminDeleteUser;
+    } catch (error) {
+        console.error("Failed to delete admin user:", error);
+        throw error;
+    }
+};
+
+/**
+ * Chuyển đổi trạng thái người dùng (Lock/Unlock)
+ */
+export const toggleAdminUserStatus = async (id, ban_reason = null) => {
+    const mutation = `
+        mutation ($id: Int!, $ban_reason: String) {
+            adminToggleUserStatus(id: $id, ban_reason: $ban_reason) {
+                id
+                name
+                email
+                status_id
+                status {
+                    id
+                    name
+                }
+                ban_reason
+            }
+        }
+    `;
+
+    try {
+        const variables = { id: parseInt(id, 10) };
+        if (ban_reason !== null && ban_reason !== undefined) {
+            variables.ban_reason = ban_reason;
+        }
+        
+        const response = await graphqlClient.post("", {
+            query: mutation,
+            variables,
+        });
+
+        if (response.data.errors) {
+            console.error("GraphQL errors:", response.data.errors);
+            throw new Error(response.data.errors[0].message);
+        }
+
+        return response.data.data.adminToggleUserStatus;
+    } catch (error) {
+        console.error("Failed to toggle admin user status:", error);
+        throw error;
+    }
+};

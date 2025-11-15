@@ -55,6 +55,15 @@ class UserServices
             ]);
         }
 
+        // Kiểm tra tài khoản có bị banned không
+        $bannedStatus = \App\Models\Status::where('name', 'banned')->first();
+        if ($bannedStatus && $user->status_id == $bannedStatus->id) {
+            $banReason = $user->ban_reason ?: 'Không có lý do cụ thể';
+            throw ValidationException::withMessages([
+                'email' => "Tài khoản của bạn đã bị cấm. Lý do: {$banReason}",
+            ]);
+        }
+
         // Tạo token ngẫu nhiên (ví dụ token tạm, chưa phải JWT)
         $token = Str::random(60);
 
