@@ -247,21 +247,23 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
   );
 }
 function App() {
-  return (
-    <div className="h-screen flex items-center justify-center">
-      <div className="flex  w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden">
-        {/* 1. Phần SocialSphere Header (Trái, Ẩn trên Mobile) */}
-        <div className="hidden md:block md:w-1/2 bg-indigo-50">
-          <SocialSphereHeader />
-        </div>
+    return (
+        <div className="h-screen flex items-center justify-center">
+            <div className="flex w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden">
 
-        {/* 2. Phần Form Đăng Ký (Phải, Chiếm 1/2 trên Desktop, Full trên Mobile) */}
-        <div className="w-full md:w-1/  flex items-center bg-gray-900 justify-center">
-          <RegisterForm />
+                {/* Left */}
+                <div className="hidden md:block md:w-1/2 bg-indigo-50">
+                    <SocialSphereHeader />
+                </div>
+
+                {/* Right */}
+                <div className="w-full md:w-1/2 flex items-center justify-center bg-gray-900">
+                    <RegisterForm />
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }
+
 
 export default App;
