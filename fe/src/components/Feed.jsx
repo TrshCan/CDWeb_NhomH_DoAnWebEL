@@ -19,20 +19,23 @@ function timeAgo(createdAt) {
 }
 
 export default function Feed() {
-  const [activeTab, setActiveTab] = useState("forYou");
+  const [activeTab, setActiveTab] = useState("announcement");
   const [allPosts, setAllPosts] = useState([]);
   const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [files, setFiles] = useState([]);
   const loadMoreRef = useRef(null);
+  
+  // TODO: Replace with actual logged-in user's following list from your auth/user context
+  const [followingUserIds] = useState([]); // Array of user IDs that the logged-in user follows
 
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
       try {
         const data =
-          activeTab === "forYou"
+          activeTab === "announcement"
             ? await getPostsByType("announcement")
             : await getPostsByType("normal_post");
 
@@ -52,8 +55,14 @@ export default function Feed() {
                     : { filename: m.filename }
                 )
               : [],
-          }))
-        setAllPosts(mapped);
+          }));
+        
+        // Filter posts for Following tab - only show posts from followed users
+        const filteredPosts = activeTab === "following" 
+          ? mapped.filter((p) => followingUserIds.includes(p.userId))
+          : mapped;
+        
+        setAllPosts(filteredPosts);
         setVisibleCount(10);
       } catch (err) {
         console.error("Failed to fetch posts:", err);
@@ -165,8 +174,8 @@ export default function Feed() {
       <Toaster position="top-right" />
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow p-2 mb-4 flex space-x-4">
-        {["forYou", "following"].map((tab) => (
+      <div className="bg-white rounded-lg shadow p-2 mb-4 flex space-x-2">
+        {["announcement", "campus", "following"].map((tab) => (
           <button
             key={tab}
             className={`flex-1 py-2 rounded-lg ${
@@ -176,12 +185,12 @@ export default function Feed() {
             }`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab === "forYou" ? "For You" : "Following"}
+            {tab === "announcement" ? "Announcement" : tab === "campus" ? "Campus" : "Following"}
           </button>
         ))}
       </div>
 
-      {activeTab === "following" && (
+      {activeTab === "campus" && (
         <div className="bg-white rounded-lg shadow p-4 mb-4">
           <div className="flex items-center space-x-2 mb-2">
             <div className="w-10 h-10 bg-cyan-600 rounded-full"></div>
