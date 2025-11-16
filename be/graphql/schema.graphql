@@ -75,3 +75,6 @@ type UserBadge {
   created_at: DateTime
   assigned_at: DateTime
 }
+
+
+#import event.graphql

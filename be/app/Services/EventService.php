@@ -3,33 +3,133 @@
 namespace App\Services;
 
 use App\Repositories\EventRepository;
+use App\Models\User;
+use App\Models\Event;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class EventService
 {
-    protected $repo;
+    protected EventRepository $repository;
 
-    public function __construct(EventRepository $repo)
+    public function __construct(EventRepository $repository)
     {
-        $this->repo = $repo;
+        $this->repository = $repository;
     }
 
-    public function getAllEvents()
+    public function createEvent(array $data, User $user): Event
     {
-        return $this->repo->getAll();
+        $validator = Validator::make($data, [
+            'title' => 'required|string|max:255',
+            'event_date' => ['required', 'date', 'date_format:Y-m-d H:i:s'],
+            'location' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        if ($this->repository->checkConflict($data['title'], $data['event_date'])) {
+            throw new \Exception("Đã tồn tại sự kiện khác vào cùng thời điểm hoặc cùng tiêu đề.");
+        }
+
+        $data['created_by'] = $user->id;
+        $data['created_at'] = now();
+
+        return $this->repository->create($data);
     }
 
-    public function getEventById($id)
+    public function updateEvent(int $id, array $data, User $user): Event
     {
-        return $this->repo->find($id);
+        $event = $this->repository->findById($id);
+        if (!$event) {
+            throw new \Exception("Không tìm thấy sự kiện hoặc sự kiện đã bị xóa.");
+        }
+
+        if (!$user->is_admin && $event->created_by !== $user->id) {
+            throw new \Exception("Bạn không có quyền cập nhật sự kiện này.");
+        }
+
+        $validator = Validator::make($data, [
+            'title' => 'sometimes|required|string|max:255',
+            'event_date' => 'sometimes|required|date_format:Y-m-d H:i:s',
+            'location' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        if ($this->repository->checkConflict(
+            $data['title'] ?? $event->title,
+            $data['event_date'] ?? $event->event_date,
+            $id
+        )) {
+            throw new \Exception("Xung đột với sự kiện khác. Vui lòng chọn thời điểm hoặc tiêu đề khác.");
+        }
+
+        return $this->repository->update($id, $data);
     }
 
-    public function getEventsByUser($userId)
+    public function deleteEvent(int $id): bool
     {
-        return $this->repo->findByUser($userId);
+        $event = $this->repository->findById($id);
+        if (!$event) {
+            throw new \Exception("Không tìm thấy sự kiện ID: $id");
+        }
+
+        return $this->repository->softDelete($id);
     }
 
-    public function today()
+    public function restoreEvent(int $id): bool
     {
-        return $this->repo->today();
+        $event = $this->repository->findDeletedById($id);
+        if (!$event) {
+            throw new \Exception("Không tìm thấy sự kiện đã xóa.");
+        }
+
+        if ($this->repository->checkConflict($event->title, $event->event_date)) {
+            throw new \Exception("Không thể khôi phục sự kiện. Dữ liệu bị trùng thời điểm hoặc tiêu đề.");
+        }
+
+        return $this->repository->restore($id);
+    }
+
+    public function getPaginatedEvents(int $perPage = 5, int $page = 1, bool $includeDeleted = false)
+    {
+        $paginator = $this->repository->getAllPaginated(null, null, null, $includeDeleted, $perPage, $page);
+
+        return [
+            'data' => $paginator->items(),
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'total' => $paginator->total(),
+        ];
+    }
+
+    public function searchEvents(array $filters = [], int $perPage = 5, int $page = 1)
+    {
+        $title = $filters['title'] ?? null;
+        $event_date = $filters['event_date'] ?? null;
+        $location = $filters['location'] ?? null;
+        $includeDeleted = $filters['include_deleted'] ?? false;
+
+        $paginator = $this->repository->getAllPaginated($title, $event_date, $location, $includeDeleted, $perPage, $page);
+
+        return [
+            'data' => $paginator->items(),
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'total' => $paginator->total(),
+        ];
+    }
+
+    public function getEventById(int $id)
+    {
+        $event = $this->repository->findById($id);
+        if (!$event) {
+            throw new \Exception("Không tìm thấy sự kiện hoặc sự kiện đã bị xóa.");
+        }
+        return $event;
     }
 }
