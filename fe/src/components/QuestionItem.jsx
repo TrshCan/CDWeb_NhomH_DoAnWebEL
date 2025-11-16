@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { toast } from "react-hot-toast";
 import EditableField from "./EditableField";
 import { PlusIcon, DuplicateIcon, TrashIcon, CalendarIcon } from "../icons";
 import FivePointScale from "./FivePointScale";
@@ -43,6 +44,14 @@ export default function QuestionItem({
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isFileDragging, setIsFileDragging] = useState(false);
   const [fileUploadError, setFileUploadError] = useState("");
+
+  // State cho text input
+  const [textInputValue, setTextInputValue] = useState("");
+  const [textInputError, setTextInputError] = useState("");
+
+  // Refs để quản lý toast và tránh spam
+  const toastTimeoutRef = useRef(null);
+  const lastToastIdRef = useRef(null);
 
   // Chuyển đổi từ YYYY-MM-DD sang MM/DD/YYYY
   const formatDateForDisplay = (dateString) => {
@@ -209,6 +218,15 @@ export default function QuestionItem({
     const validation = validateFile(file, uploadedFiles.length);
     if (!validation.valid) {
       setFileUploadError(validation.error);
+      // Dismiss toast cũ nếu có
+      if (lastToastIdRef.current) {
+        toast.dismiss(lastToastIdRef.current);
+      }
+      const id = toast.error(validation.error, {
+        style: { background: "#dc2626", color: "#fff" },
+        id: "file-upload-error",
+      });
+      lastToastIdRef.current = id;
       return;
     }
 
@@ -233,7 +251,17 @@ export default function QuestionItem({
       onAnswerSelect?.(question.id, JSON.stringify(newFiles), question.type);
     };
     reader.onerror = () => {
-      setFileUploadError("Lỗi khi đọc tệp. Vui lòng thử lại.");
+      const errorMsg = "Lỗi khi đọc tệp. Vui lòng thử lại.";
+      setFileUploadError(errorMsg);
+      // Dismiss toast cũ nếu có
+      if (lastToastIdRef.current) {
+        toast.dismiss(lastToastIdRef.current);
+      }
+      const id = toast.error(errorMsg, {
+        style: { background: "#dc2626", color: "#fff" },
+        id: "file-read-error",
+      });
+      lastToastIdRef.current = id;
     };
     reader.readAsDataURL(file);
   };
@@ -328,6 +356,10 @@ export default function QuestionItem({
         setUploadedFiles([]);
         setFileUploadError("");
       }
+    } else if (question.type === "Văn bản ngắn") {
+      // Sync textInputValue với selectedAnswer
+      setTextInputValue(selectedAnswer || "");
+      setTextInputError("");
     }
   }, [selectedAnswer, question.type]);
 
@@ -342,6 +374,82 @@ export default function QuestionItem({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question?.maxQuestions, question.type]);
+
+  // Clear error khi numericOnly hoặc maxLength thay đổi
+  React.useEffect(() => {
+    if (question.type === "Văn bản ngắn") {
+      // Clear error khi settings thay đổi
+      setTextInputError("");
+    }
+  }, [question?.numericOnly, question?.maxLength, question.type]);
+
+  // Cleanup timeout khi component unmount
+  React.useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Helper function để hiển thị toast với debounce
+  const showToastError = (errorMsg, toastId = "text-error") => {
+    // Clear timeout cũ nếu có
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    // Dismiss toast cũ cùng loại nếu có
+    if (lastToastIdRef.current) {
+      toast.dismiss(lastToastIdRef.current);
+    }
+
+    // Hiển thị toast mới sau 300ms debounce
+    toastTimeoutRef.current = setTimeout(() => {
+      const id = toast.error(errorMsg, {
+        style: { background: "#dc2626", color: "#fff" },
+        id: toastId, // Sử dụng cùng ID để replace toast cũ
+      });
+      lastToastIdRef.current = id;
+    }, 300);
+  };
+
+  // Xử lý khi nhập text
+  const handleTextInputChange = (e) => {
+    const value = e.target.value;
+    const isNumericOnly = question?.numericOnly === true;
+    const maxLength = question?.maxLength || 256;
+
+    // Kiểm tra độ dài trước - không cho phép nhập quá maxLength
+    if (value.length > maxLength) {
+      // Không cho phép nhập quá 256 ký tự
+      const errorMsg = `Vượt quá số ký tự cho phép (${maxLength} ký tự)`;
+      setTextInputError(errorMsg);
+      showToastError(errorMsg, "max-length-error");
+      // Giữ nguyên giá trị cũ (không cập nhật)
+      return;
+    }
+
+    // Kiểm tra nếu chỉ cho phép số
+    if (isNumericOnly) {
+      // Chỉ cho phép số - chỉ lấy các ký tự số
+      const numericValue = value.replace(/[^0-9]/g, "");
+      if (value !== numericValue) {
+        // Nếu có ký tự không phải số, hiển thị lỗi nhưng vẫn cập nhật với giá trị đã lọc
+        const errorMsg = "Chỉ được phép nhập số";
+        setTextInputError(errorMsg);
+        showToastError(errorMsg, "numeric-only-error");
+        setTextInputValue(numericValue);
+        onAnswerSelect?.(question.id, numericValue, question.type);
+        return;
+      }
+    }
+
+    // Clear error nếu hợp lệ
+    setTextInputError("");
+    setTextInputValue(value);
+    onAnswerSelect?.(question.id, value, question.type);
+  };
 
   // ✅ Helper: kiểm tra xem option có đang được chọn không
   const isOptionChecked = (selectedAnswer, optionId) => {
@@ -391,6 +499,11 @@ export default function QuestionItem({
   // ✅ Helper: kiểm tra xem có phải loại Tải lên tệp không
   const isFileUploadType = () => {
     return question.type === "Tải lên tệp";
+  };
+
+  // ✅ Helper: kiểm tra xem có phải loại Văn bản ngắn không
+  const isShortTextType = () => {
+    return question.type === "Văn bản ngắn";
   };
 
   // ✅ Handler: Upload ảnh cho option
@@ -1142,6 +1255,33 @@ export default function QuestionItem({
                     )}
                   </div>
                 </div>
+              ) : isShortTextType() ? (
+                /* UI đặc biệt cho loại Văn bản ngắn */
+                <div className="ml-[28px]">
+                  <input
+                    type="text"
+                    className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${
+                      textInputError
+                        ? "border-red-500"
+                        : "border-gray-400 focus:border-violet-500"
+                    }`}
+                    style={{
+                      width: "651px",
+                      height: "36px",
+                      fontSize: "14px",
+                    }}
+                    placeholder="Nhập câu trả lời của bạn tại đây."
+                    value={textInputValue}
+                    onChange={handleTextInputChange}
+                    onClick={(e) => e.stopPropagation()}
+                    maxLength={question?.maxLength || 256}
+                  />
+                  {textInputError && (
+                    <div className="mt-2 text-sm text-red-600">
+                      {textInputError}
+                    </div>
+                  )}
+                </div>
               ) : (
                 /* Danh sách đáp án */
                 options.length > 0 && (
@@ -1572,7 +1712,7 @@ export default function QuestionItem({
               {/* Actions: thu theo nội dung (không absolute) */}
               {isActive && (
                 <div className="mt-6 flex items-start justify-between">
-                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && (
+                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && !isShortTextType() && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1587,7 +1727,7 @@ export default function QuestionItem({
 
                   <div
                     className={`flex items-center space-x-1 ${
-                      isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType()
+                      isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType() || isShortTextType()
                         ? "ml-auto"
                         : "mt-[45px]"
                     }`}
@@ -2137,6 +2277,33 @@ export default function QuestionItem({
                     </div>
                   )}
                 </div>
+              </div>
+            ) : isShortTextType() ? (
+              /* UI đặc biệt cho loại Văn bản ngắn */
+              <div className="ml-[28px]">
+                <input
+                  type="text"
+                  className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${
+                    textInputError
+                      ? "border-red-500"
+                      : "border-gray-400 focus:border-violet-500"
+                  }`}
+                  style={{
+                    width: "651px",
+                    height: "36px",
+                    fontSize: "14px",
+                  }}
+                  placeholder="Nhập câu trả lời của bạn tại đây."
+                  value={textInputValue}
+                  onChange={handleTextInputChange}
+                  onClick={(e) => e.stopPropagation()}
+                  maxLength={question?.maxLength || 500}
+                />
+                {textInputError && (
+                  <div className="mt-2 text-sm text-red-600">
+                    {textInputError}
+                  </div>
+                )}
               </div>
             ) : (
               /* Danh sách đáp án */

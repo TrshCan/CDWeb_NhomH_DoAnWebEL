@@ -3,9 +3,16 @@ import { ChevronDownIcon, PlusIcon } from "../icons";
 import QuestionTypeSelectModal from "./QuestionTypeSelectModal";
 import ConditionDesigner from "./ConditionDesigner";
 
-// Component cho segmented control 3 nút (Bật, Soft, Tắt)
+// Component cho segmented control 3 nút (Bật, Soft, Tắt) hoặc 2 nút (Bật, Tắt)
 function SegmentedControl({ value, onChange, options = ["Bật", "Soft", "Tắt"] }) {
   const getActiveIndex = () => {
+    // Xử lý cho 2 options (Bật, Tắt)
+    if (options.length === 2) {
+      if (value === true || value === "Bật") return 0;
+      if (value === false || value === "Tắt") return 1;
+      return 0; // mặc định là Bật
+    }
+    // Xử lý cho 3 options (Bật, Soft, Tắt)
     if (value === true || value === "Bật") return 0;
     if (value === "soft" || value === "Soft") return 1;
     if (value === false || value === "Tắt") return 2;
@@ -28,9 +35,16 @@ function SegmentedControl({ value, onChange, options = ["Bật", "Soft", "Tắt"
                 : "bg-gray-500 text-white hover:bg-gray-600"
             }`}
             onClick={() => {
-              if (index === 0) onChange(true);
-              else if (index === 1) onChange("soft");
-              else onChange(false);
+              // Xử lý cho 2 options (Bật, Tắt)
+              if (options.length === 2) {
+                if (index === 0) onChange(true); // Bật
+                else onChange(false); // Tắt
+              } else {
+                // Xử lý cho 3 options (Bật, Soft, Tắt)
+                if (index === 0) onChange(true);
+                else if (index === 1) onChange("soft");
+                else onChange(false);
+              }
             }}
           >
             {option}
@@ -62,6 +76,8 @@ export default function QuestionSettingsPanel({
     maxQuestions = 1,
     allowedFileTypes = "png, gif, doc, odt, jpg, jpeg, pdf",
     maxFileSizeKB = 10241,
+    numericOnly = false,
+    maxLength = 256,
   } = value;
 
 
@@ -243,6 +259,51 @@ export default function QuestionSettingsPanel({
                     })
                   }
                   min="1"
+                  className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Short Text Settings - chỉ hiển thị cho loại "Văn bản ngắn" */}
+          {type === "Văn bản ngắn" && (
+            <>
+              {/* Chỉ số */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-900">
+                  Chỉ số
+                </label>
+                <SegmentedControl
+                  value={numericOnly}
+                  onChange={(newValue) =>
+                    onChange?.({
+                      ...value,
+                      numericOnly: newValue === true,
+                    })
+                  }
+                  options={["Bật", "Tắt"]}
+                />
+              </div>
+
+              {/* số ký tự tối đa */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-900">
+                  số ký tự tối đa
+                </label>
+                <input
+                  type="number"
+                  value={maxLength}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value) || 256;
+                    // Giới hạn tối đa là 256
+                    const limitedValue = Math.min(newValue, 256);
+                    onChange?.({
+                      ...value,
+                      maxLength: limitedValue,
+                    });
+                  }}
+                  min="1"
+                  max="256"
                   className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 />
               </div>

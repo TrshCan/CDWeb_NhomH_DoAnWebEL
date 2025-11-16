@@ -189,11 +189,11 @@ export default function App() {
         questions: group.questions.map((q) =>
           q.id === questionId
             ? {
-              ...q,
-              options: q.options.map((opt) =>
-                opt.id === optionId ? { ...opt, text: newText } : opt
-              ),
-            }
+                ...q,
+                options: q.options.map((opt) =>
+                  opt.id === optionId ? { ...opt, text: newText } : opt
+                ),
+              }
             : q
         ),
       }))
@@ -218,7 +218,6 @@ export default function App() {
       }))
     );
   };
-
 
   // Thêm option mới
   const handleAddOption = (questionId) => {
@@ -250,9 +249,9 @@ export default function App() {
         questions: group.questions.map((q) =>
           q.id === questionId
             ? {
-              ...q,
-              options: q.options.filter((opt) => opt.id !== optionId),
-            }
+                ...q,
+                options: q.options.filter((opt) => opt.id !== optionId),
+              }
             : q
         ),
       }))
@@ -320,14 +319,20 @@ export default function App() {
           required: "soft",
           image: null,
         };
-        
+
         // Thêm settings cho loại "Tải lên tệp"
         if (questionType === "Tải lên tệp") {
           baseSettings.maxQuestions = 1;
           baseSettings.allowedFileTypes = "png, gif, doc, odt, jpg, jpeg, pdf";
           baseSettings.maxFileSizeKB = 10241;
         }
-        
+
+        // Thêm settings cho loại "Văn bản ngắn"
+        if (questionType === "Văn bản ngắn") {
+          baseSettings.numericOnly = false;
+          baseSettings.maxLength = 256;
+        }
+
         setQuestionSettings((prev) => ({
           ...prev,
           [questionId]: baseSettings,
@@ -342,8 +347,7 @@ export default function App() {
       const el = document.getElementById(sectionId);
       if (el) {
         const yOffset = -100;
-        const y =
-          el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
         window.scrollTo({ top: y, behavior: "smooth" });
       }
     });
@@ -463,7 +467,9 @@ export default function App() {
 
       // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính và Có/Không
       if (questionType === "Giới tính" || questionType === "Có/Không") {
-        const noAnswerOption = defaultOptions.find(opt => opt.text === "Không có câu trả lời");
+        const noAnswerOption = defaultOptions.find(
+          (opt) => opt.text === "Không có câu trả lời"
+        );
         if (noAnswerOption) {
           setSelectedAnswers((prev) => ({
             ...prev,
@@ -492,7 +498,8 @@ export default function App() {
   // Thêm nhóm câu hỏi mới (không có câu hỏi)
   const addQuestionGroup = () => {
     setQuestionGroups((prev) => {
-      const maxGroupId = prev.length > 0 ? Math.max(...prev.map((g) => g.id || 0)) : 0;
+      const maxGroupId =
+        prev.length > 0 ? Math.max(...prev.map((g) => g.id || 0)) : 0;
       const newGroupId = maxGroupId + 1;
 
       const newGroup = {
@@ -522,17 +529,16 @@ export default function App() {
           ...src,
           id: newId,
           text: "",
-          options:
-            src.options || [
-              { id: 1, text: "Subquestion 1" },
-              { id: 2, text: "Subquestion 2" },
-              { id: 3, text: "Subquestion 3" },
-            ],
+          options: src.options || [
+            { id: 1, text: "Subquestion 1" },
+            { id: 2, text: "Subquestion 2" },
+            { id: 3, text: "Subquestion 3" },
+          ],
         };
         const newQuestions = [...group.questions];
         newQuestions.splice(index + 1, 0, clone);
         setActiveSection(`question-${newId}`);
-        
+
         // Copy questionSettings bao gồm ảnh từ câu hỏi gốc
         const srcSettings = questionSettings[src.id];
         if (srcSettings) {
@@ -544,7 +550,7 @@ export default function App() {
             },
           }));
         }
-        
+
         return { ...group, questions: newQuestions };
       });
     });
@@ -610,7 +616,9 @@ export default function App() {
               {
                 id: 1,
                 title: "Nhóm câu hỏi đầu tiên của tôi",
-                questions: [{ id: 1, text: "", helpText: "", type: "Mặc định" }],
+                questions: [
+                  { id: 1, text: "", helpText: "", type: "Mặc định" },
+                ],
               },
             ];
           }
@@ -655,13 +663,17 @@ export default function App() {
       const prevValue = prev[questionId];
 
       // Cho phép chọn nhiều với "Nhiều lựa chọn", "Lựa chọn 5 điểm" và "Chọn nhiều hình ảnh"
-      if (questionType === "Nhiều lựa chọn" || questionType === "Lựa chọn 5 điểm" || questionType === "Chọn nhiều hình ảnh") {
+      if (
+        questionType === "Nhiều lựa chọn" ||
+        questionType === "Lựa chọn 5 điểm" ||
+        questionType === "Chọn nhiều hình ảnh"
+      ) {
         const optionIdStr = String(optionId);
         const prevArray = Array.isArray(prevValue)
           ? prevValue.map(String)
           : prevValue != null
-            ? [String(prevValue)]
-            : [];
+          ? [String(prevValue)]
+          : [];
 
         let newArray;
         if (prevArray.includes(optionIdStr)) {
@@ -875,20 +887,49 @@ export default function App() {
                   const newType = newSettings.type;
                   const prevSettings = questionSettings[activeQuestionId] || {};
                   const oldType = prevSettings.type;
-                  
+
                   // Xử lý file upload settings khi thay đổi type
                   let finalSettings = { ...newSettings };
                   if (newType === "Tải lên tệp" && oldType !== "Tải lên tệp") {
                     // Thêm settings mặc định cho file upload
                     finalSettings.maxQuestions = 1;
-                    finalSettings.allowedFileTypes = "png, gif, doc, odt, jpg, jpeg, pdf";
+                    finalSettings.allowedFileTypes =
+                      "png, gif, doc, odt, jpg, jpeg, pdf";
                     finalSettings.maxFileSizeKB = 10241;
-                  } else if (newType !== "Tải lên tệp" && oldType === "Tải lên tệp") {
+                    // Xóa settings của loại cũ nếu có
+                    delete finalSettings.numericOnly;
+                    delete finalSettings.maxLength;
+                  } else if (
+                    newType !== "Tải lên tệp" &&
+                    oldType === "Tải lên tệp"
+                  ) {
                     // Xóa settings file upload khi chuyển sang loại khác
-                    const { maxQuestions, allowedFileTypes, maxFileSizeKB, ...rest } = finalSettings;
-                    finalSettings = rest;
+                    delete finalSettings.maxQuestions;
+                    delete finalSettings.allowedFileTypes;
+                    delete finalSettings.maxFileSizeKB;
                   }
-                  
+
+                  // Xử lý short text settings khi thay đổi type
+                  if (
+                    newType === "Văn bản ngắn" &&
+                    oldType !== "Văn bản ngắn"
+                  ) {
+                    // Thêm settings mặc định cho văn bản ngắn
+                    finalSettings.numericOnly = false;
+                    finalSettings.maxLength = 256;
+                    // Xóa settings của loại cũ nếu có
+                    delete finalSettings.maxQuestions;
+                    delete finalSettings.allowedFileTypes;
+                    delete finalSettings.maxFileSizeKB;
+                  } else if (
+                    newType !== "Văn bản ngắn" &&
+                    oldType === "Văn bản ngắn"
+                  ) {
+                    // Xóa settings văn bản ngắn khi chuyển sang loại khác
+                    delete finalSettings.numericOnly;
+                    delete finalSettings.maxLength;
+                  }
+
                   setQuestionSettings((prev) => ({
                     ...prev,
                     [activeQuestionId]: finalSettings,
@@ -906,15 +947,21 @@ export default function App() {
 
                         // Nếu thay đổi loại câu hỏi, cập nhật options
                         if (questionNewType !== questionOldType) {
-                          const defaultOptions = createDefaultOptions(questionNewType);
+                          const defaultOptions =
+                            createDefaultOptions(questionNewType);
                           updated = {
                             ...updated,
                             options: defaultOptions,
                           };
 
                           // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính và Có/Không
-                          if (questionNewType === "Giới tính" || questionNewType === "Có/Không") {
-                            const noAnswerOption = defaultOptions.find(opt => opt.text === "Không có câu trả lời");
+                          if (
+                            questionNewType === "Giới tính" ||
+                            questionNewType === "Có/Không"
+                          ) {
+                            const noAnswerOption = defaultOptions.find(
+                              (opt) => opt.text === "Không có câu trả lời"
+                            );
                             if (noAnswerOption) {
                               setSelectedAnswers((prev) => ({
                                 ...prev,
@@ -933,9 +980,7 @@ export default function App() {
                           if (!hasNoAnswer) {
                             const maxOptionId =
                               options.length > 0
-                                ? Math.max(
-                                  ...options.map((opt) => opt.id || 0)
-                                )
+                                ? Math.max(...options.map((opt) => opt.id || 0))
                                 : 0;
 
                             const noAnswerOption = {

@@ -90,6 +90,8 @@ export default function QuestionSection({
         newItem.maxQuestions !== prevItem.maxQuestions || // ✅ So sánh maxQuestions
         newItem.allowedFileTypes !== prevItem.allowedFileTypes || // ✅ So sánh allowedFileTypes
         newItem.maxFileSizeKB !== prevItem.maxFileSizeKB || // ✅ So sánh maxFileSizeKB
+        newItem.numericOnly !== prevItem.numericOnly || // ✅ So sánh numericOnly
+        newItem.maxLength !== prevItem.maxLength || // ✅ So sánh maxLength
         JSON.stringify(newItem.options) !== JSON.stringify(prevItem.options)) {
         hasChanges = true;
         break;
