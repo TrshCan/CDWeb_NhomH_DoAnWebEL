@@ -1,0 +1,24 @@
+type Badge {
+  id: ID!
+  name: String!
+  description: String
+  created_at: DateTime
+  updated_at: DateTime
+  users: [BadgeUserInfo!]! @field(resolver: "App\\GraphQL\\Resolvers\\BadgeResolver@users")
+  user_count: Int! @field(resolver: "App\\GraphQL\\Resolvers\\BadgeResolver@userCount")
+}
+
+type BadgeUserInfo {
+  user_id: ID!
+  user_name: String!
+  user_email: String!
+  assigned_at: DateTime!
+  assigned_by: ID
+  assigned_by_name: String
+}
+
+type BadgesPaginated {
+  data: [Badge!]!
+  pagination: PaginationInfo!
+}
+

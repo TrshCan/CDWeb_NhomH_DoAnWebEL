@@ -57,6 +57,8 @@ class UserResolver
     {
         return $user->userBadges()->get()->map(function ($userBadge) {
             return [
+                'id' => (string) $userBadge->id,
+                'badge_id' => (string) ($userBadge->badge_id ?? ''),
                 'name' => $userBadge->badge->name ?? '',
                 'description' => $userBadge->badge->description ?? '',
                 'created_at' => $userBadge->badge->created_at ?? null,

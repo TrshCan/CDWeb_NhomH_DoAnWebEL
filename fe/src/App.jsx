@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword.jsx";
 import EmailVerificationResult from "./pages/EmailVerificationResult.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import AdminUserManagement from "./pages/admin/AdminUserManagement.jsx";
+import AdminBadgeManagement from "./pages/admin/AdminBadgeManagement.jsx";
 import Tab1 from "./pages/admin/Tab1.jsx";
 import Tab2 from "./pages/admin/Tab2.jsx";
 import Tab3 from "./pages/admin/Tab3.jsx";
@@ -43,6 +44,7 @@ export default function App() {
       {/* Admin routes */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/admin/users" element={<AdminUserManagement />} />
+      <Route path="/admin/badges" element={<AdminBadgeManagement />} />
       <Route path="/admin/tab1" element={<Tab1 />} />
       <Route path="/admin/tab2" element={<Tab2 />} />
       <Route path="/admin/tab3" element={<Tab3 />} />
