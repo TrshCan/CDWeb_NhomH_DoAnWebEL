@@ -46,26 +46,100 @@ const AvatarModal = ({ avatarUrl, onClose }) => {
 // --- BADGE CARD ---
 const BadgeCard = ({ badge }) => {
     const [showTooltip, setShowTooltip] = useState(false);
-    const darkCardColor = '#1e2732';
+    const [isHovered, setIsHovered] = useState(false);
+    
+    // Hàm tạo màu ngẫu nhiên dựa trên tên badge (để màu nhất quán cho mỗi badge)
+    const getRandomColor = (str) => {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = hash % 360;
+        const saturation = 60 + (hash % 20); // 60-80%
+        const lightness = 40 + (hash % 15); // 40-55%
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    };
+
+    const badgeColor = getRandomColor(badge.name);
+    
+    // Tính toán màu glow dựa trên badgeColor
+    const getGlowColor = () => {
+        const match = badgeColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+        if (match) {
+            const hue = parseInt(match[1]);
+            const sat = parseInt(match[2]);
+            const light = Math.min(parseInt(match[3]) + 15, 70);
+            return `hsl(${hue}, ${sat}%, ${light}%)`;
+        }
+        return badgeColor;
+    };
 
     return (
         <div
             className="relative flex-shrink-0"
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
+            onMouseEnter={() => {
+                setShowTooltip(true);
+                setIsHovered(true);
+            }}
+            onMouseLeave={() => {
+                setShowTooltip(false);
+                setIsHovered(false);
+            }}
         >
-            <div
-                className="w-[120px] h-[60px] rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition duration-200 hover:scale-[1.05] shadow-lg"
-                style={{ backgroundColor: darkCardColor }}
-            >
-                <span className="text-xl">{badge.icon}</span>
-                <span className="text-white text-xs font-bold text-center truncate w-full px-1">
-          {badge.name}
-        </span>
+            {/* Shine effect overlay */}
+            <div className="relative w-[120px] h-[60px] rounded-lg overflow-hidden">
+                {/* Main badge */}
+                <div
+                    className="relative w-full h-full rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 ease-out shadow-lg z-10"
+                    style={{ 
+                        backgroundColor: badgeColor,
+                        boxShadow: isHovered 
+                            ? `0 0 20px ${getGlowColor()}, 0 0 40px ${getGlowColor()}, 0 0 60px ${getGlowColor()}, 0 4px 15px rgba(0, 0, 0, 0.4)`
+                            : '0 4px 15px rgba(0, 0, 0, 0.3)',
+                        transform: isHovered ? 'scale(1.1) rotate(1deg)' : 'scale(1) rotate(0deg)',
+                        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    }}
+                >
+                    {/* Shine effect */}
+                    <div 
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 ease-out"
+                        style={{
+                            transform: isHovered 
+                                ? 'translateX(200%) skewX(-12deg)' 
+                                : 'translateX(-100%) skewX(-12deg)',
+                        }}
+                    />
+                    
+                    {/* Border glow */}
+                    <div 
+                        className="absolute inset-0 rounded-lg border-2 transition-all duration-300"
+                        style={{
+                            borderColor: isHovered ? getGlowColor() : 'transparent',
+                            boxShadow: isHovered 
+                                ? `inset 0 0 10px ${getGlowColor()}` 
+                                : 'none'
+                        }}
+                    />
+                    
+                    {/* Badge text */}
+                    <span 
+                        className="relative text-white text-xs font-bold text-center truncate w-full px-1 z-10 transition-all duration-300"
+                        style={{
+                            textShadow: isHovered 
+                                ? `0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.6)`
+                                : '0 2px 4px rgba(0, 0, 0, 0.5)',
+                            transform: isHovered ? 'scale(1.1)' : 'scale(1)'
+                        }}
+                    >
+                        {badge.name}
+                    </span>
+                </div>
             </div>
 
             {showTooltip && (
-                <div className="absolute z-50 bottom-full mb-2 left-1/2 transform -translate-x-1/2 p-3 w-60 rounded-lg shadow-xl bg-gray-700 text-white">
+                <div 
+                    className="absolute z-50 bottom-full mb-2 left-1/2 transform -translate-x-1/2 p-3 w-60 rounded-lg shadow-xl bg-gray-700 text-white animate-fadeIn"
+                >
                     <p className="font-bold text-sm mb-1">{badge.name}</p>
                     <p className="text-xs text-gray-300 italic">{badge.desc}</p>
                     <p className="text-xs mt-1 border-t border-gray-600 pt-1 text-gray-400">
@@ -246,18 +320,9 @@ function ProfilePage() {
                     }
                 }
 
-                const badgeIcons = {
-                    'Tài Trợ Vàng': 'Gold',
-                    'Chuyên Gia KS': 'Tools',
-                    'VIP Code Blue': 'Blue',
-                    'Người Chia Sẻ': 'Star',
-                    'default': 'Medal'
-                };
-
                 const formattedBadges = profile.badges.map((badge, index) => ({
                     id: index + 1,
                     name: badge.name,
-                    icon: badgeIcons[badge.name] || badgeIcons.default,
                     desc: badge.description || 'Huy hiệu đặc biệt',
                     awardedDate: badge.assigned_at
                         ? new Date(badge.assigned_at).toLocaleDateString('vi-VN')

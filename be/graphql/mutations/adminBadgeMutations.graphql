@@ -1,0 +1,31 @@
+extend type Mutation {
+  adminCreateBadge(
+    name: String!
+    description: String
+  ): Badge!
+    @field(resolver: "App\\GraphQL\\Resolvers\\BadgeResolver@createBadge")
+  
+  adminUpdateBadge(
+    id: ID!
+    name: String
+    description: String
+  ): Badge!
+    @field(resolver: "App\\GraphQL\\Resolvers\\BadgeResolver@updateBadge")
+  
+  adminDeleteBadge(id: ID!): Boolean!
+    @field(resolver: "App\\GraphQL\\Resolvers\\BadgeResolver@deleteBadge")
+  
+  adminAssignBadge(
+    badge_id: ID!
+    user_id: ID!
+    assigned_by: ID
+  ): Boolean!
+    @field(resolver: "App\\GraphQL\\Resolvers\\BadgeResolver@assignBadge")
+  
+  adminRevokeBadge(
+    badge_id: ID!
+    user_id: ID!
+  ): Boolean!
+    @field(resolver: "App\\GraphQL\\Resolvers\\BadgeResolver@revokeBadge")
+}
+
