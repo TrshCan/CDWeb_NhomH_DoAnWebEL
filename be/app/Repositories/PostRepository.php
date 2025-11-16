@@ -72,9 +72,9 @@ class PostRepository
 
     public function likedPostsByUser($userId)
     {
-        return Post::whereHas('likes', function($query) use ($userId) {
-                $query->where('user_id', $userId);
-            })
+        return Post::whereHas('likes', function ($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })
             ->with(['user', 'likes.user', 'media', 'parent.user'])
             ->latest()
             ->get();
@@ -96,5 +96,18 @@ class PostRepository
     {
         $post = Post::findOrFail($id);
         return $post->delete();
+    }
+
+    public function postsOfFollowing(array $followingIds)
+    {
+        if (empty($followingIds)) {
+            return collect();               // empty collection → no DB hit
+        }
+
+        return Post::with(['user', 'likes.user', 'media'])
+            ->whereIn('user_id', $followingIds)
+            ->whereNull('parent_id')        // only root posts
+            ->latest()
+            ->get();
     }
 }

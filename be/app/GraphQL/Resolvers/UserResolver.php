@@ -64,6 +64,14 @@ class UserResolver
             ];
         })->toArray();
     }
+
+    // Resolver for following
+    public function following(User $user)
+    {
+        return $user->following()->pluck('followed_id')->toArray();
+    }
+
+
 }
 
 ?>

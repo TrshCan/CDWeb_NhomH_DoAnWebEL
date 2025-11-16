@@ -70,7 +70,7 @@ class PostService
         }
 
         // ✅ Filter out null/empty files first
-        $media = array_filter($media, function($file) {
+        $media = array_filter($media, function ($file) {
             return $file !== null && $file !== false;
         });
 
@@ -149,5 +149,15 @@ class PostService
     public function delete($id)
     {
         return $this->repository->delete($id);
+    }
+
+    public function getPostsOfFollowing(array $followingIds)
+    {
+        // Business-rule: you can’t see posts from an empty list
+        if (empty($followingIds)) {
+            return collect();
+        }
+
+        return $this->repository->postsOfFollowing($followingIds);
     }
 }

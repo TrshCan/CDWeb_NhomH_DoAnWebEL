@@ -11,4 +11,5 @@ type User {
   emailVerified: Boolean! @method(name: "hasVerifiedEmail")
   stats: UserStats @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@stats")
   badges: [UserBadge!]! @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@badges")
+  following: [Int]! @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@following")
 }

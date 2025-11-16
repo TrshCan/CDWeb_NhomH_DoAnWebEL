@@ -30,6 +30,34 @@ export const getUserProfile = async (id) => {
     }
 };
 
+export const getUserFollowingIds = async (id) => {
+    const query = `
+    query ($id: Int!) {
+      publicProfile(id: $id) {
+        following
+      }
+    }
+  `;
+
+    try {
+        const response = await graphqlClient.post("", {
+            query,
+            variables: { id },
+        });
+
+        if (response.data.errors) {
+            console.error("GraphQL errors:", response.data.errors);
+            throw new Error(response.data.errors[0].message);
+        }
+
+        const following = response.data.data?.publicProfile?.following || [];
+        return following.map((v) => parseInt(v)).filter((n) => !Number.isNaN(n));
+    } catch (error) {
+        console.error("Failed to get following ids:", error);
+        throw error;
+    }
+};
+
 export const updateProfile = async (
     name,
     email,

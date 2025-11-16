@@ -58,7 +58,7 @@ class PostResolver
 
         // Filter out null files from media array and ensure they are UploadedFile instances
         $media = $args['media'] ?? [];
-        $media = array_filter($media, function($file) {
+        $media = array_filter($media, function ($file) {
             return $file !== null
                 && $file !== false
                 && $file instanceof \Illuminate\Http\UploadedFile;
@@ -91,5 +91,13 @@ class PostResolver
     public function toggleLike($root, array $args)
     {
         return $this->likeService->toggle($args['post_id'], $args['user_id']);
+    }
+
+    public function postsOfFollowing($_, array $args)
+    {
+        $ids = $args['followingIds'] ?? [];
+
+        // Resolver is the *control* layer – just forward to service
+        return $this->service->getPostsOfFollowing($ids);
     }
 }
