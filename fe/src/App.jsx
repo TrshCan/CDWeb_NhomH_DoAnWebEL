@@ -394,6 +394,13 @@ export default function App() {
         { id: 3, text: "Không có câu trả lời" },
       ];
     }
+    if (questionType === "Có/Không") {
+      return [
+        { id: 1, text: "Có" },
+        { id: 2, text: "Không" },
+        { id: 3, text: "Không có câu trả lời" },
+      ];
+    }
     return [
       { id: 1, text: "" },
       { id: 2, text: "" },
@@ -444,8 +451,8 @@ export default function App() {
         options: defaultOptions,
       };
 
-      // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính
-      if (questionType === "Giới tính") {
+      // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính và Có/Không
+      if (questionType === "Giới tính" || questionType === "Có/Không") {
         const noAnswerOption = defaultOptions.find(opt => opt.text === "Không có câu trả lời");
         if (noAnswerOption) {
           setSelectedAnswers((prev) => ({
@@ -878,8 +885,8 @@ export default function App() {
                             options: defaultOptions,
                           };
 
-                          // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính
-                          if (newType === "Giới tính") {
+                          // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính và Có/Không
+                          if (newType === "Giới tính" || newType === "Có/Không") {
                             const noAnswerOption = defaultOptions.find(opt => opt.text === "Không có câu trả lời");
                             if (noAnswerOption) {
                               setSelectedAnswers((prev) => ({

@@ -68,6 +68,11 @@ export default function QuestionItem({
     return question.type === "Giới tính";
   };
 
+  // ✅ Helper: kiểm tra xem có phải loại Có/Không không
+  const isYesNoType = () => {
+    return question.type === "Có/Không";
+  };
+
   // ✅ Handler: Upload ảnh cho option
   const handleOptionImageUpload = (optionId) => {
     const input = document.createElement("input");
@@ -323,7 +328,7 @@ export default function QuestionItem({
                         border-[3px] rounded-md transition-all
                         ${
                           isSelected
-                            ? "bg-[#10B981] border-[#10B981]"
+                            ? "bg-[#10B981] border-[#10B981] text-white"
                             : isNoAnswer
                             ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
                             : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
@@ -390,7 +395,7 @@ export default function QuestionItem({
                           className={`
                         absolute inset-0 flex flex-col items-center justify-center
                         border-[3px] rounded-md transition-opacity pointer-events-none
-                        bg-[#10B981] border-[#10B981]
+                        bg-[#10B981] border-[#10B981] text-white
                         ${
                           isSelected
                             ? "opacity-100"
@@ -416,6 +421,173 @@ export default function QuestionItem({
                               viewBox="0 0 24 24"
                             >
                               <path d="M15.05 8.537L18.585 5H14V3h8v8h-2V6.414l-3.537 3.537a7.5 7.5 0 1 1-1.414-1.414zM10.5 20a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z"></path>
+                            </svg>
+                          )}
+                          {isNoAnswer && (
+                            <svg
+                              role="img"
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32px"
+                              height="32px"
+                              viewBox="0 0 24 24"
+                              aria-labelledby="circleIconTitle"
+                              stroke="#ffffff"
+                              strokeWidth="1.5"
+                              strokeLinecap="square"
+                              strokeLinejoin="miter"
+                              fill="none"
+                              color="#ffffff"
+                              className="mb-1"
+                            >
+                              <title id="circleIconTitle">Circle</title>
+                              <circle cx="12" cy="12" r="8" />
+                            </svg>
+                          )}
+                          <span
+                            className="text-sm font-medium text-white"
+                            style={{
+                              width: isNoAnswer ? "145px" : "auto",
+                              height: isNoAnswer ? "24px" : "auto",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              textAlign: "center",
+                            }}
+                          >
+                            {option.text}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : isYesNoType() ? (
+                /* UI đặc biệt cho loại Có/Không */
+                <div className="ml-[28px] flex gap-4 flex-wrap">
+                  {options.map((option) => {
+                    const isSelected = isOptionChecked(
+                      selectedAnswer,
+                      option.id
+                    );
+                    const isNoAnswer = option.text === "Không có câu trả lời";
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAnswerSelect?.(
+                            question.id,
+                            option.id,
+                            question.type
+                          );
+                        }}
+                        className="gender-button relative group"
+                        style={{
+                          width: isNoAnswer ? "173px" : "90px",
+                          height: "75px",
+                        }}
+                      >
+                        <div
+                          className={`
+                        absolute inset-0 flex flex-col items-center justify-center
+                        border-[3px] rounded-md transition-all
+                        ${
+                          isSelected
+                            ? "bg-[#10B981] border-[#10B981] text-white"
+                            : isNoAnswer
+                            ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                            : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                        }
+                      `}
+                        >
+                          {option.text === "Có" && (
+                            <svg
+                              width="32"
+                              height="32"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-.997-4L6.76 11.757l1.414-1.414 2.829 2.829 5.656-5.657 1.415 1.414L11.003 16z"></path>
+                            </svg>
+                          )}
+                          {option.text === "Không" && (
+                            <svg
+                              width="32"
+                              height="32"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm0-9.414l2.828-2.829 1.415 1.415L13.414 12l2.829 2.828-1.415 1.415L12 13.414l-2.828 2.829-1.415-1.415L10.586 12 7.757 9.172l1.415-1.415L12 10.586z"></path>
+                            </svg>
+                          )}
+                          {isNoAnswer && (
+                            <svg
+                              role="img"
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32px"
+                              height="32px"
+                              viewBox="0 0 24 24"
+                              aria-labelledby="circleIconTitle"
+                              stroke={isSelected ? "#ffffff" : "#4b5563"}
+                              strokeWidth="1.5"
+                              strokeLinecap="square"
+                              strokeLinejoin="miter"
+                              fill="none"
+                              color={isSelected ? "#ffffff" : "#4b5563"}
+                              className="mb-1 transition-colors"
+                            >
+                              <title id="circleIconTitle">Circle</title>
+                              <circle cx="12" cy="12" r="8" />
+                            </svg>
+                          )}
+                          <span
+                            className="text-sm font-medium transition-colors"
+                            style={{
+                              color: isSelected ? "#ffffff" : "#4b5563",
+                              width: isNoAnswer ? "145px" : "auto",
+                              height: isNoAnswer ? "24px" : "auto",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              textAlign: "center",
+                            }}
+                          >
+                            {option.text}
+                          </span>
+                        </div>
+                        {/* Overlay khi hover để đổi màu icon và chữ */}
+                        <div
+                          className={`
+                        absolute inset-0 flex flex-col items-center justify-center
+                        border-[3px] rounded-md transition-opacity pointer-events-none
+                        bg-[#10B981] border-[#10B981] text-white
+                        ${
+                          isSelected
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100"
+                        }
+                      `}
+                        >
+                          {option.text === "Có" && (
+                            <svg
+                              width="32"
+                              height="32"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-.997-4L6.76 11.757l1.414-1.414 2.829 2.829 5.656-5.657 1.415 1.414L11.003 16z"></path>
+                            </svg>
+                          )}
+                          {option.text === "Không" && (
+                            <svg
+                              width="32"
+                              height="32"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm0-9.414l2.828-2.829 1.415 1.415L13.414 12l2.829 2.828-1.415 1.415L12 13.414l-2.828 2.829-1.415-1.415L10.586 12 7.757 9.172l1.415-1.415L12 10.586z"></path>
                             </svg>
                           )}
                           {isNoAnswer && (
@@ -886,7 +1058,7 @@ export default function QuestionItem({
               {/* Actions: thu theo nội dung (không absolute) */}
               {isActive && (
                 <div className="mt-6 flex items-start justify-between">
-                  {!isGenderType() && (
+                  {!isGenderType() && !isYesNoType() && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -901,7 +1073,7 @@ export default function QuestionItem({
 
                   <div
                     className={`flex items-center space-x-1 ${
-                      isGenderType() ? "ml-auto" : "mt-[45px]"
+                      isGenderType() || isYesNoType() ? "ml-auto" : "mt-[45px]"
                     }`}
                   >
                     <button
@@ -987,7 +1159,7 @@ export default function QuestionItem({
                         border-[3px] rounded-md transition-all
                         ${
                           isSelected
-                            ? "bg-[#10B981] border-[#10B981]"
+                            ? "bg-[#10B981] border-[#10B981] text-white"
                             : isNoAnswer
                             ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
                             : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
@@ -1054,7 +1226,7 @@ export default function QuestionItem({
                         className={`
                         absolute inset-0 flex flex-col items-center justify-center
                         border-[3px] rounded-md transition-opacity pointer-events-none
-                        bg-[#10B981] border-[#10B981]
+                        bg-[#10B981] border-[#10B981] text-white
                         ${
                           isSelected
                             ? "opacity-100"
@@ -1100,6 +1272,156 @@ export default function QuestionItem({
                               }}
                             ></div>
                           </div>
+                        )}
+                        <span className="text-sm font-medium text-white">
+                          {option.text}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : isYesNoType() ? (
+              /* UI đặc biệt cho loại Có/Không */
+              <div className="ml-[28px] flex gap-4 flex-wrap">
+                {options.map((option) => {
+                  const isSelected = isOptionChecked(selectedAnswer, option.id);
+                  const isNoAnswer = option.text === "Không có câu trả lời";
+
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAnswerSelect?.(question.id, option.id, question.type);
+                      }}
+                      className="gender-button relative group"
+                      style={{
+                        width: isNoAnswer ? "173px" : "90px",
+                        height: "75px",
+                      }}
+                    >
+                      <div
+                        className={`
+                        absolute inset-0 flex flex-col items-center justify-center
+                        border-[3px] rounded-md transition-all
+                        ${
+                          isSelected
+                            ? "bg-[#10B981] border-[#10B981] text-white"
+                            : isNoAnswer
+                            ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                            : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                        }
+                      `}
+                      >
+                        {option.text === "Có" && (
+                          <svg
+                            width="32"
+                            height="32"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-.997-4L6.76 11.757l1.414-1.414 2.829 2.829 5.656-5.657 1.415 1.414L11.003 16z"></path>
+                          </svg>
+                        )}
+                        {option.text === "Không" && (
+                          <svg
+                            width="32"
+                            height="32"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm0-9.414l2.828-2.829 1.415 1.415L13.414 12l2.829 2.828-1.415 1.415L12 13.414l-2.828 2.829-1.415-1.415L10.586 12 7.757 9.172l1.415-1.415L12 10.586z"></path>
+                          </svg>
+                        )}
+                        {isNoAnswer && (
+                          <svg
+                            role="img"
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="32px"
+                            height="32px"
+                            viewBox="0 0 24 24"
+                            aria-labelledby="circleIconTitle"
+                            stroke={isSelected ? "#ffffff" : "#4b5563"}
+                            strokeWidth="1.5"
+                            strokeLinecap="square"
+                            strokeLinejoin="miter"
+                            fill="none"
+                            color={isSelected ? "#ffffff" : "#4b5563"}
+                            className="mb-1 transition-colors"
+                          >
+                            <title id="circleIconTitle">Circle</title>
+                            <circle cx="12" cy="12" r="8" />
+                          </svg>
+                        )}
+                        <span
+                          className="text-sm font-medium transition-colors"
+                          style={{
+                            color: isSelected ? "#ffffff" : "#4b5563",
+                            width: isNoAnswer ? "145px" : "auto",
+                            height: isNoAnswer ? "24px" : "auto",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textAlign: "center",
+                          }}
+                        >
+                          {option.text}
+                        </span>
+                      </div>
+                      {/* Overlay khi hover để đổi màu icon và chữ */}
+                      <div
+                        className={`
+                        absolute inset-0 flex flex-col items-center justify-center
+                        border-[3px] rounded-md transition-opacity pointer-events-none
+                        bg-[#10B981] border-[#10B981] text-white
+                        ${
+                          isSelected
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100"
+                        }
+                      `}
+                      >
+                        {option.text === "Có" && (
+                          <svg
+                            width="32"
+                            height="32"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-.997-4L6.76 11.757l1.414-1.414 2.829 2.829 5.656-5.657 1.415 1.414L11.003 16z"></path>
+                          </svg>
+                        )}
+                        {option.text === "Không" && (
+                          <svg
+                            width="32"
+                            height="32"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm0-9.414l2.828-2.829 1.415 1.415L13.414 12l2.829 2.828-1.415 1.415L12 13.414l-2.828 2.829-1.415-1.415L10.586 12 7.757 9.172l1.415-1.415L12 10.586z"></path>
+                          </svg>
+                        )}
+                        {isNoAnswer && (
+                          <svg
+                            role="img"
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="32px"
+                            height="32px"
+                            viewBox="0 0 24 24"
+                            aria-labelledby="circleIconTitle"
+                            stroke="#ffffff"
+                            strokeWidth="1.5"
+                            strokeLinecap="square"
+                            strokeLinejoin="miter"
+                            fill="none"
+                            color="#ffffff"
+                            className="mb-1"
+                          >
+                            <title id="circleIconTitle">Circle</title>
+                            <circle cx="12" cy="12" r="8" />
+                          </svg>
                         )}
                         <span className="text-sm font-medium text-white">
                           {option.text}
@@ -1534,7 +1856,7 @@ export default function QuestionItem({
             {/* Actions: đặt inline bên dưới nội dung */}
             {isActive && (
               <div className="mt-6 flex items-start justify-between">
-                {!isGenderType() && (
+                {!isGenderType() && !isYesNoType() && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1549,7 +1871,7 @@ export default function QuestionItem({
 
                 <div
                   className={`flex items-center space-x-1 ${
-                    isGenderType() ? "ml-auto" : "mt-[70px]"
+                    isGenderType() || isYesNoType() ? "ml-auto" : "mt-[70px]"
                   }`}
                 >
                   <button
