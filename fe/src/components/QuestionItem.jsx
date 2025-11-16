@@ -49,6 +49,9 @@ export default function QuestionItem({
   const [textInputValue, setTextInputValue] = useState("");
   const [textInputError, setTextInputError] = useState("");
 
+  // State cho nhiều văn bản ngắn (mỗi subquestion có một input)
+  const [multipleTextInputs, setMultipleTextInputs] = useState({});
+
   // Refs để quản lý toast và tránh spam
   const toastTimeoutRef = useRef(null);
   const lastToastIdRef = useRef(null);
@@ -360,6 +363,22 @@ export default function QuestionItem({
       // Sync textInputValue với selectedAnswer
       setTextInputValue(selectedAnswer || "");
       setTextInputError("");
+    } else if (question.type === "Nhiều văn bản ngắn") {
+      // Sync multipleTextInputs với selectedAnswer
+      if (selectedAnswer) {
+        try {
+          const parsed = JSON.parse(selectedAnswer);
+          if (typeof parsed === "object" && parsed !== null) {
+            setMultipleTextInputs(parsed);
+          } else {
+            setMultipleTextInputs({});
+          }
+        } catch {
+          setMultipleTextInputs({});
+        }
+      } else {
+        setMultipleTextInputs({});
+      }
     }
   }, [selectedAnswer, question.type]);
 
@@ -412,6 +431,23 @@ export default function QuestionItem({
       });
       lastToastIdRef.current = id;
     }, 300);
+  };
+
+  // Xử lý khi nhập text cho nhiều văn bản ngắn
+  const handleMultipleTextInputChange = (optionId, value) => {
+    const maxLength = 256;
+    
+    // Kiểm tra độ dài
+    if (value.length > maxLength) {
+      return; // Không cho phép nhập quá 256 ký tự
+    }
+
+    // Cập nhật state
+    const newInputs = { ...multipleTextInputs, [optionId]: value };
+    setMultipleTextInputs(newInputs);
+    
+    // Lưu vào selectedAnswer dưới dạng JSON
+    onAnswerSelect?.(question.id, JSON.stringify(newInputs), question.type);
   };
 
   // Xử lý khi nhập text
@@ -504,6 +540,11 @@ export default function QuestionItem({
   // ✅ Helper: kiểm tra xem có phải loại Văn bản ngắn không
   const isShortTextType = () => {
     return question.type === "Văn bản ngắn";
+  };
+
+  // ✅ Helper: kiểm tra xem có phải loại Nhiều văn bản ngắn không
+  const isMultipleShortTextType = () => {
+    return question.type === "Nhiều văn bản ngắn";
   };
 
   // ✅ Handler: Upload ảnh cho option
@@ -1282,6 +1323,210 @@ export default function QuestionItem({
                     </div>
                   )}
                 </div>
+              ) : isMultipleShortTextType() ? (
+                /* UI đặc biệt cho loại Nhiều văn bản ngắn */
+                options.length > 0 && (
+                  <div className="ml-[28px] space-y-4">
+                    {options.map((option, optionIndex) => {
+                      const isDragging = draggedIndex === optionIndex;
+                      const isDragOver = dragOverIndex === optionIndex;
+
+                      const handleDragStart = (e) => {
+                        setDraggedIndex(optionIndex);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData(
+                          "text/plain",
+                          optionIndex.toString()
+                        );
+                      };
+
+                      const handleDragOver = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.dataTransfer.dropEffect = "move";
+                        if (dragOverIndex !== optionIndex) {
+                          setDragOverIndex(optionIndex);
+                        }
+                      };
+
+                      const handleDragLeave = (e) => {
+                        e.preventDefault();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = e.clientX;
+                        const y = e.clientY;
+                        if (
+                          x < rect.left ||
+                          x > rect.right ||
+                          y < rect.top ||
+                          y > rect.bottom
+                        ) {
+                          setDragOverIndex(null);
+                        }
+                      };
+
+                      const handleDrop = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (
+                          draggedIndex !== null &&
+                          draggedIndex !== optionIndex &&
+                          onMoveOption
+                        ) {
+                          onMoveOption(question.id, draggedIndex, optionIndex);
+                        }
+                        setDraggedIndex(null);
+                        setDragOverIndex(null);
+                      };
+
+                      const handleDragEnd = () => {
+                        setDraggedIndex(null);
+                        setDragOverIndex(null);
+                      };
+
+                      return (
+                        <div
+                          key={option.id}
+                          className={isActive ? "flex items-center group" : "flex flex-col group"}
+                          style={{
+                            gap: "8px",
+                            minHeight: "40px",
+                            opacity: isDragging ? 1 : 1,
+                            transition: "all 0.2s",
+                            backgroundColor: isDragging
+                              ? "#ffffff"
+                              : isDragOver
+                              ? "#f3f4f6"
+                              : "transparent",
+                            border: isDragging
+                              ? "2px solid #7c3aed"
+                              : "2px solid transparent",
+                            borderRadius: isDragging ? "6px" : "0px",
+                            padding: isDragging ? "4px" : "0px",
+                          }}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                        >
+                          {/* Khi active: hiển thị icon X và icon grid */}
+                          {isActive ? (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRemoveOption?.(question.id, option.id);
+                                }}
+                                className="flex-shrink-0 hover:bg-red-100 rounded-full transition-colors"
+                                title="Xóa đáp án"
+                                style={{
+                                  width: "13px",
+                                  height: "13px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  backgroundColor: "#ef4444",
+                                  border: "none",
+                                  padding: "0",
+                                }}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="8"
+                                  height="8"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="white"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <line x1="18" y1="6" x2="6" y2="18" />
+                                  <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
+                              <div
+                                draggable={isActive}
+                                onDragStart={handleDragStart}
+                                onDragEnd={handleDragEnd}
+                                className="cursor-move flex-shrink-0 hover:bg-gray-200 rounded transition-colors"
+                                title="Nhấn giữ và kéo để di chuyển đáp án"
+                                style={{
+                                  width: "18px",
+                                  height: "14px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  padding: "2px",
+                                  userSelect: "none",
+                                }}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="18"
+                                  height="10"
+                                  viewBox="0 0 18 10"
+                                  fill="currentColor"
+                                  className="text-gray-600"
+                                >
+                                  <circle cx="2" cy="2" r="1.5" />
+                                  <circle cx="9" cy="2" r="1.5" />
+                                  <circle cx="16" cy="2" r="1.5" />
+                                  <circle cx="2" cy="8" r="1.5" />
+                                  <circle cx="9" cy="8" r="1.5" />
+                                  <circle cx="16" cy="8" r="1.5" />
+                                </svg>
+                              </div>
+                            </>
+                          ) : null}
+                          {/* Text của subquestion */}
+                          <div className="flex items-center" style={{ width: "290px", wordWrap: "break-word" }}>
+                            <EditableField
+                              placeholder="Subquestion"
+                              initialValue={option.text}
+                              inputClassName="text-gray-800 font-medium"
+                              isTextarea={true}
+                              onChange={(value) =>
+                                onOptionChange?.(question.id, option.id, value)
+                              }
+                            />
+                          </div>
+                          {/* Input text bên cạnh (khi không active) */}
+                          {!isActive && (
+                            <input
+                              type="text"
+                              className="border-[3px] border-gray-400 rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none focus:border-violet-500"
+                              style={{
+                                width: imageValue ? "174px" : "300px",
+                                height: "40px",
+                                fontSize: "14px",
+                              }}
+                              placeholder="Nhập câu trả lời của bạn tại đây."
+                              value={multipleTextInputs[option.id] || ""}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleMultipleTextInputChange(option.id, e.target.value);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              maxLength={256}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                    {/* Nút thêm subquestion khi active */}
+                    {isActive && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddOption?.(question.id);
+                        }}
+                        className="text-violet-600 hover:text-violet-800 font-medium text-sm flex items-center"
+                      >
+                        <PlusIcon className="w-4 h-4 mr-1" />
+                        Thêm câu hỏi phụ
+                      </button>
+                    )}
+                  </div>
+                )
               ) : (
                 /* Danh sách đáp án */
                 options.length > 0 && (
@@ -1712,7 +1957,7 @@ export default function QuestionItem({
               {/* Actions: thu theo nội dung (không absolute) */}
               {isActive && (
                 <div className="mt-6 flex items-start justify-between">
-                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && !isShortTextType() && (
+                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && !isShortTextType() && !isMultipleShortTextType() && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1727,7 +1972,7 @@ export default function QuestionItem({
 
                   <div
                     className={`flex items-center space-x-1 ${
-                      isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType() || isShortTextType()
+                      isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType() || isShortTextType() || isMultipleShortTextType()
                         ? "ml-auto"
                         : "mt-[45px]"
                     }`}
@@ -2305,6 +2550,197 @@ export default function QuestionItem({
                   </div>
                 )}
               </div>
+            ) : isMultipleShortTextType() ? (
+              /* UI đặc biệt cho loại Nhiều văn bản ngắn */
+              options.length > 0 && (
+                <div className="ml-[28px] space-y-4">
+                  {options.map((option, optionIndex) => {
+                    const isDragging = draggedIndex === optionIndex;
+                    const isDragOver = dragOverIndex === optionIndex;
+
+                    const handleDragStart = (e) => {
+                      setDraggedIndex(optionIndex);
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData(
+                        "text/plain",
+                        optionIndex.toString()
+                      );
+                    };
+
+                    const handleDragOver = (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.dataTransfer.dropEffect = "move";
+                      if (dragOverIndex !== optionIndex) {
+                        setDragOverIndex(optionIndex);
+                      }
+                    };
+
+                    const handleDragLeave = (e) => {
+                      e.preventDefault();
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = e.clientX;
+                      const y = e.clientY;
+                      if (
+                        x < rect.left ||
+                        x > rect.right ||
+                        y < rect.top ||
+                        y > rect.bottom
+                      ) {
+                        setDragOverIndex(null);
+                      }
+                    };
+
+                    const handleDrop = (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (
+                        draggedIndex !== null &&
+                        draggedIndex !== optionIndex &&
+                        onMoveOption
+                      ) {
+                        onMoveOption(question.id, draggedIndex, optionIndex);
+                      }
+                      setDraggedIndex(null);
+                      setDragOverIndex(null);
+                    };
+
+                    const handleDragEnd = () => {
+                      setDraggedIndex(null);
+                      setDragOverIndex(null);
+                    };
+
+                    return (
+                      <div
+                        key={option.id}
+                        className={isActive ? "flex items-center group" : "flex flex-col group"}
+                        style={{
+                          gap: "8px",
+                          minHeight: "40px",
+                          opacity: isDragging ? 1 : 1,
+                          transition: "all 0.2s",
+                          backgroundColor: isDragging
+                            ? "#ffffff"
+                            : isDragOver
+                            ? "#f3f4f6"
+                            : "transparent",
+                          border: isDragging
+                            ? "2px solid #7c3aed"
+                            : "2px solid transparent",
+                          borderRadius: isDragging ? "6px" : "0px",
+                          padding: isDragging ? "4px" : "0px",
+                        }}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                      >
+                        {/* Khi active: hiển thị icon X và icon grid */}
+                        {isActive ? (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRemoveOption?.(question.id, option.id);
+                              }}
+                              className="flex-shrink-0 hover:bg-red-100 rounded-full transition-colors"
+                              title="Xóa đáp án"
+                              style={{
+                                width: "13px",
+                                height: "13px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                backgroundColor: "#ef4444",
+                                border: "none",
+                                padding: "0",
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="8"
+                                height="8"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="white"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                            <div
+                              draggable={isActive}
+                              onDragStart={handleDragStart}
+                              onDragEnd={handleDragEnd}
+                              className="cursor-move flex-shrink-0 hover:bg-gray-200 rounded transition-colors"
+                              title="Nhấn giữ và kéo để di chuyển đáp án"
+                              style={{
+                                width: "18px",
+                                height: "14px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: "2px",
+                                userSelect: "none",
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="10"
+                                viewBox="0 0 18 10"
+                                fill="currentColor"
+                                className="text-gray-600"
+                              >
+                                <circle cx="2" cy="2" r="1.5" />
+                                <circle cx="9" cy="2" r="1.5" />
+                                <circle cx="16" cy="2" r="1.5" />
+                                <circle cx="2" cy="8" r="1.5" />
+                                <circle cx="9" cy="8" r="1.5" />
+                                <circle cx="16" cy="8" r="1.5" />
+                              </svg>
+                            </div>
+                          </>
+                        ) : null}
+                        {/* Text của subquestion */}
+                        <div className="flex items-center" style={{ width: "290px", wordWrap: "break-word" }}>
+                          <EditableField
+                            placeholder="Subquestion"
+                            initialValue={option.text}
+                            inputClassName="text-gray-800 font-medium"
+                            isTextarea={true}
+                            onChange={(value) =>
+                              onOptionChange?.(question.id, option.id, value)
+                            }
+                          />
+                        </div>
+                        {/* Input text bên cạnh (khi không active) */}
+                        {!isActive && (
+                          <input
+                            type="text"
+                            className="border-[3px] border-gray-400 rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none focus:border-violet-500"
+                            style={{
+                              width: imageValue ? "174px" : "300px",
+                              height: "40px",
+                              fontSize: "14px",
+                            }}
+                            placeholder="Nhập câu trả lời của bạn tại đây."
+                            value={multipleTextInputs[option.id] || ""}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleMultipleTextInputChange(option.id, e.target.value);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            maxLength={256}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )
             ) : (
               /* Danh sách đáp án */
               options.length > 0 && (

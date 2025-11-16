@@ -33,6 +33,7 @@ const allModalOptions = [
     options: [
       "Nhiều lựa chọn",
       "Chọn nhiều hình ảnh",
+      "Nhiều văn bản ngắn",
     ],
   },
   {
