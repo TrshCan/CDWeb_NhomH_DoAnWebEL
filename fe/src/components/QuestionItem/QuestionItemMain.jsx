@@ -19,8 +19,10 @@ import {
   isShortTextType as isShortTextTypeHelper,
   isLongTextType as isLongTextTypeHelper,
   isMultipleShortTextType as isMultipleShortTextTypeHelper,
+  isMatrixType as isMatrixTypeHelper,
 } from "./helpers/questionTypeHelpers";
 import MoveButtons from "./ui/MoveButtons";
+import MatrixTypeUI from "./ui/MatrixTypeUI";
 
 export default function QuestionItem({
   isActive,
@@ -537,6 +539,11 @@ export default function QuestionItem({
   // ✅ Helper: kiểm tra xem có phải loại Nhiều văn bản ngắn không
   const isMultipleShortTextType = () => {
     return question.type === "Nhiều văn bản ngắn";
+  };
+
+  // ✅ Helper: kiểm tra xem có phải loại Ma trận (chọn điểm) không
+  const isMatrixType = () => {
+    return question.type === "Ma trận (chọn điểm)";
   };
 
   // ✅ Handler: Upload ảnh cho option
@@ -1546,6 +1553,23 @@ export default function QuestionItem({
                     )}
                   </div>
                 )
+              ) : isMatrixType() ? (
+                /* UI đặc biệt cho loại Ma trận (chọn điểm) */
+                <MatrixTypeUI
+                  question={question}
+                  options={options}
+                  isActive={isActive}
+                  onOptionChange={onOptionChange}
+                  onRemoveOption={onRemoveOption}
+                  onMoveOption={onMoveOption}
+                  onAddOption={onAddOption}
+                  onAnswerSelect={onAnswerSelect}
+                  selectedAnswer={selectedAnswer}
+                  draggedIndex={draggedIndex}
+                  setDraggedIndex={setDraggedIndex}
+                  dragOverIndex={dragOverIndex}
+                  setDragOverIndex={setDragOverIndex}
+                />
               ) : (
                 /* Danh sách đáp án */
                 options.length > 0 && (
@@ -1976,7 +2000,7 @@ export default function QuestionItem({
               {/* Actions: thu theo nội dung (không absolute) */}
               {isActive && (
                 <div className="mt-6 flex items-start justify-between">
-                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && !isShortTextType() && !isMultipleShortTextType() && (
+                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && !isShortTextType() && !isMultipleShortTextType() && !isMatrixType() && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1991,7 +2015,7 @@ export default function QuestionItem({
 
                   <div
                     className={`flex items-center space-x-1 ${
-                      isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType() || isShortTextType() || isMultipleShortTextType()
+                      isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType() || isShortTextType() || isMultipleShortTextType() || isMatrixType()
                         ? "ml-auto"
                         : "mt-[45px]"
                     }`}
@@ -2787,6 +2811,23 @@ export default function QuestionItem({
                   })}
                 </div>
               )
+            ) : isMatrixType() ? (
+              /* UI đặc biệt cho loại Ma trận (chọn điểm) */
+              <MatrixTypeUI
+                question={question}
+                options={options}
+                isActive={isActive}
+                onOptionChange={onOptionChange}
+                onRemoveOption={onRemoveOption}
+                onMoveOption={onMoveOption}
+                onAddOption={onAddOption}
+                onAnswerSelect={onAnswerSelect}
+                selectedAnswer={selectedAnswer}
+                draggedIndex={draggedIndex}
+                setDraggedIndex={setDraggedIndex}
+                dragOverIndex={dragOverIndex}
+                setDragOverIndex={setDragOverIndex}
+              />
             ) : (
               /* Danh sách đáp án */
               options.length > 0 && (
@@ -3212,7 +3253,7 @@ export default function QuestionItem({
             {/* Actions: đặt inline bên dưới nội dung */}
             {isActive && (
               <div className="mt-6 flex items-start justify-between">
-                {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && (
+                {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && !isMatrixType() && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -3227,7 +3268,7 @@ export default function QuestionItem({
 
                 <div
                   className={`flex items-center space-x-1 ${
-                    isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType()
+                    isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType() || isMatrixType()
                       ? "ml-auto"
                       : "mt-[70px]"
                   }`}

@@ -3,6 +3,7 @@ import { toast } from "react-hot-toast";
 import EditableField from "./EditableField";
 import { PlusIcon, DuplicateIcon, TrashIcon, CalendarIcon } from "../icons";
 import FivePointScale from "./FivePointScale";
+import MatrixTypeUI from "./QuestionItem/ui/MatrixTypeUI";
 
 export default function QuestionItem({
   isActive,
@@ -36,7 +37,7 @@ export default function QuestionItem({
 
   // State cho date input
   const [dateInputValue, setDateInputValue] = useState("");
-  
+
   // Ref cho date picker input (ẩn)
   const datePickerRef = useRef(null);
 
@@ -101,15 +102,15 @@ export default function QuestionItem({
   // Xử lý input với mask MM/DD/YYYY - tự động thêm dấu /
   const handleDateInputChange = (e) => {
     const inputValue = e.target.value;
-    
+
     // Lấy chỉ số từ input (loại bỏ tất cả ký tự không phải số)
     let value = inputValue.replace(/[^0-9]/g, ""); // Chỉ lấy số
-    
+
     // Giới hạn tối đa 8 số (MMDDYYYY)
     if (value.length > 8) {
       value = value.substring(0, 8);
     }
-    
+
     // Format: tự động thêm dấu / sau 2 số và sau 4 số
     let formatted = value;
     if (value.length > 2) {
@@ -191,7 +192,7 @@ export default function QuestionItem({
     // Kiểm tra extension
     const allowedExtensions = allowedFileTypes.split(",").map(ext => ext.trim().toLowerCase());
     const fileExtension = file.name.split(".").pop()?.toLowerCase();
-    
+
     if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
       return {
         valid: false,
@@ -245,11 +246,11 @@ export default function QuestionItem({
         type: file.type,
         data: event.target.result, // Base64 string
       };
-      
+
       // Thêm file vào array
       const newFiles = [...uploadedFiles, fileData];
       setUploadedFiles(newFiles);
-      
+
       // Lưu array file data vào selectedAnswer
       onAnswerSelect?.(question.id, JSON.stringify(newFiles), question.type);
     };
@@ -274,7 +275,7 @@ export default function QuestionItem({
     const newFiles = uploadedFiles.filter(f => f.id !== fileId);
     setUploadedFiles(newFiles);
     setFileUploadError("");
-    
+
     // Lưu array mới vào selectedAnswer
     if (newFiles.length > 0) {
       onAnswerSelect?.(question.id, JSON.stringify(newFiles), question.type);
@@ -318,7 +319,7 @@ export default function QuestionItem({
     e.preventDefault();
     e.stopPropagation();
     setIsFileDragging(false);
-    
+
     const files = Array.from(e.dataTransfer?.files || []);
     // Chỉ xử lý file đầu tiên nếu drop nhiều file
     if (files.length > 0) {
@@ -440,7 +441,7 @@ export default function QuestionItem({
   // Xử lý khi nhập text cho nhiều văn bản ngắn
   const handleMultipleTextInputChange = (optionId, value) => {
     const maxLength = 256;
-    
+
     // Kiểm tra độ dài
     if (value.length > maxLength) {
       return; // Không cho phép nhập quá 256 ký tự
@@ -449,7 +450,7 @@ export default function QuestionItem({
     // Cập nhật state
     const newInputs = { ...multipleTextInputs, [optionId]: value };
     setMultipleTextInputs(newInputs);
-    
+
     // Lưu vào selectedAnswer dưới dạng JSON
     onAnswerSelect?.(question.id, JSON.stringify(newInputs), question.type);
   };
@@ -556,6 +557,11 @@ export default function QuestionItem({
     return question.type === "Nhiều văn bản ngắn";
   };
 
+  // ✅ Helper: kiểm tra xem có phải loại Ma trận (chọn điểm) không
+  const isMatrixType = () => {
+    return question.type === "Ma trận (chọn điểm)";
+  };
+
   // ✅ Handler: Upload ảnh cho option
   const handleOptionImageUpload = (optionId) => {
     const input = document.createElement("input");
@@ -612,11 +618,10 @@ export default function QuestionItem({
               moveQuestionItem(index, "up");
             }}
             disabled={index === 0}
-            className={`rounded p-0.5 transition-colors duration-150 shadow ${
-              index === 0
-                ? "bg-gray-400 opacity-50 cursor-not-allowed"
-                : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
-            }`}
+            className={`rounded p-0.5 transition-colors duration-150 shadow ${index === 0
+              ? "bg-gray-400 opacity-50 cursor-not-allowed"
+              : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
+              }`}
             aria-label="Move up"
             style={{
               width: "22px",
@@ -648,11 +653,10 @@ export default function QuestionItem({
               moveQuestionItem(index, "down");
             }}
             disabled={index === totalQuestions - 1}
-            className={`rounded p-0.5 transition-colors duration-150 shadow ${
-              index === totalQuestions - 1
-                ? "bg-gray-400 opacity-50 cursor-not-allowed"
-                : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
-            }`}
+            className={`rounded p-0.5 transition-colors duration-150 shadow ${index === totalQuestions - 1
+              ? "bg-gray-400 opacity-50 cursor-not-allowed"
+              : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
+              }`}
             aria-label="Move down"
             style={{
               width: "22px",
@@ -809,13 +813,12 @@ export default function QuestionItem({
                           className={`
                         absolute inset-0 flex flex-col items-center justify-center
                         border-[3px] rounded-md transition-all
-                        ${
-                          isSelected
-                            ? "bg-[#10B981] border-[#10B981] text-white"
-                            : isNoAnswer
-                            ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
-                            : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
-                        }
+                        ${isSelected
+                              ? "bg-[#10B981] border-[#10B981] text-white"
+                              : isNoAnswer
+                                ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                                : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                            }
                       `}
                         >
                           {option.text === "Nữ" && (
@@ -879,11 +882,10 @@ export default function QuestionItem({
                         absolute inset-0 flex flex-col items-center justify-center
                         border-[3px] rounded-md transition-opacity pointer-events-none
                         bg-[#10B981] border-[#10B981] text-white
-                        ${
-                          isSelected
-                            ? "opacity-100"
-                            : "opacity-0 group-hover:opacity-100"
-                        }
+                        ${isSelected
+                              ? "opacity-100"
+                              : "opacity-0 group-hover:opacity-100"
+                            }
                       `}
                         >
                           {option.text === "Nữ" && (
@@ -976,13 +978,12 @@ export default function QuestionItem({
                           className={`
                         absolute inset-0 flex flex-col items-center justify-center
                         border-[3px] rounded-md transition-all
-                        ${
-                          isSelected
-                            ? "bg-[#10B981] border-[#10B981] text-white"
-                            : isNoAnswer
-                            ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
-                            : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
-                        }
+                        ${isSelected
+                              ? "bg-[#10B981] border-[#10B981] text-white"
+                              : isNoAnswer
+                                ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                                : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                            }
                       `}
                         >
                           {option.text === "Có" && (
@@ -1046,11 +1047,10 @@ export default function QuestionItem({
                         absolute inset-0 flex flex-col items-center justify-center
                         border-[3px] rounded-md transition-opacity pointer-events-none
                         bg-[#10B981] border-[#10B981] text-white
-                        ${
-                          isSelected
-                            ? "opacity-100"
-                            : "opacity-0 group-hover:opacity-100"
-                        }
+                        ${isSelected
+                              ? "opacity-100"
+                              : "opacity-0 group-hover:opacity-100"
+                            }
                       `}
                         >
                           {option.text === "Có" && (
@@ -1184,11 +1184,10 @@ export default function QuestionItem({
                 /* UI đặc biệt cho loại Tải lên tệp */
                 <div className="ml-[28px]">
                   <div
-                    className={`border-2 border-dashed rounded-md transition-colors cursor-pointer ${
-                      isFileDragging
-                        ? "border-violet-500 bg-violet-50"
-                        : "border-gray-400 bg-gray-50 hover:bg-gray-100"
-                    }`}
+                    className={`border-2 border-dashed rounded-md transition-colors cursor-pointer ${isFileDragging
+                      ? "border-violet-500 bg-violet-50"
+                      : "border-gray-400 bg-gray-50 hover:bg-gray-100"
+                      }`}
                     style={{
                       width: "100%",
                       minHeight: "200px",
@@ -1310,11 +1309,10 @@ export default function QuestionItem({
                 <div className="ml-[28px]">
                   <input
                     type="text"
-                    className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${
-                      textInputError
-                        ? "border-red-500"
-                        : "border-gray-400 focus:border-violet-500"
-                    }`}
+                    className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${textInputError
+                      ? "border-red-500"
+                      : "border-gray-400 focus:border-violet-500"
+                      }`}
                     style={{
                       width: "651px",
                       height: "36px",
@@ -1336,11 +1334,10 @@ export default function QuestionItem({
                 /* UI đặc biệt cho loại Văn bản dài */
                 <div className="ml-[28px]">
                   <textarea
-                    className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${
-                      textInputError
-                        ? "border-red-500"
-                        : "border-gray-400 focus:border-violet-500"
-                    }`}
+                    className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${textInputError
+                      ? "border-red-500"
+                      : "border-gray-400 focus:border-violet-500"
+                      }`}
                     style={{
                       width: "651px",
                       minHeight: "100px",
@@ -1431,8 +1428,8 @@ export default function QuestionItem({
                             backgroundColor: isDragging
                               ? "#ffffff"
                               : isDragOver
-                              ? "#f3f4f6"
-                              : "transparent",
+                                ? "#f3f4f6"
+                                : "transparent",
                             border: isDragging
                               ? "2px solid #7c3aed"
                               : "2px solid transparent",
@@ -1563,6 +1560,23 @@ export default function QuestionItem({
                     )}
                   </div>
                 )
+              ) : isMatrixType() ? (
+                /* UI đặc biệt cho loại Ma trận (chọn điểm) */
+                <MatrixTypeUI
+                  question={question}
+                  options={options}
+                  isActive={isActive}
+                  onOptionChange={onOptionChange}
+                  onRemoveOption={onRemoveOption}
+                  onMoveOption={onMoveOption}
+                  onAddOption={onAddOption}
+                  onAnswerSelect={onAnswerSelect}
+                  selectedAnswer={selectedAnswer}
+                  draggedIndex={draggedIndex}
+                  setDraggedIndex={setDraggedIndex}
+                  dragOverIndex={dragOverIndex}
+                  setDragOverIndex={setDragOverIndex}
+                />
               ) : (
                 /* Danh sách đáp án */
                 options.length > 0 && (
@@ -1668,8 +1682,8 @@ export default function QuestionItem({
                             backgroundColor: isDragging
                               ? "#ffffff"
                               : isDragOver
-                              ? "#f3f4f6"
-                              : "transparent",
+                                ? "#f3f4f6"
+                                : "transparent",
                             border: isDragging
                               ? "2px solid #7c3aed"
                               : "2px solid transparent",
@@ -1866,109 +1880,108 @@ export default function QuestionItem({
                                   </div>
                                 )
                               ) : /* Khi không active: Hiển thị ảnh hoặc NO IMAGE */
-                              option.image ? (
-                                <img
-                                  src={option.image}
-                                  alt="Option"
-                                  className="border-2 border-gray-700 rounded-sm"
-                                  style={{
-                                    height: "160px",
-                                    width: "auto",
-                                    objectFit: "contain",
-                                    display: "block",
-                                  }}
-                                />
-                              ) : (
-                                <div
-                                  className="border-2 border-gray-700 rounded-md flex flex-col items-center justify-center bg-gray-50"
-                                  style={{
-                                    width: "160px",
-                                    height: "160px",
-                                  }}
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="48"
-                                    height="48"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.5"
-                                    className="text-gray-300 mb-2"
+                                option.image ? (
+                                  <img
+                                    src={option.image}
+                                    alt="Option"
+                                    className="border-2 border-gray-700 rounded-sm"
+                                    style={{
+                                      height: "160px",
+                                      width: "auto",
+                                      objectFit: "contain",
+                                      display: "block",
+                                    }}
+                                  />
+                                ) : (
+                                  <div
+                                    className="border-2 border-gray-700 rounded-md flex flex-col items-center justify-center bg-gray-50"
+                                    style={{
+                                      width: "160px",
+                                      height: "160px",
+                                    }}
                                   >
-                                    <rect
-                                      x="3"
-                                      y="3"
-                                      width="18"
-                                      height="18"
-                                      rx="2"
-                                      ry="2"
-                                    />
-                                    <circle cx="8.5" cy="8.5" r="1.5" />
-                                    <polyline points="21 15 16 10 5 21" />
-                                  </svg>
-                                  <span className="text-gray-400 font-bold text-sm">
-                                    NO IMAGE
-                                  </span>
-                                </div>
-                              )
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="48"
+                                      height="48"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="1.5"
+                                      className="text-gray-300 mb-2"
+                                    >
+                                      <rect
+                                        x="3"
+                                        y="3"
+                                        width="18"
+                                        height="18"
+                                        rx="2"
+                                        ry="2"
+                                      />
+                                      <circle cx="8.5" cy="8.5" r="1.5" />
+                                      <polyline points="21 15 16 10 5 21" />
+                                    </svg>
+                                    <span className="text-gray-400 font-bold text-sm">
+                                      NO IMAGE
+                                    </span>
+                                  </div>
+                                )
                             ) : /* Hiển thị text bình thường cho các loại khác */
-                            isActive ? (
-                              <div
-                                style={{
-                                  width: answerWidth,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <EditableField
-                                  placeholder={
-                                    isRadioType()
-                                      ? "Answer option"
-                                      : "Subquestion"
-                                  }
-                                  initialValue={option.text}
-                                  inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium"
-                                  isTextarea={true}
-                                  onChange={(value) =>
-                                    onOptionChange?.(
-                                      question.id,
-                                      option.id,
-                                      value
-                                    )
-                                  }
-                                />
-                              </div>
-                            ) : (
-                              <div
-                                style={{
-                                  width: answerWidth,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <span
-                                  className={`text-sm text-gray-700 font-medium ${
-                                    !option.text ? "italic text-gray-400" : ""
-                                  } inline-block whitespace-normal break-words leading-relaxed opacity-70`}
+                              isActive ? (
+                                <div
                                   style={{
                                     width: answerWidth,
-                                    padding: "8px",
-                                    marginLeft: "-8px",
-                                    marginTop: "0",
-                                    marginBottom: "0",
-                                    boxSizing: "border-box",
-                                    minHeight: "24px",
-                                    lineHeight: "1.625",
-                                    display: "inline-block",
-                                    verticalAlign: "top",
+                                    flexShrink: 0,
                                   }}
                                 >
-                                  {option.text ||
-                                    (isRadioType()
-                                      ? "Answer option"
-                                      : "Subquestion")}
-                                </span>
-                              </div>
-                            )}
+                                  <EditableField
+                                    placeholder={
+                                      isRadioType()
+                                        ? "Answer option"
+                                        : "Subquestion"
+                                    }
+                                    initialValue={option.text}
+                                    inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium"
+                                    isTextarea={true}
+                                    onChange={(value) =>
+                                      onOptionChange?.(
+                                        question.id,
+                                        option.id,
+                                        value
+                                      )
+                                    }
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  style={{
+                                    width: answerWidth,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <span
+                                    className={`text-sm text-gray-700 font-medium ${!option.text ? "italic text-gray-400" : ""
+                                      } inline-block whitespace-normal break-words leading-relaxed opacity-70`}
+                                    style={{
+                                      width: answerWidth,
+                                      padding: "8px",
+                                      marginLeft: "-8px",
+                                      marginTop: "0",
+                                      marginBottom: "0",
+                                      boxSizing: "border-box",
+                                      minHeight: "24px",
+                                      lineHeight: "1.625",
+                                      display: "inline-block",
+                                      verticalAlign: "top",
+                                    }}
+                                  >
+                                    {option.text ||
+                                      (isRadioType()
+                                        ? "Answer option"
+                                        : "Subquestion")}
+                                  </span>
+                                </div>
+                              )}
                           </div>
                         </div>
                       );
@@ -1993,7 +2006,7 @@ export default function QuestionItem({
               {/* Actions: thu theo nội dung (không absolute) */}
               {isActive && (
                 <div className="mt-6 flex items-start justify-between">
-                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && !isShortTextType() && !isMultipleShortTextType() && (
+                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && !isShortTextType() && !isMultipleShortTextType() && !isMatrixType() && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -2007,11 +2020,10 @@ export default function QuestionItem({
                   )}
 
                   <div
-                    className={`flex items-center space-x-1 ${
-                      isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType() || isShortTextType() || isMultipleShortTextType()
-                        ? "ml-auto"
-                        : "mt-[45px]"
-                    }`}
+                    className={`flex items-center space-x-1 ${isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType() || isShortTextType() || isMultipleShortTextType() || isMatrixType()
+                      ? "ml-auto"
+                      : "mt-[45px]"
+                      }`}
                   >
                     <button
                       className="p-1"
@@ -2094,13 +2106,12 @@ export default function QuestionItem({
                         className={`
                         absolute inset-0 flex flex-col items-center justify-center
                         border-[3px] rounded-md transition-all
-                        ${
-                          isSelected
+                        ${isSelected
                             ? "bg-[#10B981] border-[#10B981] text-white"
                             : isNoAnswer
-                            ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
-                            : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
-                        }
+                              ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                              : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                          }
                       `}
                       >
                         {option.text === "Nữ" && (
@@ -2164,11 +2175,10 @@ export default function QuestionItem({
                         absolute inset-0 flex flex-col items-center justify-center
                         border-[3px] rounded-md transition-opacity pointer-events-none
                         bg-[#10B981] border-[#10B981] text-white
-                        ${
-                          isSelected
+                        ${isSelected
                             ? "opacity-100"
                             : "opacity-0 group-hover:opacity-100"
-                        }
+                          }
                       `}
                       >
                         {option.text === "Nữ" && (
@@ -2243,13 +2253,12 @@ export default function QuestionItem({
                         className={`
                         absolute inset-0 flex flex-col items-center justify-center
                         border-[3px] rounded-md transition-all
-                        ${
-                          isSelected
+                        ${isSelected
                             ? "bg-[#10B981] border-[#10B981] text-white"
                             : isNoAnswer
-                            ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
-                            : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
-                        }
+                              ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                              : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                          }
                       `}
                       >
                         {option.text === "Có" && (
@@ -2313,11 +2322,10 @@ export default function QuestionItem({
                         absolute inset-0 flex flex-col items-center justify-center
                         border-[3px] rounded-md transition-opacity pointer-events-none
                         bg-[#10B981] border-[#10B981] text-white
-                        ${
-                          isSelected
+                        ${isSelected
                             ? "opacity-100"
                             : "opacity-0 group-hover:opacity-100"
-                        }
+                          }
                       `}
                       >
                         {option.text === "Có" && (
@@ -2441,11 +2449,10 @@ export default function QuestionItem({
               /* UI đặc biệt cho loại Tải lên tệp */
               <div className="ml-[28px]">
                 <div
-                  className={`border-2 border-dashed rounded-md transition-colors cursor-pointer ${
-                    isFileDragging
-                      ? "border-violet-500 bg-violet-50"
-                      : "border-gray-400 bg-gray-50 hover:bg-gray-100"
-                  }`}
+                  className={`border-2 border-dashed rounded-md transition-colors cursor-pointer ${isFileDragging
+                    ? "border-violet-500 bg-violet-50"
+                    : "border-gray-400 bg-gray-50 hover:bg-gray-100"
+                    }`}
                   style={{
                     width: "100%",
                     minHeight: "200px",
@@ -2564,11 +2571,10 @@ export default function QuestionItem({
               <div className="ml-[28px]">
                 <input
                   type="text"
-                  className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${
-                    textInputError
-                      ? "border-red-500"
-                      : "border-gray-400 focus:border-violet-500"
-                  }`}
+                  className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${textInputError
+                    ? "border-red-500"
+                    : "border-gray-400 focus:border-violet-500"
+                    }`}
                   style={{
                     width: "651px",
                     height: "36px",
@@ -2590,11 +2596,10 @@ export default function QuestionItem({
               /* UI đặc biệt cho loại Văn bản dài */
               <div className="ml-[28px]">
                 <textarea
-                  className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${
-                    textInputError
-                      ? "border-red-500"
-                      : "border-gray-400 focus:border-violet-500"
-                  }`}
+                  className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${textInputError
+                    ? "border-red-500"
+                    : "border-gray-400 focus:border-violet-500"
+                    }`}
                   style={{
                     width: "651px",
                     minHeight: "100px",
@@ -2685,8 +2690,8 @@ export default function QuestionItem({
                           backgroundColor: isDragging
                             ? "#ffffff"
                             : isDragOver
-                            ? "#f3f4f6"
-                            : "transparent",
+                              ? "#f3f4f6"
+                              : "transparent",
                           border: isDragging
                             ? "2px solid #7c3aed"
                             : "2px solid transparent",
@@ -2804,6 +2809,23 @@ export default function QuestionItem({
                   })}
                 </div>
               )
+            ) : isMatrixType() ? (
+              /* UI đặc biệt cho loại Ma trận (chọn điểm) */
+              <MatrixTypeUI
+                question={question}
+                options={options}
+                isActive={isActive}
+                onOptionChange={onOptionChange}
+                onRemoveOption={onRemoveOption}
+                onMoveOption={onMoveOption}
+                onAddOption={onAddOption}
+                onAnswerSelect={onAnswerSelect}
+                selectedAnswer={selectedAnswer}
+                draggedIndex={draggedIndex}
+                setDraggedIndex={setDraggedIndex}
+                dragOverIndex={dragOverIndex}
+                setDragOverIndex={setDragOverIndex}
+              />
             ) : (
               /* Danh sách đáp án */
               options.length > 0 && (
@@ -2908,8 +2930,8 @@ export default function QuestionItem({
                           backgroundColor: isDragging
                             ? "#ffffff"
                             : isDragOver
-                            ? "#f3f4f6"
-                            : "transparent",
+                              ? "#f3f4f6"
+                              : "transparent",
                           border: isDragging
                             ? "2px solid #7c3aed"
                             : "2px solid transparent",
@@ -3103,109 +3125,108 @@ export default function QuestionItem({
                                 </div>
                               )
                             ) : /* Khi không active: Hiển thị ảnh hoặc NO IMAGE */
-                            option.image ? (
-                              <img
-                                src={option.image}
-                                alt="Option"
-                                className="border-2 border-gray-700 rounded-sm"
-                                style={{
-                                  height: "160px",
-                                  width: "auto",
-                                  objectFit: "contain",
-                                  display: "block",
-                                }}
-                              />
-                            ) : (
-                              <div
-                                className="border-2 border-gray-700 rounded-md flex flex-col items-center justify-center bg-gray-50"
-                                style={{
-                                  width: "160px",
-                                  height: "160px",
-                                }}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="48"
-                                  height="48"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  className="text-gray-300 mb-2"
+                              option.image ? (
+                                <img
+                                  src={option.image}
+                                  alt="Option"
+                                  className="border-2 border-gray-700 rounded-sm"
+                                  style={{
+                                    height: "160px",
+                                    width: "auto",
+                                    objectFit: "contain",
+                                    display: "block",
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  className="border-2 border-gray-700 rounded-md flex flex-col items-center justify-center bg-gray-50"
+                                  style={{
+                                    width: "160px",
+                                    height: "160px",
+                                  }}
                                 >
-                                  <rect
-                                    x="3"
-                                    y="3"
-                                    width="18"
-                                    height="18"
-                                    rx="2"
-                                    ry="2"
-                                  />
-                                  <circle cx="8.5" cy="8.5" r="1.5" />
-                                  <polyline points="21 15 16 10 5 21" />
-                                </svg>
-                                <span className="text-gray-400 font-bold text-sm">
-                                  NO IMAGE
-                                </span>
-                              </div>
-                            )
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="48"
+                                    height="48"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    className="text-gray-300 mb-2"
+                                  >
+                                    <rect
+                                      x="3"
+                                      y="3"
+                                      width="18"
+                                      height="18"
+                                      rx="2"
+                                      ry="2"
+                                    />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                  </svg>
+                                  <span className="text-gray-400 font-bold text-sm">
+                                    NO IMAGE
+                                  </span>
+                                </div>
+                              )
                           ) : /* Hiển thị text bình thường cho các loại khác */
-                          isActive ? (
-                            <div
-                              style={{
-                                width: "300px",
-                                flexShrink: 0,
-                              }}
-                            >
-                              <EditableField
-                                placeholder={
-                                  isRadioType()
-                                    ? "Answer option"
-                                    : "Subquestion"
-                                }
-                                initialValue={option.text}
-                                inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium"
-                                isTextarea={true}
-                                onChange={(value) =>
-                                  onOptionChange?.(
-                                    question.id,
-                                    option.id,
-                                    value
-                                  )
-                                }
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              style={{
-                                width: "300px",
-                                flexShrink: 0,
-                              }}
-                            >
-                              <span
-                                className={`text-sm text-gray-700 font-medium ${
-                                  !option.text ? "italic text-gray-400" : ""
-                                } inline-block whitespace-normal break-words leading-relaxed opacity-70`}
+                            isActive ? (
+                              <div
                                 style={{
                                   width: "300px",
-                                  padding: "8px",
-                                  marginLeft: "-8px",
-                                  marginTop: "0",
-                                  marginBottom: "0",
-                                  boxSizing: "border-box",
-                                  minHeight: "24px",
-                                  lineHeight: "1.625",
-                                  display: "inline-block",
-                                  verticalAlign: "top",
+                                  flexShrink: 0,
                                 }}
                               >
-                                {option.text ||
-                                  (isRadioType()
-                                    ? "Answer option"
-                                    : "Subquestion")}
-                              </span>
-                            </div>
-                          )}
+                                <EditableField
+                                  placeholder={
+                                    isRadioType()
+                                      ? "Answer option"
+                                      : "Subquestion"
+                                  }
+                                  initialValue={option.text}
+                                  inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium"
+                                  isTextarea={true}
+                                  onChange={(value) =>
+                                    onOptionChange?.(
+                                      question.id,
+                                      option.id,
+                                      value
+                                    )
+                                  }
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  width: "300px",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <span
+                                  className={`text-sm text-gray-700 font-medium ${!option.text ? "italic text-gray-400" : ""
+                                    } inline-block whitespace-normal break-words leading-relaxed opacity-70`}
+                                  style={{
+                                    width: "300px",
+                                    padding: "8px",
+                                    marginLeft: "-8px",
+                                    marginTop: "0",
+                                    marginBottom: "0",
+                                    boxSizing: "border-box",
+                                    minHeight: "24px",
+                                    lineHeight: "1.625",
+                                    display: "inline-block",
+                                    verticalAlign: "top",
+                                  }}
+                                >
+                                  {option.text ||
+                                    (isRadioType()
+                                      ? "Answer option"
+                                      : "Subquestion")}
+                                </span>
+                              </div>
+                            )}
                         </div>
                       </div>
                     );
@@ -3229,7 +3250,7 @@ export default function QuestionItem({
             {/* Actions: đặt inline bên dưới nội dung */}
             {isActive && (
               <div className="mt-6 flex items-start justify-between">
-                {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && (
+                {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && !isMatrixType() && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -3243,11 +3264,10 @@ export default function QuestionItem({
                 )}
 
                 <div
-                  className={`flex items-center space-x-1 ${
-                    isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType()
-                      ? "ml-auto"
-                      : "mt-[70px]"
-                  }`}
+                  className={`flex items-center space-x-1 ${isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType() || isMatrixType()
+                    ? "ml-auto"
+                    : "mt-[70px]"
+                    }`}
                 >
                   <button
                     className="p-1"

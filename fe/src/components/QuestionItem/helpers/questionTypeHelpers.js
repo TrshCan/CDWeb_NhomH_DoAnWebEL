@@ -62,3 +62,8 @@ export const isLongTextType = (questionType) => {
 export const isMultipleShortTextType = (questionType) => {
   return questionType === "Nhiều văn bản ngắn";
 };
+
+// ✅ Helper: kiểm tra xem có phải loại Ma trận (chọn điểm) không
+export const isMatrixType = (questionType) => {
+  return questionType === "Ma trận (chọn điểm)";
+};

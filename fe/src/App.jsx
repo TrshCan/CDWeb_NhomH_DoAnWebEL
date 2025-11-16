@@ -220,7 +220,7 @@ export default function App() {
   };
 
   // Thêm option mới
-  const handleAddOption = (questionId) => {
+  const handleAddOption = (questionId, isSubquestion = false) => {
     setQuestionGroups((prev) =>
       prev.map((group) => ({
         ...group,
@@ -232,6 +232,7 @@ export default function App() {
             const newOption = {
               id: maxOptionId + 1,
               text: "",
+              isSubquestion: isSubquestion, // Thêm thuộc tính isSubquestion cho Ma trận
             };
             return { ...q, options: [...q.options, newOption] };
           }
@@ -413,6 +414,14 @@ export default function App() {
         { id: 1, text: "Có" },
         { id: 2, text: "Không" },
         { id: 3, text: "Không có câu trả lời" },
+      ];
+    }
+    if (questionType === "Ma trận (chọn điểm)") {
+      return [
+        { id: 1, text: "", isSubquestion: false }, // Answer option 1
+        { id: 2, text: "", isSubquestion: false }, // Answer option 2
+        { id: 3, text: "", isSubquestion: true },  // Subquestion 1
+        { id: 4, text: "", isSubquestion: true },  // Subquestion 2
       ];
     }
     return [
