@@ -268,6 +268,13 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
             errorMessage = errorMessage || "Cập nhật thất bại. Vui lòng thử lại.";
             console.log("Final errorMessage:", errorMessage);
             
+            // Kiểm tra nếu là lỗi permission
+            if (errorMessage.includes('không có quyền') || errorMessage.includes('permission') || errorMessage.includes('quyền') || errorMessage.includes('không có quyền đổi avatar')) {
+                setMessage({ type: "error", text: errorMessage });
+                setIsLoading(false);
+                return;
+            }
+            
             const newErrors = {};
             // Kiểm tra lỗi về password/mật khẩu TRƯỚC các lỗi khác
             if (errorMessage.toLowerCase().includes("password") || 

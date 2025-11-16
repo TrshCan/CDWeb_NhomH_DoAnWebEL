@@ -34,6 +34,9 @@ return [
             // Always set the `Accept: application/json` header.
             Nuwave\Lighthouse\Http\Middleware\AcceptJson::class,
 
+            // Authenticate user from Bearer token before AttemptAuthentication
+            \App\Http\Middleware\BearerTokenAuth::class,
+
             // Logs in a user if they are authenticated. In contrast to Laravel's 'auth'
             // middleware, this delegates auth and permission checks to the field level.
             Nuwave\Lighthouse\Http\Middleware\AttemptAuthentication::class,

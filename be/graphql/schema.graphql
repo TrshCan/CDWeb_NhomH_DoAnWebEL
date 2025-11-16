@@ -10,6 +10,7 @@ type Query {
 #import types/postLike.graphql
 #import types/deadline.graphql
 #import types/event.graphql
+#import types/permission.graphql
 
 #import inputs/postCreateInput.graphql
 #import inputs/postUpdateInput.graphql
@@ -22,6 +23,10 @@ type Query {
 #import mutations/postMutations.graphql
 #import mutations/userMutations.graphql
 #import mutations/adminUserMutations.graphql
+#import queries/permissionQueries.graphql
+#import mutations/postMutations.graphql
+#import mutations/userMutations.graphql
+#import mutations/permissionMutations.graphql
 
 type Mutation {
   loginUser(

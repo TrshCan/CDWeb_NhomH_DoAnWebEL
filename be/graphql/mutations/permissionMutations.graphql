@@ -1,0 +1,18 @@
+extend type Mutation {
+  # Cập nhật quyền cho role
+  updateRolePermissions(
+    role: String!
+    permission_ids: [Int!]!
+  ): Boolean!
+    @field(resolver: "App\\GraphQL\\Resolvers\\PermissionResolver@updateRolePermissions")
+    @guard
+
+  # Cập nhật quyền cho user
+  updateUserPermissions(
+    user_id: Int!
+    permission_ids: [Int!]!
+  ): Boolean!
+    @field(resolver: "App\\GraphQL\\Resolvers\\PermissionResolver@updateUserPermissions")
+    @guard
+}
+

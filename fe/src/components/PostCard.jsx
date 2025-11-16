@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { updatePost, deletePost, toggleLike } from "../api/graphql/post";
 
 export default function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = false, onReply = null }) {
@@ -208,10 +209,18 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
                         e.stopPropagation();
                         try {
                           await deletePost(post.id);
+                          toast.success("Đã xóa bài viết!");
                           if (onDeleted) onDeleted(post.id); else setHidden(true);
                         } catch (e) {
                           console.error(e);
-                          alert(e.message || "Failed to delete post");
+                          const errorMessage = e?.response?.data?.errors?.[0]?.message || e?.message || "Không thể xóa bài viết.";
+                          
+                          // Kiểm tra nếu là lỗi permission
+                          if (errorMessage.includes('không có quyền') || errorMessage.includes('permission') || errorMessage.includes('quyền')) {
+                            toast.error(errorMessage);
+                          } else {
+                            toast.error(errorMessage || "Không thể xóa bài viết. Vui lòng thử lại.");
+                          }
                         }
                       }}
                     >
@@ -257,7 +266,8 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
                   setIsEditing(false);
                 } catch (e) {
                   console.error(e);
-                  alert(e.message || "Failed to update post");
+                  const errorMessage = e?.response?.data?.errors?.[0]?.message || e?.message || "Không thể cập nhật bài viết.";
+                  toast.error(errorMessage);
                 } finally {
                   setSaving(false);
                 }
@@ -402,7 +412,7 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
           onClick={async (e) => {
             e.stopPropagation();
             if (!currentUserId) {
-              alert("Please log in to like posts");
+              toast.error("Vui lòng đăng nhập để thích bài viết");
               return;
             }
             try {
@@ -412,7 +422,14 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
               if (onLikeUpdate) onLikeUpdate(post.id, newLikedState);
             } catch (e) {
               console.error("Failed to toggle like:", e);
-              alert(e.message || "Failed to like post");
+              const errorMessage = e?.response?.data?.errors?.[0]?.message || e?.message || "Không thể thích bài viết.";
+              
+              // Kiểm tra nếu là lỗi permission
+              if (errorMessage.includes('không có quyền') || errorMessage.includes('permission') || errorMessage.includes('quyền')) {
+                toast.error(errorMessage);
+              } else {
+                toast.error(errorMessage || "Không thể thích bài viết. Vui lòng thử lại.");
+              }
             }
           }}
           className={`flex items-center gap-1 hover:text-cyan-600 transition-colors ${isLiked ? "text-cyan-600" : ""}`}

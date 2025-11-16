@@ -55,6 +55,7 @@ class UserServices
             ]);
         }
 
+        // Tạo token ngẫu nhiên và lưu vào remember_token
         // Kiểm tra tài khoản có bị banned không
         $bannedStatus = \App\Models\Status::where('name', 'banned')->first();
         if ($bannedStatus && $user->status_id == $bannedStatus->id) {
@@ -66,6 +67,8 @@ class UserServices
 
         // Tạo token ngẫu nhiên (ví dụ token tạm, chưa phải JWT)
         $token = Str::random(60);
+        $user->remember_token = $token;
+        $user->save();
 
         return [
             'token' => $token,

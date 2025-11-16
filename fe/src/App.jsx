@@ -20,6 +20,7 @@ import Tab3 from "./pages/admin/Tab3.jsx";
 import Tab4 from "./pages/admin/Tab4.jsx";
 import Tab5 from "./pages/admin/Tab5.jsx";
 import Tab6 from "./pages/admin/Tab6.jsx";
+import PermissionManagement from "./pages/admin/PermissionManagement.jsx";
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
       <Route path="/admin/tab4" element={<Tab4 />} />
       <Route path="/admin/tab5" element={<Tab5 />} />
       <Route path="/admin/tab6" element={<Tab6 />} />
+      <Route path="/admin/permissions" element={<PermissionManagement />} />
     </Routes>
   );
 }
