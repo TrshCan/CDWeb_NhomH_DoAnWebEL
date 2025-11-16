@@ -37,6 +37,12 @@ export default function AdminUserManagement() {
         status_id: null,
     });
     const [errors, setErrors] = useState({});
+    const [actionLoading, setActionLoading] = useState({
+        view: null,
+        edit: null,
+        delete: null,
+        toggle: null,
+    });
 
     // Fetch users
     const fetchUsers = async () => {
@@ -152,6 +158,8 @@ export default function AdminUserManagement() {
 
     // Handle edit
     const handleEdit = async (user) => {
+        if (actionLoading.edit === user.id) return;
+        setActionLoading((prev) => ({ ...prev, edit: user.id }));
         try {
             const userDetail = await getAdminUser(user.id);
             setFormData({
@@ -166,6 +174,8 @@ export default function AdminUserManagement() {
             setShowEditModal(true);
         } catch (error) {
             toast.error(error.message || "Không thể tải thông tin người dùng");
+        } finally {
+            setActionLoading((prev) => ({ ...prev, edit: null }));
         }
     };
 
@@ -213,32 +223,41 @@ export default function AdminUserManagement() {
 
     // Handle view
     const handleView = async (user) => {
+        if (actionLoading.view === user.id) return;
+        setActionLoading((prev) => ({ ...prev, view: user.id }));
         try {
             const userDetail = await getAdminUser(user.id);
             setSelectedUser(userDetail);
             setShowViewModal(true);
         } catch (error) {
             toast.error(error.message || "Không tìm thấy người dùng");
+        } finally {
+            setActionLoading((prev) => ({ ...prev, view: null }));
         }
     };
 
     // Handle delete
     const handleDelete = async (user) => {
+        if (actionLoading.delete === user.id) return;
         if (!window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${user.name}"?`)) {
             return;
         }
 
+        setActionLoading((prev) => ({ ...prev, delete: user.id }));
         try {
             await deleteAdminUser(user.id);
             toast.success("Xóa người dùng thành công");
             fetchUsers();
         } catch (error) {
             toast.error(error.message || "Không thể xóa người dùng");
+        } finally {
+            setActionLoading((prev) => ({ ...prev, delete: null }));
         }
     };
 
     // Handle toggle status
     const handleToggleStatus = async (user) => {
+        if (actionLoading.toggle === user.id) return;
         // Nếu đang ban user (từ active -> banned), cần hiển thị modal nhập lý do
         if (user.status?.name === "active") {
             setSelectedUser(user);
@@ -246,12 +265,15 @@ export default function AdminUserManagement() {
             setShowBanModal(true);
         } else {
             // Nếu đang unban (từ banned -> active), không cần lý do
+            setActionLoading((prev) => ({ ...prev, toggle: user.id }));
             try {
                 await toggleAdminUserStatus(user.id, null);
                 toast.success("Đã mở khóa người dùng thành công");
                 fetchUsers();
             } catch (error) {
                 toast.error(error.message || "Không thể mở khóa người dùng");
+            } finally {
+                setActionLoading((prev) => ({ ...prev, toggle: null }));
             }
         }
     };
@@ -264,6 +286,8 @@ export default function AdminUserManagement() {
             return;
         }
 
+        if (actionLoading.toggle === selectedUser.id) return;
+        setActionLoading((prev) => ({ ...prev, toggle: selectedUser.id }));
         try {
             await toggleAdminUserStatus(selectedUser.id, banReason.trim());
             toast.success("Đã khóa người dùng thành công");
@@ -272,6 +296,8 @@ export default function AdminUserManagement() {
             fetchUsers();
         } catch (error) {
             toast.error(error.message || "Không thể khóa người dùng");
+        } finally {
+            setActionLoading((prev) => ({ ...prev, toggle: null }));
         }
     };
 
@@ -456,54 +482,77 @@ export default function AdminUserManagement() {
                                                 <div className="flex justify-end space-x-2">
                                                     <button
                                                         onClick={() => handleView(user)}
-                                                        className="text-blue-600 hover:text-blue-900"
+                                                        disabled={actionLoading.view === user.id}
+                                                        className={`text-blue-600 hover:text-blue-900 transition-opacity ${
+                                                            actionLoading.view === user.id
+                                                                ? "opacity-50 cursor-not-allowed"
+                                                                : ""
+                                                        }`}
                                                         title="Xem chi tiết"
                                                     >
-                                                        <svg
-                                                            className="w-5 h-5"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth="2"
-                                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                            />
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth="2"
-                                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                                            />
-                                                        </svg>
+                                                        {actionLoading.view === user.id ? (
+                                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                                        ) : (
+                                                            <svg
+                                                                className="w-5 h-5"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth="2"
+                                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                                />
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth="2"
+                                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                                />
+                                                            </svg>
+                                                        )}
                                                     </button>
                                                     <button
                                                         onClick={() => handleEdit(user)}
-                                                        className="text-yellow-600 hover:text-yellow-900"
+                                                        disabled={actionLoading.edit === user.id}
+                                                        className={`text-yellow-600 hover:text-yellow-900 transition-opacity ${
+                                                            actionLoading.edit === user.id
+                                                                ? "opacity-50 cursor-not-allowed"
+                                                                : ""
+                                                        }`}
                                                         title="Sửa"
                                                     >
-                                                        <svg
-                                                            className="w-5 h-5"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth="2"
-                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                            />
-                                                        </svg>
+                                                        {actionLoading.edit === user.id ? (
+                                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-yellow-600"></div>
+                                                        ) : (
+                                                            <svg
+                                                                className="w-5 h-5"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth="2"
+                                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                                />
+                                                            </svg>
+                                                        )}
                                                     </button>
                                                     <button
                                                         onClick={() => handleToggleStatus(user)}
-                                                        className={`${
+                                                        disabled={actionLoading.toggle === user.id}
+                                                        className={`transition-opacity ${
                                                             user.status?.name === "active"
                                                                 ? "text-red-600 hover:text-red-900"
                                                                 : "text-green-600 hover:text-green-900"
+                                                        } ${
+                                                            actionLoading.toggle === user.id
+                                                                ? "opacity-50 cursor-not-allowed"
+                                                                : ""
                                                         }`}
                                                         title={
                                                             user.status?.name === "active"
@@ -511,47 +560,64 @@ export default function AdminUserManagement() {
                                                                 : "Mở khóa"
                                                         }
                                                     >
-                                                        <svg
-                                                            className="w-5 h-5"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            {user.status?.name === "active" ? (
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth="2"
-                                                                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                                                />
-                                                            ) : (
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth="2"
-                                                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                                />
-                                                            )}
-                                                        </svg>
+                                                        {actionLoading.toggle === user.id ? (
+                                                            <div className={`animate-spin rounded-full h-5 w-5 border-b-2 ${
+                                                                user.status?.name === "active"
+                                                                    ? "border-red-600"
+                                                                    : "border-green-600"
+                                                            }`}></div>
+                                                        ) : (
+                                                            <svg
+                                                                className="w-5 h-5"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                {user.status?.name === "active" ? (
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth="2"
+                                                                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                                                                    />
+                                                                ) : (
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth="2"
+                                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                    />
+                                                                )}
+                                                            </svg>
+                                                        )}
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(user)}
-                                                        className="text-red-600 hover:text-red-900"
+                                                        disabled={actionLoading.delete === user.id}
+                                                        className={`text-red-600 hover:text-red-900 transition-opacity ${
+                                                            actionLoading.delete === user.id
+                                                                ? "opacity-50 cursor-not-allowed"
+                                                                : ""
+                                                        }`}
                                                         title="Xóa"
                                                     >
-                                                        <svg
-                                                            className="w-5 h-5"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth="2"
-                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                            />
-                                                        </svg>
+                                                        {actionLoading.delete === user.id ? (
+                                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
+                                                        ) : (
+                                                            <svg
+                                                                className="w-5 h-5"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth="2"
+                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                                />
+                                                            </svg>
+                                                        )}
                                                     </button>
                                                 </div>
                                             </td>

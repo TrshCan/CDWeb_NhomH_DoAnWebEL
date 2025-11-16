@@ -76,7 +76,8 @@ class AdminUserRepository
             $user->phone = $data['phone'] ?? null;
             $user->address = $data['address'] ?? null;
             $user->point = 0;
-            $user->email_verified_at = null;
+            // Khi admin tạo user, tự động verified email (không cần xác thực)
+            $user->email_verified_at = now();
             $user->avatar = 'default.png';
 
             $user->save();
