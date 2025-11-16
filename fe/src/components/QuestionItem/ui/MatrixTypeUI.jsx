@@ -205,9 +205,7 @@ export default function MatrixTypeUI({
               style={{
                 display: "flex",
                 alignItems: "flex-start",
-                marginBottom: "8px",
-                paddingLeft: "180px", // Space cho cột subquestion
-                marginLeft: "-10px",
+                paddingLeft: "180px",
               }}
             >
               {answerOptions.map((option, optionIndex) => {
