@@ -283,3 +283,31 @@ export const USER_REPLIES_QUERY = `
     }
   }
 `;
+
+export const toggleFollow = async (followerId, followedId) => {
+    const mutation = `
+        mutation ($follower_id: Int!, $followed_id: Int!) {
+            toggleFollow(follower_id: $follower_id, followed_id: $followed_id)
+        }
+    `;
+
+    try {
+        const response = await graphqlClient.post("", {
+            query: mutation,
+            variables: {
+                follower_id: parseInt(followerId),
+                followed_id: parseInt(followedId),
+            },
+        });
+
+        if (response.data.errors) {
+            console.error("GraphQL errors:", response.data.errors);
+            throw new Error(response.data.errors[0].message);
+        }
+
+        return response.data.data.toggleFollow;
+    } catch (error) {
+        console.error("Failed to toggle follow:", error);
+        throw error;
+    }
+};

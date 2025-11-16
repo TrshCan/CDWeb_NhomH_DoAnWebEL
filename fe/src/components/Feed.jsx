@@ -448,7 +448,18 @@ export default function Feed() {
           <>
             {allPosts.slice(0, visibleCount).map((post, i) => (
               <div key={post.id} className="animate-fade-in">
-                <PostCard post={post} />
+                <PostCard 
+                  post={post} 
+                  followingUserIds={followingUserIds}
+                  onFollowUpdate={(userId, isFollowing) => {
+                    // Update followingUserIds when follow status changes
+                    if (isFollowing) {
+                      setFollowingUserIds(prev => [...prev, parseInt(userId)]);
+                    } else {
+                      setFollowingUserIds(prev => prev.filter(id => id !== parseInt(userId)));
+                    }
+                  }}
+                />
               </div>
             ))}
             {/* Load more sentinel */}
