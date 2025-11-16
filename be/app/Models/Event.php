@@ -18,3 +18,4 @@ class Event extends Model
         'created_by',
         'created_at'
     ];
+}

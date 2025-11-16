@@ -64,3 +64,4 @@ class DeadlineResolver
     {
         return $this->deadlineService->getDeadlineById($args['id']);
     }
+}

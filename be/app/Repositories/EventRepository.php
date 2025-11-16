@@ -77,3 +77,4 @@ class EventRepository
 
         return $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
     }
+}

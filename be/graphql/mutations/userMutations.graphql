@@ -9,5 +9,35 @@ extend type Mutation {
         current_password: String
         avatar: Upload
     ): User
-    @field(resolver: "App\\GraphQL\\Resolvers\\UserManagementResolvers@updateProfile")
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\UserManagementResolvers@updateProfile"
+        )
+
+    loginUser(email: String!, password: String!): AuthPayload
+        @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@loginUser")
+
+    registerUser(
+        name: String!
+        email: String!
+        password: String!
+        phone: String
+        address: String
+    ): User
+        @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@registerUser")
+
+    forgotPassword(email: String!): String
+        @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@forgotPassword")
+
+    resetPassword(
+        token: String!
+        email: String!
+        password: String!
+        passwordConfirmation: String!
+    ): String
+        @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@resetPassword")
+
+    resendVerificationEmail(email: String!): Boolean!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\UserResolver@resendVerificationEmail"
+        )
 }

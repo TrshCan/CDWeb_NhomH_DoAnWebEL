@@ -24,37 +24,6 @@ type Query {
 #import mutations/userMutations.graphql
 #import mutations/permissionMutations.graphql
 
-type Mutation {
-  loginUser(
-    email: String!
-    password: String!
-  ): AuthPayload @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@loginUser")
-
-  registerUser(
-      name: String!
-      email: String!
-      password: String!
-      phone: String
-      address: String
-    ): User
-      @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@registerUser")
-
-  forgotPassword(
-    email: String!
-  ): String @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@forgotPassword")
-
-  resetPassword(
-    token: String!
-    email: String!
-    password: String!
-    passwordConfirmation: String!
-  ): String @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@resetPassword")
-  resendVerificationEmail(
-      email: String!
-    ): Boolean!
-      @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@resendVerificationEmail")
-}
-
 type AuthPayload {
   token: String!
   user: User!
