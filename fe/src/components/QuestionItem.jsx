@@ -363,6 +363,10 @@ export default function QuestionItem({
       // Sync textInputValue với selectedAnswer
       setTextInputValue(selectedAnswer || "");
       setTextInputError("");
+    } else if (question.type === "Văn bản dài") {
+      // Sync textInputValue với selectedAnswer
+      setTextInputValue(selectedAnswer || "");
+      setTextInputError("");
     } else if (question.type === "Nhiều văn bản ngắn") {
       // Sync multipleTextInputs với selectedAnswer
       if (selectedAnswer) {
@@ -396,7 +400,7 @@ export default function QuestionItem({
 
   // Clear error khi numericOnly hoặc maxLength thay đổi
   React.useEffect(() => {
-    if (question.type === "Văn bản ngắn") {
+    if (question.type === "Văn bản ngắn" || question.type === "Văn bản dài") {
       // Clear error khi settings thay đổi
       setTextInputError("");
     }
@@ -454,7 +458,7 @@ export default function QuestionItem({
   const handleTextInputChange = (e) => {
     const value = e.target.value;
     const isNumericOnly = question?.numericOnly === true;
-    const maxLength = question?.maxLength || 256;
+    const maxLength = question?.maxLength || (isLongTextType() ? 2500 : 256);
 
     // Kiểm tra độ dài trước - không cho phép nhập quá maxLength
     if (value.length > maxLength) {
@@ -540,6 +544,11 @@ export default function QuestionItem({
   // ✅ Helper: kiểm tra xem có phải loại Văn bản ngắn không
   const isShortTextType = () => {
     return question.type === "Văn bản ngắn";
+  };
+
+  // ✅ Helper: kiểm tra xem có phải loại Văn bản dài không
+  const isLongTextType = () => {
+    return question.type === "Văn bản dài";
   };
 
   // ✅ Helper: kiểm tra xem có phải loại Nhiều văn bản ngắn không
@@ -1316,6 +1325,33 @@ export default function QuestionItem({
                     onChange={handleTextInputChange}
                     onClick={(e) => e.stopPropagation()}
                     maxLength={question?.maxLength || 256}
+                  />
+                  {textInputError && (
+                    <div className="mt-2 text-sm text-red-600">
+                      {textInputError}
+                    </div>
+                  )}
+                </div>
+              ) : isLongTextType() ? (
+                /* UI đặc biệt cho loại Văn bản dài */
+                <div className="ml-[28px]">
+                  <textarea
+                    className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${
+                      textInputError
+                        ? "border-red-500"
+                        : "border-gray-400 focus:border-violet-500"
+                    }`}
+                    style={{
+                      width: "651px",
+                      minHeight: "100px",
+                      fontSize: "14px",
+                      resize: "vertical",
+                    }}
+                    placeholder="Nhập câu trả lời của bạn tại đây."
+                    value={textInputValue}
+                    onChange={handleTextInputChange}
+                    onClick={(e) => e.stopPropagation()}
+                    maxLength={question?.maxLength || 2500}
                   />
                   {textInputError && (
                     <div className="mt-2 text-sm text-red-600">
@@ -2543,6 +2579,33 @@ export default function QuestionItem({
                   onChange={handleTextInputChange}
                   onClick={(e) => e.stopPropagation()}
                   maxLength={question?.maxLength || 500}
+                />
+                {textInputError && (
+                  <div className="mt-2 text-sm text-red-600">
+                    {textInputError}
+                  </div>
+                )}
+              </div>
+            ) : isLongTextType() ? (
+              /* UI đặc biệt cho loại Văn bản dài */
+              <div className="ml-[28px]">
+                <textarea
+                  className={`border-[3px] rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none ${
+                    textInputError
+                      ? "border-red-500"
+                      : "border-gray-400 focus:border-violet-500"
+                  }`}
+                  style={{
+                    width: "651px",
+                    minHeight: "100px",
+                    fontSize: "14px",
+                    resize: "vertical",
+                  }}
+                  placeholder="Nhập câu trả lời của bạn tại đây."
+                  value={textInputValue}
+                  onChange={handleTextInputChange}
+                  onClick={(e) => e.stopPropagation()}
+                  maxLength={question?.maxLength || 2500}
                 />
                 {textInputError && (
                   <div className="mt-2 text-sm text-red-600">

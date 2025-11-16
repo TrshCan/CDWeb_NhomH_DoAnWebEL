@@ -434,6 +434,8 @@ export default function App() {
           helpText: "",
           type: questionType,
           options: defaultOptions,
+          // Đặt maxLength mặc định dựa trên loại câu hỏi
+          maxLength: questionType === "Văn bản dài" ? 2500 : questionType === "Văn bản ngắn" ? 256 : undefined,
         };
         return [
           {
@@ -463,6 +465,8 @@ export default function App() {
         helpText: "",
         type: questionType,
         options: defaultOptions,
+        // Đặt maxLength mặc định dựa trên loại câu hỏi
+        maxLength: questionType === "Văn bản dài" ? 2500 : questionType === "Văn bản ngắn" ? 256 : undefined,
       };
 
       // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính và Có/Không

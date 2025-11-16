@@ -64,6 +64,7 @@ export default function QuestionSettingsPanel({
 }) {
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [showConditionDesigner, setShowConditionDesigner] = useState(false);
+  const [maxLengthError, setMaxLengthError] = useState("");
   const typeButtonRef = useRef(null);
 
   const {
@@ -77,8 +78,12 @@ export default function QuestionSettingsPanel({
     allowedFileTypes = "png, gif, doc, odt, jpg, jpeg, pdf",
     maxFileSizeKB = 10241,
     numericOnly = false,
-    maxLength = 256,
+    maxLength,
   } = value;
+
+  // Giá trị mặc định cho maxLength dựa trên loại câu hỏi
+  const defaultMaxLength = type === "Văn bản dài" ? 2500 : type === "Văn bản ngắn" ? 256 : 256;
+  const currentMaxLength = maxLength !== undefined ? maxLength : defaultMaxLength;
 
 
   const handleImageDrop = (e) => {
@@ -201,6 +206,115 @@ export default function QuestionSettingsPanel({
                 onChange?.({ ...value, required: newRequired })
               }
             />
+          </div>
+
+          {/* Số ký tự tối đa */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-900">
+              Số ký tự tối đa
+            </label>
+            <input
+              type="number"
+              value={currentMaxLength || ""}
+              onChange={(e) => {
+                const inputValue = e.target.value;
+                // Nếu input rỗng, cho phép xóa
+                if (inputValue === "") {
+                  setMaxLengthError("");
+                  onChange?.({
+                    ...value,
+                    maxLength: "",
+                  });
+                  return;
+                }
+                const numValue = parseInt(inputValue);
+                // Kiểm tra nếu không phải số hợp lệ
+                if (isNaN(numValue) || numValue < 1) {
+                  setMaxLengthError("Vui lòng nhập số lớn hơn 0");
+                  // Không cập nhật giá trị nếu không hợp lệ
+                  return;
+                }
+                // Kiểm tra nếu vượt quá 2500 - KHÔNG cho phép nhập
+                if (numValue > 2500) {
+                  setMaxLengthError("Số ký tự tối đa không được vượt quá 2500");
+                  // Không cập nhật giá trị, giữ nguyên giá trị cũ
+                  return;
+                }
+                // Nếu hợp lệ, cập nhật và xóa lỗi
+                setMaxLengthError("");
+                onChange?.({
+                  ...value,
+                  maxLength: numValue,
+                });
+              }}
+              onKeyDown={(e) => {
+                // Ngăn chặn nhập nếu giá trị hiện tại đã là 2500 và đang cố nhập thêm
+                const currentValue = parseInt(e.target.value) || 0;
+                // Nếu đã đạt 2500 và đang nhập số hoặc các phím tăng giá trị
+                if (currentValue >= 2500) {
+                  // Cho phép xóa, backspace, delete, arrow keys, tab
+                  const allowedKeys = [
+                    "Backspace",
+                    "Delete",
+                    "ArrowLeft",
+                    "ArrowRight",
+                    "ArrowUp",
+                    "ArrowDown",
+                    "Tab",
+                    "Home",
+                    "End",
+                  ];
+                  // Nếu là số và giá trị hiện tại >= 2500, không cho nhập
+                  if (
+                    !allowedKeys.includes(e.key) &&
+                    !e.ctrlKey &&
+                    !e.metaKey &&
+                    /[0-9]/.test(e.key)
+                  ) {
+                    // Kiểm tra nếu nhập số mới sẽ vượt quá 2500
+                    const newValue = parseInt(
+                      e.target.value + e.key
+                    );
+                    if (newValue > 2500) {
+                      e.preventDefault();
+                      setMaxLengthError(
+                        "Số ký tự tối đa không được vượt quá 2500"
+                      );
+                    }
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                // Khi blur, nếu có lỗi hoặc giá trị không hợp lệ thì reset về giá trị hợp lệ
+                const currentValue = parseInt(e.target.value);
+                if (isNaN(currentValue) || currentValue < 1) {
+                  onChange?.({
+                    ...value,
+                    maxLength: defaultMaxLength,
+                  });
+                  setMaxLengthError("");
+                } else if (currentValue > 2500) {
+                  onChange?.({
+                    ...value,
+                    maxLength: 2500,
+                  });
+                  setMaxLengthError("");
+                } else if (maxLengthError) {
+                  // Nếu có lỗi nhưng giá trị hợp lệ, xóa lỗi
+                  setMaxLengthError("");
+                }
+              }}
+              min="1"
+              max="2500"
+              className={`w-full px-3 py-2 border-[2px] rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
+                maxLengthError
+                  ? "border-red-500"
+                  : "border-gray-600"
+              }`}
+            />
+            {maxLengthError && (
+              <div className="mt-1 text-sm text-red-600">{maxLengthError}</div>
+            )}
           </div>
 
           {/* File Upload Settings - chỉ hiển thị cho loại "Tải lên tệp" */}
