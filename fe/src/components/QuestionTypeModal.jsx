@@ -7,6 +7,7 @@ import {
   TextIcon,
   NumberIcon,
   SearchIcon,
+  GridIcon,
 } from "../icons";
 
 const BlackIcon = ({ IconComponent }) => {
@@ -27,8 +28,6 @@ const allModalOptions = [
       "Danh sách có nhận xét (Radio)",
       "Chọn hình ảnh từ danh sách (Radio)",
       "Lựa chọn 5 điểm",
-      "Danh sách thả xuống",
-      "Nút lựa chọn đơn",
     ],
   },
   {
@@ -36,19 +35,18 @@ const allModalOptions = [
     icon: <BlackIcon IconComponent={ListIcon} />,
     options: [
       "Nhiều lựa chọn",
-      "Nhiều lựa chọn với ý kiến",
-      "Nút lựa chọn nhiều",
+      "Chọn nhiều hình ảnh",
     ],
   },
   {
     title: "Xếp hạng & Đánh giá",
     icon: <BlackIcon IconComponent={SortIcon} />,
-    options: ["Xếp hạng năng cao", "Có/Không"],
+    options: ["Có/Không", "Giới tính"],
   },
   {
     title: "Ngày & dữ liệu",
     icon: <BlackIcon IconComponent={CalendarIcon} />,
-    options: ["Ngày giờ"],
+    options: ["Ngày giờ", "Tải lên tệp"],
   },
   {
     title: "Văn bản",
@@ -59,6 +57,11 @@ const allModalOptions = [
     title: "Số",
     icon: <BlackIcon IconComponent={NumberIcon} />,
     options: ["Đầu vào dạng số"],
+  },
+  {
+    title: "Mảng",
+    icon: <BlackIcon IconComponent={GridIcon} />,
+    options: ["Ma trận (chọn điểm)"],
   },
 ];
 
@@ -94,11 +97,11 @@ export default function QuestionTypeModal({
   const handleSelect = (optionType) => onSelectQuestionType(optionType);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/5 z-50 transition-opacity" onClick={onClose}>
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                    bg-white rounded-sm shadow-2xl w-[1000px] h-[441px] p-0
-                   border border-gray-200 overflow-hidden flex flex-col"
+                   border-2 border-violet-600 overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Phần 1: Thanh tìm kiếm (1000 x 50) */}
@@ -119,7 +122,7 @@ export default function QuestionTypeModal({
         {/* Phần 2: Nội dung bên dưới */}
         <div className="flex-1 overflow-y-auto flex">
           {/* Cột trái: Nút thêm nhóm câu hỏi */}
-          <div className="w-[200px] shrink-0 p-6 border-r border-gray-200">
+          <div className="w-[200px] shrink-0 p-6">
             <button
               onClick={() => {
                 onAddGroup?.();
@@ -143,10 +146,10 @@ export default function QuestionTypeModal({
           </div>
 
           {/* Cột phải: Danh sách loại câu hỏi */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-6 pt-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {modalOptions.map((cat) => (
-                <div key={cat.title}>
+                <div key={cat.title} className={cat.title === "Mảng" ? "mb-8" : ""}>
                   <div className="flex items-center mb-3">
                     {cat.icon}
                     <h3 className="font-bold text-black ml-2 text-[14px]">

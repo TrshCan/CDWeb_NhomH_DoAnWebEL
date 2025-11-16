@@ -352,10 +352,6 @@ export default function QuestionSection({
                   overflow: "visible",
                   position: "relative",
                 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSetSection(sectionId);
-                }}
               >
                 <QuestionItem
                   question={question}

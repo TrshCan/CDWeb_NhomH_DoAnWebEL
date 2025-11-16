@@ -36,26 +36,36 @@ export default function QuestionItem({
   // ✅ Helper: kiểm tra xem option có đang được chọn không
   const isOptionChecked = (selectedAnswer, optionId) => {
     if (Array.isArray(selectedAnswer)) {
-      return selectedAnswer
-        .map(String)
-        .includes(String(optionId));
+      return selectedAnswer.map(String).includes(String(optionId));
     }
     return String(selectedAnswer) === String(optionId);
   };
 
   // ✅ Helper: kiểm tra xem có phải loại radio button không
   const isRadioType = () => {
-    return question.type === "Danh sách (nút chọn)" || question.type === "Danh sách có nhận xét (Radio)" || question.type === "Chọn hình ảnh từ danh sách (Radio)";
+    return (
+      question.type === "Danh sách (nút chọn)" ||
+      question.type === "Danh sách có nhận xét (Radio)" ||
+      question.type === "Chọn hình ảnh từ danh sách (Radio)"
+    );
   };
 
   // ✅ Helper: kiểm tra xem có phải loại image option không
   const isImageOptionType = () => {
-    return question.type === "Chọn hình ảnh từ danh sách (Radio)";
+    return (
+      question.type === "Chọn hình ảnh từ danh sách (Radio)" ||
+      question.type === "Chọn nhiều hình ảnh"
+    );
   };
 
   // ✅ Helper: kiểm tra xem có phải loại 5 điểm không
   const isFivePointScale = () => {
     return question.type === "Lựa chọn 5 điểm";
+  };
+
+  // ✅ Helper: kiểm tra xem có phải loại Giới tính không
+  const isGenderType = () => {
+    return question.type === "Giới tính";
   };
 
   // ✅ Handler: Upload ảnh cho option
@@ -114,10 +124,11 @@ export default function QuestionItem({
               moveQuestionItem(index, "up");
             }}
             disabled={index === 0}
-            className={`rounded p-0.5 transition-colors duration-150 shadow ${index === 0
-              ? "bg-gray-400 opacity-50 cursor-not-allowed"
-              : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
-              }`}
+            className={`rounded p-0.5 transition-colors duration-150 shadow ${
+              index === 0
+                ? "bg-gray-400 opacity-50 cursor-not-allowed"
+                : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
+            }`}
             aria-label="Move up"
             style={{
               width: "22px",
@@ -149,10 +160,11 @@ export default function QuestionItem({
               moveQuestionItem(index, "down");
             }}
             disabled={index === totalQuestions - 1}
-            className={`rounded p-0.5 transition-colors duration-150 shadow ${index === totalQuestions - 1
-              ? "bg-gray-400 opacity-50 cursor-not-allowed"
-              : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
-              }`}
+            className={`rounded p-0.5 transition-colors duration-150 shadow ${
+              index === totalQuestions - 1
+                ? "bg-gray-400 opacity-50 cursor-not-allowed"
+                : "bg-gray-500 hover:bg-gray-600 active:bg-gray-700"
+            }`}
             aria-label="Move down"
             style={{
               width: "22px",
@@ -180,7 +192,10 @@ export default function QuestionItem({
       )}
 
       <div
-        onClick={onClick}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.();
+        }}
         className={[
           "peer cursor-pointer rounded-sm transition-shadow duration-150 relative",
           "hover:ring-2 hover:ring-inset hover:ring-violet-600",
@@ -213,7 +228,7 @@ export default function QuestionItem({
             <div
               className="flex-1"
               style={{
-                position: "relative"
+                position: "relative",
               }}
             >
               <img
@@ -224,13 +239,21 @@ export default function QuestionItem({
                   width: "100%",
                   height: "auto",
                   objectFit: "contain",
-                  display: "block"
+                  display: "block",
                 }}
                 onLoad={() => {
-                  console.log("✅ Image loaded successfully for question:", question.id);
+                  console.log(
+                    "✅ Image loaded successfully for question:",
+                    question.id
+                  );
                 }}
                 onError={(e) => {
-                  console.error("❌ Image error for question:", question.id, "Image URL:", imageValue?.substring(0, 100));
+                  console.error(
+                    "❌ Image error for question:",
+                    question.id,
+                    "Image URL:",
+                    imageValue?.substring(0, 100)
+                  );
                   e.target.style.display = "none";
                 }}
               />
@@ -264,11 +287,832 @@ export default function QuestionItem({
                   selectedAnswer={selectedAnswer}
                   onAnswerSelect={onAnswerSelect}
                   isActive={isActive}
+                  hasImage={true}
                 />
+              ) : isGenderType() ? (
+                /* UI đặc biệt cho loại Giới tính */
+                <div className="ml-[28px] flex gap-4 flex-wrap">
+                  {options.map((option) => {
+                    const isSelected = isOptionChecked(
+                      selectedAnswer,
+                      option.id
+                    );
+                    const isNoAnswer = option.text === "Không có câu trả lời";
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAnswerSelect?.(
+                            question.id,
+                            option.id,
+                            question.type
+                          );
+                        }}
+                        className="gender-button relative group"
+                        style={{
+                          width: isNoAnswer ? "173px" : "90px",
+                          height: "75px",
+                        }}
+                      >
+                        <div
+                          className={`
+                        absolute inset-0 flex flex-col items-center justify-center
+                        border-[3px] rounded-md transition-all
+                        ${
+                          isSelected
+                            ? "bg-[#10B981] border-[#10B981]"
+                            : isNoAnswer
+                            ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                            : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                        }
+                      `}
+                        >
+                          {option.text === "Nữ" && (
+                            <svg
+                              width="32"
+                              height="32"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M11 15.934A7.501 7.501 0 0 1 12 1a7.5 7.5 0 0 1 1 14.934V18h5v2h-5v4h-2v-4H6v-2h5v-2.066zM12 14a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z"></path>
+                            </svg>
+                          )}
+                          {option.text === "Nam" && (
+                            <svg
+                              width="32"
+                              height="32"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M15.05 8.537L18.585 5H14V3h8v8h-2V6.414l-3.537 3.537a7.5 7.5 0 1 1-1.414-1.414zM10.5 20a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z"></path>
+                            </svg>
+                          )}
+                          {isNoAnswer && (
+                            <svg
+                              role="img"
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32px"
+                              height="32px"
+                              viewBox="0 0 24 24"
+                              aria-labelledby="circleIconTitle"
+                              stroke={isSelected ? "#ffffff" : "#4b5563"}
+                              strokeWidth="1.5"
+                              strokeLinecap="square"
+                              strokeLinejoin="miter"
+                              fill="none"
+                              color={isSelected ? "#ffffff" : "#4b5563"}
+                              className="mb-1 transition-colors"
+                            >
+                              <title id="circleIconTitle">Circle</title>
+                              <circle cx="12" cy="12" r="8" />
+                            </svg>
+                          )}
+                          <span
+                            className="text-sm font-medium transition-colors"
+                            style={{
+                              color: isSelected ? "#ffffff" : "#4b5563",
+                              width: isNoAnswer ? "145px" : "auto",
+                              height: isNoAnswer ? "24px" : "auto",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              textAlign: "center",
+                            }}
+                          >
+                            {option.text}
+                          </span>
+                        </div>
+                        {/* Overlay khi hover để đổi màu icon và chữ */}
+                        <div
+                          className={`
+                        absolute inset-0 flex flex-col items-center justify-center
+                        border-[3px] rounded-md transition-opacity pointer-events-none
+                        bg-[#10B981] border-[#10B981]
+                        ${
+                          isSelected
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100"
+                        }
+                      `}
+                        >
+                          {option.text === "Nữ" && (
+                            <svg
+                              width="32"
+                              height="32"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M11 15.934A7.501 7.501 0 0 1 12 1a7.5 7.5 0 0 1 1 14.934V18h5v2h-5v4h-2v-4H6v-2h5v-2.066zM12 14a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z"></path>
+                            </svg>
+                          )}
+                          {option.text === "Nam" && (
+                            <svg
+                              width="32"
+                              height="32"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M15.05 8.537L18.585 5H14V3h8v8h-2V6.414l-3.537 3.537a7.5 7.5 0 1 1-1.414-1.414zM10.5 20a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z"></path>
+                            </svg>
+                          )}
+                          {isNoAnswer && (
+                            <svg
+                              role="img"
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32px"
+                              height="32px"
+                              viewBox="0 0 24 24"
+                              aria-labelledby="circleIconTitle"
+                              stroke="#ffffff"
+                              strokeWidth="1.5"
+                              strokeLinecap="square"
+                              strokeLinejoin="miter"
+                              fill="none"
+                              color="#ffffff"
+                              className="mb-1"
+                            >
+                              <title id="circleIconTitle">Circle</title>
+                              <circle cx="12" cy="12" r="8" />
+                            </svg>
+                          )}
+                          <span
+                            className="text-sm font-medium text-white"
+                            style={{
+                              width: isNoAnswer ? "145px" : "auto",
+                              height: isNoAnswer ? "24px" : "auto",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              textAlign: "center",
+                            }}
+                          >
+                            {option.text}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               ) : (
                 /* Danh sách đáp án */
                 options.length > 0 && (
                   <div className="ml-[28px] space-y-4">
+                    {options.map((option, optionIndex) => {
+                      const isDragging = draggedIndex === optionIndex;
+                      const isDragOver = dragOverIndex === optionIndex;
+
+                      const handleDragStart = (e) => {
+                        setDraggedIndex(optionIndex);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData(
+                          "text/plain",
+                          optionIndex.toString()
+                        );
+
+                        // Tạo custom drag image từ cả dòng đáp án
+                        const rowElement = e.currentTarget.closest(
+                          ".flex.items-center.group"
+                        );
+                        if (rowElement) {
+                          const dragImage = rowElement.cloneNode(true);
+                          dragImage.style.position = "absolute";
+                          dragImage.style.top = "-9999px";
+                          dragImage.style.left = "-9999px";
+                          dragImage.style.width = rowElement.offsetWidth + "px";
+                          dragImage.style.backgroundColor = "#ffffff";
+                          dragImage.style.border = "3px solid #7c3aed";
+                          dragImage.style.borderRadius = "8px";
+                          dragImage.style.padding = "10px";
+                          dragImage.style.boxShadow =
+                            "0 8px 24px rgba(124, 58, 237, 0.3), 0 4px 8px rgba(0,0,0,0.1)";
+                          dragImage.style.transform = "scale(1.02)";
+                          dragImage.style.fontWeight = "600";
+                          document.body.appendChild(dragImage);
+                          e.dataTransfer.setDragImage(dragImage, 30, 20);
+                          setTimeout(
+                            () => document.body.removeChild(dragImage),
+                            0
+                          );
+                        }
+                      };
+
+                      const handleDragOver = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.dataTransfer.dropEffect = "move";
+                        if (dragOverIndex !== optionIndex) {
+                          setDragOverIndex(optionIndex);
+                        }
+                      };
+
+                      const handleDragLeave = (e) => {
+                        e.preventDefault();
+                        // Chỉ xóa dragOverIndex nếu không còn ở trong container
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = e.clientX;
+                        const y = e.clientY;
+                        if (
+                          x < rect.left ||
+                          x > rect.right ||
+                          y < rect.top ||
+                          y > rect.bottom
+                        ) {
+                          setDragOverIndex(null);
+                        }
+                      };
+
+                      const handleDrop = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        if (
+                          draggedIndex !== null &&
+                          draggedIndex !== optionIndex &&
+                          onMoveOption
+                        ) {
+                          onMoveOption(question.id, draggedIndex, optionIndex);
+                        }
+
+                        setDraggedIndex(null);
+                        setDragOverIndex(null);
+                      };
+
+                      const handleDragEnd = () => {
+                        setDraggedIndex(null);
+                        setDragOverIndex(null);
+                      };
+
+                      return (
+                        <div
+                          key={option.id}
+                          className={
+                            isImageOptionType()
+                              ? "flex items-start group"
+                              : "inline-flex items-center group"
+                          }
+                          style={{
+                            gap: "8px",
+                            minHeight: "40px",
+                            opacity: isDragging ? 1 : 1,
+                            transition: "all 0.2s",
+                            backgroundColor: isDragging
+                              ? "#ffffff"
+                              : isDragOver
+                              ? "#f3f4f6"
+                              : "transparent",
+                            border: isDragging
+                              ? "2px solid #7c3aed"
+                              : "2px solid transparent",
+                            borderRadius: isDragging ? "6px" : "0px",
+                            padding: isDragging ? "4px" : "0px",
+                          }}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                        >
+                          {/* Khi active: hiển thị icon X (hình tròn 13x13) và icon grid (14x14) */}
+                          {isActive ? (
+                            <>
+                              {/* Icon X để xóa - hình tròn 13x13 */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRemoveOption?.(question.id, option.id);
+                                }}
+                                className="flex-shrink-0 hover:bg-red-100 rounded-full transition-colors"
+                                title="Xóa đáp án"
+                                style={{
+                                  width: "13px",
+                                  height: "13px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  backgroundColor: "#ef4444",
+                                  border: "none",
+                                  padding: "0",
+                                }}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="8"
+                                  height="8"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="white"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <line x1="18" y1="6" x2="6" y2="18" />
+                                  <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
+                              {/* Icon 6 chấm nằm ngang để di chuyển */}
+                              <div
+                                draggable={isActive}
+                                onDragStart={handleDragStart}
+                                onDragEnd={handleDragEnd}
+                                className="cursor-move flex-shrink-0 hover:bg-gray-200 rounded transition-colors"
+                                title="Nhấn giữ và kéo để di chuyển đáp án"
+                                style={{
+                                  width: "18px",
+                                  height: "14px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  padding: "2px",
+                                  userSelect: "none",
+                                }}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="18"
+                                  height="10"
+                                  viewBox="0 0 18 10"
+                                  fill="currentColor"
+                                  className="text-gray-600"
+                                >
+                                  <circle cx="2" cy="2" r="1.5" />
+                                  <circle cx="9" cy="2" r="1.5" />
+                                  <circle cx="16" cy="2" r="1.5" />
+                                  <circle cx="2" cy="8" r="1.5" />
+                                  <circle cx="9" cy="8" r="1.5" />
+                                  <circle cx="16" cy="8" r="1.5" />
+                                </svg>
+                              </div>
+                            </>
+                          ) : (
+                            /* Khi không active: hiển thị checkbox hoặc radio tùy loại */
+                            <input
+                              type={isRadioType() ? "radio" : "checkbox"}
+                              name={`question-${question.id}`}
+                              value={option.id}
+                              checked={isOptionChecked(
+                                selectedAnswer,
+                                option.id
+                              )}
+                              onChange={() =>
+                                onAnswerSelect?.(
+                                  question.id,
+                                  option.id,
+                                  question.type
+                                )
+                              }
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-violet-600 focus:ring-violet-500 cursor-pointer flex-shrink-0 opacity-90"
+                              style={{
+                                accentColor: "#7c3aed",
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: isRadioType() ? "50%" : "4px",
+                              }}
+                            />
+                          )}
+                          <div
+                            className="flex items-start space-x-2 ml-2"
+                            style={{
+                              width: isImageOptionType() ? "auto" : answerWidth,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isImageOptionType() ? (
+                              /* Hiển thị ảnh cho loại "Chọn hình ảnh từ danh sách (Radio)" */
+                              isActive ? (
+                                /* Khi active: Hiển thị ảnh nếu có, hoặc ô upload */
+                                option.image ? (
+                                  <div className="relative inline-block">
+                                    <img
+                                      src={option.image}
+                                      alt="Option"
+                                      className="peer border-2 border-gray-700 rounded-sm cursor-pointer"
+                                      style={{
+                                        height: "160px",
+                                        width: "auto",
+                                        objectFit: "contain",
+                                        display: "block",
+                                      }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOptionImageUpload(option.id);
+                                      }}
+                                    />
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onOptionImageChange?.(
+                                          question.id,
+                                          option.id,
+                                          null
+                                        );
+                                      }}
+                                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-all opacity-0 peer-hover:opacity-100"
+                                      title="Xóa ảnh"
+                                    >
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="white"
+                                        strokeWidth="1.5"
+                                        strokeLinecap="square"
+                                        strokeLinejoin="miter"
+                                      >
+                                        <path d="M15.5355339 15.5355339L8.46446609 8.46446609M15.5355339 8.46446609L8.46446609 15.5355339" />
+                                        <path d="M4.92893219,19.0710678 C1.02368927,15.1658249 1.02368927,8.83417511 4.92893219,4.92893219 C8.83417511,1.02368927 15.1658249,1.02368927 19.0710678,4.92893219 C22.9763107,8.83417511 22.9763107,15.1658249 19.0710678,19.0710678 C15.1658249,22.9763107 8.83417511,22.9763107 4.92893219,19.0710678 Z" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div
+                                    className="border-2 border-dashed border-gray-700 rounded-md flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                                    style={{
+                                      width: "260px",
+                                      height: "160px",
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOptionImageUpload(option.id);
+                                    }}
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="32"
+                                      height="32"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      className="text-gray-400 mb-2"
+                                    >
+                                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                      <polyline points="17 8 12 3 7 8" />
+                                      <line x1="12" y1="3" x2="12" y2="15" />
+                                    </svg>
+                                    <span className="text-sm text-gray-500 italic">
+                                      Thả hình ảnh tại đây
+                                    </span>
+                                  </div>
+                                )
+                              ) : /* Khi không active: Hiển thị ảnh hoặc NO IMAGE */
+                              option.image ? (
+                                <img
+                                  src={option.image}
+                                  alt="Option"
+                                  className="border-2 border-gray-700 rounded-sm"
+                                  style={{
+                                    height: "160px",
+                                    width: "auto",
+                                    objectFit: "contain",
+                                    display: "block",
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  className="border-2 border-gray-700 rounded-md flex flex-col items-center justify-center bg-gray-50"
+                                  style={{
+                                    width: "160px",
+                                    height: "160px",
+                                  }}
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="48"
+                                    height="48"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    className="text-gray-300 mb-2"
+                                  >
+                                    <rect
+                                      x="3"
+                                      y="3"
+                                      width="18"
+                                      height="18"
+                                      rx="2"
+                                      ry="2"
+                                    />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                  </svg>
+                                  <span className="text-gray-400 font-bold text-sm">
+                                    NO IMAGE
+                                  </span>
+                                </div>
+                              )
+                            ) : /* Hiển thị text bình thường cho các loại khác */
+                            isActive ? (
+                              <div
+                                style={{
+                                  width: answerWidth,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <EditableField
+                                  placeholder={
+                                    isRadioType()
+                                      ? "Answer option"
+                                      : "Subquestion"
+                                  }
+                                  initialValue={option.text}
+                                  inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium"
+                                  isTextarea={true}
+                                  onChange={(value) =>
+                                    onOptionChange?.(
+                                      question.id,
+                                      option.id,
+                                      value
+                                    )
+                                  }
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  width: answerWidth,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <span
+                                  className={`text-sm text-gray-700 font-medium ${
+                                    !option.text ? "italic text-gray-400" : ""
+                                  } inline-block whitespace-normal break-words leading-relaxed opacity-70`}
+                                  style={{
+                                    width: answerWidth,
+                                    padding: "8px",
+                                    marginLeft: "-8px",
+                                    marginTop: "0",
+                                    marginBottom: "0",
+                                    boxSizing: "border-box",
+                                    minHeight: "24px",
+                                    lineHeight: "1.625",
+                                    display: "inline-block",
+                                    verticalAlign: "top",
+                                  }}
+                                >
+                                  {option.text ||
+                                    (isRadioType()
+                                      ? "Answer option"
+                                      : "Subquestion")}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              )}
+
+              {/* Ô nhận xét cho loại "Danh sách có nhận xét (Radio)" - chỉ hiện khi không active */}
+              {!isActive &&
+                question.type === "Danh sách có nhận xét (Radio)" && (
+                  <div className="ml-[28px] mt-4">
+                    <textarea
+                      placeholder="Nhập nhận xét của bạn tại đây."
+                      className="w-full border-2 border-gray-700 rounded-md p-3 text-sm text-gray-700 placeholder:italic placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
+                      rows="3"
+                      style={{ width: answerWidth }}
+                    />
+                  </div>
+                )}
+
+              {/* Actions: thu theo nội dung (không absolute) */}
+              {isActive && (
+                <div className="mt-6 flex items-start justify-between">
+                  {!isGenderType() && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddOption?.(question.id);
+                      }}
+                      className="flex items-center text-violet-600 text-sm hover:text-violet-800 transition-colors font-normal ml-[28px]"
+                    >
+                      <PlusIcon className="h-5 w-5 mr-1" />
+                      Thêm câu hỏi phụ
+                    </button>
+                  )}
+
+                  <div
+                    className={`flex items-center space-x-1 ${
+                      isGenderType() ? "ml-auto" : "mt-[45px]"
+                    }`}
+                  >
+                    <button
+                      className="p-1"
+                      title="Duplicate"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDuplicate?.(index);
+                      }}
+                    >
+                      <DuplicateIcon />
+                    </button>
+                    <button
+                      className="p-1"
+                      title="Delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete?.(index);
+                      }}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* ======================= BỐ CỤC MẶC ĐỊNH (KHÔNG ẢNH) ======================= */
+          <div className="p-6 pb-[35px]">
+            <div className="flex items-baseline">
+              <span className="text-violet-600 font-medium mr-2 whitespace-nowrap">
+                {index + 1} →
+              </span>
+              <div className="w-full">
+                <EditableField
+                  placeholder="Nhập câu hỏi của bạn ở đây"
+                  initialValue={question.text}
+                  inputClassName="text-gray-900 font-thin text-[25px]"
+                  onChange={(value) => onTextChange?.(question.id, value)}
+                />
+                <EditableField
+                  placeholder="Mô tả trợ giúp tuỳ chọn"
+                  initialValue={question.helpText}
+                  inputClassName="text-sm text-gray-800 mt-1 mb-4 italic font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Render 5 điểm nếu là loại Lựa chọn 5 điểm */}
+            {isFivePointScale() ? (
+              <FivePointScale
+                questionId={question.id}
+                selectedAnswer={selectedAnswer}
+                onAnswerSelect={onAnswerSelect}
+                isActive={isActive}
+                hasImage={false}
+              />
+            ) : isGenderType() ? (
+              /* UI đặc biệt cho loại Giới tính */
+              <div className="ml-[28px] flex gap-4 flex-wrap">
+                {options.map((option) => {
+                  const isSelected = isOptionChecked(selectedAnswer, option.id);
+                  const isNoAnswer = option.text === "Không có câu trả lời";
+
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAnswerSelect?.(question.id, option.id, question.type);
+                      }}
+                      className="gender-button relative group"
+                      style={{
+                        width: isNoAnswer ? "173px" : "90px",
+                        height: "75px",
+                      }}
+                    >
+                      <div
+                        className={`
+                        absolute inset-0 flex flex-col items-center justify-center
+                        border-[3px] rounded-md transition-all
+                        ${
+                          isSelected
+                            ? "bg-[#10B981] border-[#10B981]"
+                            : isNoAnswer
+                            ? "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                            : "bg-white border-gray-600 group-hover:bg-[#10B981] group-hover:border-[#10B981]"
+                        }
+                      `}
+                      >
+                        {option.text === "Nữ" && (
+                          <svg
+                            width="32"
+                            height="32"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M11 15.934A7.501 7.501 0 0 1 12 1a7.5 7.5 0 0 1 1 14.934V18h5v2h-5v4h-2v-4H6v-2h5v-2.066zM12 14a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z"></path>
+                          </svg>
+                        )}
+                        {option.text === "Nam" && (
+                          <svg
+                            width="32"
+                            height="32"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M15.05 8.537L18.585 5H14V3h8v8h-2V6.414l-3.537 3.537a7.5 7.5 0 1 1-1.414-1.414zM10.5 20a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z"></path>
+                          </svg>
+                        )}
+                        {isNoAnswer && (
+                          <svg
+                            role="img"
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="32px"
+                            height="32px"
+                            viewBox="0 0 24 24"
+                            aria-labelledby="circleIconTitle"
+                            stroke={isSelected ? "#ffffff" : "#000000"}
+                            strokeWidth="1.5"
+                            strokeLinecap="square"
+                            strokeLinejoin="miter"
+                            fill="none"
+                            color={isSelected ? "#ffffff" : "#000000"}
+                            className="mb-1 transition-colors"
+                          >
+                            <title id="circleIconTitle">Circle</title>
+                            <circle cx="12" cy="12" r="8" />
+                          </svg>
+                        )}
+                        <span
+                          className="text-sm font-medium transition-colors"
+                          style={{
+                            color: isSelected ? "#ffffff" : "#4b5563",
+                            width: isNoAnswer ? "145px" : "auto",
+                            height: isNoAnswer ? "24px" : "auto",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            textAlign: "center",
+                          }}
+                        >
+                          {option.text}
+                        </span>
+                      </div>
+                      {/* Overlay khi hover để đổi màu icon và chữ */}
+                      <div
+                        className={`
+                        absolute inset-0 flex flex-col items-center justify-center
+                        border-[3px] rounded-md transition-opacity pointer-events-none
+                        bg-[#10B981] border-[#10B981]
+                        ${
+                          isSelected
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100"
+                        }
+                      `}
+                      >
+                        {option.text === "Nữ" && (
+                          <svg
+                            width="32"
+                            height="32"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M11 15.934A7.501 7.501 0 0 1 12 1a7.5 7.5 0 0 1 1 14.934V18h5v2h-5v4h-2v-4H6v-2h5v-2.066zM12 14a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z"></path>
+                          </svg>
+                        )}
+                        {option.text === "Nam" && (
+                          <svg
+                            width="32"
+                            height="32"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M15.05 8.537L18.585 5H14V3h8v8h-2V6.414l-3.537 3.537a7.5 7.5 0 1 1-1.414-1.414zM10.5 20a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11z"></path>
+                          </svg>
+                        )}
+                        {isNoAnswer && (
+                          <div
+                            className="mb-1 rounded-full flex items-center justify-center"
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              border: "2px solid #ffffff",
+                            }}
+                          >
+                            <div
+                              className="rounded-full"
+                              style={{
+                                width: "20px",
+                                height: "20px",
+                                border: "2px solid #ffffff",
+                              }}
+                            ></div>
+                          </div>
+                        )}
+                        <span className="text-sm font-medium text-white">
+                          {option.text}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Danh sách đáp án */
+              options.length > 0 && (
+                <div className="ml-[28px] space-y-4">
                   {options.map((option, optionIndex) => {
                     const isDragging = draggedIndex === optionIndex;
                     const isDragOver = dragOverIndex === optionIndex;
@@ -276,10 +1120,15 @@ export default function QuestionItem({
                     const handleDragStart = (e) => {
                       setDraggedIndex(optionIndex);
                       e.dataTransfer.effectAllowed = "move";
-                      e.dataTransfer.setData("text/plain", optionIndex.toString());
+                      e.dataTransfer.setData(
+                        "text/plain",
+                        optionIndex.toString()
+                      );
 
                       // Tạo custom drag image từ cả dòng đáp án
-                      const rowElement = e.currentTarget.closest('.flex.items-center.group');
+                      const rowElement = e.currentTarget.closest(
+                        ".flex.items-center.group"
+                      );
                       if (rowElement) {
                         const dragImage = rowElement.cloneNode(true);
                         dragImage.style.position = "absolute";
@@ -290,12 +1139,16 @@ export default function QuestionItem({
                         dragImage.style.border = "3px solid #7c3aed";
                         dragImage.style.borderRadius = "8px";
                         dragImage.style.padding = "10px";
-                        dragImage.style.boxShadow = "0 8px 24px rgba(124, 58, 237, 0.3), 0 4px 8px rgba(0,0,0,0.1)";
+                        dragImage.style.boxShadow =
+                          "0 8px 24px rgba(124, 58, 237, 0.3), 0 4px 8px rgba(0,0,0,0.1)";
                         dragImage.style.transform = "scale(1.02)";
                         dragImage.style.fontWeight = "600";
                         document.body.appendChild(dragImage);
                         e.dataTransfer.setDragImage(dragImage, 30, 20);
-                        setTimeout(() => document.body.removeChild(dragImage), 0);
+                        setTimeout(
+                          () => document.body.removeChild(dragImage),
+                          0
+                        );
                       }
                     };
 
@@ -310,11 +1163,15 @@ export default function QuestionItem({
 
                     const handleDragLeave = (e) => {
                       e.preventDefault();
-                      // Chỉ xóa dragOverIndex nếu không còn ở trong container
                       const rect = e.currentTarget.getBoundingClientRect();
                       const x = e.clientX;
                       const y = e.clientY;
-                      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                      if (
+                        x < rect.left ||
+                        x > rect.right ||
+                        y < rect.top ||
+                        y > rect.bottom
+                      ) {
                         setDragOverIndex(null);
                       }
                     };
@@ -323,7 +1180,11 @@ export default function QuestionItem({
                       e.preventDefault();
                       e.stopPropagation();
 
-                      if (draggedIndex !== null && draggedIndex !== optionIndex && onMoveOption) {
+                      if (
+                        draggedIndex !== null &&
+                        draggedIndex !== optionIndex &&
+                        onMoveOption
+                      ) {
                         onMoveOption(question.id, draggedIndex, optionIndex);
                       }
 
@@ -339,14 +1200,24 @@ export default function QuestionItem({
                     return (
                       <div
                         key={option.id}
-                        className={isImageOptionType() ? "flex items-start group" : "inline-flex items-center group"}
+                        className={
+                          isImageOptionType()
+                            ? "flex items-start group"
+                            : "inline-flex items-center group"
+                        }
                         style={{
                           gap: "8px",
                           minHeight: "40px",
                           opacity: isDragging ? 1 : 1,
                           transition: "all 0.2s",
-                          backgroundColor: isDragging ? "#ffffff" : (isDragOver ? "#f3f4f6" : "transparent"),
-                          border: isDragging ? "2px solid #7c3aed" : "2px solid transparent",
+                          backgroundColor: isDragging
+                            ? "#ffffff"
+                            : isDragOver
+                            ? "#f3f4f6"
+                            : "transparent",
+                          border: isDragging
+                            ? "2px solid #7c3aed"
+                            : "2px solid transparent",
                           borderRadius: isDragging ? "6px" : "0px",
                           padding: isDragging ? "4px" : "0px",
                         }}
@@ -433,7 +1304,11 @@ export default function QuestionItem({
                             value={option.id}
                             checked={isOptionChecked(selectedAnswer, option.id)}
                             onChange={() =>
-                              onAnswerSelect?.(question.id, option.id, question.type)
+                              onAnswerSelect?.(
+                                question.id,
+                                option.id,
+                                question.type
+                              )
                             }
                             onClick={(e) => e.stopPropagation()}
                             className="text-violet-600 focus:ring-violet-500 cursor-pointer flex-shrink-0 opacity-90"
@@ -446,8 +1321,11 @@ export default function QuestionItem({
                           />
                         )}
                         <div
-                          className="flex items-start space-x-2 ml-2"
-                          style={{ width: isImageOptionType() ? "auto" : answerWidth, flexShrink: 0 }}
+                          className="flex items-start space-x-2 ml-4"
+                          style={{
+                            width: isImageOptionType() ? "auto" : "300px",
+                            flexShrink: 0,
+                          }}
                         >
                           {isImageOptionType() ? (
                             /* Hiển thị ảnh cho loại "Chọn hình ảnh từ danh sách (Radio)" */
@@ -458,7 +1336,7 @@ export default function QuestionItem({
                                   <img
                                     src={option.image}
                                     alt="Option"
-                                    className="peer border-2 border-gray-700 rounded-sm cursor-pointer"
+                                    className="peer border-1 border-gray-900 rounded-sm cursor-pointer"
                                     style={{
                                       height: "160px",
                                       width: "auto",
@@ -473,7 +1351,11 @@ export default function QuestionItem({
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      onOptionImageChange?.(question.id, option.id, null);
+                                      onOptionImageChange?.(
+                                        question.id,
+                                        option.id,
+                                        null
+                                      );
                                     }}
                                     className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-all opacity-0 peer-hover:opacity-100"
                                     title="Xóa ảnh"
@@ -520,445 +1402,12 @@ export default function QuestionItem({
                                     <polyline points="17 8 12 3 7 8" />
                                     <line x1="12" y1="3" x2="12" y2="15" />
                                   </svg>
-                                  <span className="text-sm text-gray-500 italic">Thả hình ảnh tại đây</span>
+                                  <span className="text-sm text-gray-500 italic">
+                                    Thả hình ảnh tại đây
+                                  </span>
                                 </div>
                               )
-                            ) : (
-                              /* Khi không active: Hiển thị ảnh hoặc NO IMAGE */
-                              option.image ? (
-                                <img
-                                  src={option.image}
-                                  alt="Option"
-                                  className="border-2 border-gray-700 rounded-sm"
-                                  style={{
-                                    height: "160px",
-                                    width: "auto",
-                                    objectFit: "contain",
-                                    display: "block",
-                                  }}
-                                />
-                              ) : (
-                                <div
-                                  className="border-2 border-gray-700 rounded-md flex flex-col items-center justify-center bg-gray-50"
-                                  style={{
-                                    width: "160px",
-                                    height: "160px",
-                                  }}
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="48"
-                                    height="48"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.5"
-                                    className="text-gray-300 mb-2"
-                                  >
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                    <circle cx="8.5" cy="8.5" r="1.5" />
-                                    <polyline points="21 15 16 10 5 21" />
-                                  </svg>
-                                  <span className="text-gray-400 font-bold text-sm">NO IMAGE</span>
-                                </div>
-                              )
-                            )
-                          ) : (
-                            /* Hiển thị text bình thường cho các loại khác */
-                            isActive ? (
-                              <div
-                                style={{
-                                  width: answerWidth,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <EditableField
-                                  placeholder={isRadioType() ? "Answer option" : "Subquestion"}
-                                  initialValue={option.text}
-                                  inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium"
-                                  isTextarea={true}
-                                  onChange={(value) =>
-                                    onOptionChange?.(question.id, option.id, value)
-                                  }
-                                />
-                              </div>
-                            ) : (
-                              <div
-                                style={{
-                                  width: answerWidth,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <span
-                                  className={`text-sm text-gray-700 font-medium ${!option.text ? "italic text-gray-400" : ""} inline-block whitespace-normal break-words leading-relaxed opacity-70`}
-                                  style={{
-                                    width: answerWidth,
-                                    padding: "8px",
-                                    marginLeft: "-8px",
-                                    marginTop: "0",
-                                    marginBottom: "0",
-                                    boxSizing: "border-box",
-                                    minHeight: "24px",
-                                    lineHeight: "1.625",
-                                    display: "inline-block",
-                                    verticalAlign: "top",
-                                  }}
-                                >
-                                  {option.text || (isRadioType() ? "Answer option" : "Subquestion")}
-                                </span>
-                              </div>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                )
-              )}
-
-              {/* Ô nhận xét cho loại "Danh sách có nhận xét (Radio)" - chỉ hiện khi không active */}
-              {!isActive && question.type === "Danh sách có nhận xét (Radio)" && (
-                <div className="ml-[28px] mt-4">
-                  <textarea
-                    placeholder="Nhập nhận xét của bạn tại đây."
-                    className="w-full border-2 border-gray-700 rounded-md p-3 text-sm text-gray-700 placeholder:italic placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
-                    rows="3"
-                    style={{ width: answerWidth }}
-                  />
-                </div>
-              )}
-
-              {/* Actions: thu theo nội dung (không absolute) */}
-              {isActive && (
-                <div className="mt-6 flex items-start justify-between">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddOption?.(question.id);
-                    }}
-                    className="flex items-center text-violet-600 text-sm hover:text-violet-800 transition-colors font-normal ml-[28px]"
-                  >
-                    <PlusIcon className="h-5 w-5 mr-1" />
-                    Thêm câu hỏi phụ
-                  </button>
-
-                  <div className="flex items-center space-x-1 mt-[45px]">
-                    <button
-                      className="p-1"
-                      title="Duplicate"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDuplicate?.(index);
-                      }}
-                    >
-                      <DuplicateIcon />
-                    </button>
-                    <button
-                      className="p-1"
-                      title="Delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete?.(index);
-                      }}
-                    >
-                      <TrashIcon />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          /* ======================= BỐ CỤC MẶC ĐỊNH (KHÔNG ẢNH) ======================= */
-          <div className="p-6 pb-[35px]">
-            <div className="flex items-baseline">
-              <span className="text-violet-600 font-medium mr-2 whitespace-nowrap">
-                {index + 1} →
-              </span>
-              <div className="w-full">
-                <EditableField
-                  placeholder="Nhập câu hỏi của bạn ở đây"
-                  initialValue={question.text}
-                  inputClassName="text-gray-900 font-thin text-[25px]"
-                  onChange={(value) => onTextChange?.(question.id, value)}
-                />
-                <EditableField
-                  placeholder="Mô tả trợ giúp tuỳ chọn"
-                  initialValue={question.helpText}
-                  inputClassName="text-sm text-gray-800 mt-1 mb-4 italic font-medium"
-                />
-              </div>
-            </div>
-
-            {/* Render 5 điểm nếu là loại Lựa chọn 5 điểm */}
-            {isFivePointScale() ? (
-              <FivePointScale
-                questionId={question.id}
-                selectedAnswer={selectedAnswer}
-                onAnswerSelect={onAnswerSelect}
-                isActive={isActive}
-              />
-            ) : (
-              /* Danh sách đáp án */
-              options.length > 0 && (
-                <div className="ml-[28px] space-y-4">
-                {options.map((option, optionIndex) => {
-                  const isDragging = draggedIndex === optionIndex;
-                  const isDragOver = dragOverIndex === optionIndex;
-
-                  const handleDragStart = (e) => {
-                    setDraggedIndex(optionIndex);
-                    e.dataTransfer.effectAllowed = "move";
-                    e.dataTransfer.setData("text/plain", optionIndex.toString());
-
-                    // Tạo custom drag image từ cả dòng đáp án
-                    const rowElement = e.currentTarget.closest('.flex.items-center.group');
-                    if (rowElement) {
-                      const dragImage = rowElement.cloneNode(true);
-                      dragImage.style.position = "absolute";
-                      dragImage.style.top = "-9999px";
-                      dragImage.style.left = "-9999px";
-                      dragImage.style.width = rowElement.offsetWidth + "px";
-                      dragImage.style.backgroundColor = "#ffffff";
-                      dragImage.style.border = "3px solid #7c3aed";
-                      dragImage.style.borderRadius = "8px";
-                      dragImage.style.padding = "10px";
-                      dragImage.style.boxShadow = "0 8px 24px rgba(124, 58, 237, 0.3), 0 4px 8px rgba(0,0,0,0.1)";
-                      dragImage.style.transform = "scale(1.02)";
-                      dragImage.style.fontWeight = "600";
-                      document.body.appendChild(dragImage);
-                      e.dataTransfer.setDragImage(dragImage, 30, 20);
-                      setTimeout(() => document.body.removeChild(dragImage), 0);
-                    }
-                  };
-
-                  const handleDragOver = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.dataTransfer.dropEffect = "move";
-                    if (dragOverIndex !== optionIndex) {
-                      setDragOverIndex(optionIndex);
-                    }
-                  };
-
-                  const handleDragLeave = (e) => {
-                    e.preventDefault();
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const x = e.clientX;
-                    const y = e.clientY;
-                    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
-                      setDragOverIndex(null);
-                    }
-                  };
-
-                  const handleDrop = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    if (draggedIndex !== null && draggedIndex !== optionIndex && onMoveOption) {
-                      onMoveOption(question.id, draggedIndex, optionIndex);
-                    }
-
-                    setDraggedIndex(null);
-                    setDragOverIndex(null);
-                  };
-
-                  const handleDragEnd = () => {
-                    setDraggedIndex(null);
-                    setDragOverIndex(null);
-                  };
-
-                  return (
-                    <div
-                      key={option.id}
-                      className={isImageOptionType() ? "flex items-start group" : "inline-flex items-center group"}
-                      style={{
-                        gap: "8px",
-                        minHeight: "40px",
-                        opacity: isDragging ? 1 : 1,
-                        transition: "all 0.2s",
-                        backgroundColor: isDragging ? "#ffffff" : (isDragOver ? "#f3f4f6" : "transparent"),
-                        border: isDragging ? "2px solid #7c3aed" : "2px solid transparent",
-                        borderRadius: isDragging ? "6px" : "0px",
-                        padding: isDragging ? "4px" : "0px",
-                      }}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                    >
-                      {/* Khi active: hiển thị icon X (hình tròn 13x13) và icon grid (14x14) */}
-                      {isActive ? (
-                        <>
-                          {/* Icon X để xóa - hình tròn 13x13 */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRemoveOption?.(question.id, option.id);
-                            }}
-                            className="flex-shrink-0 hover:bg-red-100 rounded-full transition-colors"
-                            title="Xóa đáp án"
-                            style={{
-                              width: "13px",
-                              height: "13px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              backgroundColor: "#ef4444",
-                              border: "none",
-                              padding: "0",
-                            }}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="8"
-                              height="8"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="white"
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <line x1="18" y1="6" x2="6" y2="18" />
-                              <line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                          </button>
-                          {/* Icon 6 chấm nằm ngang để di chuyển */}
-                          <div
-                            draggable={isActive}
-                            onDragStart={handleDragStart}
-                            onDragEnd={handleDragEnd}
-                            className="cursor-move flex-shrink-0 hover:bg-gray-200 rounded transition-colors"
-                            title="Nhấn giữ và kéo để di chuyển đáp án"
-                            style={{
-                              width: "18px",
-                              height: "14px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              padding: "2px",
-                              userSelect: "none",
-                            }}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="18"
-                              height="10"
-                              viewBox="0 0 18 10"
-                              fill="currentColor"
-                              className="text-gray-600"
-                            >
-                              <circle cx="2" cy="2" r="1.5" />
-                              <circle cx="9" cy="2" r="1.5" />
-                              <circle cx="16" cy="2" r="1.5" />
-                              <circle cx="2" cy="8" r="1.5" />
-                              <circle cx="9" cy="8" r="1.5" />
-                              <circle cx="16" cy="8" r="1.5" />
-                            </svg>
-                          </div>
-                        </>
-                      ) : (
-                        /* Khi không active: hiển thị checkbox hoặc radio tùy loại */
-                        <input
-                          type={isRadioType() ? "radio" : "checkbox"}
-                          name={`question-${question.id}`}
-                          value={option.id}
-                          checked={isOptionChecked(selectedAnswer, option.id)}
-                          onChange={() =>
-                            onAnswerSelect?.(question.id, option.id, question.type)
-                          }
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-violet-600 focus:ring-violet-500 cursor-pointer flex-shrink-0 opacity-90"
-                          style={{
-                            accentColor: "#7c3aed",
-                            width: "28px",
-                            height: "28px",
-                            borderRadius: isRadioType() ? "50%" : "4px",
-                          }}
-                        />
-
-                      )}
-                      <div
-                        className="flex items-start space-x-2 ml-4"
-                        style={{ width: isImageOptionType() ? "auto" : "300px", flexShrink: 0 }}
-                      >
-                        {isImageOptionType() ? (
-                          /* Hiển thị ảnh cho loại "Chọn hình ảnh từ danh sách (Radio)" */
-                          isActive ? (
-                            /* Khi active: Hiển thị ảnh nếu có, hoặc ô upload */
-                            option.image ? (
-                              <div className="relative inline-block">
-                                <img
-                                  src={option.image}
-                                  alt="Option"
-                                  className="peer border-1 border-gray-900 rounded-sm cursor-pointer"
-                                  style={{
-                                    height: "160px",
-                                    width: "auto",
-                                    objectFit: "contain",
-                                    display: "block",
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOptionImageUpload(option.id);
-                                  }}
-                                />
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onOptionImageChange?.(question.id, option.id, null);
-                                  }}
-                                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-all opacity-0 peer-hover:opacity-100"
-                                  title="Xóa ảnh"
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="white"
-                                    strokeWidth="1.5"
-                                    strokeLinecap="square"
-                                    strokeLinejoin="miter"
-                                  >
-                                    <path d="M15.5355339 15.5355339L8.46446609 8.46446609M15.5355339 8.46446609L8.46446609 15.5355339" />
-                                    <path d="M4.92893219,19.0710678 C1.02368927,15.1658249 1.02368927,8.83417511 4.92893219,4.92893219 C8.83417511,1.02368927 15.1658249,1.02368927 19.0710678,4.92893219 C22.9763107,8.83417511 22.9763107,15.1658249 19.0710678,19.0710678 C15.1658249,22.9763107 8.83417511,22.9763107 4.92893219,19.0710678 Z" />
-                                  </svg>
-                                </button>
-                              </div>
-                            ) : (
-                              <div
-                                className="border-2 border-dashed border-gray-700 rounded-md flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
-                                style={{
-                                  width: "260px",
-                                  height: "160px",
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOptionImageUpload(option.id);
-                                }}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="32"
-                                  height="32"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  className="text-gray-400 mb-2"
-                                >
-                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                  <polyline points="17 8 12 3 7 8" />
-                                  <line x1="12" y1="3" x2="12" y2="15" />
-                                </svg>
-                                <span className="text-sm text-gray-500 italic">Thả hình ảnh tại đây</span>
-                              </div>
-                            )
-                          ) : (
-                            /* Khi không active: Hiển thị ảnh hoặc NO IMAGE */
+                            ) : /* Khi không active: Hiển thị ảnh hoặc NO IMAGE */
                             option.image ? (
                               <img
                                 src={option.image}
@@ -989,16 +1438,23 @@ export default function QuestionItem({
                                   strokeWidth="1.5"
                                   className="text-gray-300 mb-2"
                                 >
-                                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                  <rect
+                                    x="3"
+                                    y="3"
+                                    width="18"
+                                    height="18"
+                                    rx="2"
+                                    ry="2"
+                                  />
                                   <circle cx="8.5" cy="8.5" r="1.5" />
                                   <polyline points="21 15 16 10 5 21" />
                                 </svg>
-                                <span className="text-gray-400 font-bold text-sm">NO IMAGE</span>
+                                <span className="text-gray-400 font-bold text-sm">
+                                  NO IMAGE
+                                </span>
                               </div>
                             )
-                          )
-                        ) : (
-                          /* Hiển thị text bình thường cho các loại khác */
+                          ) : /* Hiển thị text bình thường cho các loại khác */
                           isActive ? (
                             <div
                               style={{
@@ -1007,12 +1463,20 @@ export default function QuestionItem({
                               }}
                             >
                               <EditableField
-                                placeholder={isRadioType() ? "Answer option" : "Subquestion"}
+                                placeholder={
+                                  isRadioType()
+                                    ? "Answer option"
+                                    : "Subquestion"
+                                }
                                 initialValue={option.text}
                                 inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium"
                                 isTextarea={true}
                                 onChange={(value) =>
-                                  onOptionChange?.(question.id, option.id, value)
+                                  onOptionChange?.(
+                                    question.id,
+                                    option.id,
+                                    value
+                                  )
                                 }
                               />
                             </div>
@@ -1024,8 +1488,9 @@ export default function QuestionItem({
                               }}
                             >
                               <span
-                                className={`text-sm text-gray-700 font-medium ${!option.text ? "italic text-gray-400" : ""
-                                  } inline-block whitespace-normal break-words leading-relaxed opacity-70`}
+                                className={`text-sm text-gray-700 font-medium ${
+                                  !option.text ? "italic text-gray-400" : ""
+                                } inline-block whitespace-normal break-words leading-relaxed opacity-70`}
                                 style={{
                                   width: "300px",
                                   padding: "8px",
@@ -1039,16 +1504,18 @@ export default function QuestionItem({
                                   verticalAlign: "top",
                                 }}
                               >
-                                {option.text || (isRadioType() ? "Answer option" : "Subquestion")}
+                                {option.text ||
+                                  (isRadioType()
+                                    ? "Answer option"
+                                    : "Subquestion")}
                               </span>
                             </div>
-                          )
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
               )
             )}
 
@@ -1067,18 +1534,24 @@ export default function QuestionItem({
             {/* Actions: đặt inline bên dưới nội dung */}
             {isActive && (
               <div className="mt-6 flex items-start justify-between">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddOption?.(question.id);
-                  }}
-                  className="flex items-center text-violet-600 text-sm hover:text-violet-800 transition-colors font-normal ml-[28px]"
-                >
-                  <PlusIcon className="h-5 w-5 mr-1" />
-                  Thêm câu hỏi phụ
-                </button>
+                {!isGenderType() && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddOption?.(question.id);
+                    }}
+                    className="flex items-center text-violet-600 text-sm hover:text-violet-800 transition-colors font-normal ml-[28px]"
+                  >
+                    <PlusIcon className="h-5 w-5 mr-1" />
+                    Thêm câu hỏi phụ
+                  </button>
+                )}
 
-                <div className="flex items-center space-x-1 mt-[70px]">
+                <div
+                  className={`flex items-center space-x-1 ${
+                    isGenderType() ? "ml-auto" : "mt-[70px]"
+                  }`}
+                >
                   <button
                     className="p-1"
                     title="Duplicate"

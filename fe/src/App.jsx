@@ -66,7 +66,7 @@ export default function App() {
   );
 
   // Helper: lấy tất cả questionItems từ tất cả groups (giữ API cũ)
-  const getAllQuestionItems = () => allQuestions;
+  // const getAllQuestionItems = () => allQuestions;
 
   // STATE: Tổng quát
   const [generalSettings, setGeneralSettings] = useState({
@@ -387,6 +387,13 @@ export default function App() {
     if (questionType === "Lựa chọn 5 điểm") {
       return []; // Không cần options cho loại 5 điểm
     }
+    if (questionType === "Giới tính") {
+      return [
+        { id: 1, text: "Nữ" },
+        { id: 2, text: "Nam" },
+        { id: 3, text: "Không có câu trả lời" },
+      ];
+    }
     return [
       { id: 1, text: "" },
       { id: 2, text: "" },
@@ -436,6 +443,17 @@ export default function App() {
         type: questionType,
         options: defaultOptions,
       };
+
+      // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính
+      if (questionType === "Giới tính") {
+        const noAnswerOption = defaultOptions.find(opt => opt.text === "Không có câu trả lời");
+        if (noAnswerOption) {
+          setSelectedAnswers((prev) => ({
+            ...prev,
+            [newId]: noAnswerOption.id,
+          }));
+        }
+      }
 
       setActiveSection(`question-${newId}`);
 
@@ -497,6 +515,19 @@ export default function App() {
         const newQuestions = [...group.questions];
         newQuestions.splice(index + 1, 0, clone);
         setActiveSection(`question-${newId}`);
+        
+        // Copy questionSettings bao gồm ảnh từ câu hỏi gốc
+        const srcSettings = questionSettings[src.id];
+        if (srcSettings) {
+          setQuestionSettings((prevSettings) => ({
+            ...prevSettings,
+            [newId]: {
+              ...srcSettings,
+              questionCode: `Q${String(newId).padStart(3, "0")}`,
+            },
+          }));
+        }
+        
         return { ...group, questions: newQuestions };
       });
     });
@@ -530,6 +561,21 @@ export default function App() {
         title: sourceGroup.title,
         questions: duplicatedQuestions,
       };
+
+      // Copy questionSettings bao gồm ảnh cho tất cả câu hỏi trong group
+      sourceGroup.questions.forEach((question, index) => {
+        const srcSettings = questionSettings[question.id];
+        const newQuestionId = maxQuestionId + index + 1;
+        if (srcSettings) {
+          setQuestionSettings((prevSettings) => ({
+            ...prevSettings,
+            [newQuestionId]: {
+              ...srcSettings,
+              questionCode: `Q${String(newQuestionId).padStart(3, "0")}`,
+            },
+          }));
+        }
+      });
 
       return [...prev, newGroup];
     });
@@ -591,8 +637,8 @@ export default function App() {
     setSelectedAnswers((prev) => {
       const prevValue = prev[questionId];
 
-      // Cho phép chọn nhiều với "Nhiều lựa chọn" và "Lựa chọn 5 điểm"
-      if (questionType === "Nhiều lựa chọn" || questionType === "Lựa chọn 5 điểm") {
+      // Cho phép chọn nhiều với "Nhiều lựa chọn", "Lựa chọn 5 điểm" và "Chọn nhiều hình ảnh"
+      if (questionType === "Nhiều lựa chọn" || questionType === "Lựa chọn 5 điểm" || questionType === "Chọn nhiều hình ảnh") {
         const optionIdStr = String(optionId);
         const prevArray = Array.isArray(prevValue)
           ? prevValue.map(String)
@@ -822,8 +868,27 @@ export default function App() {
 
                         let updated = { ...q, ...newSettings };
                         const newType = newSettings.type || q.type;
+                        const oldType = q.type;
 
-                        if (newType === "Danh sách (nút chọn)") {
+                        // Nếu thay đổi loại câu hỏi, cập nhật options
+                        if (newType !== oldType) {
+                          const defaultOptions = createDefaultOptions(newType);
+                          updated = {
+                            ...updated,
+                            options: defaultOptions,
+                          };
+
+                          // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính
+                          if (newType === "Giới tính") {
+                            const noAnswerOption = defaultOptions.find(opt => opt.text === "Không có câu trả lời");
+                            if (noAnswerOption) {
+                              setSelectedAnswers((prev) => ({
+                                ...prev,
+                                [activeQuestionId]: noAnswerOption.id,
+                              }));
+                            }
+                          }
+                        } else if (newType === "Danh sách (nút chọn)") {
                           const options = updated.options || [];
 
                           const hasNoAnswer = options.some(

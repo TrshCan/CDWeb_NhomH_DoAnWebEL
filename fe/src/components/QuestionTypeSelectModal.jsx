@@ -13,6 +13,7 @@ import {
   TextIcon,
   NumberIcon,
   SearchIcon,
+  GridIcon,
 } from "../icons";
 
 const allModalOptions = [
@@ -24,8 +25,6 @@ const allModalOptions = [
       "Danh sách có nhận xét (Radio)",
       "Chọn hình ảnh từ danh sách (Radio)",
       "Lựa chọn 5 điểm",
-      "Danh sách thả xuống",
-      "Nút lựa chọn đơn",
     ],
   },
   {
@@ -33,22 +32,26 @@ const allModalOptions = [
     icon: <ListIcon />,
     options: [
       "Nhiều lựa chọn",
-      "Nhiều lựa chọn với ý kiến",
-      "Nút lựa chọn nhiều",
+      "Chọn nhiều hình ảnh",
     ],
   },
   {
     title: "Xếp hạng & Đánh giá",
     icon: <SortIcon />,
-    options: ["Xếp hạng năng cao", "Có/Không"],
+    options: ["Có/Không", "Giới tính"],
   },
-  { title: "Ngày & dữ liệu", icon: <CalendarIcon />, options: ["Ngày giờ"] },
+  { title: "Ngày & dữ liệu", icon: <CalendarIcon />, options: ["Ngày giờ", "Tải lên tệp"] },
   {
     title: "Văn bản",
     icon: <TextIcon />,
     options: ["Văn bản ngắn", "Văn bản dài"],
   },
   { title: "Số", icon: <NumberIcon />, options: ["Đầu vào dạng số"] },
+  {
+    title: "Mảng",
+    icon: <GridIcon />,
+    options: ["Ma trận (chọn điểm)"],
+  },
 ];
 
 export default function QuestionTypeSelectModal({
