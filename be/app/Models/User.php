@@ -86,6 +86,19 @@ class User extends Authenticatable implements MustVerifyEmail
             ->with('badge');
     }
 
+    // Permissions của user (user_permissions)
+    public function userPermissions()
+    {
+        return $this->hasMany(UserPermission::class, 'user_id');
+    }
+
+    // Permissions thông qua relationship many-to-many
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class, 'user_permissions')
+            ->withPivot(['granted_at', 'granted_by']);
+    }
+
     // ============================
     // 🔹 HELPER / LOGIC METHODS
     // ============================

@@ -55,8 +55,10 @@ class UserServices
             ]);
         }
 
-        // Tạo token ngẫu nhiên (ví dụ token tạm, chưa phải JWT)
+        // Tạo token ngẫu nhiên và lưu vào remember_token
         $token = Str::random(60);
+        $user->remember_token = $token;
+        $user->save();
 
         return [
             'token' => $token,

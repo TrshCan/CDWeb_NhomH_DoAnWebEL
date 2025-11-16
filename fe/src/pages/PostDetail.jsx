@@ -149,8 +149,14 @@ export default function PostDetail() {
       if (mediaInput) mediaInput.value = "";
     } catch (err) {
       console.error("Failed to create comment:", err);
-      const errorMessage = err?.response?.data?.errors?.[0]?.message || err?.message || "Failed to post comment.";
-      toast.error(errorMessage);
+      const errorMessage = err?.response?.data?.errors?.[0]?.message || err?.message || "Không thể đăng bình luận.";
+      
+      // Kiểm tra nếu là lỗi permission
+      if (errorMessage.includes('không có quyền') || errorMessage.includes('permission') || errorMessage.includes('quyền')) {
+        toast.error(errorMessage);
+      } else {
+        toast.error(errorMessage || "Không thể đăng bình luận. Vui lòng thử lại.");
+      }
     }
   };
 

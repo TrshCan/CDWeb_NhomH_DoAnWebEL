@@ -1,0 +1,30 @@
+type Permission {
+  id: ID!
+  name: String!
+  description: String
+  created_at: DateTime
+  updated_at: DateTime
+}
+
+type PermissionGroup {
+  name: String!
+  permissions: [Permission!]!
+}
+
+type RolePermission {
+  role: String!
+  permission_ids: [Int!]!
+}
+
+type UserPermission {
+  user_id: Int!
+  permission_ids: [Int!]!
+}
+
+type UserOption {
+  id: ID!
+  name: String!
+  email: String!
+  role: String!
+}
+

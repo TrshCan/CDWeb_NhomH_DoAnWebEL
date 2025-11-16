@@ -101,10 +101,25 @@ class DatabaseSeeder extends Seeder
         }
 
         // ===== Permissions =====
-        for ($i = 1; $i <= 10; $i++) {
+        $permissions = [
+            // Bài viết
+            ['name' => 'create_post', 'description' => 'Tạo bài viết'],
+            ['name' => 'comment_post', 'description' => 'Bình luận'],
+            ['name' => 'delete_post', 'description' => 'Xóa bài viết'],
+            ['name' => 'like_post', 'description' => 'Thích bài viết'],
+            // Người dùng
+            ['name' => 'edit_profile', 'description' => 'Sửa hồ sơ'],
+            ['name' => 'change_avatar', 'description' => 'Đổi avatar'],
+            // Hệ thống
+            ['name' => 'view_dashboard', 'description' => 'Xem dashboard'],
+            ['name' => 'manage_users', 'description' => 'Quản lý người dùng'],
+            ['name' => 'manage_permissions', 'description' => 'Phân quyền'],
+        ];
+
+        foreach ($permissions as $permission) {
             DB::table('permissions')->insert([
-                'name' => "permission_$i",
-                'description' => "Permission number $i",
+                'name' => $permission['name'],
+                'description' => $permission['description'],
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
