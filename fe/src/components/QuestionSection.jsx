@@ -87,6 +87,9 @@ export default function QuestionSection({
         newItem.image !== prevItem.image || // ✅ Quan trọng: so sánh image
         newItem.type !== prevItem.type ||
         newItem.required !== prevItem.required ||
+        newItem.maxQuestions !== prevItem.maxQuestions || // ✅ So sánh maxQuestions
+        newItem.allowedFileTypes !== prevItem.allowedFileTypes || // ✅ So sánh allowedFileTypes
+        newItem.maxFileSizeKB !== prevItem.maxFileSizeKB || // ✅ So sánh maxFileSizeKB
         JSON.stringify(newItem.options) !== JSON.stringify(prevItem.options)) {
         hasChanges = true;
         break;

@@ -59,6 +59,9 @@ export default function QuestionSettingsPanel({
     image = null,
     conditions = [],
     defaultScenario = 1,
+    maxQuestions = 1,
+    allowedFileTypes = "png, gif, doc, odt, jpg, jpeg, pdf",
+    maxFileSizeKB = 10241,
   } = value;
 
 
@@ -183,6 +186,68 @@ export default function QuestionSettingsPanel({
               }
             />
           </div>
+
+          {/* File Upload Settings - chỉ hiển thị cho loại "Tải lên tệp" */}
+          {type === "Tải lên tệp" && (
+            <>
+              {/* Số lượng tệp cho phép */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-900">
+                  Số lượng tệp cho phép
+                </label>
+                <input
+                  type="number"
+                  value={maxQuestions}
+                  onChange={(e) =>
+                    onChange?.({
+                      ...value,
+                      maxQuestions: parseInt(e.target.value) || 1,
+                    })
+                  }
+                  min="1"
+                  className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Loại tập tin được cho phép */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-900">
+                  Loại tập tin được cho phép
+                </label>
+                <input
+                  type="text"
+                  value={allowedFileTypes}
+                  onChange={(e) =>
+                    onChange?.({
+                      ...value,
+                      allowedFileTypes: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="png, gif, doc, odt, jpg, jpeg, pdf"
+                />
+              </div>
+
+              {/* Kích thước tệp tối đa (kB) */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-900">
+                  Kích thước tệp tối đa (kB)
+                </label>
+                <input
+                  type="number"
+                  value={maxFileSizeKB}
+                  onChange={(e) =>
+                    onChange?.({
+                      ...value,
+                      maxFileSizeKB: parseInt(e.target.value) || 10241,
+                    })
+                  }
+                  min="1"
+                  className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
+            </>
+          )}
 
           {/* Add Image */}
           <div>

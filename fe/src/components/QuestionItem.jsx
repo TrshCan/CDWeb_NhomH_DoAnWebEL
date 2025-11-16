@@ -39,6 +39,11 @@ export default function QuestionItem({
   // Ref cho date picker input (ẩn)
   const datePickerRef = useRef(null);
 
+  // State cho file upload
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isFileDragging, setIsFileDragging] = useState(false);
+  const [fileUploadError, setFileUploadError] = useState("");
+
   // Chuyển đổi từ YYYY-MM-DD sang MM/DD/YYYY
   const formatDateForDisplay = (dateString) => {
     if (!dateString) return "";
@@ -152,6 +157,144 @@ export default function QuestionItem({
     }
   };
 
+  // Validation file upload
+  const validateFile = (file, currentFileCount = 0) => {
+    if (!file) {
+      return { valid: false, error: "Vui lòng chọn một tệp" };
+    }
+
+    // Lấy settings từ question object
+    const maxFileCount = question?.maxQuestions || 1;
+    const allowedFileTypes = question?.allowedFileTypes || "png, gif, doc, odt, jpg, jpeg, pdf";
+    const maxFileSizeKB = question?.maxFileSizeKB || 10241;
+
+    // Kiểm tra số lượng file
+    if (currentFileCount >= maxFileCount) {
+      return {
+        valid: false,
+        error: `Đã đạt giới hạn số lượng tệp cho phép (${maxFileCount} tệp). Vui lòng xóa một tệp trước khi thêm mới.`,
+      };
+    }
+
+    // Kiểm tra extension
+    const allowedExtensions = allowedFileTypes.split(",").map(ext => ext.trim().toLowerCase());
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+    
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      return {
+        valid: false,
+        error: `Loại tệp không được phép. Chỉ chấp nhận: ${allowedExtensions.join(", ").toUpperCase()}`,
+      };
+    }
+
+    // Kiểm tra kích thước
+    const maxSizeBytes = maxFileSizeKB * 1024;
+    const fileSizeKB = file.size / 1024;
+
+    if (file.size > maxSizeBytes) {
+      return {
+        valid: false,
+        error: `Kích thước tệp quá lớn. Kích thước tối đa: ${maxFileSizeKB} KB (Hiện tại: ${fileSizeKB.toFixed(2)} KB)`,
+      };
+    }
+
+    return { valid: true, error: "" };
+  };
+
+  // Xử lý khi chọn file
+  const handleFileSelect = (file) => {
+    if (!file) return;
+
+    // Validate file với số lượng file hiện tại
+    const validation = validateFile(file, uploadedFiles.length);
+    if (!validation.valid) {
+      setFileUploadError(validation.error);
+      return;
+    }
+
+    // Clear error nếu file hợp lệ
+    setFileUploadError("");
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const fileData = {
+        id: Date.now() + Math.random(), // Tạo ID duy nhất cho file
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        data: event.target.result, // Base64 string
+      };
+      
+      // Thêm file vào array
+      const newFiles = [...uploadedFiles, fileData];
+      setUploadedFiles(newFiles);
+      
+      // Lưu array file data vào selectedAnswer
+      onAnswerSelect?.(question.id, JSON.stringify(newFiles), question.type);
+    };
+    reader.onerror = () => {
+      setFileUploadError("Lỗi khi đọc tệp. Vui lòng thử lại.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Xóa file
+  const handleRemoveFile = (fileId) => {
+    const newFiles = uploadedFiles.filter(f => f.id !== fileId);
+    setUploadedFiles(newFiles);
+    setFileUploadError("");
+    
+    // Lưu array mới vào selectedAnswer
+    if (newFiles.length > 0) {
+      onAnswerSelect?.(question.id, JSON.stringify(newFiles), question.type);
+    } else {
+      onAnswerSelect?.(question.id, "", question.type);
+    }
+  };
+
+  // Xử lý khi click vào vùng upload
+  const handleFileUploadClick = (e) => {
+    e.stopPropagation();
+    const input = document.createElement("input");
+    input.type = "file";
+    // Chỉ cho phép các loại file được phép từ settings
+    const allowedFileTypes = question?.allowedFileTypes || "png, gif, doc, odt, jpg, jpeg, pdf";
+    const acceptExtensions = allowedFileTypes.split(",").map(ext => `.${ext.trim()}`).join(",");
+    input.accept = acceptExtensions;
+    input.onchange = (e) => {
+      const file = e.target.files?.[0];
+      handleFileSelect(file);
+    };
+    input.click();
+  };
+
+  // Xử lý drag over
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsFileDragging(true);
+  };
+
+  // Xử lý drag leave
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsFileDragging(false);
+  };
+
+  // Xử lý drop file
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsFileDragging(false);
+    
+    const files = Array.from(e.dataTransfer?.files || []);
+    // Chỉ xử lý file đầu tiên nếu drop nhiều file
+    if (files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  };
+
   // Sync dateInputValue với selectedAnswer khi selectedAnswer thay đổi
   React.useEffect(() => {
     if (question.type === "Ngày giờ") {
@@ -163,8 +306,42 @@ export default function QuestionItem({
       } else if (datePickerRef.current && !selectedAnswer) {
         datePickerRef.current.value = "";
       }
+    } else if (question.type === "Tải lên tệp") {
+      // Sync uploadedFiles với selectedAnswer
+      if (selectedAnswer) {
+        try {
+          const parsed = JSON.parse(selectedAnswer);
+          // Kiểm tra xem là array hay object đơn
+          if (Array.isArray(parsed)) {
+            setUploadedFiles(parsed);
+          } else {
+            // Nếu là object đơn (format cũ), chuyển thành array
+            setUploadedFiles([parsed]);
+          }
+          setFileUploadError("");
+        } catch {
+          // Nếu không phải JSON, reset
+          setUploadedFiles([]);
+          setFileUploadError("");
+        }
+      } else {
+        setUploadedFiles([]);
+        setFileUploadError("");
+      }
     }
   }, [selectedAnswer, question.type]);
+
+  // Clear error khi maxQuestions thay đổi (để validation mới có thể chạy lại)
+  React.useEffect(() => {
+    if (question.type === "Tải lên tệp") {
+      // Clear error liên quan đến số lượng khi maxQuestions thay đổi
+      // Validation sẽ được chạy lại khi user thử upload file mới
+      if (fileUploadError && fileUploadError.includes("giới hạn số lượng")) {
+        setFileUploadError("");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question?.maxQuestions, question.type]);
 
   // ✅ Helper: kiểm tra xem option có đang được chọn không
   const isOptionChecked = (selectedAnswer, optionId) => {
@@ -209,6 +386,11 @@ export default function QuestionItem({
   // ✅ Helper: kiểm tra xem có phải loại Ngày giờ không
   const isDateTimeType = () => {
     return question.type === "Ngày giờ";
+  };
+
+  // ✅ Helper: kiểm tra xem có phải loại Tải lên tệp không
+  const isFileUploadType = () => {
+    return question.type === "Tải lên tệp";
   };
 
   // ✅ Handler: Upload ảnh cho option
@@ -835,6 +1017,131 @@ export default function QuestionItem({
                     </button>
                   </div>
                 </div>
+              ) : isFileUploadType() ? (
+                /* UI đặc biệt cho loại Tải lên tệp */
+                <div className="ml-[28px]">
+                  <div
+                    className={`border-2 border-dashed rounded-md transition-colors cursor-pointer ${
+                      isFileDragging
+                        ? "border-violet-500 bg-violet-50"
+                        : "border-gray-400 bg-gray-50 hover:bg-gray-100"
+                    }`}
+                    style={{
+                      width: "100%",
+                      minHeight: "200px",
+                      padding: "40px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    onClick={handleFileUploadClick}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {uploadedFiles.length > 0 ? (
+                      <div className="flex flex-col items-center space-y-3 w-full">
+                        {uploadedFiles.map((file) => (
+                          <div
+                            key={file.id}
+                            className="flex items-center space-x-3 bg-white rounded-md p-4 border-2 border-gray-300 w-full max-w-md"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32"
+                              height="32"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              className="text-gray-600"
+                            >
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                              <line x1="16" y1="13" x2="8" y2="13" />
+                              <line x1="16" y1="17" x2="8" y2="17" />
+                              <polyline points="10 9 9 9 8 9" />
+                            </svg>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">
+                                {file.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {(file.size / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
+                            {(isActive || !isActive) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveFile(file.id);
+                                }}
+                                className="text-red-500 hover:text-red-700 transition-colors"
+                                title="Xóa file"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="20"
+                                  height="20"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <line x1="18" y1="6" x2="6" y2="18" />
+                                  <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {!isActive && uploadedFiles.length < (question?.maxQuestions || 1) && (
+                          <button
+                            onClick={handleFileUploadClick}
+                            className="text-sm text-violet-600 hover:text-violet-800 font-medium"
+                          >
+                            Thêm tệp khác
+                          </button>
+                        )}
+                        {uploadedFiles.length >= (question?.maxQuestions || 1) && (
+                          <p className="text-xs text-gray-500 italic">
+                            Đã đạt giới hạn ({question?.maxQuestions || 1} tệp)
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center space-y-3">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="48"
+                          height="48"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="text-gray-400"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        <p className="text-sm text-gray-600 font-medium">
+                          Chọn tệp hoặc kéo hình ảnh vào đây
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Định dạng: {(question?.allowedFileTypes || "png, gif, doc, odt, jpg, jpeg, pdf").toUpperCase()} • Kích thước tối đa: {question?.maxFileSizeKB || 10241} KB • Số lượng tối đa: {question?.maxQuestions || 1} tệp
+                        </p>
+                      </div>
+                    )}
+                    {fileUploadError && (
+                      <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2 w-full max-w-md">
+                        {fileUploadError}
+                      </div>
+                    )}
+                  </div>
+                </div>
               ) : (
                 /* Danh sách đáp án */
                 options.length > 0 && (
@@ -1265,7 +1572,7 @@ export default function QuestionItem({
               {/* Actions: thu theo nội dung (không absolute) */}
               {isActive && (
                 <div className="mt-6 flex items-start justify-between">
-                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && (
+                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1280,7 +1587,7 @@ export default function QuestionItem({
 
                   <div
                     className={`flex items-center space-x-1 ${
-                      isGenderType() || isYesNoType() || isDateTimeType()
+                      isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType()
                         ? "ml-auto"
                         : "mt-[45px]"
                     }`}
@@ -1709,6 +2016,128 @@ export default function QuestionItem({
                   </button>
                 </div>
               </div>
+            ) : isFileUploadType() ? (
+              /* UI đặc biệt cho loại Tải lên tệp */
+              <div className="ml-[28px]">
+                <div
+                  className={`border-2 border-dashed rounded-md transition-colors cursor-pointer ${
+                    isFileDragging
+                      ? "border-violet-500 bg-violet-50"
+                      : "border-gray-400 bg-gray-50 hover:bg-gray-100"
+                  }`}
+                  style={{
+                    width: "100%",
+                    minHeight: "200px",
+                    padding: "40px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  onClick={handleFileUploadClick}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  {uploadedFiles.length > 0 ? (
+                    <div className="flex flex-col items-center space-y-3 w-full">
+                      {uploadedFiles.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center space-x-3 bg-white rounded-md p-4 border-2 border-gray-300 w-full max-w-md"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="32"
+                            height="32"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="text-gray-600"
+                          >
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
+                          </svg>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {(file.size / 1024).toFixed(2)} KB
+                            </p>
+                          </div>
+                          {(isActive || !isActive) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveFile(file.id);
+                              }}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                              title="Xóa file"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {!isActive && uploadedFiles.length < (question?.maxQuestions || 1) && (
+                        <button
+                          onClick={handleFileUploadClick}
+                          className="text-sm text-violet-600 hover:text-violet-800 font-medium"
+                        >
+                          Thêm tệp khác
+                        </button>
+                      )}
+                      {uploadedFiles.length >= (question?.maxQuestions || 1) && (
+                        <p className="text-xs text-gray-500 italic">
+                          Đã đạt giới hạn ({question?.maxQuestions || 1} tệp)
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center space-y-3">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="48"
+                        height="48"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="text-gray-400"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      <p className="text-sm text-gray-600 font-medium">
+                        Chọn tệp hoặc kéo hình ảnh vào đây
+                      </p>
+                    </div>
+                  )}
+                  {fileUploadError && (
+                    <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2 w-full max-w-md">
+                      {fileUploadError}
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : (
               /* Danh sách đáp án */
               options.length > 0 && (
@@ -2134,7 +2563,7 @@ export default function QuestionItem({
             {/* Actions: đặt inline bên dưới nội dung */}
             {isActive && (
               <div className="mt-6 flex items-start justify-between">
-                {!isGenderType() && !isYesNoType() && !isDateTimeType() && (
+                {!isGenderType() && !isYesNoType() && !isDateTimeType() && !isFileUploadType() && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -2149,7 +2578,7 @@ export default function QuestionItem({
 
                 <div
                   className={`flex items-center space-x-1 ${
-                    isGenderType() || isYesNoType() || isDateTimeType()
+                    isGenderType() || isYesNoType() || isDateTimeType() || isFileUploadType()
                       ? "ml-auto"
                       : "mt-[70px]"
                   }`}

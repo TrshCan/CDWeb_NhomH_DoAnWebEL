@@ -313,14 +313,24 @@ export default function App() {
         const question = allQuestions.find(
           (q) => String(q.id) === String(questionId)
         );
+        const questionType = question?.type || "Danh sách (nút chọn)";
+        const baseSettings = {
+          questionCode: `Q${String(questionId).padStart(3, "0")}`,
+          type: questionType,
+          required: "soft",
+          image: null,
+        };
+        
+        // Thêm settings cho loại "Tải lên tệp"
+        if (questionType === "Tải lên tệp") {
+          baseSettings.maxQuestions = 1;
+          baseSettings.allowedFileTypes = "png, gif, doc, odt, jpg, jpeg, pdf";
+          baseSettings.maxFileSizeKB = 10241;
+        }
+        
         setQuestionSettings((prev) => ({
           ...prev,
-          [questionId]: {
-            questionCode: `Q${String(questionId).padStart(3, "0")}`,
-            type: question?.type || "Danh sách (nút chọn)",
-            required: "soft",
-            image: null,
-          },
+          [questionId]: baseSettings,
         }));
       }
     } else {
@@ -862,9 +872,26 @@ export default function App() {
               <QuestionSettingsPanel
                 value={questionSettings[activeQuestionId] || {}}
                 onChange={(newSettings) => {
+                  const newType = newSettings.type;
+                  const prevSettings = questionSettings[activeQuestionId] || {};
+                  const oldType = prevSettings.type;
+                  
+                  // Xử lý file upload settings khi thay đổi type
+                  let finalSettings = { ...newSettings };
+                  if (newType === "Tải lên tệp" && oldType !== "Tải lên tệp") {
+                    // Thêm settings mặc định cho file upload
+                    finalSettings.maxQuestions = 1;
+                    finalSettings.allowedFileTypes = "png, gif, doc, odt, jpg, jpeg, pdf";
+                    finalSettings.maxFileSizeKB = 10241;
+                  } else if (newType !== "Tải lên tệp" && oldType === "Tải lên tệp") {
+                    // Xóa settings file upload khi chuyển sang loại khác
+                    const { maxQuestions, allowedFileTypes, maxFileSizeKB, ...rest } = finalSettings;
+                    finalSettings = rest;
+                  }
+                  
                   setQuestionSettings((prev) => ({
                     ...prev,
-                    [activeQuestionId]: newSettings,
+                    [activeQuestionId]: finalSettings,
                   }));
 
                   setQuestionGroups((prevGroups) =>
@@ -873,20 +900,20 @@ export default function App() {
                       questions: group.questions.map((q) => {
                         if (String(q.id) !== String(activeQuestionId)) return q;
 
-                        let updated = { ...q, ...newSettings };
-                        const newType = newSettings.type || q.type;
-                        const oldType = q.type;
+                        let updated = { ...q, ...finalSettings };
+                        const questionNewType = finalSettings.type || q.type;
+                        const questionOldType = q.type;
 
                         // Nếu thay đổi loại câu hỏi, cập nhật options
-                        if (newType !== oldType) {
-                          const defaultOptions = createDefaultOptions(newType);
+                        if (questionNewType !== questionOldType) {
+                          const defaultOptions = createDefaultOptions(questionNewType);
                           updated = {
                             ...updated,
                             options: defaultOptions,
                           };
 
                           // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính và Có/Không
-                          if (newType === "Giới tính" || newType === "Có/Không") {
+                          if (questionNewType === "Giới tính" || questionNewType === "Có/Không") {
                             const noAnswerOption = defaultOptions.find(opt => opt.text === "Không có câu trả lời");
                             if (noAnswerOption) {
                               setSelectedAnswers((prev) => ({
@@ -895,7 +922,7 @@ export default function App() {
                               }));
                             }
                           }
-                        } else if (newType === "Danh sách (nút chọn)") {
+                        } else if (questionNewType === "Danh sách (nút chọn)") {
                           const options = updated.options || [];
 
                           const hasNoAnswer = options.some(
