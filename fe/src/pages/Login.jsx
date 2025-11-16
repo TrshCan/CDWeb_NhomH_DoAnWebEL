@@ -120,7 +120,8 @@ function LoginForm() {
       } else if (response.errors) {
         // Mutation bị lỗi
         console.error("GraphQL errors:", response.errors);
-        setMessage(response.errors[0].message);
+        const errorMessage = response.errors[0].message;
+        setMessage(errorMessage);
       } else {
         // Network error hoặc response không mong muốn
         setMessage("Có lỗi xảy ra, vui lòng thử lại");
@@ -144,7 +145,13 @@ function LoginForm() {
       {/* Thông báo */}
       {message && (
         <div
-          className="p-3 mb-4 text-sm font-medium text-green-800 bg-green-100 rounded-lg"
+          className={`p-3 mb-4 text-sm font-medium rounded-lg ${
+            message.includes("thành công")
+              ? "text-green-800 bg-green-100"
+              : message.includes("bị cấm") || message.includes("cấm")
+              ? "text-red-800 bg-red-100 border border-red-300"
+              : "text-red-800 bg-red-100"
+          }`}
           role="alert"
         >
           {message}
