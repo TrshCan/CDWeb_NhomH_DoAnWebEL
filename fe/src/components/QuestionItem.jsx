@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import EditableField from "./EditableField";
-import { PlusIcon, DuplicateIcon, TrashIcon } from "../icons";
+import { PlusIcon, DuplicateIcon, TrashIcon, CalendarIcon } from "../icons";
 import FivePointScale from "./FivePointScale";
 
 export default function QuestionItem({
@@ -32,6 +32,139 @@ export default function QuestionItem({
   // State cho drag and drop
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  // State cho date input
+  const [dateInputValue, setDateInputValue] = useState("");
+  
+  // Ref cho date picker input (ẩn)
+  const datePickerRef = useRef(null);
+
+  // Chuyển đổi từ YYYY-MM-DD sang MM/DD/YYYY
+  const formatDateForDisplay = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+
+  // Chuyển đổi từ MM/DD/YYYY sang YYYY-MM-DD
+  const formatDateForStorage = (dateString) => {
+    if (!dateString || dateString.length !== 10) return "";
+    const parts = dateString.split("/");
+    if (parts.length !== 3) return "";
+    const month = parts[0];
+    const day = parts[1];
+    const year = parts[2];
+
+    // Validate
+    const monthNum = parseInt(month, 10);
+    const dayNum = parseInt(day, 10);
+    const yearNum = parseInt(year, 10);
+
+    if (monthNum < 1 || monthNum > 12) return "";
+    if (dayNum < 1 || dayNum > 31) return "";
+    if (yearNum < 1900 || yearNum > 2100) return "";
+
+    // Check valid date
+    const date = new Date(yearNum, monthNum - 1, dayNum);
+    if (
+      date.getFullYear() !== yearNum ||
+      date.getMonth() !== monthNum - 1 ||
+      date.getDate() !== dayNum
+    ) {
+      return "";
+    }
+
+    return `${year}-${month}-${day}`;
+  };
+
+  // Xử lý input với mask MM/DD/YYYY - tự động thêm dấu /
+  const handleDateInputChange = (e) => {
+    const inputValue = e.target.value;
+    
+    // Lấy chỉ số từ input (loại bỏ tất cả ký tự không phải số)
+    let value = inputValue.replace(/[^0-9]/g, ""); // Chỉ lấy số
+    
+    // Giới hạn tối đa 8 số (MMDDYYYY)
+    if (value.length > 8) {
+      value = value.substring(0, 8);
+    }
+    
+    // Format: tự động thêm dấu / sau 2 số và sau 4 số
+    let formatted = value;
+    if (value.length > 2) {
+      formatted = value.substring(0, 2) + "/" + value.substring(2);
+    }
+    if (value.length > 4) {
+      formatted = value.substring(0, 2) + "/" + value.substring(2, 4) + "/" + value.substring(4);
+    }
+
+    setDateInputValue(formatted);
+
+    // Nếu đủ 8 số (MMDDYYYY), chuyển đổi và lưu
+    if (value.length === 8) {
+      const dateString = value.substring(0, 2) + "/" + value.substring(2, 4) + "/" + value.substring(4, 8);
+      const dateForStorage = formatDateForStorage(dateString);
+      if (dateForStorage) {
+        onAnswerSelect?.(question.id, dateForStorage, question.type);
+        // Cập nhật date picker input
+        if (datePickerRef.current) {
+          datePickerRef.current.value = dateForStorage;
+        }
+      }
+    } else {
+      // Nếu chưa đủ, xóa giá trị đã chọn
+      onAnswerSelect?.(question.id, "", question.type);
+      if (datePickerRef.current) {
+        datePickerRef.current.value = "";
+      }
+    }
+  };
+
+  // Mở date picker khi click vào icon calendar
+  const openDatePicker = (e) => {
+    e.stopPropagation();
+    if (datePickerRef.current) {
+      if (typeof datePickerRef.current.showPicker === "function") {
+        datePickerRef.current.showPicker();
+      } else {
+        datePickerRef.current.focus();
+        datePickerRef.current.click();
+      }
+    }
+  };
+
+  // Xử lý khi chọn ngày từ date picker
+  const handleDatePickerChange = (e) => {
+    const selectedDate = e.target.value; // Format: YYYY-MM-DD
+    if (selectedDate) {
+      // Chuyển đổi từ YYYY-MM-DD sang MM/DD/YYYY để hiển thị
+      const formatted = formatDateForDisplay(selectedDate);
+      setDateInputValue(formatted);
+      // Lưu giá trị YYYY-MM-DD
+      onAnswerSelect?.(question.id, selectedDate, question.type);
+    } else {
+      setDateInputValue("");
+      onAnswerSelect?.(question.id, "", question.type);
+    }
+  };
+
+  // Sync dateInputValue với selectedAnswer khi selectedAnswer thay đổi
+  React.useEffect(() => {
+    if (question.type === "Ngày giờ") {
+      const formatted = formatDateForDisplay(selectedAnswer);
+      setDateInputValue(formatted || "");
+      // Sync date picker input
+      if (datePickerRef.current && selectedAnswer) {
+        datePickerRef.current.value = selectedAnswer;
+      } else if (datePickerRef.current && !selectedAnswer) {
+        datePickerRef.current.value = "";
+      }
+    }
+  }, [selectedAnswer, question.type]);
 
   // ✅ Helper: kiểm tra xem option có đang được chọn không
   const isOptionChecked = (selectedAnswer, optionId) => {
@@ -71,6 +204,11 @@ export default function QuestionItem({
   // ✅ Helper: kiểm tra xem có phải loại Có/Không không
   const isYesNoType = () => {
     return question.type === "Có/Không";
+  };
+
+  // ✅ Helper: kiểm tra xem có phải loại Ngày giờ không
+  const isDateTimeType = () => {
+    return question.type === "Ngày giờ";
   };
 
   // ✅ Handler: Upload ảnh cho option
@@ -628,6 +766,75 @@ export default function QuestionItem({
                     );
                   })}
                 </div>
+              ) : isDateTimeType() ? (
+                /* UI đặc biệt cho loại Ngày giờ */
+                <div className="ml-[28px]">
+                  <div
+                    className="relative"
+                    style={{ width: "326px", height: "43px" }}
+                  >
+                    {/* Input ẩn cho date picker */}
+                    <input
+                      ref={datePickerRef}
+                      type="date"
+                      style={{
+                        position: "absolute",
+                        opacity: 0,
+                        pointerEvents: "none",
+                        width: 0,
+                        height: 0,
+                        overflow: "hidden",
+                      }}
+                      onChange={handleDatePickerChange}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <input
+                      type="text"
+                      className="border-[3px] border-gray-400 rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none uppercase"
+                      style={{
+                        width: "326px",
+                        height: "43px",
+                        paddingRight: "40px",
+                        fontSize: "14px",
+                        letterSpacing: "0.5px",
+                      }}
+                      placeholder="MM/DD/YYYY"
+                      value={dateInputValue}
+                      onChange={handleDateInputChange}
+                      onClick={(e) => e.stopPropagation()}
+                      maxLength={10}
+                    />
+                    <button
+                      type="button"
+                      aria-label="Open date picker"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded hover:bg-gray-100 transition-colors pointer-events-auto"
+                      onClick={openDatePicker}
+                      style={{
+                        width: "24px",
+                        height: "24px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="text-gray-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        style={{ width: "24px", height: "24px" }}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               ) : (
                 /* Danh sách đáp án */
                 options.length > 0 && (
@@ -1058,7 +1265,7 @@ export default function QuestionItem({
               {/* Actions: thu theo nội dung (không absolute) */}
               {isActive && (
                 <div className="mt-6 flex items-start justify-between">
-                  {!isGenderType() && !isYesNoType() && (
+                  {!isGenderType() && !isYesNoType() && !isDateTimeType() && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1073,7 +1280,9 @@ export default function QuestionItem({
 
                   <div
                     className={`flex items-center space-x-1 ${
-                      isGenderType() || isYesNoType() ? "ml-auto" : "mt-[45px]"
+                      isGenderType() || isYesNoType() || isDateTimeType()
+                        ? "ml-auto"
+                        : "mt-[45px]"
                     }`}
                   >
                     <button
@@ -1430,6 +1639,75 @@ export default function QuestionItem({
                     </button>
                   );
                 })}
+              </div>
+            ) : isDateTimeType() ? (
+              /* UI đặc biệt cho loại Ngày giờ */
+              <div className="ml-[28px]">
+                <div
+                  className="relative"
+                  style={{ width: "326px", height: "43px" }}
+                >
+                  {/* Input ẩn cho date picker */}
+                  <input
+                    ref={datePickerRef}
+                    type="date"
+                    style={{
+                      position: "absolute",
+                      opacity: 0,
+                      pointerEvents: "none",
+                      width: 0,
+                      height: 0,
+                      overflow: "hidden",
+                    }}
+                    onChange={handleDatePickerChange}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <input
+                    type="text"
+                    className="border-[3px] border-gray-400 rounded-md px-3 py-2 font-semibold text-gray-800 focus:outline-none uppercase"
+                    style={{
+                      width: "326px",
+                      height: "43px",
+                      paddingRight: "40px",
+                      fontSize: "14px",
+                      letterSpacing: "0.5px",
+                    }}
+                    placeholder="MM/DD/YYYY"
+                    value={dateInputValue}
+                    onChange={handleDateInputChange}
+                    onClick={(e) => e.stopPropagation()}
+                    maxLength={10}
+                  />
+                  <button
+                    type="button"
+                    aria-label="Open date picker"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded hover:bg-gray-100 transition-colors pointer-events-auto"
+                    onClick={openDatePicker}
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="text-gray-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      style={{ width: "24px", height: "24px" }}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ) : (
               /* Danh sách đáp án */
@@ -1856,7 +2134,7 @@ export default function QuestionItem({
             {/* Actions: đặt inline bên dưới nội dung */}
             {isActive && (
               <div className="mt-6 flex items-start justify-between">
-                {!isGenderType() && !isYesNoType() && (
+                {!isGenderType() && !isYesNoType() && !isDateTimeType() && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1871,7 +2149,9 @@ export default function QuestionItem({
 
                 <div
                   className={`flex items-center space-x-1 ${
-                    isGenderType() || isYesNoType() ? "ml-auto" : "mt-[70px]"
+                    isGenderType() || isYesNoType() || isDateTimeType()
+                      ? "ml-auto"
+                      : "mt-[70px]"
                   }`}
                 >
                   <button
