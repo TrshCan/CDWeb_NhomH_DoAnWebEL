@@ -1,0 +1,54 @@
+type Deadline {
+  id: ID!
+  title: String!
+  deadline_date: String!
+  details: String
+  created_by: Int!
+  created_at: String
+  deleted_at: String
+}
+
+input DeadlineInput {
+  title: String!
+  deadline_date: String!
+  details: String
+}
+
+input DeadlineFilterInput {
+  title: String
+  deadline_date: String
+  details: String
+  include_deleted: Boolean
+}
+
+type PaginatedDeadlines {
+  data: [Deadline!]!
+  current_page: Int!
+  last_page: Int!
+  total: Int!
+}
+
+type Query {
+  getPaginatedDeadlines(perPage: Int, page: Int, includeDeleted: Boolean): PaginatedDeadlines
+    @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@getPaginatedDeadlines")
+
+  searchDeadlines(filter: DeadlineFilterInput, perPage: Int, page: Int): PaginatedDeadlines
+    @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@searchDeadlines")
+
+  getDeadlineById(id: ID!): Deadline
+    @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@getDeadlineById")
+}
+
+type Mutation {
+  createDeadline(input: DeadlineInput!): Deadline
+    @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@createDeadline")
+
+  updateDeadline(id: ID!, input: DeadlineInput!): Deadline
+    @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@updateDeadline")
+
+  deleteDeadline(id: ID!): Boolean
+    @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@deleteDeadline")
+
+  restoreDeadline(id: ID!): Boolean
+    @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@restoreDeadline")
+}
