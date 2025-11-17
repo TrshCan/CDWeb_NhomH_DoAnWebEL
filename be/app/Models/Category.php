@@ -2,17 +2,23 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Category extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['id', 'name'];
-    protected $keyType = 'int';
-    public $incrementing = false; // PK smallint tự set, nhưng không auto-increment theo migration
+    protected $fillable = [
+        'id',
+        'name',
+    ];
+
+    public $incrementing = false;
+    protected $keyType = 'integer';
+
+    // Relationships
     public function surveys()
     {
         return $this->hasMany(Survey::class, 'categories_id');

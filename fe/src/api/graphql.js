@@ -1,7 +1,7 @@
 // fe/src/api/graphql.js
 import axios from "axios";
 
-const GRAPHQL_URL = "http://127.0.0.1:8000/graphql"; // thay bằng URL BE của bạn
+const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_URL || "/graphql";
 
 export const graphqlRequest = async (query, variables = {}) => {
   try {

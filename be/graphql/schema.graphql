@@ -1,4 +1,10 @@
 # --------------------------------------------
+# ----------------Scalars---------------------
+# --------------------------------------------
+scalar DateTime
+scalar JSON
+
+# --------------------------------------------
 # ----------------Category--------------------
 # --------------------------------------------
 type Category {
@@ -7,10 +13,11 @@ type Category {
     created_at: DateTime
     updated_at: DateTime
     deleted_at: DateTime
+    surveys: [Survey!]
 }
 
 input CreateCategoryInput {
-    id: Int! # BẮT BUỘC vì PK smallint không auto-increment
+    id: Int!
     name: String
 }
 
@@ -18,12 +25,139 @@ input UpdateCategoryInput {
     name: String
 }
 
-type Query {
-    categories: [Category!]!
-        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@list")
+# --------------------------------------------
+# ----------------Survey----------------------
+# --------------------------------------------
+type Survey {
+    id: ID!
+    title: String!
+    description: String
+    categories_id: Int!
+    category: Category
+    type: SurveyType!
+    object: SurveyObject!
+    status: SurveyStatus!
+    created_by: ID!
+    creator: User
+    questions: [SurveyQuestion!]
+    created_at: DateTime
+    updated_at: DateTime
 }
 
+enum SurveyType {
+    survey
+    quiz
+}
+
+enum SurveyObject {
+    public
+    students
+    lecturers
+}
+
+enum SurveyStatus {
+    pending
+    active
+    paused
+    closed
+}
+
+# --------------------------------------------
+# ----------------SurveyQuestion--------------
+# --------------------------------------------
+type SurveyQuestion {
+    id: ID!
+    survey_id: ID!
+    survey: Survey
+    question_code: String
+    question_text: String!
+    image: String
+    question_type: String!
+    required: QuestionRequired!
+    conditions: JSON
+    default_scenario: Int
+    max_length: Int
+    numeric_only: Boolean
+    max_questions: Int
+    allowed_file_types: String
+    max_file_size_kb: Int
+    help_text: String
+    points: Int!
+    options: [SurveyOption!]
+}
+
+enum QuestionRequired {
+    none
+    soft
+    hard
+}
+
+input CreateQuestionInput {
+    survey_id: ID!
+    question_code: String
+    question_text: String!
+    image: String
+    question_type: String!
+    required: QuestionRequired
+    conditions: JSON
+    default_scenario: Int
+    max_length: Int
+    numeric_only: Boolean
+    max_questions: Int
+    allowed_file_types: String
+    max_file_size_kb: Int
+    help_text: String
+    points: Int
+}
+
+# --------------------------------------------
+# ----------------SurveyOption----------------
+# --------------------------------------------
+type SurveyOption {
+    id: ID!
+    question_id: ID!
+    question: SurveyQuestion
+    option_text: String!
+    image: String
+    is_subquestion: Boolean!
+    position: Int
+    is_correct: Boolean!
+}
+
+# --------------------------------------------
+# ----------------User (Basic)----------------
+# --------------------------------------------
+type User {
+    id: ID!
+    name: String!
+    email: String!
+}
+
+# --------------------------------------------
+# ----------------Queries---------------------
+# --------------------------------------------
+type Query {
+    # Categories
+    categories: [Category!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@list")
+
+    # Surveys
+    surveys: [Survey!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@list")
+
+    survey(id: ID!): Survey
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@find")
+
+    # Questions
+    question(id: ID!): SurveyQuestion
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@find")
+}
+
+# --------------------------------------------
+# ----------------Mutations-------------------
+# --------------------------------------------
 type Mutation {
+    # Categories
     createCategory(input: CreateCategoryInput!): Category
         @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@create")
 
@@ -32,4 +166,8 @@ type Mutation {
 
     deleteCategory(id: Int!, allowIfReferenced: Boolean): Boolean!
         @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@delete")
+
+    # Questions - CHỈ ADD QUESTION
+    addQuestion(input: CreateQuestionInput!): SurveyQuestion
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@create")
 }
