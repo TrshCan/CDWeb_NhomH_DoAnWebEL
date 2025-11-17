@@ -9,17 +9,12 @@ class Event extends Model
 {
     use SoftDeletes;
 
-    public $timestamps = false;
+    public $timestamps = false; // vì chỉ có created_at, không có updated_at
 
-    protected $fillable = ['title', 'event_date', 'location', 'created_at', 'created_by'];
-    protected $casts = [
-        'event_date' => 'datetime',
-        'created_at' => 'datetime',
+    protected $fillable = [
+        'title',
+        'event_date',
+        'location',
+        'created_by',
+        'created_at'
     ];
-
-    public function createdBy()
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-}
