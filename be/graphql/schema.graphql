@@ -1,5 +1,5 @@
 #import scalars.graphql
-
+#import event.graphql
 type Query {
     _empty: String
 }
@@ -77,4 +77,4 @@ type UserBadge {
 }
 
 
-#import event.graphql
+

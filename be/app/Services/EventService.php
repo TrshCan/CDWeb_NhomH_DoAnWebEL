@@ -19,6 +19,16 @@ class EventService
 
     public function createEvent(array $data, User $user): Event
     {
+        // Normalize event_date format
+        if (isset($data['event_date'])) {
+            try {
+                $date = \Carbon\Carbon::parse($data['event_date']);
+                $data['event_date'] = $date->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                // If parsing fails, validation will catch it
+            }
+        }
+
         $validator = Validator::make($data, [
             'title' => 'required|string|max:255',
             'event_date' => ['required', 'date', 'date_format:Y-m-d H:i:s'],
@@ -46,8 +56,18 @@ class EventService
             throw new \Exception("Không tìm thấy sự kiện hoặc sự kiện đã bị xóa.");
         }
 
-        if (!$user->is_admin && $event->created_by !== $user->id) {
+        if (!$user->isAdmin() && $event->created_by !== $user->id) {
             throw new \Exception("Bạn không có quyền cập nhật sự kiện này.");
+        }
+
+        // Normalize event_date format if provided
+        if (isset($data['event_date'])) {
+            try {
+                $date = \Carbon\Carbon::parse($data['event_date']);
+                $data['event_date'] = $date->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                // If parsing fails, validation will catch it
+            }
         }
 
         $validator = Validator::make($data, [
@@ -132,3 +152,4 @@ class EventService
         }
         return $event;
     }
+}

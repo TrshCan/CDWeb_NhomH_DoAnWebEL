@@ -65,15 +65,26 @@ class EventRepository
             $query->whereNull('deleted_at'); // Only fetch active events
         }
 
-        if ($title) {
-            $query->where('title', 'like', "%$title%");
+        // If multiple search terms provided, use OR logic
+        if ($title || $location) {
+            $query->where(function ($q) use ($title, $location) {
+                if ($title) {
+                    $q->where('title', 'like', "%$title%");
+                }
+                if ($location) {
+                    if ($title) {
+                        $q->orWhere('location', 'like', "%$location%");
+                    } else {
+                        $q->where('location', 'like', "%$location%");
+                    }
+                }
+            });
         }
+        
         if ($time) {
             $query->where('event_date', 'like', "%$time%");
-        }
-        if ($location) {
-            $query->where('location', 'like', "%$location%");
         }
 
         return $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
     }
+}

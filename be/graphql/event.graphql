@@ -28,7 +28,7 @@ type PaginatedEvents {
   total: Int!
 }
 
-type Query {
+extend type Query {
   getPaginatedEvents(perPage: Int, page: Int, includeDeleted: Boolean): PaginatedEvents
     @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@getPaginatedEvents")
 
@@ -39,7 +39,7 @@ type Query {
     @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@getEventById")
 }
 
-type Mutation {
+extend type Mutation {
   createEvent(input: EventInput!): Event
     @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@createEvent")
 

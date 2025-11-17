@@ -19,17 +19,37 @@ export const graphqlRequest = async (query, variables = {}) => {
     // Kiểm tra GraphQL errors
     if (response.data.errors) {
       const error = response.data.errors[0];
-      throw new Error(error.message || 'Có lỗi xảy ra');
+      console.error("GraphQL error:", error);
+      
+      // Extract error message from extensions if available
+      let errorMessage = error.message || 'Có lỗi xảy ra';
+      if (error.extensions?.validation) {
+        const validationErrors = error.extensions.validation;
+        const firstError = Object.values(validationErrors)[0];
+        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+      }
+      
+      throw new Error(errorMessage);
     }
     
     return response.data;
   } catch (error) {
-    console.error(error);
+    console.error("GraphQL request error:", error);
     
     // Xử lý lỗi từ response
     if (error.response?.data?.errors) {
       const graphqlError = error.response.data.errors[0];
-      throw new Error(graphqlError.message || 'Có lỗi xảy ra');
+      console.error("GraphQL error details:", graphqlError);
+      
+      // Extract error message from extensions if available
+      let errorMessage = graphqlError.message || 'Có lỗi xảy ra';
+      if (graphqlError.extensions?.validation) {
+        const validationErrors = graphqlError.extensions.validation;
+        const firstError = Object.values(validationErrors)[0];
+        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+      }
+      
+      throw new Error(errorMessage);
     }
     
     // Xử lý lỗi network hoặc lỗi khác
