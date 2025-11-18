@@ -256,7 +256,7 @@ return new class extends Migration {
         Schema::create('deadlines', function (Blueprint $table) {
             $table->increments('id'); // int auto-increment
             $table->text('title');
-            $table->date('deadline_date');
+            $table->dateTime('deadline_date');
             $table->text('details')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
