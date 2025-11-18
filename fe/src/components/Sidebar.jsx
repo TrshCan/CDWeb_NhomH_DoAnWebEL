@@ -1,16 +1,33 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
+import { getUserProfile } from "../api/graphql/user";
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
-  // Check login status based on token
-  const checkLoginStatus = () => {
+  // Check login status based on token and load user role
+  const checkLoginStatus = async () => {
     const token = localStorage.getItem("token");
+    const userId = localStorage.getItem("userId");
+    
     setIsLoggedIn(!!token);
+    
+    // Load user role if logged in
+    if (token && userId) {
+      try {
+        const userData = await getUserProfile(parseInt(userId));
+        setUserRole(userData?.role || null);
+      } catch (err) {
+        console.error("Failed to load user role:", err);
+        setUserRole(null);
+      }
+    } else {
+      setUserRole(null);
+    }
   };
 
   useEffect(() => {
@@ -53,6 +70,7 @@ export default function Sidebar() {
       icon: "M9 17v-2h6v2H9zm-4 4h14a1 1 0 001-1V4a1 1 0 00-1-1H5a1 1 0 00-1 1v16a1 1 0 001 1zM7 7h10v2H7V7z",
       path: "/surveys",
       requiresAuth: true,
+      hideForStudent: true, // Ẩn menu này nếu user là student
     },
     {
       label: "Profile",
@@ -62,10 +80,20 @@ export default function Sidebar() {
     },
   ];
 
-  // Filter links based on auth
-  const visibleLinks = allLinks.filter(
-    (link) => !link.requiresAuth || isLoggedIn
-  );
+  // Filter links based on auth and role
+  const visibleLinks = allLinks.filter((link) => {
+    // Kiểm tra yêu cầu đăng nhập
+    if (link.requiresAuth && !isLoggedIn) {
+      return false;
+    }
+    
+    // Ẩn Surveys nếu user là student
+    if (link.hideForStudent && userRole === 'student') {
+      return false;
+    }
+    
+    return true;
+  });
 
   // Handle navigation with auth check
   const handleLinkClick = (e, path, requiresAuth) => {
