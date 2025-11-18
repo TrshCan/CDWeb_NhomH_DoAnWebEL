@@ -2,6 +2,6 @@
 
 extend type Mutation {
 
-    duplicateSurvey(id: ID! @eq): Survey
+    duplicateSurvey(id: Int!): Survey
         @field(resolver: "App\\GraphQL\\Resolvers\\DuplicateResolver@duplicateSurvey")
 }

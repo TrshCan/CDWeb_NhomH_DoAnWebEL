@@ -13,6 +13,7 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 import EmailVerificationResult from "./pages/EmailVerificationResult.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import Survey from "./pages/SurveyFilter.jsx";
 import Tab1 from "./pages/admin/Tab1.jsx";
 import Tab2 from "./pages/admin/Tab2.jsx";
 import Tab3 from "./pages/admin/Event.jsx";
@@ -29,6 +30,7 @@ export default function App() {
         {/* các route con  */}
         <Route index element={<Feed />} /> {/* mặc định là Feed */}
         <Route path="profile" element={<Profile />} />
+        
         <Route path="edit-profile" element={<UserManagement />} />
         <Route path="post/:id" element={<PostDetail />} />
         {/* sau này sẽ thêm các route như profile expole v.v*/}
@@ -39,6 +41,7 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/email-verified" element={<EmailVerificationResult />} />
+      <Route path="surveys" element={<Survey />} />
 
       {/* Admin routes */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />

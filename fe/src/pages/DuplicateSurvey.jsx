@@ -95,7 +95,7 @@ const DuplicateSurvey = () => {
   // Gọi GraphQL mutation để sao chép survey
   const duplicateSurveyApi = async (surveyId) => {
     const result = await graphqlRequest(`
-      mutation DuplicateSurvey($id: ID!) {
+      mutation DuplicateSurvey($id: Int!) {
         duplicateSurvey(id: $id) {
           id
           title
@@ -104,7 +104,7 @@ const DuplicateSurvey = () => {
         }
       }
     `, {
-      id: String(surveyId)
+      id: parseInt(surveyId)
     });
 
     if (result.errors) {
