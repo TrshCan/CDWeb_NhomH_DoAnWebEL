@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Survey extends Model
 {
@@ -21,25 +21,23 @@ class Survey extends Model
         'points',
         'object',
         'created_by',
+        'status',
+        'allow_review', // ✅ thêm dòng này
     ];
+
 
     protected $casts = [
         'start_at' => 'datetime',
-        'end_at'   => 'datetime',
-        'time_limit' => 'integer',
-        'points'   => 'integer',
+        'end_at' => 'datetime',
+        'allow_review' => 'boolean',
     ];
 
-    public function category()
-    {
-        return $this->belongsTo(Category::class, 'categories_id');
-    }
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
     public function questions()
     {
-        return $this->hasMany(SurveyQuestion::class);
+        return $this->hasMany(SurveyQuestion::class, 'survey_id');
     }
-}

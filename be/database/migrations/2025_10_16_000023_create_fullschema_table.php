@@ -184,6 +184,8 @@ return new class extends Migration {
             $table->integer('time_limit')->nullable();
             $table->integer('points')->default(0);
             $table->enum('object', ['public', 'students', 'lecturers'])->default('public');
+            $table->enum('status', ['pending', 'active', 'paused', 'closed'])->default('pending'); // 🆕 Thêm dòng này
+            $table->boolean('allow_review')->default(false);
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
