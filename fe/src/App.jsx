@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword.jsx";
 import EmailVerificationResult from "./pages/EmailVerificationResult.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import Survey from "./pages/SurveyFilter.jsx";
+import StateManagement from "./pages/StatusManagement.jsx";
 import Tab1 from "./pages/admin/Tab1.jsx";
 import Tab2 from "./pages/admin/Tab2.jsx";
 import Tab3 from "./pages/admin/Event.jsx";
@@ -42,6 +43,7 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/email-verified" element={<EmailVerificationResult />} />
       <Route path="surveys" element={<Survey />} />
+      <Route path="statemanagement" element={<StateManagement />} />
 
       {/* Admin routes */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />

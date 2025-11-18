@@ -3,6 +3,7 @@
 #import Deadline.graphql
 #import Survey.graphql
 #import duplicate.graphql
+#import StateManagement.graphql
 type Query {
     _empty: String
 }

@@ -253,23 +253,23 @@ const StatusManagement = () => {
   const Pagination = () => {
     if (totalPages <= 1) return null;
     return (
-      <div className="bg-white p-4 rounded-b-lg border-t border-gray-200">
+      <div className="bg-white p-4 flex-shrink-0">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <span className="text-sm text-gray-700">
-            Trang <b>{currentPage}</b> trên <b>{totalPages}</b>
+            Trang <b>{currentPage}</b> trên <b>{totalPages}</b> ({surveysState.length} khảo sát)
           </span>
           <div className="inline-flex rounded-md shadow-sm -space-x-px">
             <button
               onClick={() => handlePageChange(-1)}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-3 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+              className="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Trước
             </button>
             <button
               onClick={() => handlePageChange(1)}
               disabled={currentPage === totalPages}
-              className="relative inline-flex items-center px-3 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+              className="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Sau
             </button>
@@ -519,7 +519,7 @@ const StatusManagement = () => {
 
       if (currentUserRole === 'admin') {
         reviewPermissionHtml = (
-          <td className="px-6 py-4">
+          <td className="px-4 md:px-6 py-4">
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -532,7 +532,7 @@ const StatusManagement = () => {
           </td>
         );
       } else {
-        reviewPermissionHtml = <td className={currentUserRole === 'admin' ? 'px-6 py-4' : 'hidden'}></td>;
+        reviewPermissionHtml = <td className={currentUserRole === 'admin' ? 'px-4 md:px-6 py-4' : 'hidden'}></td>;
       }
 
       const isDropdownOpen = openDropdownId === survey.id;
@@ -587,15 +587,17 @@ const StatusManagement = () => {
         );
 
       return (
-        <tr key={survey.id} className="bg-white border-b hover:bg-gray-50">
-          <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{survey.name}</td>
-          <td className="px-6 py-4">
+        <tr key={survey.id} className="bg-white hover:bg-gray-50 transition-colors">
+          <td className="px-4 md:px-6 py-4 font-medium text-gray-900">
+            <div className="max-w-md truncate" title={survey.name}>{survey.name}</div>
+          </td>
+          <td className="px-4 md:px-6 py-4">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorMap[statusInfo.color]}`}>
               {statusInfo.text}
             </span>
           </td>
           {reviewPermissionHtml}
-          <td className="px-6 py-4 text-center relative">{actions}</td>
+          <td className="px-4 md:px-6 py-4 text-center relative">{actions}</td>
         </tr>
       );
     });
@@ -613,17 +615,17 @@ const StatusManagement = () => {
         }
       `}</style>
 
-      <div className="container mx-auto p-4 md:p-8 antialiased text-slate-700 bg-gray-100 min-h-screen">
-        <header className="mb-8">
-          <div className="flex justify-between items-start">
+      <div className="w-full h-screen antialiased text-slate-700 bg-gray-100 flex flex-col overflow-hidden">
+        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex-shrink-0">
+          <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">Quản Lý Trạng Thái Khảo Sát</h1>
-              <p className="text-slate-500 mt-1">Thay đổi trạng thái hoạt động và quyền xem lại của các khảo sát.</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Quản Lý Trạng Thái Khảo Sát</h1>
+              <p className="text-sm md:text-base text-slate-500 mt-1">Thay đổi trạng thái hoạt động và quyền xem lại của các khảo sát.</p>
             </div>
-            <div className="text-right">
+            <div className="flex items-center gap-4">
               <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-                <div className="text-sm text-gray-600">Thời gian hiện tại</div>
-                <div className="text-lg font-mono font-semibold text-blue-600">
+                <div className="text-xs md:text-sm text-gray-600">Thời gian hiện tại</div>
+                <div className="text-sm md:text-lg font-mono font-semibold text-blue-600">
                   {currentTime.toLocaleString('vi-VN', {
                     year: 'numeric',
                     month: '2-digit',
@@ -644,34 +646,41 @@ const StatusManagement = () => {
           </div>
         </header>
 
-
         {/* 🔹 Bỏ overflow-hidden để dropdown không bị clip */}
-        <div className="bg-white rounded-lg shadow-md">
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="mt-2 text-gray-600">Đang tải danh sách khảo sát...</p>
-            </div>
-          ) : surveysState.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-gray-600">Không có khảo sát nào</p>
-            </div>
-          ) : (
-            <>
-              <table className="w-full text-sm text-left text-gray-700">
-                <thead className="bg-gray-100 text-gray-900 text-xs uppercase font-semibold">
-                  <tr>
-                    <th className="px-6 py-3">Tên khảo sát</th>
-                    <th className="px-6 py-3">Trạng thái</th>
-                    {currentUserRole === 'admin' && <th className="px-6 py-3">Cho phép xem lại</th>}
-                    <th className="px-6 py-3 text-center">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>{renderSurveyList()}</tbody>
-              </table>
-              <Pagination />
-            </>
-          )}
+        <div className="flex-1 overflow-auto bg-white">
+          <div className="h-full flex flex-col">
+            {loading ? (
+              <div className="flex-1 flex items-center justify-center p-8">
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  <p className="mt-4 text-gray-600">Đang tải danh sách khảo sát...</p>
+                </div>
+              </div>
+            ) : surveysState.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center p-12">
+                <p className="text-gray-600 text-lg">Không có khảo sát nào</p>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-auto">
+                  <table className="w-full text-sm text-left text-gray-700 min-w-full">
+                    <thead className="bg-gray-100 text-gray-900 text-xs uppercase font-semibold sticky top-0 z-10">
+                      <tr>
+                        <th className="px-4 md:px-6 py-3">Tên khảo sát</th>
+                        <th className="px-4 md:px-6 py-3">Trạng thái</th>
+                        {currentUserRole === 'admin' && <th className="px-4 md:px-6 py-3">Cho phép xem lại</th>}
+                        <th className="px-4 md:px-6 py-3 text-center">Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">{renderSurveyList()}</tbody>
+                  </table>
+                </div>
+                <div className="border-t border-gray-200">
+                  <Pagination />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {confirmationModal.show && (
