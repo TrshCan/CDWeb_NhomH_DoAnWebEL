@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, startTransition } from "react";
 import WelcomeSection from "./WelcomeSection";
 import QuestionSection from "./QuestionSection";
 import AddSection from "./AddSection";
@@ -17,6 +17,7 @@ import HeaderBar from "./HeaderBar";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 
 import { Toaster, toast } from "react-hot-toast";
+import { addQuestion, deleteQuestion, deleteQuestions } from "../api/questions";
 
 export default function SurveyForm({ surveyId = null }) {
   const [activeSection, setActiveSection] = useState(null);
@@ -39,26 +40,9 @@ export default function SurveyForm({ surveyId = null }) {
   const [rightPanel, setRightPanel] = useState(null);
   const [activeQuestionId, setActiveQuestionId] = useState(null);
 
-  // Cấu trúc: mảng các groups, mỗi group có id, title, và questions
-  const [questionGroups, setQuestionGroups] = useState([
-    {
-      id: 1,
-      title: "Nhóm câu hỏi đầu tiên của tôi",
-      questions: [
-        {
-          id: 1,
-          text: "",
-          helpText: "",
-          type: "Nhiều lựa chọn",
-          options: [
-            { id: 1, text: "" },
-            { id: 2, text: "" },
-            { id: 3, text: "" },
-          ],
-        },
-      ],
-    },
-  ]);
+  // ✅ Cấu trúc: mảng các groups, mỗi group có id, title, và questions
+  // Khởi tạo rỗng, sẽ load từ CSDL
+  const [questionGroups, setQuestionGroups] = useState([]);
 
   // ✅ Memo hóa tất cả câu hỏi để tránh flatMap lặp lại
   const allQuestions = useMemo(
@@ -152,17 +136,47 @@ export default function SurveyForm({ surveyId = null }) {
     owner: "",
   });
 
-  // Load survey data từ backend khi có surveyId
+  // ✅ State để lưu surveyId thực tế từ CSDL
+  const [currentSurveyId, setCurrentSurveyId] = useState(surveyId);
+  
+  // ✅ Ref để track surveyId đã load (tránh hiển thị toast 2 lần)
+  const loadedSurveyIdRef = useRef(null);
+  const isLoadingRef = useRef(false);
+  
+  // ✅ BroadcastChannel để đồng bộ giữa các tab/cửa sổ
+  const broadcastChannelRef = useRef(null);
+
+  // ✅ Load survey từ CSDL (chỉ chỉnh sửa, không tạo mới)
   useEffect(() => {
-    const loadSurveyData = async () => {
-      if (!surveyId) return;
+    const loadSurvey = async () => {
+      // Nếu không có surveyId, không làm gì (tạo survey là công việc của người khác)
+      if (!surveyId) {
+        setLoading(false);
+        loadedSurveyIdRef.current = null;
+        isLoadingRef.current = false;
+        return;
+      }
+      
+      // ✅ Kiểm tra xem đã load surveyId này chưa hoặc đang load (tránh load và hiển thị toast 2 lần)
+      // Chỉ load nếu surveyId thay đổi hoặc chưa load lần nào
+      if (loadedSurveyIdRef.current === surveyId || isLoadingRef.current) {
+        return;
+      }
+      
+      isLoadingRef.current = true;
       
       setLoading(true);
       try {
         const { getSurvey } = await import('../api/surveys');
-        const surveyData = await getSurvey(surveyId);
         
-        // Cập nhật general settings
+        // ✅ Load survey từ CSDL
+        const surveyData = await getSurvey(surveyId);
+        setCurrentSurveyId(surveyId);
+        
+        // ✅ Đánh dấu đã load surveyId này
+        loadedSurveyIdRef.current = surveyId;
+        
+        // Cập nhật general settings từ CSDL
         setGeneralSettings({
           title: surveyData.title || "",
           type: surveyData.type || "survey",
@@ -179,7 +193,7 @@ export default function SurveyForm({ surveyId = null }) {
           });
         }
 
-        // Load questions và convert sang format của questionGroups
+        // ✅ Load questions và convert sang format của questionGroups từ CSDL
         if (surveyData.questions && surveyData.questions.length > 0) {
           // ✅ Tối ưu: Thu thập tất cả data trước, sau đó batch update 1 lần
           const newQuestionSettings = {};
@@ -252,38 +266,186 @@ export default function SurveyForm({ surveyId = null }) {
           setQuestionSettings((prev) => ({ ...prev, ...newQuestionSettings }));
           setSelectedAnswers((prev) => ({ ...prev, ...newSelectedAnswers }));
         } else {
-          // Nếu không có questions, reset về default
-          setQuestionGroups([
-            {
-              id: 1,
-              title: "Nhóm câu hỏi đầu tiên của tôi",
-              questions: [
-                {
-                  id: 1,
-                  text: "",
-                  helpText: "",
-                  type: "Nhiều lựa chọn",
-                  options: [
-                    { id: 1, text: "" },
-                    { id: 2, text: "" },
-                    { id: 3, text: "" },
-                  ],
-                },
-              ],
-            },
-          ]);
+          // ✅ Nếu không có questions, khởi tạo rỗng (không hardcode)
+          setQuestionGroups([]);
         }
 
         toast.success(`Đã tải survey: ${surveyData.title}`);
       } catch (error) {
         toast.error('Không thể tải survey: ' + error.message);
+        loadedSurveyIdRef.current = null; // Reset nếu lỗi để có thể thử lại
       } finally {
         setLoading(false);
+        isLoadingRef.current = false;
       }
     };
 
-    loadSurveyData();
-  }, [surveyId, createDefaultOptions, buildQuestionSettings]);
+    loadSurvey();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [surveyId]); // Chỉ chạy khi surveyId thay đổi - chỉ load survey để chỉnh sửa, không tạo mới
+
+  // ✅ Đồng bộ giữa các tab/cửa sổ khi có thay đổi từ tab khác
+  useEffect(() => {
+    if (!surveyId) return;
+
+    // Tạo BroadcastChannel với tên channel dựa trên surveyId
+    const channelName = `survey-${surveyId}`;
+    const channel = new BroadcastChannel(channelName);
+    broadcastChannelRef.current = channel;
+
+    // Lắng nghe message từ các tab khác
+    channel.onmessage = (event) => {
+      const { type, data } = event.data;
+
+      // Xử lý khi có câu hỏi bị xóa từ tab khác
+      if (type === 'QUESTION_DELETED') {
+        const { questionIds } = data;
+        const questionIdsSet = new Set(questionIds.map(String));
+
+        // Cập nhật state để xóa câu hỏi
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.filter(
+              (q) => !questionIdsSet.has(String(q.id))
+            ),
+          }))
+        );
+
+        // Xóa questionSettings và selectedAnswers
+        setQuestionSettings((prev) => {
+          const newSettings = { ...prev };
+          questionIdsSet.forEach((qId) => delete newSettings[qId]);
+          return newSettings;
+        });
+
+        setSelectedAnswers((prev) => {
+          const newAnswers = { ...prev };
+          questionIdsSet.forEach((qId) => delete newAnswers[qId]);
+          return newAnswers;
+        });
+
+        // Nếu câu hỏi đang active bị xóa, reset active state
+        if (activeQuestionId && questionIdsSet.has(activeQuestionId)) {
+          setActiveSection(null);
+          setActiveQuestionId(null);
+          setRightPanel(null);
+        }
+      }
+
+      // Xử lý khi có nhóm câu hỏi bị xóa từ tab khác
+      if (type === 'GROUP_DELETED') {
+        const { groupId, questionIds } = data;
+        const questionIdsSet = new Set(questionIds.map(String));
+
+        // Xóa group
+        setQuestionGroups((prev) => prev.filter((g) => g.id !== groupId));
+
+        // Xóa questionSettings và selectedAnswers
+        setQuestionSettings((prev) => {
+          const newSettings = { ...prev };
+          questionIdsSet.forEach((qId) => delete newSettings[qId]);
+          return newSettings;
+        });
+
+        setSelectedAnswers((prev) => {
+          const newAnswers = { ...prev };
+          questionIdsSet.forEach((qId) => delete newAnswers[qId]);
+          return newAnswers;
+        });
+
+        // Nếu câu hỏi đang active bị xóa, reset active state
+        if (activeQuestionId && questionIdsSet.has(activeQuestionId)) {
+          setActiveSection(null);
+          setActiveQuestionId(null);
+          setRightPanel(null);
+        }
+      }
+
+      // Xử lý khi có câu hỏi mới được thêm từ tab khác
+      if (type === 'QUESTION_ADDED') {
+        // Reload survey để lấy dữ liệu mới nhất
+        const reloadSurvey = async () => {
+          try {
+            const { getSurvey } = await import('../api/surveys');
+            const surveyData = await getSurvey(surveyId);
+
+            if (surveyData.questions && surveyData.questions.length > 0) {
+              const newQuestionSettings = {};
+              const newSelectedAnswers = {};
+
+              const convertedQuestions = surveyData.questions.map((backendQuestion) => {
+                const convertedOptions = (backendQuestion.options || []).map((backendOption) => {
+                  const frontendOption = {
+                    id: parseInt(backendOption.id) || Date.now() + Math.random(),
+                    text: backendOption.option_text || "",
+                  };
+
+                  if (backendQuestion.question_type === "Ma trận (chọn điểm)") {
+                    frontendOption.isSubquestion = backendOption.is_subquestion || false;
+                  }
+
+                  if (backendOption.image) {
+                    frontendOption.image = backendOption.image;
+                  }
+
+                  return frontendOption;
+                });
+
+                const frontendQuestion = {
+                  id: parseInt(backendQuestion.id),
+                  text: backendQuestion.question_text || "",
+                  helpText: backendQuestion.help_text || "",
+                  type: backendQuestion.question_type || "Danh sách (nút chọn)",
+                  options: convertedOptions.length > 0 ? convertedOptions : createDefaultOptions(backendQuestion.question_type || "Danh sách (nút chọn)"),
+                };
+
+                if (backendQuestion.max_length) {
+                  frontendQuestion.maxLength = backendQuestion.max_length;
+                }
+
+                const questionId = String(frontendQuestion.id);
+                newQuestionSettings[questionId] = buildQuestionSettings(backendQuestion, frontendQuestion);
+
+                if (frontendQuestion.type === "Giới tính" || frontendQuestion.type === "Có/Không") {
+                  const noAnswerOption = frontendQuestion.options.find(
+                    (opt) => opt.text === "Không có câu trả lời"
+                  );
+                  if (noAnswerOption) {
+                    newSelectedAnswers[frontendQuestion.id] = noAnswerOption.id;
+                  }
+                }
+
+                return frontendQuestion;
+              });
+
+              const newQuestionGroups = [
+                {
+                  id: 1,
+                  title: "Nhóm câu hỏi",
+                  questions: convertedQuestions,
+                },
+              ];
+
+              setQuestionGroups(newQuestionGroups);
+              setQuestionSettings((prev) => ({ ...prev, ...newQuestionSettings }));
+              setSelectedAnswers((prev) => ({ ...prev, ...newSelectedAnswers }));
+            }
+          } catch (error) {
+            console.error('Lỗi khi reload survey:', error);
+          }
+        };
+
+        reloadSurvey();
+      }
+    };
+
+    // Cleanup khi unmount
+    return () => {
+      channel.close();
+      broadcastChannelRef.current = null;
+    };
+  }, [surveyId, activeQuestionId, createDefaultOptions, buildQuestionSettings]);
 
   // STATE: Xuất bản & truy cập
   const [publishSettings, setPublishSettings] = useState({
@@ -603,25 +765,62 @@ export default function SurveyForm({ surveyId = null }) {
   };
 
 
-  // Thêm câu hỏi mới vào group cuối cùng
-  const addQuestionItem = (questionType = "Mặc định", groupId = null) => {
+  // ✅ Helper function để convert frontend question sang backend format
+  const convertQuestionToBackend = useCallback((frontendQuestion, questionSettingsData, surveyIdParam) => {
+    // ✅ Đảm bảo question_text không rỗng (backend yêu cầu String!)
+    const questionText = frontendQuestion.text?.trim() || "Câu hỏi mới";
+    
+    return {
+      survey_id: String(surveyIdParam), // Đảm bảo là string
+      question_code: questionSettingsData?.questionCode || undefined,
+      question_text: questionText, // Backend yêu cầu String! (không null)
+      image: questionSettingsData?.image || null,
+      question_type: frontendQuestion.type || "Danh sách (nút chọn)",
+      required: questionSettingsData?.required || "soft",
+      conditions: questionSettingsData?.conditions || null,
+      default_scenario: questionSettingsData?.defaultScenario || 1,
+      max_length: frontendQuestion.maxLength || questionSettingsData?.maxLength || null,
+      numeric_only: questionSettingsData?.numericOnly || false,
+      max_questions: questionSettingsData?.maxQuestions || null,
+      allowed_file_types: questionSettingsData?.allowedFileTypes || null,
+      max_file_size_kb: questionSettingsData?.maxFileSizeKB || null,
+      help_text: frontendQuestion.helpText || null,
+      points: questionSettingsData?.points || 0,
+    };
+  }, []);
+
+  // ✅ Thêm câu hỏi mới vào group cuối cùng và lưu lên CSDL
+  const addQuestionItem = async (questionType = "Mặc định", groupId = null) => {
+    // ✅ Kiểm tra đã có surveyId chưa (survey phải được tạo trước bởi người khác)
+    const surveyIdToUse = currentSurveyId || surveyId;
+    
+    if (!surveyIdToUse) {
+      toast.error("Vui lòng chọn survey để chỉnh sửa");
+      return;
+    }
+
+    // ✅ Tạo question mới TRƯỚC khi gọi setState (sử dụng functional update để đảm bảo có state mới nhất)
+    let newItem = null;
+    let newId = null;
+    
+    // ✅ Sử dụng functional update và tạo newItem trong callback
     setQuestionGroups((prev) => {
+      // Tạo group mới nếu chưa có
       if (prev.length === 0) {
         const defaultOptions = createDefaultOptions(questionType);
-
-        const newItem = {
-          id: 1,
+        newId = Date.now(); // Temporary ID
+        newItem = {
+          id: newId,
           text: "",
           helpText: "",
           type: questionType,
           options: defaultOptions,
-          // Đặt maxLength mặc định dựa trên loại câu hỏi
           maxLength: questionType === "Văn bản dài" ? 2500 : questionType === "Văn bản ngắn" ? 256 : undefined,
         };
         return [
           {
             id: 1,
-            title: "Nhóm câu hỏi đầu tiên của tôi",
+            title: "Nhóm câu hỏi",
             questions: [newItem],
           },
         ];
@@ -631,22 +830,43 @@ export default function SurveyForm({ surveyId = null }) {
         ? prev.find((g) => g.id === groupId)
         : prev[prev.length - 1];
 
-      if (!targetGroup) return prev;
+      if (!targetGroup) {
+        // Vẫn tạo newItem để có thể lưu
+        const defaultOptions = createDefaultOptions(questionType);
+        const maxId = Math.max(
+          ...prev.flatMap((g) => g.questions.map((q) => q.id || 0)),
+          0
+        );
+        newId = maxId + 1;
+        newItem = {
+          id: newId,
+          text: "",
+          helpText: "",
+          type: questionType,
+          options: defaultOptions,
+          maxLength: questionType === "Văn bản dài" ? 2500 : questionType === "Văn bản ngắn" ? 256 : undefined,
+        };
+        // Thêm vào group đầu tiên nếu không tìm thấy targetGroup
+        return prev.map((group, index) =>
+          index === 0
+            ? { ...group, questions: [...group.questions, newItem] }
+            : group
+        );
+      }
 
       const maxId = Math.max(
-        ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
+        ...prev.flatMap((g) => g.questions.map((q) => q.id || 0)),
+        0
       );
-      const newId = maxId + 1;
+      newId = maxId + 1;
 
       const defaultOptions = createDefaultOptions(questionType);
-
-      const newItem = {
+      newItem = {
         id: newId,
         text: "",
         helpText: "",
         type: questionType,
         options: defaultOptions,
-        // Đặt maxLength mặc định dựa trên loại câu hỏi
         maxLength: questionType === "Văn bản dài" ? 2500 : questionType === "Văn bản ngắn" ? 256 : undefined,
       };
 
@@ -671,12 +891,91 @@ export default function SurveyForm({ surveyId = null }) {
           : group
       );
     });
+
+    // ✅ Đợi một chút để đảm bảo newItem được set (do closure trong callback)
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // ✅ Kiểm tra newItem đã được set chưa
+    if (!newItem) {
+      toast.error("Không thể tạo câu hỏi mới");
+      return;
+    }
+
+    // ✅ Lưu question lên CSDL
+    if (newItem && surveyIdToUse) {
+      try {
+        // Tạo default questionSettings
+        const defaultQuestionSettings = {
+          questionCode: `Q${String(newId).padStart(3, "0")}`,
+          type: questionType,
+          required: "soft",
+          image: null,
+          conditions: [],
+          defaultScenario: 1,
+          points: 0,
+        };
+
+        // Thêm settings đặc biệt cho từng loại câu hỏi
+        if (questionType === "Tải lên tệp") {
+          defaultQuestionSettings.maxQuestions = 1;
+          defaultQuestionSettings.allowedFileTypes = "png, gif, doc, odt, jpg, jpeg, pdf";
+          defaultQuestionSettings.maxFileSizeKB = 10241;
+        }
+
+        if (questionType === "Văn bản ngắn" || questionType === "Văn bản dài" || questionType === "Nhiều văn bản ngắn") {
+          defaultQuestionSettings.maxLength = questionType === "Văn bản dài" ? 2500 : 256;
+          defaultQuestionSettings.numericOnly = false;
+        }
+
+        const questionSettingsData = questionSettings[newId] || defaultQuestionSettings;
+
+        // Lưu questionSettings vào state
+        setQuestionSettings((prev) => ({
+          ...prev,
+          [newId]: questionSettingsData,
+        }));
+
+        // Convert sang backend format
+        const backendQuestionData = convertQuestionToBackend(newItem, questionSettingsData, surveyIdToUse);
+
+        // ✅ Gọi API để lưu lên CSDL
+        const savedQuestion = await addQuestion(backendQuestionData);
+
+        // Cập nhật ID từ CSDL về frontend
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) =>
+              q.id === newId ? { ...q, id: parseInt(savedQuestion.id) } : q
+            ),
+          }))
+        );
+
+        // Cập nhật questionSettings với ID mới từ CSDL
+        setQuestionSettings((prev) => {
+          const newSettings = { ...prev };
+          const oldSettings = newSettings[newId] || questionSettingsData;
+          if (newSettings[newId]) {
+            delete newSettings[newId];
+          }
+          newSettings[savedQuestion.id] = { ...oldSettings };
+          return newSettings;
+        });
+
+        // Cập nhật activeSection với ID mới
+        setActiveSection(`question-${savedQuestion.id}`);
+        setActiveQuestionId(String(savedQuestion.id));
+
+        } catch {
+          // Lỗi đã được xử lý, không cần hiển thị toast
+        }
+    }
   };
 
-  const handleSelectQuestionType = (questionType) => {
+  const handleSelectQuestionType = async (questionType) => {
     handleToggleModal();
     const groupId = window.__currentGroupId || null;
-    addQuestionItem(questionType, groupId);
+    await addQuestionItem(questionType, groupId);
     window.__currentGroupId = null;
   };
 
@@ -739,7 +1038,6 @@ export default function SurveyForm({ surveyId = null }) {
         return { ...group, questions: newQuestions };
       });
     });
-    toast.success("Đã nhân bản câu hỏi");
   };
 
   const duplicateGroup = (groupId = null) => {
@@ -787,58 +1085,180 @@ export default function SurveyForm({ surveyId = null }) {
 
       return [...prev, newGroup];
     });
-    toast.success("Đã nhân bản nhóm câu hỏi");
   };
 
   const deleteGroup = (groupId) => {
     setDeleteModal({
       isOpen: true,
-      action: () => {
-        setQuestionGroups((prev) => {
-          const filtered = prev.filter((g) => g.id !== groupId);
-          if (filtered.length === 0) {
-            return [
-              {
-                id: 1,
-                title: "Nhóm câu hỏi đầu tiên của tôi",
-                questions: [
-                  { id: 1, text: "", helpText: "", type: "Mặc định" },
-                ],
-              },
-            ];
+      action: async () => {
+        // ✅ Tối ưu: Tìm group và lấy question IDs một lần
+        const groupToDelete = questionGroups.find((g) => g.id === groupId);
+        if (!groupToDelete) {
+          toast.error("Không tìm thấy nhóm câu hỏi cần xóa");
+          return;
+        }
+        
+        const questionIdsToDelete = groupToDelete.questions.map((q) => String(q.id));
+        const shouldResetActive = activeQuestionId && questionIdsToDelete.includes(activeQuestionId);
+        const questionIdsSet = new Set(questionIdsToDelete);
+
+        // ✅ Đóng modal ngay để UI responsive hơn
+        setDeleteModal((prev) => ({ ...prev, isOpen: false }));
+
+        // ✅ Lưu snapshot state để rollback nếu lỗi
+        const stateSnapshot = {
+          questionGroups: [...questionGroups],
+          questionSettings: { ...questionSettings },
+          selectedAnswers: { ...selectedAnswers },
+          activeSection,
+          activeQuestionId,
+          rightPanel,
+        };
+
+        // ✅ OPTIMISTIC UPDATE: Update UI ngay lập tức với startTransition (không block UI)
+        startTransition(() => {
+          setQuestionGroups((prev) => prev.filter((g) => g.id !== groupId));
+          
+          setQuestionSettings((prev) => {
+            const newSettings = { ...prev };
+            questionIdsSet.forEach((qId) => delete newSettings[qId]);
+            return newSettings;
+          });
+
+          setSelectedAnswers((prev) => {
+            const newAnswers = { ...prev };
+            questionIdsSet.forEach((qId) => delete newAnswers[qId]);
+            return newAnswers;
+          });
+
+          if (shouldResetActive) {
+            setActiveSection(null);
+            setActiveQuestionId(null);
+            setRightPanel(null);
           }
-          return filtered;
         });
-        toast.success("Đã xoá nhóm câu hỏi");
+
+        // Gọi API ở background (không block UI) - không cần await
+        deleteQuestions(questionIdsToDelete)
+          .then(() => {
+            // ✅ Gửi message qua BroadcastChannel để đồng bộ với các tab khác
+            if (broadcastChannelRef.current) {
+              broadcastChannelRef.current.postMessage({
+                type: 'GROUP_DELETED',
+                data: {
+                  groupId,
+                  questionIds: questionIdsToDelete,
+                },
+              });
+            }
+          })
+          .catch(() => {
+            // Rollback state nếu lỗi
+            setQuestionGroups(stateSnapshot.questionGroups);
+            setQuestionSettings(stateSnapshot.questionSettings);
+            setSelectedAnswers(stateSnapshot.selectedAnswers);
+            setActiveSection(stateSnapshot.activeSection);
+            setActiveQuestionId(stateSnapshot.activeQuestionId);
+            setRightPanel(stateSnapshot.rightPanel);
+          });
       },
       title: "Xác nhận xoá",
-      message: "Bạn có chắc muốn xoá nhóm câu hỏi này?",
+      message: "Bạn có chắc muốn xoá nhóm câu hỏi này? Tất cả câu hỏi bên trong cũng sẽ bị xóa, bạn không thể hoàn tác lựa chọn này.",
     });
   };
 
   const deleteQuestionItem = (groupId, index) => {
     setDeleteModal({
       isOpen: true,
-      action: () => {
-        setQuestionGroups((prev) => {
-          return prev.map((group) => {
-            if (group.id !== groupId) return group;
-            if (index < 0 || index >= group.questions.length) return group;
-            const newQuestions = group.questions.filter((_, i) => i !== index);
+      action: async () => {
+        // ✅ Tối ưu: Tìm group và question một lần
+        const group = questionGroups.find((g) => g.id === groupId);
+        if (!group || index < 0 || index >= group.questions.length) {
+          toast.error("Không tìm thấy câu hỏi cần xóa");
+          return;
+        }
+        
+        const questionToDelete = group.questions[index];
+        const questionIdToDelete = String(questionToDelete.id);
+        const isActiveQuestion = activeQuestionId === questionIdToDelete;
+        const newQuestions = group.questions.filter((_, i) => i !== index);
+        const hasNextQuestion = newQuestions.length > 0;
+        const nextQuestion = hasNextQuestion ? newQuestions[Math.min(index, newQuestions.length - 1)] : null;
 
-            if (newQuestions.length > 0) {
-              const next = Math.min(index, newQuestions.length - 1);
-              setActiveSection(`question-${newQuestions[next].id}`);
+        // ✅ Đóng modal ngay để UI responsive hơn
+        setDeleteModal((prev) => ({ ...prev, isOpen: false }));
+
+        // ✅ Lưu snapshot state để rollback nếu lỗi
+        const stateSnapshot = {
+          questionGroups: questionGroups.map((g) => ({
+            ...g,
+            questions: [...g.questions],
+          })),
+          questionSettings: { ...questionSettings },
+          selectedAnswers: { ...selectedAnswers },
+          activeSection,
+          activeQuestionId,
+          rightPanel,
+        };
+
+        // ✅ OPTIMISTIC UPDATE: Update UI ngay lập tức với startTransition (không block UI)
+        startTransition(() => {
+          setQuestionGroups((prev) =>
+            prev.map((g) =>
+              g.id === groupId ? { ...g, questions: newQuestions } : g
+            )
+          );
+
+          setQuestionSettings((prev) => {
+            const newSettings = { ...prev };
+            delete newSettings[questionIdToDelete];
+            return newSettings;
+          });
+
+          setSelectedAnswers((prev) => {
+            const newAnswers = { ...prev };
+            delete newAnswers[questionIdToDelete];
+            return newAnswers;
+          });
+
+          // Cập nhật active section
+          if (isActiveQuestion) {
+            if (hasNextQuestion) {
+              setActiveSection(`question-${nextQuestion.id}`);
+              setActiveQuestionId(String(nextQuestion.id));
             } else {
               setActiveSection(null);
+              setActiveQuestionId(null);
+              setRightPanel(null);
             }
-            return { ...group, questions: newQuestions };
-          });
+          }
         });
-        toast.success("Đã xoá câu hỏi");
+
+        // Gọi API ở background (không block UI) - không cần await
+        deleteQuestion(questionIdToDelete)
+          .then(() => {
+            // ✅ Gửi message qua BroadcastChannel để đồng bộ với các tab khác
+            if (broadcastChannelRef.current) {
+              broadcastChannelRef.current.postMessage({
+                type: 'QUESTION_DELETED',
+                data: {
+                  questionIds: [questionIdToDelete],
+                },
+              });
+            }
+          })
+          .catch(() => {
+            // Rollback state nếu lỗi
+            setQuestionGroups(stateSnapshot.questionGroups);
+            setQuestionSettings(stateSnapshot.questionSettings);
+            setSelectedAnswers(stateSnapshot.selectedAnswers);
+            setActiveSection(stateSnapshot.activeSection);
+            setActiveQuestionId(stateSnapshot.activeQuestionId);
+            setRightPanel(stateSnapshot.rightPanel);
+          });
       },
       title: "Xác nhận xoá",
-      message: "Bạn có chắc muốn xoá câu hỏi này?",
+      message: "Bạn có chắc muốn xoá câu hỏi này? Bạn không thể hoàn tác lựa chọn này.",
     });
   };
 
@@ -1056,6 +1476,11 @@ export default function SurveyForm({ surveyId = null }) {
           title={generalSettings?.title || "Survey mới"}
           savedAt={savedAt}
           onActivate={() => toast.success("Đã kích hoạt")}
+          onMore={() => setOpenPanel(openPanel === "settings" ? null : "settings")}
+          onAddQuestion={() => {
+            handleToggleModal();
+            window.__currentGroupId = null;
+          }}
         />
 
         <SidebarRail active={openPanel} onOpen={handleOpenPanel} />

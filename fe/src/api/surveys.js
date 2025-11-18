@@ -82,3 +82,39 @@ export const getSurvey = async (surveyId) => {
   const response = await graphqlRequest(query, variables);
   return response.data.survey;
 };
+
+/**
+ * Tạo survey mới
+ */
+export const createSurvey = async (surveyData) => {
+  const mutation = `
+    mutation CreateSurvey($input: CreateSurveyInput!) {
+      createSurvey(input: $input) {
+        id
+        title
+        description
+        type
+        object
+        status
+        categories_id
+        created_at
+        category {
+          id
+          name
+        }
+        creator {
+          id
+          name
+          email
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    input: surveyData,
+  };
+
+  const response = await graphqlRequest(mutation, variables);
+  return response.data.createSurvey;
+};

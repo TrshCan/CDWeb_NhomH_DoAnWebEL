@@ -182,7 +182,13 @@ type Mutation {
     createSurvey(input: CreateSurveyInput!): Survey
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@create")
 
-    # Questions - CHỈ ADD QUESTION
+    # Questions
     addQuestion(input: CreateQuestionInput!): SurveyQuestion
         @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@create")
+    
+    deleteQuestion(id: ID!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@delete")
+    
+    deleteQuestions(ids: [ID!]!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@deleteBatch")
 }

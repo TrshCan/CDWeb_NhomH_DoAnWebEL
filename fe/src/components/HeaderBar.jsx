@@ -5,7 +5,8 @@ export default function HeaderBar({
   savedAt = null,
   onActivate,
   onMore,
-  logoSrc = "/logo.svg",
+  onAddQuestion,
+  logoSrc = "/fe/img/logo.jpg",
 }) {
   const fmt = (d) => {
     if (!d) return "--:--";
@@ -18,14 +19,39 @@ export default function HeaderBar({
   return (
     <header className="fixed top-0 inset-x-0 h-[60px] bg-white border-b border-gray-200 z-50">
       <div className="h-full w-full flex items-center justify-between px-4">
-        {/* Left: LOGO */}
-        <div className="flex items-center gap-2 min-w-0">
+        {/* Left: LOGO + Dấu + */}
+        <div className="flex items-center min-w-0">
           {/* Nếu chưa có logo thật, tạm dùng placeholder box */}
           {logoSrc ? (
-            <img src={logoSrc} alt="Logo" className="h-8 w-auto" />
+            <img src="img/logo.jpg" alt="Logo" className="h-13 w-auto" />
           ) : (
             <div className="h-8 w-24 bg-gray-200 rounded-sm" />
           )}
+          
+          {/* Dấu + cách logo 100px */}
+          <div className="ml-[100px]">
+            <button
+              type="button"
+              onClick={onAddQuestion}
+              className="w-9 h-9 flex items-center justify-center rounded bg-violet-600 hover:bg-violet-700 active:bg-violet-800 transition-colors"
+              aria-label="Thêm câu hỏi"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M6 1V11M1 6H11"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Center: TÊN KHẢO SÁT */}

@@ -52,4 +52,48 @@ class QuestionResolver
         
         return $question;
     }
+    
+    /**
+     * Xóa câu hỏi
+     */
+    public function delete($rootValue, array $args)
+    {
+        $question = SurveyQuestion::findOrFail($args['id']);
+        
+        // Kiểm tra quyền (optional - có thể bỏ qua nếu chưa có auth)
+        // if (Auth::id() !== $question->survey->created_by) {
+        //     throw new \Exception('Bạn không có quyền xóa câu hỏi này');
+        // }
+        
+        // Xóa câu hỏi (cascade delete sẽ tự động xóa options và answers)
+        $question->delete();
+        
+        return true;
+    }
+    
+    /**
+     * Xóa nhiều câu hỏi cùng lúc (batch delete) - Tối ưu hơn
+     */
+    public function deleteBatch($rootValue, array $args)
+    {
+        $ids = $args['ids'];
+        
+        if (empty($ids)) {
+            return true;
+        }
+        
+        // Kiểm tra quyền (optional - có thể bỏ qua nếu chưa có auth)
+        // $questions = SurveyQuestion::whereIn('id', $ids)->get();
+        // foreach ($questions as $question) {
+        //     if (Auth::id() !== $question->survey->created_by) {
+        //         throw new \Exception('Bạn không có quyền xóa một số câu hỏi');
+        //     }
+        // }
+        
+        // Xóa tất cả câu hỏi trong một query (nhanh hơn nhiều so với xóa từng cái)
+        // Cascade delete sẽ tự động xóa options và answers
+        SurveyQuestion::whereIn('id', $ids)->delete();
+        
+        return true;
+    }
 }

@@ -75,3 +75,37 @@ export const getQuestion = async (questionId) => {
   const response = await graphqlRequest(query, variables);
   return response.data.question;
 };
+
+/**
+ * Xóa câu hỏi
+ */
+export const deleteQuestion = async (questionId) => {
+  const mutation = `
+    mutation DeleteQuestion($id: ID!) {
+      deleteQuestion(id: $id)
+    }
+  `;
+
+  const variables = { id: questionId };
+  const response = await graphqlRequest(mutation, variables);
+  return response.data.deleteQuestion;
+};
+
+/**
+ * Xóa nhiều câu hỏi cùng lúc (batch delete) - Tối ưu hơn
+ */
+export const deleteQuestions = async (questionIds) => {
+  if (!questionIds || questionIds.length === 0) {
+    return true;
+  }
+
+  const mutation = `
+    mutation DeleteQuestions($ids: [ID!]!) {
+      deleteQuestions(ids: $ids)
+    }
+  `;
+
+  const variables = { ids: questionIds };
+  const response = await graphqlRequest(mutation, variables);
+  return response.data.deleteQuestions;
+};
