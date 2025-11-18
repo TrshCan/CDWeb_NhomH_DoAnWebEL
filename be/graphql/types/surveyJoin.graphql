@@ -1,0 +1,35 @@
+type SurveyJoinQuestion {
+  id: ID!
+  question_text: String!
+  question_type: String!
+  points: Float
+  options: [SurveyJoinOption!]
+}
+
+type SurveyJoinOption {
+  id: ID!
+  option_text: String!
+}
+
+type SurveyJoinDetail {
+  id: ID!
+  title: String!
+  description: String
+  time_limit: Int
+  total_points: Float
+  questions: [SurveyJoinQuestion!]!
+}
+
+input SurveyAnswerInput {
+  question_id: ID!
+  selected_option_id: ID
+  answer_text: String
+}
+
+type SurveySubmissionResult {
+  success: Boolean!
+  message: String!
+  total_score: Float
+  max_score: Float
+  score_percentage: Float
+}
