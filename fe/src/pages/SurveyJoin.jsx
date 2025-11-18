@@ -28,6 +28,8 @@ function SurveyJoin() {
           return;
         }
         setSurveyData(data);
+        console.log("Survey data loaded:", data);
+        console.log("Questions:", data.questions);
         
         if (data.time_limit) {
           setTimeRemaining(data.time_limit * 60);
@@ -381,42 +383,19 @@ function SurveyJoin() {
                       rows={5}
                     />
                   </div>
-                ) : question.question_type === "single" ? (
+                ) : question.question_type === "single_choice" ? (
                   <div className="answer-options">
-                    {question.options.map((option, optIndex) => (
-                      <label key={option.id} className="answer-option" style={{ animationDelay: `${optIndex * 50}ms` }}>
-                        <input
-                          type="radio"
-                          name={`question-${question.id}`}
-                          value={option.id}
-                          checked={answers[question.id]?.selected_option_id === option.id}
-                          onChange={() => handleAnswerChange(question.id, option.id, "single")}
-                        />
-                        <span className="option-indicator"></span>
-                        <span className="option-text">{option.option_text}</span>
-                        <span className="option-check">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                ) : question.question_type === "multiple" ? (
-                  <div className="answer-options">
-                    <p className="multiple-hint">Select all that apply</p>
-                    {question.options.map((option, optIndex) => {
-                      const selectedOptions = answers[question.id]?.selected_option_id || [];
-                      const isChecked = Array.isArray(selectedOptions) && selectedOptions.includes(option.id);
-                      
-                      return (
+                    {question.options && question.options.length > 0 ? (
+                      question.options.map((option, optIndex) => (
                         <label key={option.id} className="answer-option" style={{ animationDelay: `${optIndex * 50}ms` }}>
                           <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => handleMultipleChoice(question.id, option.id)}
+                            type="radio"
+                            name={`question-${question.id}`}
+                            value={option.id}
+                            checked={answers[question.id]?.selected_option_id === option.id}
+                            onChange={() => handleAnswerChange(question.id, option.id, "single")}
                           />
-                          <span className="option-indicator checkbox"></span>
+                          <span className="option-indicator"></span>
                           <span className="option-text">{option.option_text}</span>
                           <span className="option-check">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -424,10 +403,45 @@ function SurveyJoin() {
                             </svg>
                           </span>
                         </label>
-                      );
-                    })}
+                      ))
+                    ) : (
+                      <p className="no-options">No options available for this question.</p>
+                    )}
                   </div>
-                ) : null}
+                ) : question.question_type === "multiple_choice" ? (
+                  <div className="answer-options">
+                    <p className="multiple-hint">Select all that apply</p>
+                    {question.options && question.options.length > 0 ? (
+                      question.options.map((option, optIndex) => {
+                        const selectedOptions = answers[question.id]?.selected_option_id || [];
+                        const isChecked = Array.isArray(selectedOptions) && selectedOptions.includes(option.id);
+                        
+                        return (
+                          <label key={option.id} className="answer-option" style={{ animationDelay: `${optIndex * 50}ms` }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleMultipleChoice(question.id, option.id)}
+                            />
+                            <span className="option-indicator checkbox"></span>
+                            <span className="option-text">{option.option_text}</span>
+                            <span className="option-check">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            </span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <p className="no-options">No options available for this question.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="answer-options">
+                    <p className="no-options">Unknown question type: {question.question_type}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
