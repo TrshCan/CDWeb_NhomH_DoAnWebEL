@@ -183,7 +183,7 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Bắt đầu</label>
         <input
-          type="date"
+          type="datetime-local"
           value={editForm.startAt}
           onChange={(e) => onChange.startAt(e.target.value)}
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
@@ -193,7 +193,7 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Kết thúc</label>
         <input
-          type="date"
+          type="datetime-local"
           value={editForm.endAt}
           onChange={(e) => onChange.endAt(e.target.value)}
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
@@ -310,7 +310,7 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Bắt đầu</label>
         <input
-          type="date"
+          type="datetime-local"
           value={addForm.startAt}
           onChange={(e) => onChange.startAt(e.target.value)}
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
@@ -320,7 +320,7 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Kết thúc</label>
         <input
-          type="date"
+          type="datetime-local"
           value={addForm.endAt}
           onChange={(e) => onChange.endAt(e.target.value)}
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
@@ -472,12 +472,29 @@ const SurveyFilter = () => {
 
   const toDateTimeLocal = (dbString) => {
     if (!dbString) return '';
-    return dbString.slice(0, 10);
+    // Chuyển từ DB format "YYYY-MM-DD HH:mm:ss" hoặc "YYYY-MM-DD HH:mm" sang "YYYY-MM-DDTHH:mm" cho datetime-local
+    // Nếu không có thời gian, mặc định là 00:00
+    if (dbString.includes(' ')) {
+      const [datePart, timePart] = dbString.split(' ');
+      const time = timePart ? timePart.slice(0, 5) : '00:00'; // Lấy HH:mm
+      return `${datePart}T${time}`;
+    }
+    // Nếu chỉ có date, thêm T00:00
+    return `${dbString.slice(0, 10)}T00:00`;
   };
 
-  const toDBDateTime = (dateString) => {
-    if (!dateString) return null;
-    return `${dateString} 00:00:00`;
+  const toDBDateTime = (dateTimeString) => {
+    if (!dateTimeString) return null;
+    // Chuyển từ datetime-local format "YYYY-MM-DDTHH:mm" sang DB format "YYYY-MM-DD HH:mm:ss"
+    if (dateTimeString.includes('T')) {
+      const [datePart, timePart] = dateTimeString.split('T');
+      const time = timePart || '00:00';
+      // Đảm bảo có giây
+      const timeWithSeconds = time.split(':').length === 2 ? `${time}:00` : time;
+      return `${datePart} ${timeWithSeconds}`;
+    }
+    // Fallback: nếu không có T, giả sử là date format cũ
+    return `${dateTimeString} 00:00:00`;
   };
 
   const loadCategories = async () => {

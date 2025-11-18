@@ -99,7 +99,6 @@ class StateManagementService
                 if ($survey->status === $newStatus) {
                     if ($originalStatus !== $survey->status) {
                         $message = match ($newStatus) {
-                            'active' => 'Khảo sát đã được tự động kích hoạt.',
                             'closed' => 'Khảo sát đã được tự động đóng.',
                             default => 'Trạng thái đã được cập nhật.'
                         };
@@ -410,30 +409,8 @@ class StateManagementService
         // === 3. TRẠNG THÁI CỐ ĐỊNH ===
         if ($survey->status === 'closed') return 'closed';
         if ($survey->status === 'paused') return 'paused';
-
-        // === 4. TỰ ĐỘNG KÍCH HOẠT KHI ĐẾN start_at ===
-        if ($survey->status === 'pending') {
-            try {
-                if (!$startAt || $now->gte($startAt)) {
-                    Log::info("Survey {$survey->id}: AUTO-ACTIVATE by start_at", [
-                        'start_at' => $startAt?->format('Y-m-d H:i:s') ?? 'null',
-                        'now' => $now->format('Y-m-d H:i:s'),
-                    ]);
-                    return 'active';
-                }
-            } catch (\Exception $e) {
-                Log::warning("Survey {$survey->id}: Lỗi so sánh start_at", [
-                    'error' => $e->getMessage(),
-                    'start_at' => $startAt?->format('Y-m-d H:i:s')
-                ]);
-            }
-            return 'pending';
-        }
-
-        // === 5. ACTIVE ===
-        if ($survey->status === 'active') {
-            return 'active';
-        }
+        if ($survey->status === 'active') return 'active';
+        if ($survey->status === 'pending') return 'pending';
 
         // Trả về trạng thái hiện tại nếu không match với bất kỳ điều kiện nào
         return $survey->status ?? 'pending';
@@ -458,8 +435,10 @@ class StateManagementService
             $now = Carbon::now();
             $needsSave = false;
 
-            // === TỰ ĐỘNG KÍCH HOẠT + CÓ time_limit + CÓ start_at → GHI ĐÈ end_at = start_at + time_limit ===
-            if ($computed === 'active' && $oldStatus !== 'active' && $survey->time_limit && $survey->time_limit > 0) {
+            // === CHỈ XỬ LÝ time_limit KHI ĐƯỢC KÍCH HOẠT THỦ CÔNG ===
+            // Xử lý time_limit khi survey đã ở trạng thái active (được kích hoạt thủ công)
+            // và có time_limit + start_at → tính end_at
+            if ($survey->status === 'active' && $survey->time_limit && $survey->time_limit > 0) {
                 try {
                     $startAt = $survey->start_at ? Carbon::parse($survey->start_at)->setTimezone($now->timezone) : null;
                     
@@ -470,7 +449,7 @@ class StateManagementService
                         if (!$survey->end_at || !$survey->end_at->eq($newEndAt)) {
                             $survey->end_at = $newEndAt;
                             $needsSave = true;
-                            Log::info("Survey {$survey->id}: AUTO SET end_at = start_at + time_limit", [
+                            Log::info("Survey {$survey->id}: SET end_at = start_at + time_limit (manual activation)", [
                                 'start_at' => $startAt->format('Y-m-d H:i:s'),
                                 'time_limit' => $survey->time_limit,
                                 'end_at' => $newEndAt->format('Y-m-d H:i:s'),
@@ -485,7 +464,6 @@ class StateManagementService
                     ]);
                     // Tiếp tục xử lý status sync dù có lỗi parse date
                 }
-                // Nếu không có start_at → không set end_at, dùng end_at ban đầu (nếu có)
             }
 
             // === CẬP NHẬT STATUS ===

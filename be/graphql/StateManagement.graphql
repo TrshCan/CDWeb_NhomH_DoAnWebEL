@@ -10,17 +10,9 @@ enum SurveyStatus {
   closed
 }
 
-type Survey {
-  id: ID!
-  title: String!
-  description: String
-  start_at: String   # ← đổi từ DateTime sang String
-  end_at: String     # ← đổi từ DateTime sang String
-  status: SurveyStatus!
+extend type Survey {
+  # Các field đã được định nghĩa trong Survey.graphql, chỉ extend thêm field cho StateManagement
   allow_review: Boolean!
-  created_by: ID!
-  type: String!
-  object: String!
 }
 
 
@@ -29,9 +21,10 @@ type SurveyStatusResponse {
   message: String!
 }
 
-type Query {
-  _empty: String
-  surveys: [Survey!]!
+extend type Query {
+  # Query stateSurveys cho StateManagement (có sync status)
+  # Khác với surveys từ Survey.graphql (có filter và pagination)
+  stateSurveys: [Survey!]!
     @field(resolver: "App\\GraphQL\\Resolvers\\StateManagementResolver@listSurveys")
 }
 

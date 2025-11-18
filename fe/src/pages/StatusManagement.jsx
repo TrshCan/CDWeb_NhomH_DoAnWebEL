@@ -38,7 +38,7 @@ const StatusManagement = () => {
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState('bottom'); // 'bottom' or 'top'
   const buttonRefs = useRef({}); // 🔹 ref riêng cho từng survey
-  const itemsPerPage = 3;
+  const itemsPerPage = 10;
   const lastRefreshTime = useRef(0); // Lưu thời gian refresh cuối cùng
   const isRefreshing = useRef(false); // Flag để tránh refresh đồng thời
 
@@ -69,7 +69,7 @@ const StatusManagement = () => {
       
       const result = await graphqlRequest(`
         query {
-          surveys {
+          stateSurveys {
             id
             title
             description
@@ -92,7 +92,7 @@ const StatusManagement = () => {
         return;
       }
 
-      const surveysData = result.data?.surveys || [];
+      const surveysData = result.data?.stateSurveys || [];
       // Map dữ liệu từ API sang format của component
       const mappedSurveys = surveysData.map(s => ({
         id: Number(s.id),
@@ -194,32 +194,44 @@ const StatusManagement = () => {
   }, [openDropdownId]);
 
   const getEffectiveStatus = (survey) => {
-    // Sử dụng currentTime thay vì now
+    // Ưu tiên status từ database - không override status đã được set thủ công
+    // Chỉ tính toán lại cho các trường hợp tự động (đóng khi quá thời gian)
+    
     const now = currentTime;
     
-    // Nếu status là closed, luôn trả về closed
-    if (survey.status === 'closed') return 'closed';
+    // Ưu tiên status từ database trước
+    const dbStatus = survey.status || 'pending';
     
-    // Nếu status là paused, trả về paused
-    if (survey.status === 'paused') return 'paused';
+    // Nếu status là closed, luôn trả về closed
+    if (dbStatus === 'closed') return 'closed';
+    
+    // Nếu status là paused, trả về paused (giữ nguyên)
+    if (dbStatus === 'paused') return 'paused';
     
     // Xử lý thời gian
     const startDate = survey.start_at ? new Date(survey.start_at) : null;
     const endDate = survey.end_at ? new Date(survey.end_at) : null;
     
-    // Nếu đã quá thời gian kết thúc
-    if (endDate && now > endDate) return 'closed';
-    
-    // Nếu chưa đến thời gian bắt đầu
-    if (startDate && now < startDate) return 'pending';
-    
-    // Nếu đang trong khoảng thời gian và status là active
-    if (survey.status === 'active' && startDate && endDate && now >= startDate && now <= endDate) {
-      return 'active';
+    // CHỈ tự động đóng nếu đã quá thời gian kết thúc (không override status thủ công)
+    // Nếu status đã được set thủ công là 'active' hoặc 'paused', giữ nguyên
+    if (endDate && now > endDate && (dbStatus === 'active' || dbStatus === 'paused')) {
+      // Tự động đóng khi quá thời gian (hiển thị cảnh báo, backend sẽ xử lý)
+      return 'closed';
     }
     
-    // Mặc định trả về status hiện tại
-    return survey.status || 'pending';
+    // Nếu status là active hoặc paused, trả về nguyên status từ database
+    // (KHÔNG override dựa trên start_at - đây là status đã được set thủ công)
+    if (dbStatus === 'active' || dbStatus === 'paused') {
+      return dbStatus;
+    }
+    
+    // Nếu status là pending, giữ nguyên pending (KHÔNG tự động kích hoạt)
+    if (dbStatus === 'pending') {
+      return 'pending';
+    }
+    
+    // Mặc định trả về status hiện tại từ database
+    return dbStatus;
   };
 
   // 🔹 Function để lấy available actions cho một survey

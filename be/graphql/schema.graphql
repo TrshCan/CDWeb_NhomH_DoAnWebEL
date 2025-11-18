@@ -101,7 +101,7 @@ input UpdateCategoryInput {
     name: String
 }
 
-type Query {
+extend type Query {
     categories: [Category!]!
         @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@list")
 }
