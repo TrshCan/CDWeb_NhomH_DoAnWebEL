@@ -13,9 +13,9 @@ class DeadlineRepository
 
     public function update(int $id, array $data): Deadline
     {
-        $deadline = Deadline::findOrFail($id);
+        $deadline = Deadline::whereNull('deleted_at')->findOrFail($id);
         $deadline->update($data);
-        return $deadline;
+        return $deadline->fresh();
     }
 
     public function softDelete(int $id): bool
@@ -74,3 +74,4 @@ class DeadlineRepository
 
         return $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
     }
+}

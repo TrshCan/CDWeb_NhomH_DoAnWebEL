@@ -28,7 +28,10 @@ class DeadlineResolver
     public function updateDeadline($_, array $args)
     {
         try {
-            return $this->deadlineService->updateDeadline($args['id'], $args['input']);
+            $id = is_numeric($args['id']) ? (int)$args['id'] : $args['id'];
+            return $this->deadlineService->updateDeadline($id, $args['input']);
+        } catch (ValidationException $e) {
+            throw new \Exception(json_encode($e->errors()));
         } catch (\Exception $e) {
             throw new \Exception($e->getMessage());
         }
@@ -36,12 +39,14 @@ class DeadlineResolver
 
     public function deleteDeadline($_, array $args)
     {
-        return $this->deadlineService->deleteDeadline($args['id']);
+        $id = is_numeric($args['id']) ? (int)$args['id'] : $args['id'];
+        return $this->deadlineService->deleteDeadline($id);
     }
 
     public function restoreDeadline($_, array $args)
     {
-        return $this->deadlineService->restoreDeadline($args['id']);
+        $id = is_numeric($args['id']) ? (int)$args['id'] : $args['id'];
+        return $this->deadlineService->restoreDeadline($id);
     }
 
     public function getPaginatedDeadlines($_, array $args)
@@ -62,5 +67,7 @@ class DeadlineResolver
 
     public function getDeadlineById($_, array $args)
     {
-        return $this->deadlineService->getDeadlineById($args['id']);
+        $id = is_numeric($args['id']) ? (int)$args['id'] : $args['id'];
+        return $this->deadlineService->getDeadlineById($id);
     }
+}

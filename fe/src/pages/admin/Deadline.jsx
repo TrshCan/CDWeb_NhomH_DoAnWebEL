@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { graphqlRequest } from '../api/graphql';
+import { graphqlRequest } from '../../api/graphql';
+import AdminSidebar from "../../components/AdminSidebar";
+
 
 // --- SVG Icons ---
 const PlusIcon = () => (
@@ -429,12 +431,15 @@ export default function Deadline() {
           text-align: left !important;
         }
       `}</style>
-      <div className="min-h-screen bg-gray-100 text-gray-800">
-        <Toast {...toast} />
-        <DeadlineModal modalData={modalData} closeModal={closeModal} handleSave={handleSaveDeadline} />
-        <DeleteModal modalData={modalData} closeModal={closeModal} confirmDelete={handleDeleteDeadline} />
+      <div className="flex min-h-screen bg-gray-100">
+        <AdminSidebar />
+        
+        <main className="flex-1 p-8 overflow-y-auto">
+          <Toast {...toast} />
+          <DeadlineModal modalData={modalData} closeModal={closeModal} handleSave={handleSaveDeadline} />
+          <DeleteModal modalData={modalData} closeModal={closeModal} confirmDelete={handleDeleteDeadline} />
 
-        <div className="p-4 max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto">
           <header className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900">Quản lý Deadline</h1>
             <p className="text-gray-500 mt-2">Tạo, cập nhật và quản lý các deadline quan trọng.</p>
@@ -527,7 +532,8 @@ export default function Deadline() {
               </div>
             </div>
           )}
-        </div>
+          </div>
+        </main>
       </div>
     </>
   );

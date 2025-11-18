@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Exception;
+use Carbon\Carbon;
 
 class DeadlineService
 {
@@ -74,18 +76,21 @@ class DeadlineService
                     throw new Exception("Không thể lưu dữ liệu. Vui lòng thử lại sau.");
                 }
             });
-        } catch (Exception $e) {
+        } catch (ValidationException $e) {
+            // Re-throw validation exceptions để resolver xử lý
+            throw $e;
+        } catch (QueryException $e) {
             // Xử lý lỗi hệ thống hoặc kết nối DB
-            if ($e instanceof QueryException) {
-                if (strpos($e->getMessage(), 'SQLSTATE[HY000]') !== false) {
-                    throw new Exception("Không thể kết nối đến cơ sở dữ liệu.");
-                }
-                if (strpos($e->getMessage(), 'SQLSTATE[HY000]: General error: 1205') !== false) {
-                    throw new Exception("Truy vấn quá lâu, hệ thống đã hủy yêu cầu.");
-                }
-                throw new Exception("Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.");
+            if (strpos($e->getMessage(), 'SQLSTATE[HY000]') !== false) {
+                throw new Exception("Không thể kết nối đến cơ sở dữ liệu.");
             }
-            throw $e; // Ném lại các lỗi khác (validation, xung đột)
+            if (strpos($e->getMessage(), 'SQLSTATE[HY000]: General error: 1205') !== false) {
+                throw new Exception("Truy vấn quá lâu, hệ thống đã hủy yêu cầu.");
+            }
+            throw new Exception("Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.");
+        } catch (Exception $e) {
+            // Ném lại các lỗi khác (xung đột, etc.)
+            throw $e;
         }
     }
 
@@ -109,6 +114,7 @@ class DeadlineService
                 'deadline_date' => [
                     'sometimes',
                     'required',
+                    'date',
                     'date_format:Y-m-d H:i:s',
                     'after:now',
                 ],
@@ -134,11 +140,17 @@ class DeadlineService
             }
 
             // Kiểm tra xung đột
-            if ($this->repository->checkConflict(
-                $data['title'] ?? $deadline->title,
-                $data['deadline_date'] ?? $deadline->deadline_date,
-                $id
-            )) {
+            $titleToCheck = $data['title'] ?? $deadline->title;
+            $deadlineDateToCheck = $data['deadline_date'] ?? null;
+            
+            // Chuyển đổi deadline_date từ Carbon sang string nếu cần
+            if ($deadlineDateToCheck === null) {
+                $deadlineDateToCheck = $deadline->deadline_date instanceof Carbon 
+                    ? $deadline->deadline_date->format('Y-m-d H:i:s') 
+                    : (string)$deadline->deadline_date;
+            }
+            
+            if ($this->repository->checkConflict($titleToCheck, $deadlineDateToCheck, $id)) {
                 throw new Exception("Xung đột với deadline khác. Vui lòng chọn thời điểm hoặc tiêu đề khác.");
             }
 
@@ -150,17 +162,22 @@ class DeadlineService
                     throw new Exception("Không thể lưu dữ liệu. Vui lòng thử lại sau.");
                 }
             });
-        } catch (Exception $e) {
+        } catch (ValidationException $e) {
+            // Re-throw validation exceptions để resolver xử lý
+            throw $e;
+        } catch (ModelNotFoundException $e) {
+            throw new Exception("Không tìm thấy deadline hoặc deadline đã bị xóa.");
+        } catch (QueryException $e) {
             // Xử lý lỗi hệ thống hoặc kết nối DB
-            if ($e instanceof QueryException) {
-                if (strpos($e->getMessage(), 'SQLSTATE[HY000]') !== false) {
-                    throw new Exception("Không thể kết nối đến cơ sở dữ liệu.");
-                }
-                if (strpos($e->getMessage(), 'SQLSTATE[HY000]: General error: 1205') !== false) {
-                    throw new Exception("Truy vấn quá lâu, hệ thống đã hủy yêu cầu.");
-                }
-                throw new Exception("Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.");
+            if (strpos($e->getMessage(), 'SQLSTATE[HY000]') !== false) {
+                throw new Exception("Không thể kết nối đến cơ sở dữ liệu.");
             }
+            if (strpos($e->getMessage(), 'SQLSTATE[HY000]: General error: 1205') !== false) {
+                throw new Exception("Truy vấn quá lâu, hệ thống đã hủy yêu cầu.");
+            }
+            throw new Exception("Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.");
+        } catch (Exception $e) {
+            // Xử lý các lỗi khác
             throw $e;
         }
     }
@@ -199,8 +216,12 @@ class DeadlineService
                 throw new Exception("Không tìm thấy deadline đã xóa.");
             }
 
-            // Kiểm tra xung đột
-            if ($this->repository->checkConflict($deadline->title, $deadline->deadline_date)) {
+            // Kiểm tra xung đột - chuyển đổi deadline_date từ Carbon sang string
+            $deadlineDateStr = $deadline->deadline_date instanceof Carbon 
+                ? $deadline->deadline_date->format('Y-m-d H:i:s') 
+                : (string)$deadline->deadline_date;
+            
+            if ($this->repository->checkConflict($deadline->title, $deadlineDateStr)) {
                 throw new Exception("Không thể khôi phục deadline. Kiểm tra dữ liệu hoặc xung đột với deadline khác.");
             }
 
@@ -322,3 +343,4 @@ class DeadlineService
             throw $e;
         }
     }
+}

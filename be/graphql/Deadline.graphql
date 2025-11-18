@@ -28,7 +28,7 @@ type PaginatedDeadlines {
   total: Int!
 }
 
-type Query {
+extend type Query {
   getPaginatedDeadlines(perPage: Int, page: Int, includeDeleted: Boolean): PaginatedDeadlines
     @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@getPaginatedDeadlines")
 
@@ -39,7 +39,7 @@ type Query {
     @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@getDeadlineById")
 }
 
-type Mutation {
+ extend type Mutation {
   createDeadline(input: DeadlineInput!): Deadline
     @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@createDeadline")
 

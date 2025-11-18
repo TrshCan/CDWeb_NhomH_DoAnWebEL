@@ -1,5 +1,6 @@
 #import scalars.graphql
 #import event.graphql
+#import Deadline.graphql
 type Query {
     _empty: String
 }
@@ -8,7 +9,7 @@ type Query {
 #import types/user.graphql
 #import types/postMedia.graphql
 #import types/postLike.graphql
-#import types/deadline.graphql
+
 #import types/event.graphql
 #import types/permission.graphql
 
@@ -78,4 +79,4 @@ type UserBadge {
 
 
 
-#import Deadline.graphql
+

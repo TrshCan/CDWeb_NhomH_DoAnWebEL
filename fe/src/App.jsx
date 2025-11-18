@@ -16,7 +16,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import Tab1 from "./pages/admin/Tab1.jsx";
 import Tab2 from "./pages/admin/Tab2.jsx";
 import Tab3 from "./pages/admin/Event.jsx";
-import Tab4 from "./pages/admin/Tab4.jsx";
+import Tab4 from "./pages/admin/Deadline.jsx";
 import Tab5 from "./pages/admin/Tab5.jsx";
 import Tab6 from "./pages/admin/Tab6.jsx";
 import PermissionManagement from "./pages/admin/PermissionManagement.jsx";
