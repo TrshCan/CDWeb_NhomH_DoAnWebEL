@@ -130,7 +130,7 @@ return new class extends Migration {
                 ->constrained('groups')->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('parent_id')->nullable()
                 ->constrained('posts')->cascadeOnUpdate()->nullOnDelete();
-            $table->enum('type', ['announcement', 'group_post', 'comment'])->default('announcement');
+            $table->enum('type', ['announcement', 'group_post', 'comment','normal_post'])->default('announcement');
             $table->text('content')->nullable();
             $table->string('media_url', 255)->nullable();
             $table->timestamp('created_at')->nullable();
@@ -347,7 +347,7 @@ return new class extends Migration {
         Schema::create('events', function (Blueprint $table) {
             $table->increments('id'); // int auto-increment
             $table->text('title');
-            $table->date('event_date');
+            $table->datetime('event_date');
             $table->text('location')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
@@ -385,6 +385,13 @@ return new class extends Migration {
             $table->timestamp('assigned_at')->useCurrent();
             $table->timestamp('revoked_at')->nullable();
         });
+         // 21) PostImages
+        Schema::create('post_media', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('post_id')->constrained()->onDelete('cascade');
+            $table->string('url');
+            $table->timestamps();
+        });
     }
 
     public function down(): void
@@ -393,7 +400,7 @@ return new class extends Migration {
         Schema::dropIfExists('survey_results');
         Schema::dropIfExists('survey_answer_files');
         Schema::dropIfExists('survey_answer_options');
-
+        Schema::dropIfExists('post_media');
         Schema::dropIfExists('user_badges');
         Schema::dropIfExists('badges');
         Schema::dropIfExists('deadlines');

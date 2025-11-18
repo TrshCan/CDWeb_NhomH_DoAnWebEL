@@ -62,6 +62,17 @@ enum SurveyStatus {
     closed
 }
 
+input CreateSurveyInput {
+    title: String!
+    description: String
+    categories_id: Int!
+    type: SurveyType
+    object: SurveyObject
+    status: SurveyStatus
+    start_at: DateTime
+    end_at: DateTime
+}
+
 # --------------------------------------------
 # ----------------SurveyQuestion--------------
 # --------------------------------------------
@@ -166,6 +177,10 @@ type Mutation {
 
     deleteCategory(id: Int!, allowIfReferenced: Boolean): Boolean!
         @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@delete")
+
+    # Surveys
+    createSurvey(input: CreateSurveyInput!): Survey
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@create")
 
     # Questions - CHỈ ADD QUESTION
     addQuestion(input: CreateQuestionInput!): SurveyQuestion
