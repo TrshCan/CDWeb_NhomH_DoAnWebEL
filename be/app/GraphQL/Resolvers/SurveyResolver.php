@@ -5,6 +5,7 @@ namespace App\GraphQL\Resolvers;
 use App\Services\SurveyService;
 use App\Models\Survey;
 use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class SurveyResolver
@@ -48,6 +49,20 @@ class SurveyResolver
     public function updateSurvey($root, array $args)
     {
         try {
+            // Kiểm tra quyền: chỉ admin và lecturer mới có thể sửa survey
+            $user = Auth::user();
+            if (!$user) {
+                throw ValidationException::withMessages([
+                    'permission' => 'Bạn chưa đăng nhập. Vui lòng đăng nhập để sử dụng chức năng này.',
+                ]);
+            }
+
+            if (!$user->isAdmin() && !$user->isLecturer()) {
+                throw ValidationException::withMessages([
+                    'permission' => 'Bạn không có quyền sửa khảo sát. Chỉ admin và giáo viên mới có quyền này.',
+                ]);
+            }
+
             $id = $args['id'];
             $input = $args['input'];
 
@@ -78,6 +93,20 @@ class SurveyResolver
     public function createSurvey($root, array $args, GraphQLContext $context): Survey
     {
         try {
+            // Kiểm tra quyền: chỉ admin và lecturer mới có thể tạo survey
+            $user = Auth::user();
+            if (!$user) {
+                throw ValidationException::withMessages([
+                    'permission' => 'Bạn chưa đăng nhập. Vui lòng đăng nhập để sử dụng chức năng này.',
+                ]);
+            }
+
+            if (!$user->isAdmin() && !$user->isLecturer()) {
+                throw ValidationException::withMessages([
+                    'permission' => 'Bạn không có quyền tạo khảo sát. Chỉ admin và giáo viên mới có quyền này.',
+                ]);
+            }
+
             $data = [
                 'title' => $args['input']['title'],
                 'description' => $args['input']['description'] ?? null,
@@ -114,6 +143,20 @@ class SurveyResolver
     public function deleteSurvey($_, array $args)
     {
         try {
+            // Kiểm tra quyền: chỉ admin và lecturer mới có thể xóa survey
+            $user = Auth::user();
+            if (!$user) {
+                throw ValidationException::withMessages([
+                    'permission' => 'Bạn chưa đăng nhập. Vui lòng đăng nhập để sử dụng chức năng này.',
+                ]);
+            }
+
+            if (!$user->isAdmin() && !$user->isLecturer()) {
+                throw ValidationException::withMessages([
+                    'permission' => 'Bạn không có quyền xóa khảo sát. Chỉ admin và giáo viên mới có quyền này.',
+                ]);
+            }
+
             $result = $this->service->deleteSurvey($args['id']);
             return $result;
         } catch (\Illuminate\Validation\ValidationException $e) {
