@@ -1,0 +1,50 @@
+
+enum SurveyStatus {
+  """Chưa bắt đầu"""
+  pending
+  """Đang diễn ra"""
+  active
+  """Tạm dừng"""
+  paused
+  """Đã kết thúc"""
+  closed
+}
+
+type Survey {
+  id: ID!
+  title: String!
+  description: String
+  start_at: String   # ← đổi từ DateTime sang String
+  end_at: String     # ← đổi từ DateTime sang String
+  status: SurveyStatus!
+  allow_review: Boolean!
+  created_by: ID!
+  type: String!
+  object: String!
+}
+
+
+type SurveyStatusResponse {
+  survey: Survey
+  message: String!
+}
+
+type Query {
+  _empty: String
+  surveys: [Survey!]!
+    @field(resolver: "App\\GraphQL\\Resolvers\\StateManagementResolver@listSurveys")
+}
+
+extend type Mutation {
+  changeSurveyStatus(
+    id: ID!
+    status: SurveyStatus!
+  ): SurveyStatusResponse
+    @field(resolver: "App\\GraphQL\\Resolvers\\StateManagementResolver@changeSurveyStatus")
+
+  toggleReviewPermission(
+    id: ID!
+    allowReview: Boolean!
+  ): SurveyStatusResponse
+    @field(resolver: "App\\GraphQL\\Resolvers\\StateManagementResolver@toggleReviewPermission")
+}
