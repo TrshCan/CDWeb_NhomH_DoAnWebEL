@@ -1,42 +1,41 @@
-// fe/src/api/graphql.js
 import axios from "axios";
 
-const GRAPHQL_URL = "http://127.0.0.1:8000/graphql"; // thay bằng URL BE của bạn
+const GRAPHQL_URL = "http://127.0.0.1:8000/graphql";
 
 export const graphqlRequest = async (query, variables = {}) => {
   try {
     const token = localStorage.getItem("token");
-    const headers = { "Content-Type": "application/json" };
-    
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
+
+    const response = await axios.post(
+      GRAPHQL_URL,
+      { query, variables },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+      }
+    );
+
+    // Nếu GraphQL trả lỗi → ném ra FE
+    if (response.data?.errors?.length) {
+      throw new Error(response.data.errors[0].message);
     }
 
-    const response = await axios.post(GRAPHQL_URL, { query, variables }, {
-      headers,
-    });
-    
-    // Kiểm tra GraphQL errors
-    if (response.data.errors) {
-      const error = response.data.errors[0];
-      throw new Error(error.message || 'Có lỗi xảy ra');
-    }
-    
     return response.data;
-  } catch (error) {
-    console.error(error);
-    
-    // Xử lý lỗi từ response
-    if (error.response?.data?.errors) {
-      const graphqlError = error.response.data.errors[0];
-      throw new Error(graphqlError.message || 'Có lỗi xảy ra');
+
+  } catch (err) {
+    // Lỗi backend Laravel (axios có response)
+    if (err.response?.data?.errors?.length) {
+      throw new Error(err.response.data.errors[0].message);
     }
-    
-    // Xử lý lỗi network hoặc lỗi khác
-    if (error.message) {
-      throw error;
+
+    // Lỗi network thật
+    if (err.message === "Network Error") {
+      throw new Error("Không thể kết nối đến server");
     }
-    
-    throw new Error('Có lỗi xảy ra, vui lòng thử lại');
+
+    // Lỗi khác
+    throw new Error(err.message || "Lỗi không xác định");
   }
 };

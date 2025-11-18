@@ -74,6 +74,7 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
       remember: true,
   });
   const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Xử lý thay đổi Input
   const handleChange = (e) => {
@@ -87,53 +88,64 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
   // Xử lý Submit
 
   const handleSubmit = async (e) => {
-      e.preventDefault();
-      try {
-          const variables = {
-              name: formData.name,
-              email: formData.email,
-              phone: formData.phone,
-              address: formData.address,
-              password: formData.password
-          };
+    e.preventDefault();
+    setMessage('');
   
-          const response = await graphqlRequest(REGISTER_USER, variables);
-          console.log("Full response:", response); // log để debug
-
-          if (response.data && response.data.registerUser) {
-              // Mutation thành công
-              let second = 3;
-              setCountdown(second);
-              setMessage(`Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`);
-
-              const interval = setInterval(() => {
-                  second -= 1;
-                  setCountdown(second);
-                  setMessage(`Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`);
-
-                  if (second === 0) {
-                      clearInterval(interval);
-                      navigate('/login');
-                  }
-              }, 1000);
-
-              // Reset form
-              setFormData({ name: '', email: '', phone: '', address: '', password: '', remember: false });
-          } else if (response.errors) {
-              console.error("GraphQL errors:", response.errors);
-              setMessage(response.errors[0].message);
-          } else {
-              setMessage("Có lỗi xảy ra, vui lòng thử lại");
+    // Validation front-end
+    if (!formData.name || !formData.email || !formData.password) {
+      setMessage("Vui lòng điền đầy đủ tên, email và mật khẩu");
+      return;
+    }
+  
+    setIsLoading(true);
+  
+    try {
+      const variables = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || null,
+        address: formData.address || null,
+        password: formData.password,
+      };
+  
+      const response = await graphqlRequest(REGISTER_USER, variables);
+  
+      if (response.data && response.data.registerUser) {
+        // Mutation thành công
+        let second = 3;
+        setCountdown(second);
+        setMessage(
+          `Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`
+        );
+  
+        const interval = setInterval(() => {
+          second -= 1;
+          setCountdown(second);
+          setMessage(
+            `Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`
+          );
+  
+          if (second === 0) {
+            clearInterval(interval);
+            navigate("/login");
           }
-
-
-      } catch (err) {
-          console.error(err);
-          setMessage("Network hoặc server error");
+        }, 1000);
+  
+        // Reset form
+        setFormData({ name: "", email: "", phone: "", address: "", password: "", remember: false });
+      } else if (response.errors) {
+        setMessage(response.errors[0].message);
+      } else {
+        setMessage("Có lỗi xảy ra, vui lòng thử lại");
       }
+    } catch (err) {
+      console.error(err);
+      setMessage(err.message || "Có lỗi xảy ra, vui lòng thử lại");
+    } finally {
+      setIsLoading(false);
+    }
   };
   
-
   return (
     <form className="w-full max-w-md mx-auto p-6" onSubmit={handleSubmit}>
     <h2 className="text-2xl font-bold mb-6 text-center text-white">
@@ -158,6 +170,7 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
           placeholder="Nguyen Van A"
           value={formData.name}
           onChange={handleChange}
+          disabled={isLoading}
           className="w-full p-3 rounded-lg border bg-white text-gray-900"
         />
       </div>
@@ -171,6 +184,7 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
           placeholder="WQOZV@example.com"
           value={formData.email}
           onChange={handleChange}
+          disabled={isLoading}
           className="w-full p-3 rounded-lg border bg-white text-gray-900"
         />
       </div>
@@ -184,6 +198,7 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
           placeholder="0123456789"
           value={formData.phone}
           onChange={handleChange}
+          disabled={isLoading}
           className="w-full p-3 rounded-lg border bg-white text-gray-900"
         />
       </div>
@@ -197,6 +212,7 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
           placeholder="Thanh Xuan, Ha Noi"
           value={formData.address}
           onChange={handleChange}
+          disabled={isLoading}
           className="w-full p-3 rounded-lg border bg-white text-gray-900"
         />
       </div>
@@ -212,6 +228,7 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
         placeholder="••••••••"
         value={formData.password}
         onChange={handleChange}
+        disabled={isLoading}
         className="w-full p-3 pr-10 rounded-lg border bg-white text-gray-900"
       />
       <button
@@ -232,10 +249,41 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
       </label>
     </div>
   
-    {/* Nút đăng ký */}
-    <button className="mt-2 w-full p-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700">
-      Đăng ký
-    </button>
+    <button
+  type="submit"
+  disabled={isLoading}
+  className="mt-2 w-full p-3 flex items-center justify-center bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  {isLoading ? (
+    <div className="flex items-center">
+      <svg
+        className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        ></circle>
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
+      </svg>
+      Đang tải...
+    </div>
+  ) : (
+    "Đăng ký"
+  )}
+</button>
+
+
   
     <p className="mt-3 text-center text-sm text-gray-400">
       Đã có tài khoản?  
@@ -267,3 +315,4 @@ function App() {
 
 
 export default App;
+
