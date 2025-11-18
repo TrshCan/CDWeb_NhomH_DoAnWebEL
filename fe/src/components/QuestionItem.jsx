@@ -15,10 +15,14 @@ export default function QuestionItem({
   onDuplicate,
   onDelete,
   onTextChange,
+  onTextBlur,
+  onHelpTextChange,
+  onHelpTextBlur,
   onAnswerSelect,
   selectedAnswer,
   conditionInfo,
   onOptionChange,
+  onOptionBlur,
   onRemoveOption,
   onMoveOption,
   onAddOption,
@@ -763,11 +767,14 @@ export default function QuestionItem({
                     initialValue={question.text}
                     inputClassName="text-gray-800 font-thin text-[25px]"
                     onChange={(value) => onTextChange?.(question.id, value)}
+                    onBlur={(value) => onTextBlur?.(question.id, value)}
                   />
                   <EditableField
                     placeholder="Mô tả trợ giúp tuỳ chọn"
                     initialValue={question.helpText}
                     inputClassName="text-sm text-gray-800 mt-1 mb-4 italic font-medium"
+                    onChange={(value) => onHelpTextChange?.(question.id, value)}
+                    onBlur={(value) => onHelpTextBlur?.(question.id, value)}
                   />
                 </div>
               </div>
@@ -1520,6 +1527,9 @@ export default function QuestionItem({
                               onChange={(value) =>
                                 onOptionChange?.(question.id, option.id, value)
                               }
+                              onBlur={(value) =>
+                                onOptionBlur?.(option.id, value)
+                              }
                             />
                           </div>
                           {/* Input text bên cạnh (khi không active) */}
@@ -1950,6 +1960,9 @@ export default function QuestionItem({
                                         value
                                       )
                                     }
+                                    onBlur={(value) =>
+                                      onOptionBlur?.(option.id, value)
+                                    }
                                   />
                                 </div>
                               ) : (
@@ -2063,11 +2076,14 @@ export default function QuestionItem({
                   initialValue={question.text}
                   inputClassName="text-gray-900 font-thin text-[25px]"
                   onChange={(value) => onTextChange?.(question.id, value)}
+                  onBlur={(value) => onTextBlur?.(question.id, value)}
                 />
                 <EditableField
                   placeholder="Mô tả trợ giúp tuỳ chọn"
                   initialValue={question.helpText}
                   inputClassName="text-sm text-gray-800 mt-1 mb-4 italic font-medium"
+                  onChange={(value) => onHelpTextChange?.(question.id, value)}
+                  onBlur={(value) => onHelpTextBlur?.(question.id, value)}
                 />
               </div>
             </div>

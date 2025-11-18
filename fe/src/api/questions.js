@@ -109,3 +109,104 @@ export const deleteQuestions = async (questionIds) => {
   const response = await graphqlRequest(mutation, variables);
   return response.data.deleteQuestions;
 };
+
+/**
+ * Cập nhật câu hỏi (partial update - chỉ cập nhật các field được truyền vào)
+ */
+export const updateQuestion = async (questionId, updateData) => {
+  const mutation = `
+    mutation UpdateQuestion($id: ID!, $input: UpdateQuestionInput!) {
+      updateQuestion(id: $id, input: $input) {
+        id
+        question_code
+        question_text
+        question_type
+        required
+        image
+        conditions
+        max_length
+        numeric_only
+        max_questions
+        allowed_file_types
+        max_file_size_kb
+        help_text
+        points
+      }
+    }
+  `;
+
+  const variables = {
+    id: questionId,
+    input: updateData,
+  };
+
+  const response = await graphqlRequest(mutation, variables);
+  return response.data.updateQuestion;
+};
+
+/**
+ * Tạo option mới
+ */
+export const addOption = async (optionData) => {
+  const mutation = `
+    mutation AddOption($input: CreateOptionInput!) {
+      addOption(input: $input) {
+        id
+        question_id
+        option_text
+        image
+        is_subquestion
+        position
+        is_correct
+      }
+    }
+  `;
+
+  const variables = {
+    input: optionData,
+  };
+
+  const response = await graphqlRequest(mutation, variables);
+  return response.data.addOption;
+};
+
+/**
+ * Cập nhật option (partial update - chỉ cập nhật các field được truyền vào)
+ */
+export const updateOption = async (optionId, updateData) => {
+  const mutation = `
+    mutation UpdateOption($id: ID!, $input: UpdateOptionInput!) {
+      updateOption(id: $id, input: $input) {
+        id
+        option_text
+        image
+        is_subquestion
+        position
+        is_correct
+      }
+    }
+  `;
+
+  const variables = {
+    id: optionId,
+    input: updateData,
+  };
+
+  const response = await graphqlRequest(mutation, variables);
+  return response.data.updateOption;
+};
+
+/**
+ * Xóa option
+ */
+export const deleteOption = async (optionId) => {
+  const mutation = `
+    mutation DeleteOption($id: ID!) {
+      deleteOption(id: $id)
+    }
+  `;
+
+  const variables = { id: optionId };
+  const response = await graphqlRequest(mutation, variables);
+  return response.data.deleteOption;
+};

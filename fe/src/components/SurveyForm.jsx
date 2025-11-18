@@ -17,7 +17,7 @@ import HeaderBar from "./HeaderBar";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 
 import { Toaster, toast } from "react-hot-toast";
-import { addQuestion, deleteQuestion, deleteQuestions } from "../api/questions";
+import { addQuestion, deleteQuestion, deleteQuestions, updateQuestion, updateOption, addOption, deleteOption } from "../api/questions";
 
 export default function SurveyForm({ surveyId = null }) {
   const [activeSection, setActiveSection] = useState(null);
@@ -362,6 +362,102 @@ export default function SurveyForm({ surveyId = null }) {
         }
       }
 
+      // Xử lý khi có field của câu hỏi được cập nhật từ tab khác (tối ưu - chỉ cập nhật field cụ thể)
+      if (type === 'QUESTION_FIELD_UPDATED') {
+        const { questionId, fieldName, value } = data;
+        const questionIdStr = String(questionId);
+
+        // Cập nhật chỉ field cụ thể (tối ưu - không reload toàn bộ)
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) => {
+              if (String(q.id) !== questionIdStr) return q;
+
+              // Cập nhật field tương ứng
+              if (fieldName === 'question_text') {
+                return { ...q, text: value };
+              } else if (fieldName === 'help_text') {
+                return { ...q, helpText: value };
+              } else if (fieldName === 'max_length') {
+                return { ...q, maxLength: value };
+              }
+              // Có thể thêm các field khác nếu cần
+              return q;
+            }),
+          }))
+        );
+
+        // Cập nhật questionSettings nếu cần
+        if (fieldName !== 'question_text' && fieldName !== 'help_text' && fieldName !== 'max_length') {
+          setQuestionSettings((prev) => {
+            const questionSettings = prev[questionIdStr];
+            if (questionSettings) {
+              return {
+                ...prev,
+                [questionIdStr]: {
+                  ...questionSettings,
+                  [fieldName]: value,
+                },
+              };
+            }
+            return prev;
+          });
+        }
+      }
+
+      // Xử lý khi có field của option được cập nhật từ tab khác (tối ưu - chỉ cập nhật field cụ thể)
+      if (type === 'OPTION_FIELD_UPDATED') {
+        const { optionId, fieldName, value } = data;
+        const optionIdStr = String(optionId);
+
+        // Cập nhật chỉ field cụ thể của option (tối ưu - không reload toàn bộ)
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) => {
+              const optionIndex = q.options?.findIndex((opt) => String(opt.id) === optionIdStr);
+              if (optionIndex === -1 || optionIndex === undefined) return q;
+
+              const updatedOptions = [...q.options];
+              if (fieldName === 'option_text') {
+                updatedOptions[optionIndex] = { ...updatedOptions[optionIndex], text: value };
+              } else if (fieldName === 'image') {
+                updatedOptions[optionIndex] = { ...updatedOptions[optionIndex], image: value };
+              }
+              // Có thể thêm các field khác nếu cần
+
+              return {
+                ...q,
+                options: updatedOptions,
+              };
+            }),
+          }))
+        );
+      }
+
+      // Xử lý khi có option bị xóa từ tab khác
+      if (type === 'OPTION_DELETED') {
+        const { questionId, optionId } = data;
+        const questionIdStr = String(questionId);
+        const deletedOptionIdStr = String(optionId);
+
+        // Xóa option khỏi question tương ứng
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) => {
+              if (String(q.id) !== questionIdStr) return q;
+              
+              return {
+                ...q,
+                options: (q.options || []).filter((opt) => String(opt.id) !== deletedOptionIdStr),
+              };
+            }),
+          }))
+        );
+      }
+
       // Xử lý khi có câu hỏi mới được thêm từ tab khác
       if (type === 'QUESTION_ADDED') {
         // Reload survey để lấy dữ liệu mới nhất
@@ -431,8 +527,8 @@ export default function SurveyForm({ surveyId = null }) {
               setQuestionSettings((prev) => ({ ...prev, ...newQuestionSettings }));
               setSelectedAnswers((prev) => ({ ...prev, ...newSelectedAnswers }));
             }
-          } catch (error) {
-            console.error('Lỗi khi reload survey:', error);
+          } catch {
+            // Lỗi đã được xử lý
           }
         };
 
@@ -542,8 +638,62 @@ export default function SurveyForm({ surveyId = null }) {
     };
   }, [activeSection]);
 
+  // ✅ Helper function để lưu câu hỏi vào CSDL và đồng bộ với các tab
+  const saveQuestionField = useCallback(async (questionId, fieldName, value, skipBroadcast = false) => {
+    if (!questionId || !currentSurveyId) return;
+
+    try {
+      // Cập nhật state ngay lập tức (optimistic update)
+      const updateData = { [fieldName]: value };
+      await updateQuestion(questionId, updateData);
+
+      // Gửi message qua BroadcastChannel để đồng bộ với các tab khác
+      if (!skipBroadcast && broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: 'QUESTION_FIELD_UPDATED',
+          data: {
+            questionId: String(questionId),
+            fieldName,
+            value,
+          },
+        });
+      }
+
+      setSavedAt(new Date());
+    } catch {
+      toast.error(`Không thể lưu ${fieldName}`);
+    }
+  }, [currentSurveyId]);
+
+  // ✅ Helper function để lưu option vào CSDL và đồng bộ với các tab
+  const saveOptionField = useCallback(async (optionId, fieldName, value, skipBroadcast = false) => {
+    if (!optionId) return;
+
+    try {
+      // Cập nhật state ngay lập tức (optimistic update)
+      const updateData = { [fieldName]: value };
+      await updateOption(optionId, updateData);
+
+      // Gửi message qua BroadcastChannel để đồng bộ với các tab khác
+      if (!skipBroadcast && broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: 'OPTION_FIELD_UPDATED',
+          data: {
+            optionId: String(optionId),
+            fieldName,
+            value,
+          },
+        });
+      }
+
+      setSavedAt(new Date());
+    } catch {
+      toast.error(`Không thể lưu ${fieldName}`);
+    }
+  }, []);
+
   // ✅ Memoize handlers để tránh re-render không cần thiết
-  // Thay đổi văn bản câu hỏi
+  // Thay đổi văn bản câu hỏi (onChange - chỉ cập nhật UI)
   const handleQuestionTextChange = useCallback((id, newText) => {
     setQuestionGroups((prev) =>
       prev.map((group) => ({
@@ -555,7 +705,31 @@ export default function SurveyForm({ surveyId = null }) {
     );
   }, []);
 
-  // Thay đổi văn bản option
+  // ✅ Lưu văn bản câu hỏi khi onBlur
+  const handleQuestionTextBlur = useCallback((id, newText) => {
+    if (!id || !newText) return;
+    saveQuestionField(id, 'question_text', newText);
+  }, [saveQuestionField]);
+
+  // ✅ Thay đổi helpText câu hỏi (onChange - chỉ cập nhật UI)
+  const handleHelpTextChange = useCallback((id, newHelpText) => {
+    setQuestionGroups((prev) =>
+      prev.map((group) => ({
+        ...group,
+        questions: group.questions.map((item) =>
+          item.id === id ? { ...item, helpText: newHelpText } : item
+        ),
+      }))
+    );
+  }, []);
+
+  // ✅ Lưu helpText câu hỏi khi onBlur
+  const handleHelpTextBlur = useCallback((id, newHelpText) => {
+    if (!id) return;
+    saveQuestionField(id, 'help_text', newHelpText || '');
+  }, [saveQuestionField]);
+
+  // Thay đổi văn bản option (onChange - chỉ cập nhật UI)
   const handleOptionChange = useCallback((questionId, optionId, newText) => {
     setQuestionGroups((prev) =>
       prev.map((group) => ({
@@ -574,7 +748,13 @@ export default function SurveyForm({ surveyId = null }) {
     );
   }, []);
 
-  // Thay đổi ảnh cho từng option
+  // ✅ Lưu văn bản option khi onBlur
+  const handleOptionBlur = useCallback((optionId, newText) => {
+    if (!optionId || newText === undefined) return;
+    saveOptionField(optionId, 'option_text', newText);
+  }, [saveOptionField]);
+
+  // Thay đổi ảnh cho từng option (lưu ngay khi thay đổi)
   const handleOptionImageChange = useCallback((questionId, optionId, imageDataUrl) => {
     setQuestionGroups((prev) =>
       prev.map((group) => ({
@@ -591,33 +771,141 @@ export default function SurveyForm({ surveyId = null }) {
         }),
       }))
     );
-  }, []);
 
-  // Thêm option mới
-  const handleAddOption = (questionId, isSubquestion = false) => {
+    // Lưu vào CSDL ngay khi thay đổi ảnh
+    if (optionId && imageDataUrl !== undefined) {
+      saveOptionField(optionId, 'image', imageDataUrl);
+    }
+  }, [saveOptionField]);
+
+  // ✅ Thêm option mới và lưu vào CSDL
+  const handleAddOption = async (questionId, isSubquestion = false) => {
+    // Tìm question để lấy thông tin
+    const question = allQuestions.find((q) => q.id === questionId);
+    if (!question) {
+      toast.error("Không tìm thấy câu hỏi");
+      return;
+    }
+
+    // Tính position mới (số options hiện tại + 1)
+    const currentOptions = question.options || [];
+    const newPosition = currentOptions.length + 1;
+
+    // Tạo option tạm thời với ID tạm
+    const tempId = Date.now() + Math.random();
+    const newOption = {
+      id: tempId,
+      text: "",
+      isSubquestion: isSubquestion,
+    };
+
+    // Cập nhật UI ngay lập tức (optimistic update)
     setQuestionGroups((prev) =>
       prev.map((group) => ({
         ...group,
         questions: group.questions.map((q) => {
           if (q.id === questionId) {
-            const maxOptionId = Math.max(
-              ...q.options.map((opt) => opt.id || 0)
-            );
-            const newOption = {
-              id: maxOptionId + 1,
-              text: "",
-              isSubquestion: isSubquestion, // Thêm thuộc tính isSubquestion cho Ma trận
-            };
             return { ...q, options: [...q.options, newOption] };
           }
           return q;
         }),
       }))
     );
+
+    // Lưu vào CSDL
+    try {
+      const optionData = {
+        question_id: String(questionId),
+        option_text: "",
+        is_subquestion: isSubquestion,
+        position: newPosition,
+      };
+
+      const savedOption = await addOption(optionData);
+
+      // Cập nhật ID thực từ CSDL
+      setQuestionGroups((prev) =>
+        prev.map((group) => ({
+          ...group,
+          questions: group.questions.map((q) => {
+            if (q.id === questionId) {
+              return {
+                ...q,
+                options: q.options.map((opt) =>
+                  opt.id === tempId
+                    ? {
+                        id: parseInt(savedOption.id),
+                        text: savedOption.option_text || "",
+                        isSubquestion: savedOption.is_subquestion || false,
+                        image: savedOption.image || null,
+                      }
+                    : opt
+                ),
+              };
+            }
+            return q;
+          }),
+        }))
+      );
+
+      setSavedAt(new Date());
+    } catch {
+      toast.error("Không thể thêm option mới");
+      
+      // Rollback: xóa option tạm thời
+      setQuestionGroups((prev) =>
+        prev.map((group) => ({
+          ...group,
+          questions: group.questions.map((q) => {
+            if (q.id === questionId) {
+              return {
+                ...q,
+                options: q.options.filter((opt) => opt.id !== tempId),
+              };
+            }
+            return q;
+          }),
+        }))
+      );
+    }
   };
 
-  // Xóa option
-  const handleRemoveOption = (questionId, optionId) => {
+  // ✅ Xóa option và xóa trong CSDL
+  const handleRemoveOption = async (questionId, optionId) => {
+    // Lưu snapshot để rollback nếu lỗi
+    const question = allQuestions.find((q) => q.id === questionId);
+    const optionToDelete = question?.options?.find((opt) => opt.id === optionId);
+    
+    if (!optionToDelete) {
+      toast.error("Không tìm thấy option cần xóa");
+      return;
+    }
+
+    // Kiểm tra xem option có ID từ CSDL không
+    // ID từ CSDL: số nguyên (integer) hoặc string có thể parse thành số nguyên
+    // ID tạm thời: số thập phân (Date.now() + Math.random() tạo ra số thập phân)
+    let isFromDB = false;
+    let optionIdToDelete = null;
+    
+    if (optionId !== null && optionId !== undefined) {
+      if (typeof optionId === 'number') {
+        // Nếu là số nguyên thì là ID từ CSDL (ID từ CSDL luôn là số nguyên)
+        if (Number.isInteger(optionId) && optionId > 0) {
+          isFromDB = true;
+          optionIdToDelete = optionId;
+        }
+        // Nếu là số thập phân thì là ID tạm thời, không xóa trong CSDL
+      } else if (typeof optionId === 'string') {
+        // Nếu string có thể parse thành số nguyên thì là ID từ CSDL
+        const parsed = parseInt(optionId, 10);
+        if (!isNaN(parsed) && String(parsed) === optionId && parsed > 0) {
+          isFromDB = true;
+          optionIdToDelete = parsed;
+        }
+      }
+    }
+
+    // Cập nhật UI ngay lập tức (optimistic update)
     setQuestionGroups((prev) =>
       prev.map((group) => ({
         ...group,
@@ -631,10 +919,68 @@ export default function SurveyForm({ surveyId = null }) {
         ),
       }))
     );
+
+    // Xóa trong CSDL nếu option đã được lưu
+    if (isFromDB && optionIdToDelete) {
+      try {
+        await deleteOption(optionIdToDelete);
+        setSavedAt(new Date());
+        
+        // ✅ Gửi message qua BroadcastChannel để đồng bộ với các tab khác
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.postMessage({
+            type: 'OPTION_DELETED',
+            data: {
+              questionId: String(questionId),
+              optionId: String(optionIdToDelete),
+            },
+          });
+        }
+      } catch {
+        toast.error("Không thể xóa option");
+        
+        // Rollback: khôi phục option
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) => {
+              if (q.id === questionId) {
+                const options = [...q.options];
+                // Tìm vị trí để chèn lại (giữ nguyên thứ tự)
+                const originalIndex = question.options.findIndex(
+                  (opt) => opt.id === optionId
+                );
+                if (originalIndex >= 0) {
+                  options.splice(originalIndex, 0, optionToDelete);
+                } else {
+                  options.push(optionToDelete);
+                }
+                return { ...q, options };
+              }
+              return q;
+            }),
+          }))
+        );
+      }
+    } else {
+      // Option tạm thời, chỉ xóa khỏi UI (không cần xóa trong CSDL)
+      setSavedAt(new Date());
+    }
   };
 
-  // Di chuyển option lên/xuống
-  const handleMoveOption = (questionId, fromIndex, toIndex) => {
+  // ✅ Di chuyển option lên/xuống và cập nhật position trong CSDL
+  const handleMoveOption = async (questionId, fromIndex, toIndex) => {
+    // Tìm question và lưu snapshot
+    const question = allQuestions.find((q) => q.id === questionId);
+    if (!question || !question.options) {
+      return;
+    }
+
+    // Lưu snapshot để rollback nếu lỗi
+    const originalOptions = [...question.options];
+
+    // Cập nhật UI ngay lập tức (optimistic update)
+    let movedOptions = [];
     setQuestionGroups((prev) =>
       prev.map((group) => ({
         ...group,
@@ -648,13 +994,47 @@ export default function SurveyForm({ surveyId = null }) {
             ) {
               const [removed] = newOptions.splice(fromIndex, 1);
               newOptions.splice(toIndex, 0, removed);
+              movedOptions = newOptions;
               return { ...q, options: newOptions };
             }
+            movedOptions = newOptions;
           }
           return q;
         }),
       }))
     );
+
+    // Cập nhật position trong CSDL cho tất cả options
+    if (movedOptions.length > 0) {
+      try {
+        // Cập nhật position cho tất cả options theo thứ tự mới
+        const updatePromises = movedOptions.map((opt, index) => {
+          // Chỉ cập nhật nếu option đã có ID từ CSDL (ID là số và > 1000)
+          if (opt.id && typeof opt.id === 'number' && opt.id > 1000 && Number.isInteger(opt.id)) {
+            return updateOption(opt.id, { position: index + 1 });
+          }
+          return Promise.resolve();
+        });
+
+        await Promise.all(updatePromises);
+        setSavedAt(new Date());
+      } catch {
+        toast.error("Không thể cập nhật thứ tự option");
+        
+        // Rollback: khôi phục thứ tự ban đầu
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) => {
+              if (q.id === questionId) {
+                return { ...q, options: originalOptions };
+              }
+              return q;
+            }),
+          }))
+        );
+      }
+    }
   };
 
   const handleOpenPanel = (panel) => {
@@ -940,14 +1320,54 @@ export default function SurveyForm({ surveyId = null }) {
 
         // ✅ Gọi API để lưu lên CSDL
         const savedQuestion = await addQuestion(backendQuestionData);
+        const savedQuestionId = parseInt(savedQuestion.id);
 
-        // Cập nhật ID từ CSDL về frontend
+        // ✅ Lưu tất cả options mặc định vào CSDL
+        const defaultOptions = newItem.options || [];
+        const savedOptions = [];
+        
+        for (let i = 0; i < defaultOptions.length; i++) {
+          const option = defaultOptions[i];
+          try {
+            const optionData = {
+              question_id: String(savedQuestionId),
+              option_text: option.text || "",
+              is_subquestion: option.isSubquestion || false,
+              position: i + 1,
+            };
+
+            const savedOption = await addOption(optionData);
+            savedOptions.push({
+              id: parseInt(savedOption.id),
+              text: savedOption.option_text || "",
+              isSubquestion: savedOption.is_subquestion || false,
+              image: savedOption.image || null,
+            });
+          } catch {
+            // Vẫn tiếp tục với các option khác
+            savedOptions.push({
+              id: Date.now() + i, // ID tạm thời
+              text: option.text || "",
+              isSubquestion: option.isSubquestion || false,
+              image: null,
+            });
+          }
+        }
+
+        // Cập nhật ID từ CSDL về frontend và cập nhật options đã lưu
         setQuestionGroups((prev) =>
           prev.map((group) => ({
             ...group,
-            questions: group.questions.map((q) =>
-              q.id === newId ? { ...q, id: parseInt(savedQuestion.id) } : q
-            ),
+            questions: group.questions.map((q) => {
+              if (q.id === newId) {
+                return {
+                  ...q,
+                  id: savedQuestionId,
+                  options: savedOptions.length > 0 ? savedOptions : q.options,
+                };
+              }
+              return q;
+            }),
           }))
         );
 
@@ -958,13 +1378,30 @@ export default function SurveyForm({ surveyId = null }) {
           if (newSettings[newId]) {
             delete newSettings[newId];
           }
-          newSettings[savedQuestion.id] = { ...oldSettings };
+          newSettings[savedQuestionId] = { ...oldSettings };
           return newSettings;
         });
 
+        // Cập nhật selectedAnswers với ID mới nếu có
+        if (questionType === "Giới tính" || questionType === "Có/Không") {
+          const noAnswerOption = savedOptions.find(
+            (opt) => opt.text === "Không có câu trả lời"
+          );
+          if (noAnswerOption) {
+            setSelectedAnswers((prev) => {
+              const newAnswers = { ...prev };
+              if (newAnswers[newId]) {
+                delete newAnswers[newId];
+              }
+              newAnswers[savedQuestionId] = noAnswerOption.id;
+              return newAnswers;
+            });
+          }
+        }
+
         // Cập nhật activeSection với ID mới
-        setActiveSection(`question-${savedQuestion.id}`);
-        setActiveQuestionId(String(savedQuestion.id));
+        setActiveSection(`question-${savedQuestionId}`);
+        setActiveQuestionId(String(savedQuestionId));
 
         } catch {
           // Lỗi đã được xử lý, không cần hiển thị toast
@@ -1695,6 +2132,9 @@ export default function SurveyForm({ surveyId = null }) {
                             }}
                             onDeleteGroup={() => deleteGroup(group.id)}
                             onTextChange={handleQuestionTextChange}
+                            onTextBlur={handleQuestionTextBlur}
+                            onHelpTextChange={handleHelpTextChange}
+                            onHelpTextBlur={handleHelpTextBlur}
                             onGroupTitleChange={(newTitle) => {
                               setQuestionGroups((prev) =>
                                 prev.map((g) =>
@@ -1708,6 +2148,7 @@ export default function SurveyForm({ surveyId = null }) {
                             selectedAnswers={selectedAnswers}
                             getQuestionConditionInfo={getQuestionConditionInfo}
                             onOptionChange={handleOptionChange}
+                            onOptionBlur={handleOptionBlur}
                             onAddOption={handleAddOption}
                             onRemoveOption={handleRemoveOption}
                             onMoveOption={handleMoveOption}

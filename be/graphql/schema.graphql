@@ -121,6 +121,40 @@ input CreateQuestionInput {
     points: Int
 }
 
+input UpdateQuestionInput {
+    question_code: String
+    question_text: String
+    image: String
+    question_type: String
+    required: QuestionRequired
+    conditions: JSON
+    default_scenario: Int
+    max_length: Int
+    numeric_only: Boolean
+    max_questions: Int
+    allowed_file_types: String
+    max_file_size_kb: Int
+    help_text: String
+    points: Int
+}
+
+input CreateOptionInput {
+    question_id: ID!
+    option_text: String
+    image: String
+    is_subquestion: Boolean
+    position: Int
+    is_correct: Boolean
+}
+
+input UpdateOptionInput {
+    option_text: String
+    image: String
+    is_subquestion: Boolean
+    position: Int
+    is_correct: Boolean
+}
+
 # --------------------------------------------
 # ----------------SurveyOption----------------
 # --------------------------------------------
@@ -185,6 +219,18 @@ type Mutation {
     # Questions
     addQuestion(input: CreateQuestionInput!): SurveyQuestion
         @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@create")
+    
+    updateQuestion(id: ID!, input: UpdateQuestionInput!): SurveyQuestion
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@update")
+    
+    addOption(input: CreateOptionInput!): SurveyOption
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@createOption")
+    
+    updateOption(id: ID!, input: UpdateOptionInput!): SurveyOption
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@updateOption")
+    
+    deleteOption(id: ID!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@deleteOption")
     
     deleteQuestion(id: ID!): Boolean!
         @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@delete")

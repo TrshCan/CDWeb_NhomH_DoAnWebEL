@@ -23,10 +23,14 @@ export default function QuestionSection({
   onDeleteGroup,
   onGroupTitleChange, // optional: bắn tiêu đề ra ngoài nếu cần
   onTextChange,
+  onTextBlur,
+  onHelpTextChange,
+  onHelpTextBlur,
   onAnswerSelect,
   selectedAnswers,
   getQuestionConditionInfo,
   onOptionChange,
+  onOptionBlur,
   onAddOption,
   onRemoveOption,
   onMoveOption,
@@ -378,10 +382,14 @@ export default function QuestionSection({
                     }
                   }}
                   onTextChange={onTextChange}
+                  onTextBlur={onTextBlur}
+                  onHelpTextChange={onHelpTextChange}
+                  onHelpTextBlur={onHelpTextBlur}
                   onAnswerSelect={onAnswerSelect}
                   selectedAnswer={selectedAnswers?.[qid]}
                   conditionInfo={getQuestionConditionInfo?.(qid)}
                   onOptionChange={onOptionChange}
+                  onOptionBlur={onOptionBlur}
                   onAddOption={onAddOption}
                   onRemoveOption={onRemoveOption}
                   onMoveOption={onMoveOption}

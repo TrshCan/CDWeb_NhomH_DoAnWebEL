@@ -5,7 +5,8 @@ export default function EditableField({
   initialValue = "",
   inputClassName = "",
   isTextarea = false,
-  onChange, // ✅ callback ra ngoài
+  onChange, // ✅ callback ra ngoài khi onChange
+  onBlur, // ✅ callback ra ngoài khi onBlur (để lưu vào CSDL)
 }) {
   const [value, setValue] = useState(initialValue);
   const textareaRef = useRef(null);
@@ -49,7 +50,12 @@ export default function EditableField({
       type={isTextarea ? undefined : "text"}
       value={value}
       onChange={handleChange}
-      onBlur={(e) => onChange?.(e.target.value)} // ✅ backup khi mất focus
+      onBlur={(e) => {
+        // Gọi onChange để cập nhật UI (nếu có)
+        onChange?.(e.target.value);
+        // Gọi onBlur để lưu vào CSDL (nếu có)
+        onBlur?.(e.target.value);
+      }}
       placeholder={placeholder}
       className={`${commonClasses} ${inputClassName} ${isTextarea ? "w-full" : "w-full"}`}
       rows={isTextarea ? 1 : undefined}
