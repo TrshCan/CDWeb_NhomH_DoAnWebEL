@@ -202,6 +202,12 @@ export async function submitSurveyAnswers(surveyId, answers) {
     }
   `;
 
+  console.log("[API][submitSurveyAnswers] Sending request", {
+    surveyId,
+    parsedSurveyId: parseInt(surveyId, 10),
+    answers,
+  });
+
   const response = await graphqlClient.post("", {
     query: mutation,
     variables: {
@@ -210,7 +216,10 @@ export async function submitSurveyAnswers(surveyId, answers) {
     },
   });
 
+  console.log("[API][submitSurveyAnswers] Raw response", response);
+
   if (response.data.errors) {
+    console.error("[API][submitSurveyAnswers] GraphQL errors", response.data.errors);
     throw new Error(response.data.errors[0]?.message || "GraphQL error");
   }
 

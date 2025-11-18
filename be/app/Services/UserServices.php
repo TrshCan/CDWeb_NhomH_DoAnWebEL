@@ -48,6 +48,10 @@ class UserServices
         // Tạo token ngẫu nhiên (ví dụ token tạm, chưa phải JWT)
         $token = Str::random(60);
 
+        // Lưu token vào cột remember_token để sử dụng cho xác thực bằng Bearer token
+        $user->remember_token = $token;
+        $user->save();
+
         return [
             'token' => $token,
             'user' => $user,
