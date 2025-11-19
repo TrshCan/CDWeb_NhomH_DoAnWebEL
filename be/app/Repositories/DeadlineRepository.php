@@ -54,7 +54,7 @@ class DeadlineRepository
 
     public function getAllPaginated(?string $title, ?string $deadline_date, ?string $details, bool $includeDeleted, int $perPage, int $page = 1)
     {
-        $query = Deadline::query();
+        $query = Deadline::with('creator');
 
         if ($includeDeleted) {
             $query->onlyTrashed();

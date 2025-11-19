@@ -29,7 +29,8 @@ class DeadlineResolver
                 ]);
             }
 
-            return $this->deadlineService->createDeadline($args['input']);
+            $userId = Auth::id();
+            return $this->deadlineService->createDeadline($args['input'], $userId);
         } catch (ValidationException $e) {
             // Re-throw validation exceptions as-is
             throw $e;
@@ -50,7 +51,12 @@ class DeadlineResolver
             }
 
             $id = is_numeric($args['id']) ? (int)$args['id'] : $args['id'];
-            return $this->deadlineService->updateDeadline($id, $args['input']);
+            
+            // Get updated_at from input if provided (for optimistic locking)
+            $updatedAt = $args['input']['updated_at'] ?? null;
+            unset($args['input']['updated_at']); // Remove from input data
+            
+            return $this->deadlineService->updateDeadline($id, $args['input'], $updatedAt);
         } catch (ValidationException $e) {
             // Re-throw validation exceptions as-is
             throw $e;
@@ -119,12 +125,25 @@ class DeadlineResolver
 
     public function getDeadlineById($_, array $args)
     {
-        $id = is_numeric($args['id']) ? (int)$args['id'] : $args['id'];
-        return $this->deadlineService->getDeadlineById($id);
+        try {
+            $id = $args['id'] ?? null;
+            return $this->deadlineService->getDeadlineById($id);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
     }
 
     public function upcoming($_, array $args)
     {
         return $this->deadlineService->upcoming();
+    }
+
+    /**
+     * Resolver cho field user trong Deadline type
+     * Map từ relationship creator
+     */
+    public function user($deadline)
+    {
+        return $deadline->creator;
     }
 }

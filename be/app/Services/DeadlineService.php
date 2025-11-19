@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Repositories\DeadlineRepository;
 use App\Models\Deadline;
+use App\Helpers\ValidationHelper;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Exception;
@@ -21,38 +23,56 @@ class DeadlineService
         $this->repository = $repository;
     }
 
-    public function createDeadline(array $data): Deadline
+    public function createDeadline(array $data, ?int $userId = null): Deadline
     {
+        // Prevent duplicate submissions using cache lock
+        $lockKey = 'deadline_create_' . md5(json_encode($data) . ($userId ?? 0));
+        $lock = Cache::lock($lockKey, 5); // 5 seconds lock
+
+        if (!$lock->get()) {
+            throw new Exception("Đang xử lý yêu cầu. Vui lòng đợi và thử lại.");
+        }
+
         try {
-            // Validation rules
+            // Sanitize và validate title
+            $data['title'] = ValidationHelper::sanitizeTitle($data['title'] ?? '');
+
+            // Sanitize details
+            if (isset($data['details']) && !empty($data['details'])) {
+                $data['details'] = ValidationHelper::sanitizeDetails($data['details'], 255);
+            } else {
+                $data['details'] = null;
+            }
+
+            // Normalize và validate deadline_date format
+            if (isset($data['deadline_date'])) {
+                try {
+                    $date = Carbon::parse($data['deadline_date']);
+                    $data['deadline_date'] = $date->format('Y-m-d H:i:s');
+                    
+                    // Check if deadline is in the future
+                    if ($date->lte(Carbon::now())) {
+                        throw new Exception("Ngày giờ kết thúc phải sau thời điểm hiện tại.");
+                    }
+                } catch (\Exception $e) {
+                    if (strpos($e->getMessage(), 'Ngày giờ kết thúc') !== false) {
+                        throw $e;
+                    }
+                    throw new Exception("Định dạng ngày tháng không hợp lệ. Định dạng yêu cầu: YYYY-MM-DD HH:mm:ss.");
+                }
+            }
+
             $validator = Validator::make($data, [
-                'title' => [
-                    'required',
-                    'string',
-                    'max:255',
-                    'regex:/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/',
-                ],
-                'deadline_date' => [
-                    'required',
-                    'date',
-                    'date_format:Y-m-d H:i:s',
-                    'after:now',
-                ],
-                'details' => [
-                    'nullable',
-                    'string',
-                    'max:255',
-                    'regex:/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/',
-                ],
+                'title' => 'required|string|max:255',
+                'deadline_date' => ['required', 'date', 'date_format:Y-m-d H:i:s', 'after:now'],
+                'details' => 'nullable|string|max:255',
             ], [
                 'title.required' => 'Tên deadline không được để trống.',
                 'title.max' => 'Tên deadline không được vượt quá 255 ký tự.',
-                'title.regex' => 'Tên deadline chứa ký tự không hợp lệ.',
                 'deadline_date.required' => 'Ngày giờ kết thúc không được để trống.',
                 'deadline_date.date_format' => 'Ngày giờ kết thúc không hợp lệ. Định dạng: YYYY-MM-DD HH:mm:ss.',
                 'deadline_date.after' => 'Ngày giờ kết thúc phải sau thời điểm hiện tại.',
                 'details.max' => 'Ghi chú không được vượt quá 255 ký tự.',
-                'details.regex' => 'Ghi chú chứa ký tự không hợp lệ.',
             ]);
 
             if ($validator->fails()) {
@@ -64,8 +84,8 @@ class DeadlineService
                 throw new Exception("Đã tồn tại deadline khác vào cùng thời điểm hoặc cùng tiêu đề.");
             }
 
-            // Set created_by và created_at (giả lập user ID = 1 nếu không có Auth)
-            $data['created_by'] = 1; // Giả lập user ID
+            // Set created_by và created_at
+            $data['created_by'] = $userId ?? 1;
             $data['created_at'] = now();
 
             // Thực hiện tạo deadline trong transaction
@@ -77,10 +97,8 @@ class DeadlineService
                 }
             });
         } catch (ValidationException $e) {
-            // Re-throw validation exceptions để resolver xử lý
             throw $e;
         } catch (QueryException $e) {
-            // Xử lý lỗi hệ thống hoặc kết nối DB
             if (strpos($e->getMessage(), 'SQLSTATE[HY000]') !== false) {
                 throw new Exception("Không thể kết nối đến cơ sở dữ liệu.");
             }
@@ -89,50 +107,79 @@ class DeadlineService
             }
             throw new Exception("Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.");
         } catch (Exception $e) {
-            // Ném lại các lỗi khác (xung đột, etc.)
             throw $e;
+        } finally {
+            $lock->release();
         }
     }
 
-    public function updateDeadline(int $id, array $data): Deadline
+    public function updateDeadline(int $id, array $data, ?string $updatedAt = null): Deadline
     {
+        // Validate ID
+        $id = ValidationHelper::validateId($id);
+
+        // Lock để tránh concurrent updates
+        $lockKey = 'deadline_update_' . $id;
+        $lock = Cache::lock($lockKey, 10); // 10 seconds lock
+
+        if (!$lock->get()) {
+            throw new Exception("Đang xử lý yêu cầu cập nhật. Vui lòng đợi và thử lại.");
+        }
+
         try {
             $deadline = $this->repository->findById($id);
             if (!$deadline) {
                 throw new Exception("Không tìm thấy deadline hoặc deadline đã bị xóa.");
             }
 
-            // Validation rules
+            // Optimistic locking: Kiểm tra nếu có updated_at và không khớp
+            if ($updatedAt && $deadline->created_at && $deadline->created_at->toDateTimeString() !== $updatedAt) {
+                throw new Exception("Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.");
+            }
+
+            // Sanitize và validate title nếu có
+            if (isset($data['title'])) {
+                $data['title'] = ValidationHelper::sanitizeTitle($data['title']);
+            }
+
+            // Sanitize details nếu có
+            if (isset($data['details'])) {
+                if (!empty($data['details'])) {
+                    $data['details'] = ValidationHelper::sanitizeDetails($data['details'], 255);
+                } else {
+                    $data['details'] = null;
+                }
+            }
+
+            // Normalize và validate deadline_date format if provided
+            if (isset($data['deadline_date'])) {
+                try {
+                    $date = Carbon::parse($data['deadline_date']);
+                    $data['deadline_date'] = $date->format('Y-m-d H:i:s');
+                    
+                    // Check if deadline is in the future
+                    if ($date->lte(Carbon::now())) {
+                        throw new Exception("Ngày giờ kết thúc phải sau thời điểm hiện tại.");
+                    }
+                } catch (\Exception $e) {
+                    if (strpos($e->getMessage(), 'Ngày giờ kết thúc') !== false) {
+                        throw $e;
+                    }
+                    throw new Exception("Định dạng ngày tháng không hợp lệ. Định dạng yêu cầu: YYYY-MM-DD HH:mm:ss.");
+                }
+            }
+
             $validator = Validator::make($data, [
-                'title' => [
-                    'sometimes',
-                    'required',
-                    'string',
-                    'max:255',
-                    'regex:/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/',
-                ],
-                'deadline_date' => [
-                    'sometimes',
-                    'required',
-                    'date',
-                    'date_format:Y-m-d H:i:s',
-                    'after:now',
-                ],
-                'details' => [
-                    'nullable',
-                    'string',
-                    'max:255',
-                    'regex:/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/',
-                ],
+                'title' => 'sometimes|required|string|max:255',
+                'deadline_date' => 'sometimes|required|date_format:Y-m-d H:i:s|after:now',
+                'details' => 'nullable|string|max:255',
             ], [
                 'title.required' => 'Tên deadline không được để trống.',
                 'title.max' => 'Tên deadline không được vượt quá 255 ký tự.',
-                'title.regex' => 'Tên deadline chứa ký tự không hợp lệ.',
                 'deadline_date.required' => 'Ngày giờ kết thúc không được để trống.',
                 'deadline_date.date_format' => 'Ngày giờ kết thúc không hợp lệ. Định dạng: YYYY-MM-DD HH:mm:ss.',
                 'deadline_date.after' => 'Ngày giờ kết thúc phải sau thời điểm hiện tại.',
                 'details.max' => 'Ghi chú không được vượt quá 255 ký tự.',
-                'details.regex' => 'Ghi chú chứa ký tự không hợp lệ.',
             ]);
 
             if ($validator->fails()) {
@@ -163,12 +210,10 @@ class DeadlineService
                 }
             });
         } catch (ValidationException $e) {
-            // Re-throw validation exceptions để resolver xử lý
             throw $e;
         } catch (ModelNotFoundException $e) {
             throw new Exception("Không tìm thấy deadline hoặc deadline đã bị xóa.");
         } catch (QueryException $e) {
-            // Xử lý lỗi hệ thống hoặc kết nối DB
             if (strpos($e->getMessage(), 'SQLSTATE[HY000]') !== false) {
                 throw new Exception("Không thể kết nối đến cơ sở dữ liệu.");
             }
@@ -177,35 +222,35 @@ class DeadlineService
             }
             throw new Exception("Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.");
         } catch (Exception $e) {
-            // Xử lý các lỗi khác
             throw $e;
+        } finally {
+            $lock->release();
         }
     }
 
     public function deleteDeadline(int $id): bool
     {
-        try {
-            $deadline = $this->repository->findById($id);
-            if (!$deadline) {
-                throw new Exception("Không tìm thấy deadline ID: $id");
-            }
+        // Validate ID
+        $id = ValidationHelper::validateId($id);
 
-            return DB::transaction(function () use ($id) {
-                try {
-                    return $this->repository->softDelete($id);
-                } catch (QueryException $e) {
-                    throw new Exception("Không thể xóa deadline. Vui lòng thử lại sau.");
-                }
-            });
-        } catch (Exception $e) {
-            if ($e instanceof QueryException) {
-                if (strpos($e->getMessage(), 'SQLSTATE[HY000]') !== false) {
-                    throw new Exception("Không thể kết nối đến cơ sở dữ liệu.");
-                }
-                throw new Exception("Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.");
-            }
-            throw $e;
+        // Check if already deleted
+        $deletedDeadline = $this->repository->findDeletedById($id);
+        if ($deletedDeadline) {
+            throw new Exception("Deadline đã bị xóa trước đó. Không thể xóa lại.");
         }
+
+        $deadline = $this->repository->findById($id);
+        if (!$deadline) {
+            throw new Exception("Không tìm thấy deadline ID: $id hoặc deadline đã bị xóa.");
+        }
+
+        return DB::transaction(function () use ($id) {
+            try {
+                return $this->repository->softDelete($id);
+            } catch (QueryException $e) {
+                throw new Exception("Không thể xóa deadline. Vui lòng thử lại sau.");
+            }
+        });
     }
 
     public function restoreDeadline(int $id): bool
@@ -243,8 +288,14 @@ class DeadlineService
         }
     }
 
-    public function getPaginatedDeadlines(int $perPage = 5, int $page = 1, bool $includeDeleted = false)
+    public function getPaginatedDeadlines($perPage = 5, $page = 1, bool $includeDeleted = false)
     {
+        try {
+            [$perPage, $page] = ValidationHelper::validatePagination($perPage, $page);
+        } catch (\Exception $e) {
+            throw new Exception("Tham số phân trang không hợp lệ: " . $e->getMessage());
+        }
+
         try {
             $paginator = $this->repository->getAllPaginated(null, null, null, $includeDeleted, $perPage, $page);
             $items = $paginator->items();
@@ -274,12 +325,27 @@ class DeadlineService
         }
     }
 
-    public function searchDeadlines(array $filters = [], int $perPage = 5, int $page = 1)
+    public function searchDeadlines(array $filters = [], $perPage = 5, $page = 1)
     {
         try {
+            [$perPage, $page] = ValidationHelper::validatePagination($perPage, $page);
+        } catch (\Exception $e) {
+            throw new Exception("Tham số phân trang không hợp lệ: " . $e->getMessage());
+        }
+
+        try {
             $title = $filters['title'] ?? null;
+            if ($title) {
+                $title = ValidationHelper::sanitizeText($title, 255);
+            }
+
             $deadline_date = $filters['deadline_date'] ?? null;
+            
             $details = $filters['details'] ?? null;
+            if ($details) {
+                $details = ValidationHelper::sanitizeText($details, 255);
+            }
+            
             $includeDeleted = $filters['include_deleted'] ?? false;
 
             // Validation cho filters
@@ -325,23 +391,20 @@ class DeadlineService
         }
     }
 
-    public function getDeadlineById(int $id)
+    public function getDeadlineById($id)
     {
+        // Validate ID format
         try {
-            $deadline = $this->repository->findById($id);
-            if (!$deadline) {
-                throw new Exception("Không tìm thấy deadline hoặc deadline đã bị xóa.");
-            }
-            return $deadline;
-        } catch (Exception $e) {
-            if ($e instanceof QueryException) {
-                if (strpos($e->getMessage(), 'SQLSTATE[HY000]') !== false) {
-                    throw new Exception("Không thể kết nối đến cơ sở dữ liệu.");
-                }
-                throw new Exception("Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.");
-            }
-            throw $e;
+            $id = ValidationHelper::validateId($id);
+        } catch (\Exception $e) {
+            throw new Exception("ID không hợp lệ. " . $e->getMessage());
         }
+
+        $deadline = $this->repository->findById($id);
+        if (!$deadline) {
+            throw new Exception("Không tìm thấy deadline hoặc deadline đã bị xóa.");
+        }
+        return $deadline;
     }
 
     public function upcoming()

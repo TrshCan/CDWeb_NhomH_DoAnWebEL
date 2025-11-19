@@ -57,7 +57,7 @@ class EventRepository
 
     public function getAllPaginated(?string $title, ?string $time, ?string $location, bool $includeDeleted, int $perPage, int $page = 1)
     {
-        $query = Event::query();
+        $query = Event::with('createdBy');
 
         if ($includeDeleted) {
             $query->onlyTrashed(); // Only fetch deleted events

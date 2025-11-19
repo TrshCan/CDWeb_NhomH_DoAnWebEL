@@ -111,6 +111,11 @@ const GET_PAGINATED_EVENTS = `
         created_by
         created_at
         deleted_at
+        user {
+          id
+          name
+          email
+        }
       }
       current_page
       last_page
@@ -130,6 +135,11 @@ const SEARCH_EVENTS = `
         created_by
         created_at
         deleted_at
+        user {
+          id
+          name
+          email
+        }
       }
       current_page
       last_page
@@ -148,6 +158,11 @@ const CREATE_EVENT = `
       created_by
       created_at
       deleted_at
+      user {
+        id
+        name
+        email
+      }
     }
   }
 `;
@@ -162,6 +177,11 @@ const UPDATE_EVENT = `
       created_by
       created_at
       deleted_at
+      user {
+        id
+        name
+        email
+      }
     }
   }
 `;
@@ -208,6 +228,7 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
     location: "",
   });
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (modalData.type === "edit" && modalData.event) {
@@ -224,6 +245,7 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
       setFormData({ title: "", event_date: "", location: "" });
     }
     setErrors({});
+    setIsSubmitting(false); // Reset submitting state when modal opens/closes
   }, [modalData]);
 
   const validate = () => {
@@ -246,15 +268,28 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prevent spam submit
+    if (isSubmitting) {
+      return;
+    }
+    
     if (validate()) {
-      // Convert event_date to backend-compatible format (e.g., YYYY-MM-DD HH:mm:ss)
-      const formattedEventDate = new Date(formData.event_date)
-        .toISOString()
-        .replace("T", " ")
-        .slice(0, 19);
-      handleSave({ ...formData, event_date: formattedEventDate });
+      setIsSubmitting(true);
+      try {
+        // Convert event_date to backend-compatible format (e.g., YYYY-MM-DD HH:mm:ss)
+        const formattedEventDate = new Date(formData.event_date)
+          .toISOString()
+          .replace("T", " ")
+          .slice(0, 19);
+        await handleSave({ ...formData, event_date: formattedEventDate });
+      } catch (error) {
+        // Error is handled in handleSave
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -340,15 +375,23 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
             <button
               type="button"
               onClick={closeModal}
-              className="text-gray-700 bg-white border px-4 py-2 rounded-lg"
+              disabled={isSubmitting}
+              className="text-gray-700 bg-white border px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg"
+              disabled={isSubmitting}
+              className="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {isEditing ? "Cập nhật" : "Tạo sự kiện"}
+              {isSubmitting && (
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {isSubmitting ? "Đang xử lý..." : (isEditing ? "Cập nhật" : "Tạo sự kiện")}
             </button>
           </div>
         </form>
@@ -359,7 +402,22 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
 
 // --- Delete Modal ---
 const DeleteModal = ({ modalData, closeModal, confirmDelete }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   if (modalData.type !== "delete") return null;
+  
+  const handleDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await confirmDelete();
+    } catch (error) {
+      // Error is handled in confirmDelete
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 backdrop-blur-sm p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 text-center animate-scale-in">
@@ -386,15 +444,23 @@ const DeleteModal = ({ modalData, closeModal, confirmDelete }) => {
         <div className="flex justify-center gap-4">
           <button
             onClick={closeModal}
-            className="text-gray-700 bg-white border px-5 py-2 rounded-lg"
+            disabled={isDeleting}
+            className="text-gray-700 bg-white border px-5 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Hủy
           </button>
           <button
-            onClick={confirmDelete}
-            className="text-white bg-red-600 hover:bg-red-700 px-5 py-2 rounded-lg"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="text-white bg-red-600 hover:bg-red-700 px-5 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
           >
-            Vâng, xóa
+            {isDeleting && (
+              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
+            {isDeleting ? "Đang xóa..." : "Vâng, xóa"}
           </button>
         </div>
       </div>
@@ -415,7 +481,7 @@ export default function EventManager() {
     type: "success",
     visible: false,
   });
-  const ITEMS_PER_PAGE = 5;
+  const ITEMS_PER_PAGE = 10;
 
   const showToast = (msg, type = "success") =>
     setToast({ message: msg, type, visible: true });
@@ -497,6 +563,7 @@ export default function EventManager() {
             )
           );
           showToast("Cập nhật thông tin sự kiện thành công");
+          closeModal();
         } else {
           throw new Error(
             "Cập nhật thất bại: Không nhận được dữ liệu từ server"
@@ -507,11 +574,11 @@ export default function EventManager() {
         if (res.data.createEvent) {
           setEvents([res.data.createEvent, ...events]);
           showToast("Tạo sự kiện thành công");
+          closeModal();
         } else {
           throw new Error("Tạo thất bại: Không nhận được dữ liệu từ server");
         }
       }
-      closeModal();
     } catch (error) {
       console.error("Save event error:", error);
       let errorMessage = "Không thể lưu dữ liệu. Vui lòng thử lại sau.";
@@ -542,6 +609,10 @@ export default function EventManager() {
         } else {
           errorMessage = error.message;
         }
+      } else if (error.message.includes("Đang xử lý yêu cầu")) {
+        errorMessage = "Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.";
+      } else if (error.message.includes("Dữ liệu đã được cập nhật")) {
+        errorMessage = "Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.";
       } else if (error.message.includes("Xung đột với sự kiện")) {
         errorMessage =
           "Xung đột với sự kiện khác. Vui lòng chọn giờ hoặc tiêu đề khác.";
@@ -554,6 +625,7 @@ export default function EventManager() {
         errorMessage = error.message;
       }
       showToast(errorMessage, "error");
+      throw error; // Re-throw để component có thể xử lý
     }
   };
 
@@ -571,16 +643,20 @@ export default function EventManager() {
           )
         );
         showToast("Xóa sự kiện thành công");
+        closeModal();
       } else {
         throw new Error("Xóa thất bại: Không nhận được dữ liệu từ server");
       }
-      closeModal();
     } catch (error) {
       console.error("Delete event error:", error);
       let errorMessage =
         "Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.";
       
-      if (error.message.includes("Bạn chưa đăng nhập") || error.message.includes("auth")) {
+      if (error.message.includes("Đang xử lý yêu cầu")) {
+        errorMessage = "Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.";
+      } else if (error.message.includes("Sự kiện đã bị xóa trước đó")) {
+        errorMessage = "Sự kiện đã bị xóa trước đó. Không thể xóa lại.";
+      } else if (error.message.includes("Bạn chưa đăng nhập") || error.message.includes("auth")) {
         errorMessage = "Bạn chưa đăng nhập. Vui lòng đăng nhập lại.";
         setTimeout(() => (window.location.href = "/login"), 2000);
       } else if (error.message.includes("Bạn không có quyền") || error.message.includes("permission")) {
@@ -594,6 +670,7 @@ export default function EventManager() {
         errorMessage = error.message;
       }
       showToast(errorMessage, "error");
+      throw error; // Re-throw để component có thể xử lý
     }
   };
 
@@ -611,16 +688,20 @@ export default function EventManager() {
     } catch (error) {
       let errorMessage =
         "Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.";
-      if (error.message.includes("Kiểm tra dữ liệu hoặc xung đột")) {
+      if (error.message.includes("Đang xử lý yêu cầu")) {
+        errorMessage = "Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.";
+      } else if (error.message.includes("Kiểm tra dữ liệu hoặc xung đột")) {
         errorMessage =
           "Không thể khôi phục sự kiện. Kiểm tra dữ liệu hoặc xung đột với sự kiện khác.";
       } else if (error.message.includes("Không tìm thấy sự kiện")) {
-        errorMessage = "Không tìm thấy sự kiện. Vui lòng làm mới danh sách.??";
+        errorMessage = "Không tìm thấy sự kiện. Vui lòng làm mới danh sách.";
       } else if (error.message.includes("Bạn không có quyền")) {
         errorMessage = error.message;
       } else if (error.message.includes("Phiên đăng nhập")) {
         errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
         setTimeout(() => (window.location.href = "/login"), 5000);
+      } else if (error.message && error.message !== "Internal server error") {
+        errorMessage = error.message;
       }
       showToast(errorMessage, "error");
     }
@@ -699,16 +780,16 @@ export default function EventManager() {
                   <tr
                     key={e.id}
                     className={`hover:bg-gray-50 ${
-                      showDeleted ? "bg-gray-100 opacity-75" : ""
+                      e.deleted_at ? "bg-gray-100 opacity-75" : ""
                     }`}
                   >
                     <td className="px-6 py-3 font-medium">{e.title}</td>
                     <td className="px-6 py-3">{formatDate(e.event_date)}</td>
                     <td className="px-6 py-3">{e.location || "N/A"}</td>
-                    <td className="px-6 py-3">{e.created_by}</td>
+                    <td className="px-6 py-3">{e.user?.name || "N/A"}</td>
                     <td className="px-6 py-3">{formatDate(e.created_at)}</td>
                     <td className="px-6 py-3 text-center">
-                      {showDeleted ? (
+                      {e.deleted_at ? (
                         <button
                           onClick={() => handleRestoreEvent(e.id)}
                           className="text-green-500 hover:text-green-700"

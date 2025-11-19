@@ -56,7 +56,11 @@ class EventResolver
                 ]);
             }
             
-            return $this->eventService->updateEvent($args['id'], $args['input'], $user);
+            // Get updated_at from input if provided (for optimistic locking)
+            $updatedAt = $args['input']['updated_at'] ?? null;
+            unset($args['input']['updated_at']); // Remove from input data
+            
+            return $this->eventService->updateEvent($args['id'], $args['input'], $user, $updatedAt);
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
@@ -128,23 +132,45 @@ class EventResolver
 
     public function getPaginatedEvents($_, array $args)
     {
-        $perPage = $args['perPage'] ?? 5;
-        $page = $args['page'] ?? 1;
-        $includeDeleted = $args['includeDeleted'] ?? false;
-        return $this->eventService->getPaginatedEvents($perPage, $page, $includeDeleted);
+        try {
+            $perPage = $args['perPage'] ?? 5;
+            $page = $args['page'] ?? 1;
+            $includeDeleted = $args['includeDeleted'] ?? false;
+            return $this->eventService->getPaginatedEvents($perPage, $page, $includeDeleted);
+        } catch (\Exception $e) {
+            Log::error('EventResolver getPaginatedEvents error:', [
+                'message' => $e->getMessage(),
+            ]);
+            throw new \Exception($e->getMessage());
+        }
     }
 
     public function searchEvents($_, array $args)
     {
-        $filters = $args['filter'] ?? [];
-        $perPage = $args['perPage'] ?? 5;
-        $page = $args['page'] ?? 1;
-        return $this->eventService->searchEvents($filters, $perPage, $page);
+        try {
+            $filters = $args['filter'] ?? [];
+            $perPage = $args['perPage'] ?? 5;
+            $page = $args['page'] ?? 1;
+            return $this->eventService->searchEvents($filters, $perPage, $page);
+        } catch (\Exception $e) {
+            Log::error('EventResolver searchEvents error:', [
+                'message' => $e->getMessage(),
+            ]);
+            throw new \Exception($e->getMessage());
+        }
     }
 
     public function getEventById($_, array $args)
     {
-        return $this->eventService->getEventById($args['id']);
+        try {
+            return $this->eventService->getEventById($args['id']);
+        } catch (\Exception $e) {
+            Log::error('EventResolver getEventById error:', [
+                'id' => $args['id'] ?? null,
+                'message' => $e->getMessage(),
+            ]);
+            throw new \Exception($e->getMessage());
+        }
     }
 
     public function all($_, array $args)
@@ -159,12 +185,29 @@ class EventResolver
 
     public function byUser($_, array $args)
     {
-        return $this->eventService->getEventsByUser($args['user_id']);
+        try {
+            return $this->eventService->getEventsByUser($args['user_id']);
+        } catch (\Exception $e) {
+            Log::error('EventResolver byUser error:', [
+                'user_id' => $args['user_id'] ?? null,
+                'message' => $e->getMessage(),
+            ]);
+            throw new \Exception($e->getMessage());
+        }
     }
 
     public function today($_, array $args)
     {
         return $this->eventService->today();
+    }
+
+    /**
+     * Resolver cho field user trong Event type
+     * Map từ relationship createdBy
+     */
+    public function user($event)
+    {
+        return $event->createdBy;
     }
     
 }

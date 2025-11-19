@@ -9,6 +9,6 @@ type Event {
     deleted_at: DateTime
 
     # Relationships (mirrors Post structure)
-    user: User
+    user: User @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@user")
     group: Group
 }

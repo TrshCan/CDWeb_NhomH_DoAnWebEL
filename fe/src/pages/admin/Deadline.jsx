@@ -48,6 +48,11 @@ const GET_PAGINATED_DEADLINES = `
         created_by
         created_at
         deleted_at
+        user {
+          id
+          name
+          email
+        }
       }
       current_page
       last_page
@@ -67,6 +72,11 @@ const SEARCH_DEADLINES = `
         created_by
         created_at
         deleted_at
+        user {
+          id
+          name
+          email
+        }
       }
       current_page
       last_page
@@ -85,6 +95,11 @@ const CREATE_DEADLINE = `
       created_by
       created_at
       deleted_at
+      user {
+        id
+        name
+        email
+      }
     }
   }
 `;
@@ -99,6 +114,11 @@ const UPDATE_DEADLINE = `
       created_by
       created_at
       deleted_at
+      user {
+        id
+        name
+        email
+      }
     }
   }
 `;
@@ -139,20 +159,57 @@ const Toast = ({ message, type, visible }) => {
 
 // --- Delete Modal ---
 const DeleteModal = ({ modalData, closeModal, confirmDelete }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   if (modalData.type !== 'delete') return null;
+  
+  const handleDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await confirmDelete();
+    } catch (error) {
+      // Error is handled in confirmDelete
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" onClick={closeModal}>
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center p-5 border-b">
           <h3 className="text-xl font-semibold text-gray-800">Xác nhận xóa</h3>
-          <button onClick={closeModal} className="ml-auto text-gray-400 hover:text-gray-600">
+          <button 
+            onClick={closeModal} 
+            disabled={isDeleting}
+            className="ml-auto text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <CloseIcon />
           </button>
         </div>
         <p className="p-6">Bạn có chắc muốn xóa deadline "{modalData.deadline.title}"?</p>
         <div className="flex justify-end gap-4 p-6 pt-0">
-          <button onClick={closeModal} className="px-4 py-2 bg-gray-300 rounded">Hủy</button>
-          <button onClick={confirmDelete} className="px-4 py-2 bg-red-500 text-white rounded">Xóa</button>
+          <button 
+            onClick={closeModal} 
+            disabled={isDeleting}
+            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Hủy
+          </button>
+          <button 
+            onClick={handleDelete} 
+            disabled={isDeleting}
+            className="px-4 py-2 bg-red-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isDeleting && (
+              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            )}
+            {isDeleting ? "Đang xóa..." : "Xóa"}
+          </button>
         </div>
       </div>
     </div>
@@ -163,6 +220,7 @@ const DeleteModal = ({ modalData, closeModal, confirmDelete }) => {
 const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
   const [formData, setFormData] = useState({ title: '', deadline_date: '', details: '' });
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (modalData.type === 'edit' && modalData.deadline) {
@@ -178,6 +236,7 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
       setFormData({ title: '', deadline_date: '', details: '' });
     }
     setErrors({});
+    setIsSubmitting(false); // Reset submitting state when modal opens/closes
   }, [modalData]);
 
   const validate = () => {
@@ -194,11 +253,24 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prevent spam submit
+    if (isSubmitting) {
+      return;
+    }
+    
     if (validate()) {
-      const formattedDeadlineDate = formData.deadline_date.replace('T', ' ') + ':00';
-      handleSave({ ...formData, deadline_date: formattedDeadlineDate });
+      setIsSubmitting(true);
+      try {
+        const formattedDeadlineDate = formData.deadline_date.replace('T', ' ') + ':00';
+        await handleSave({ ...formData, deadline_date: formattedDeadlineDate });
+      } catch (error) {
+        // Error is handled in handleSave
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -263,8 +335,27 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
           </div>
 
           <div className="flex justify-end gap-4">
-            <button type="button" onClick={closeModal} className="px-4 py-2 bg-gray-300 rounded">Hủy</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Lưu</button>
+            <button 
+              type="button" 
+              onClick={closeModal} 
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Hủy
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isSubmitting && (
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {isSubmitting ? "Đang xử lý..." : "Lưu"}
+            </button>
           </div>
         </form>
       </div>
@@ -289,7 +380,7 @@ export default function Deadline() {
 
   const fetchDeadlines = async () => {
     try {
-      const variables = { perPage: 5, page: currentPage, includeDeleted: showDeleted };
+      const variables = { perPage: 10, page: currentPage, includeDeleted: showDeleted };
       let res;
       if (searchQuery) {
         variables.filter = { title: searchQuery };
@@ -326,22 +417,27 @@ export default function Deadline() {
         if (res.data.createDeadline) {
           setDeadlines([...deadlines, res.data.createDeadline]);
           showToast('Thêm deadline thành công');
+          closeModal();
         }
       } else if (modalData.type === 'edit') {
         res = await graphqlRequest(UPDATE_DEADLINE, { id: modalData.deadline.id, input: formData });
         if (res.data.updateDeadline) {
           setDeadlines(deadlines.map((d) => (d.id === modalData.deadline.id ? res.data.updateDeadline : d)));
           showToast('Cập nhật deadline thành công');
+          closeModal();
         }
       }
-      closeModal();
     } catch (error) {
       let errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.';
       try {
         const parsed = JSON.parse(error.message);
         errorMessage = Object.values(parsed)[0][0];
       } catch {}
-      if (error.message.includes('Xung đột với deadline')) {
+      if (error.message.includes('Đang xử lý yêu cầu')) {
+        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+      } else if (error.message.includes('Dữ liệu đã được cập nhật')) {
+        errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
+      } else if (error.message.includes('Xung đột với deadline')) {
         errorMessage = 'Xung đột với deadline khác. Vui lòng chọn giờ hoặc tiêu đề khác.';
       } else if (error.message.includes('Không tìm thấy deadline')) {
         errorMessage = 'Không tìm thấy deadline. Vui lòng làm mới danh sách.';
@@ -350,8 +446,11 @@ export default function Deadline() {
       } else if (error.message.includes('Phiên đăng nhập')) {
         errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
         setTimeout(() => (window.location.href = '/login'), 5000);
+      } else if (error.message && error.message !== 'Internal server error') {
+        errorMessage = error.message;
       }
       showToast(errorMessage, 'error');
+      throw error; // Re-throw để component có thể xử lý
     }
   };
 
@@ -367,15 +466,22 @@ export default function Deadline() {
       closeModal();
     } catch (error) {
       let errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.';
-      if (error.message.includes('Không tìm thấy deadline')) {
+      if (error.message.includes('Đang xử lý yêu cầu')) {
+        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+      } else if (error.message.includes('Deadline đã bị xóa trước đó')) {
+        errorMessage = 'Deadline đã bị xóa trước đó. Không thể xóa lại.';
+      } else if (error.message.includes('Không tìm thấy deadline')) {
         errorMessage = 'Không tìm thấy deadline. Vui lòng làm mới danh sách.';
       } else if (error.message.includes('Bạn không có quyền')) {
         errorMessage = error.message;
       } else if (error.message.includes('Phiên đăng nhập')) {
         errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
         setTimeout(() => (window.location.href = '/login'), 5000);
+      } else if (error.message && error.message !== 'Internal server error') {
+        errorMessage = error.message;
       }
       showToast(errorMessage, 'error');
+      throw error; // Re-throw để component có thể xử lý
     }
   };
 
@@ -390,7 +496,9 @@ export default function Deadline() {
       }
     } catch (error) {
       let errorMessage = 'Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.';
-      if (error.message.includes('Kiểm tra dữ liệu hoặc xung đột')) {
+      if (error.message.includes('Đang xử lý yêu cầu')) {
+        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+      } else if (error.message.includes('Kiểm tra dữ liệu hoặc xung đột')) {
         errorMessage = 'Không thể khôi phục deadline. Kiểm tra dữ liệu hoặc xung đột với deadline khác.';
       } else if (error.message.includes('Không tìm thấy deadline')) {
         errorMessage = 'Không tìm thấy deadline. Vui lòng làm mới danh sách.';
@@ -399,6 +507,8 @@ export default function Deadline() {
       } else if (error.message.includes('Phiên đăng nhập')) {
         errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
         setTimeout(() => (window.location.href = '/login'), 5000);
+      } else if (error.message && error.message !== 'Internal server error') {
+        errorMessage = error.message;
       }
       showToast(errorMessage, 'error');
     }
@@ -484,7 +594,7 @@ export default function Deadline() {
                       <td className="px-6 py-3 font-medium">{d.title}</td>
                       <td className="px-6 py-3">{formatDate(d.deadline_date)}</td>
                       <td className="px-6 py-3">{d.details || 'N/A'}</td>
-                      <td className="px-6 py-3">{d.created_by}</td>
+                      <td className="px-6 py-3">{d.user?.name || 'N/A'}</td>
                       <td className="px-6 py-3">{formatDate(d.created_at)}</td>
                       <td className="px-6 py-3 text-center">
                         {d.deleted_at ? (

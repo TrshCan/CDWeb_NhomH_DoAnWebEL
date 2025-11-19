@@ -396,6 +396,7 @@ const SurveyFilter = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState({ add: false, edit: false, delete: false, duplicate: false });
 
   const [addForm, setAddForm] = useState({
     title: '',
@@ -706,6 +707,12 @@ const SurveyFilter = () => {
   const handleDuplicateConfirm = async () => {
     if (!selectedSurvey) return;
 
+    // Prevent spam submit
+    if (isSubmitting.duplicate) {
+      return;
+    }
+
+    setIsSubmitting(prev => ({ ...prev, duplicate: true }));
     try {
       setLoading(true);
       const result = await graphqlRequest(`
@@ -731,8 +738,14 @@ const SurveyFilter = () => {
       });
 
       if (result.errors?.length > 0) {
-        const errorMessage = result.errors[0].message || 'Sao chép thất bại';
+        let errorMessage = result.errors[0].message || 'Sao chép thất bại';
         console.error('Lỗi sao chép survey:', result.errors);
+        
+        // Handle specific error messages
+        if (errorMessage.includes('Đang xử lý yêu cầu')) {
+          errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+        }
+        
         pushToast(errorMessage, 'error');
         return;
       }
@@ -749,10 +762,14 @@ const SurveyFilter = () => {
       loadSurveys(filters);
     } catch (error) {
       console.error('Lỗi sao chép:', error);
-      const errorMessage = error.message || 'Lỗi hệ thống khi sao chép khảo sát';
+      let errorMessage = error.message || 'Lỗi hệ thống khi sao chép khảo sát';
+      if (errorMessage.includes('Đang xử lý yêu cầu')) {
+        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+      }
       pushToast(errorMessage, 'error');
     } finally {
       setLoading(false);
+      setIsSubmitting(prev => ({ ...prev, duplicate: false }));
     }
   };
 
@@ -782,6 +799,11 @@ const SurveyFilter = () => {
   const handleAddSubmit = async (e) => {
     e.preventDefault();
 
+    // Prevent spam submit
+    if (isSubmitting.add) {
+      return;
+    }
+
     if (!addForm.startAt || !addForm.endAt) {
       pushToast('Vui lòng chọn thời gian', 'error');
       return;
@@ -791,6 +813,7 @@ const SurveyFilter = () => {
       return;
     }
 
+    setIsSubmitting(prev => ({ ...prev, add: true }));
     try {
       setLoading(true);
       const categoryId = Object.entries(categoryIdMap).find(([_, name]) => name === addForm.category)?.[0];
@@ -831,7 +854,16 @@ const SurveyFilter = () => {
           }
           return msg;
         }).join('\n');
-        pushToast('Tạo khảo sát thất bại: ' + messages, 'error');
+        
+        // Handle specific error messages
+        let errorMessage = 'Tạo khảo sát thất bại: ' + messages;
+        if (messages.includes('Đang xử lý yêu cầu')) {
+          errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+        } else if (messages.includes('Dữ liệu đã được cập nhật')) {
+          errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
+        }
+        
+        pushToast(errorMessage, 'error');
         return;
       }
 
@@ -862,15 +894,27 @@ const SurveyFilter = () => {
       loadSurveys(filters);
     } catch (error) {
       console.error('Lỗi hệ thống:', error);
-      pushToast('Lỗi hệ thống: ' + error.message, 'error');
+      let errorMessage = 'Lỗi hệ thống: ' + error.message;
+      if (error.message.includes('Đang xử lý yêu cầu')) {
+        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+      } else if (error.message.includes('Dữ liệu đã được cập nhật')) {
+        errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
+      }
+      pushToast(errorMessage, 'error');
     } finally {
       setLoading(false);
+      setIsSubmitting(prev => ({ ...prev, add: false }));
     }
   };
 
   // EDIT SUBMIT
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+
+    // Prevent spam submit
+    if (isSubmitting.edit) {
+      return;
+    }
 
     if (!editForm.startAt || !editForm.endAt) {
       pushToast('Vui lòng chọn thời gian', 'error');
@@ -881,6 +925,7 @@ const SurveyFilter = () => {
       return;
     }
 
+    setIsSubmitting(prev => ({ ...prev, edit: true }));
     try {
       setLoading(true);
       const categoryId = Object.entries(categoryIdMap).find(([_, name]) => name === editForm.category)?.[0];
@@ -934,7 +979,16 @@ const SurveyFilter = () => {
           }
           return msg;
         }).join('\n');
-        pushToast('Cập nhật thất bại: ' + messages, 'error');
+        
+        // Handle specific error messages
+        let errorMessage = 'Cập nhật thất bại: ' + messages;
+        if (messages.includes('Đang xử lý yêu cầu')) {
+          errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+        } else if (messages.includes('Dữ liệu đã được cập nhật')) {
+          errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
+        }
+        
+        pushToast(errorMessage, 'error');
         return;
       }
 
@@ -965,14 +1019,27 @@ const SurveyFilter = () => {
       loadSurveys(filters);
     } catch (error) {
       console.error('Lỗi:', error);
-      pushToast('Lỗi hệ thống: ' + error.message, 'error');
+      let errorMessage = 'Lỗi hệ thống: ' + error.message;
+      if (error.message.includes('Đang xử lý yêu cầu')) {
+        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+      } else if (error.message.includes('Dữ liệu đã được cập nhật')) {
+        errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
+      }
+      pushToast(errorMessage, 'error');
     } finally {
       setLoading(false);
+      setIsSubmitting(prev => ({ ...prev, edit: false }));
     }
   };
 
   // DELETE – ĐÃ SỬA: id → Number
   const handleDelete = async () => {
+    // Prevent spam submit
+    if (isSubmitting.delete) {
+      return;
+    }
+
+    setIsSubmitting(prev => ({ ...prev, delete: true }));
     try {
       setLoading(true);
       const result = await graphqlRequest(`
@@ -984,8 +1051,16 @@ const SurveyFilter = () => {
       });
 
       if (result.errors?.length > 0) {
-        const errorMessage = result.errors[0].message || 'Xóa thất bại';
+        let errorMessage = result.errors[0].message || 'Xóa thất bại';
         console.error('Lỗi xóa survey:', result.errors);
+        
+        // Handle specific error messages
+        if (errorMessage.includes('Đang xử lý yêu cầu')) {
+          errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+        } else if (errorMessage.includes('Khảo sát đã bị xóa trước đó') || errorMessage.includes('đã bị xóa')) {
+          errorMessage = 'Khảo sát đã bị xóa trước đó. Không thể xóa lại.';
+        }
+        
         pushToast(errorMessage, 'error');
         return;
       }
@@ -1001,10 +1076,16 @@ const SurveyFilter = () => {
       }
     } catch (error) {
       console.error('Lỗi xóa:', error);
-      const errorMessage = error.message || 'Lỗi hệ thống khi xóa khảo sát';
+      let errorMessage = error.message || 'Lỗi hệ thống khi xóa khảo sát';
+      if (errorMessage.includes('Đang xử lý yêu cầu')) {
+        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+      } else if (errorMessage.includes('Khảo sát đã bị xóa trước đó') || errorMessage.includes('đã bị xóa')) {
+        errorMessage = 'Khảo sát đã bị xóa trước đó. Không thể xóa lại.';
+      }
       pushToast(errorMessage, 'error');
     } finally {
       setLoading(false);
+      setIsSubmitting(prev => ({ ...prev, delete: false }));
     }
   };
 
@@ -1047,72 +1128,103 @@ const SurveyFilter = () => {
     <>
       <button 
         onClick={closeEditModal} 
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+        disabled={isSubmitting.edit}
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Hủy
       </button>
       <button 
         type="submit" 
         form="editForm" 
-        className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        disabled={isSubmitting.edit}
+        className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
       >
-        Lưu thay đổi
+        {isSubmitting.edit && (
+          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+        {isSubmitting.edit ? "Đang xử lý..." : "Lưu thay đổi"}
       </button>
     </>
-  ), [closeEditModal]);
+  ), [closeEditModal, isSubmitting.edit]);
 
   const addFooter = useMemo(() => (
     <>
       <button 
         onClick={closeAddModal} 
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+        disabled={isSubmitting.add}
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Hủy
       </button>
       <button 
         type="submit" 
         form="addForm" 
-        className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        disabled={isSubmitting.add}
+        className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
       >
-        Thêm khảo sát
+        {isSubmitting.add && (
+          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+        {isSubmitting.add ? "Đang xử lý..." : "Thêm khảo sát"}
       </button>
     </>
-  ), [closeAddModal]);
+  ), [closeAddModal, isSubmitting.add]);
 
   const deleteFooter = useMemo(() => (
     <>
       <button 
         onClick={closeDeleteModal} 
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+        disabled={isSubmitting.delete}
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Hủy
       </button>
       <button 
         onClick={handleDelete} 
-        className="px-8 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold rounded-lg hover:from-red-700 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        disabled={isSubmitting.delete}
+        className="px-8 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold rounded-lg hover:from-red-700 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
       >
-        Xóa khảo sát
+        {isSubmitting.delete && (
+          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+        {isSubmitting.delete ? "Đang xóa..." : "Xóa khảo sát"}
       </button>
     </>
-  ), [closeDeleteModal, handleDelete]);
+  ), [closeDeleteModal, handleDelete, isSubmitting.delete]);
 
   const duplicateFooter = useMemo(() => (
     <>
       <button 
         onClick={closeDuplicateModal} 
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+        disabled={isSubmitting.duplicate}
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Hủy
       </button>
       <button 
         onClick={handleDuplicateConfirm} 
-        disabled={loading}
-        className="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+        disabled={isSubmitting.duplicate}
+        className="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
       >
-        {loading ? 'Đang sao chép...' : 'Sao chép khảo sát'}
+        {isSubmitting.duplicate && (
+          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+        {isSubmitting.duplicate ? 'Đang sao chép...' : 'Sao chép khảo sát'}
       </button>
     </>
-  ), [closeDuplicateModal, handleDuplicateConfirm, loading]);
+  ), [closeDuplicateModal, handleDuplicateConfirm, isSubmitting.duplicate]);
 
   return (
     <div className="bg-gray-50 p-8">
