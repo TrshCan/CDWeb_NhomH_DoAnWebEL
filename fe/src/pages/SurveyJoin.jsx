@@ -27,20 +27,57 @@ function SurveyJoin() {
         const data = await getSurveyJoinDetail(parseInt(surveyId, 10));
         if (!data) {
           toast.error("Survey not found");
-          navigate("/");
+          setTimeout(() => navigate("/"), 1000);
           return;
         }
+
+        // Prevent direct URL access
+        if (!data.is_accessible_directly) {
+          toast.error("Please access surveys through the main page");
+          setTimeout(() => navigate("/"), 1000);
+          return;
+        }
+
+        // Check if survey is closed
+        if (data.status === 'closed') {
+          toast.error("This survey is closed and no longer accepting responses");
+          setTimeout(() => navigate("/"), 1000);
+          return;
+        }
+
+        // Get current user from localStorage
+        const user = JSON.parse(localStorage.getItem('user'));
+        
+        // Check if user role matches survey target
+        if (user) {
+          const userRole = user.role;
+          const surveyTarget = data.object;
+          
+          if (userRole !== 'admin') {
+            if (
+              (surveyTarget === 'students' && userRole !== 'student') ||
+              (surveyTarget === 'lecturers' && userRole !== 'lecturer')
+            ) {
+              toast.error(`This survey is for ${surveyTarget} only`);
+              setTimeout(() => navigate("/"), 1000);
+              return;
+            }
+          }
+        } else {
+          toast.error("Please login before joining the survey");
+          setTimeout(() => navigate("/"), 1000);
+          return;
+        }
+
         setSurveyData(data);
-        console.log("Survey data loaded:", data);
-        console.log("Questions:", data.questions);
 
         if (data.time_limit) {
           setTimeRemaining(data.time_limit * 60);
         }
       } catch (err) {
-        console.error(err);
+        console.error("Failed to load survey:", err);
         toast.error("Failed to load survey");
-        navigate("/");
+        setTimeout(() => navigate("/"), 1000);
       } finally {
         setLoading(false);
       }
@@ -142,29 +179,15 @@ function SurveyJoin() {
   };
 
   const handleAutoSubmit = async () => {
-    console.log("[SurveyJoin] Auto submit triggered due to timeout", {
-      surveyId,
-      answers,
-      timeRemaining,
-    });
     toast.warning("Time's up! Submitting your answers...");
     await handleSubmit();
   };
 
   const handleSubmitClick = () => {
-    console.log("[SurveyJoin] Submit button clicked", {
-      surveyId,
-      answeredCount: Object.keys(answers).length,
-      totalQuestions: surveyData?.questions?.length,
-    });
     setShowSubmitModal(true);
   };
 
   const handleSubmit = async () => {
-    console.log("[SurveyJoin] handleSubmit called", {
-      surveyId,
-      rawAnswersState: answers,
-    });
     setShowSubmitModal(false);
     setSubmitting(true);
 
@@ -197,39 +220,34 @@ function SurveyJoin() {
         ];
       });
 
-      console.log("[SurveyJoin] Transformed answers for submit", {
-        surveyId,
-        answerArray,
-      });
-
       const result = await submitSurveyAnswers(
         parseInt(surveyId, 10),
         answerArray
       );
 
-      console.log("[SurveyJoin] submitSurveyAnswers result", result);
-
       if (result.success) {
-        toast.success(result.message);
+        toast.success(result.message || "Survey submitted successfully!");
         navigate("/");
       } else {
-        console.warn("[SurveyJoin] Survey submit returned unsuccessful result", {
-          surveyId,
-          result,
-        });
-        toast.error(result.message);
+        // Handle specific error cases
+        const errorMessage = result.message || "Failed to submit survey";
+        
+        if (errorMessage.includes("not authenticated") || errorMessage.includes("Invalid or expired token")) {
+          toast.error("Please login before joining the survey");
+          navigate("/");
+        } else if (errorMessage.includes("Survey not found")) {
+          toast.error("Survey not found");
+          navigate("/");
+        } else if (errorMessage.includes("no questions") || errorMessage.includes("No valid answers")) {
+          toast.error(errorMessage);
+        } else {
+          toast.error(errorMessage);
+        }
       }
     } catch (err) {
-      console.error("[SurveyJoin] Failed to submit survey", {
-        surveyId,
-        error: err,
-      });
-      toast.error("Failed to submit survey");
+      console.error("Failed to submit survey:", err);
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
-      console.log("[SurveyJoin] handleSubmit finished", {
-        surveyId,
-        submitting: false,
-      });
       setSubmitting(false);
     }
   };
