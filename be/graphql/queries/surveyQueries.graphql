@@ -10,6 +10,9 @@ extend type Query {
 
   surveyResponseDetail(surveyId: Int!, responseId: String!): SurveyResponseDetail
     @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@surveyResponseDetail")
+
+  surveysCompleted(userId: Int!): [CompletedSurveySummary!]!
+    @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@surveysCompleted")
 }
 
 

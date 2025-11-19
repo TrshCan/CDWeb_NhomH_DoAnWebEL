@@ -151,3 +151,22 @@ export async function getSurveyResponseDetail(surveyId, responseId) {
 
   return response.data.data.surveyResponseDetail;
 }
+
+export async function getSurveysCompletedByUser(userId) {
+  const query = `
+    query ($userId: Int!) {
+      surveysCompleted(userId: $userId) {
+        id
+        name
+        creator
+        completedAt
+        canView
+      }
+    }
+  `;
+  const response = await graphqlClient.post("", { query, variables: { userId } });
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+  return response.data.data.surveysCompleted;
+}

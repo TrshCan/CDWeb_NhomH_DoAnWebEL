@@ -74,6 +74,13 @@ class SurveyResolver
 
         return $this->service->getResponseDetail($surveyId, $responseId);
     }
+
+    public function surveysCompleted($_, array $args)
+    {
+        $userId = (int) ($args['userId'] ?? 0);
+        if ($userId <= 0) return [];
+        return $this->service->listCompletedByUser($userId);
+    }
 }
 
 

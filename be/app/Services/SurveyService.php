@@ -266,6 +266,21 @@ class SurveyService
         $carbon = $value instanceof Carbon ? $value : Carbon::parse($value);
         return $carbon->format('d/m/Y H:i');
     }
+
+     public function listCompletedByUser(int $userId)
+    {
+        $items = $this->repo->getCompletedByUser($userId);
+        return $items->map(function ($row) {
+            $canView = ($row->object ?? 'public') === 'public';
+            return [
+                'id' => $row->id,
+                'name' => $row->name,
+                'creator' => $row->creator,
+                'completedAt' => $row->completedAt,
+                'canView' => (bool) $canView,
+            ];
+        });
+    }
 }
 
 

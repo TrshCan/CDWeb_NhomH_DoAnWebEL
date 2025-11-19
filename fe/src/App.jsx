@@ -12,6 +12,8 @@ import SurveysDid from "./pages/SurveysDid.jsx";
 import RawDataList from "./pages/RawDataList.jsx";
 import SurveyOverview from "./pages/SurveyOverview.jsx";
 import ResponseDetail from "./pages/ResponseDetail.jsx";
+import SurveysMade from "./pages/SurveysMade.jsx";
+import SurveysCompleted from "./pages/SurveysCompleted.jsx";
 
 export default function App() {
   return (
@@ -22,8 +24,11 @@ export default function App() {
         <Route index element={<Feed />} /> {/* mặc định là Feed */}
         <Route path="profile" element={<Profile />} />
         <Route path="surveys/did" element={<SurveysDid />} />
+        <Route path="surveys/made" element={<SurveysMade />} />
         {/* sau này sẽ thêm các route như profile expole v.v*/}
       </Route>
+      {/* Independent pages outside MainLayout */}
+      <Route path="/surveys/completed" element={<SurveysCompleted />} />
       
       {/* Independent pages outside MainLayout */}
       <Route path="/surveys/created" element={<SurveysCreated />} />

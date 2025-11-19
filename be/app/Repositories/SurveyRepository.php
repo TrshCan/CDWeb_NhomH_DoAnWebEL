@@ -207,5 +207,28 @@ class SurveyRepository
             ->pluck('response_id')
             ->toArray();
     }
+
+    public function getCompletedByUser(int $userId)
+    {
+        // Distinct surveys that user answered any question on
+        return Survey::query()
+            ->select([
+                'surveys.id',
+                'surveys.title as name',
+                DB::raw('MAX(survey_answers.answered_at) as completedAt'),
+                DB::raw('users.name as creator'),
+                'surveys.object',
+            ])
+            ->join('survey_questions', 'survey_questions.survey_id', '=', 'surveys.id')
+            ->join('survey_answers', function ($join) use ($userId) {
+                $join->on('survey_answers.question_id', '=', 'survey_questions.id')
+                    ->where('survey_answers.user_id', '=', $userId);
+            })
+            ->leftJoin('users', 'users.id', '=', 'surveys.created_by')
+            ->groupBy('surveys.id', 'surveys.title', 'users.name', 'surveys.object')
+            ->orderByDesc(DB::raw('MAX(survey_answers.answered_at)'))
+            ->get();
+    }
 }
+
 

@@ -231,7 +231,7 @@ export default function Sidebar() {
                         </Link>
                       )}
                       <Link
-                        to="/surveys/did"
+                        to="/surveys/completed"
                         onClick={() => setShowSurveysExpanded(true)}
                         className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-150 ${
                           location.pathname === "/surveys/did"
