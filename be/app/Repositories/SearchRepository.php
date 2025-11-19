@@ -7,13 +7,22 @@ use App\Models\User;
 
 class SearchRepository
 {
-    public function searchPosts(string $query)
+    protected $post;
+    protected $user;
+
+    public function __construct(Post $post, User $user)
     {
-        return Post::where('content', 'like', "%{$query}%")->get();
+        $this->post = $post;
+        $this->user = $user;
     }
 
-    public function searchUsers(string $query)
+    public function searchPosts(string $query): \Illuminate\Database\Eloquent\Collection
     {
-        return User::where('name', 'like', "%{$query}%")->get();
+        return $this->post->where('content', 'LIKE', "%{$query}%")->get();
+    }
+
+    public function searchUsers(string $query): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->user->where('name', 'LIKE', "%{$query}%")->get();
     }
 }
