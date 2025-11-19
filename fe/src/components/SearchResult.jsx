@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom"; // ✅ add these
+import { useLocation, useNavigate } from "react-router-dom";
 import { searchAll, fetchSuggestions } from "../api/graphql/search";
 import PostCard from "./PostCard";
 import "../assets/css/search.css";
 
 export default function SearchResult() {
   const location = useLocation();
-  const navigate = useNavigate(); // optional (for pressing Enter to update URL)
+  const navigate = useNavigate();
 
-  // ✅ read "q" from URL
   const queryParam = new URLSearchParams(location.search).get("q") || "";
 
   const [searchQuery, setSearchQuery] = useState(queryParam);
@@ -22,19 +21,60 @@ export default function SearchResult() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const inputRef = useRef(null);
 
-  // ✅ whenever URL changes, update searchQuery
+  // Whenever URL changes, update searchQuery
   useEffect(() => {
     const q = new URLSearchParams(location.search).get("q") || "";
     setSearchQuery(q);
+    setShowSuggestions(false);
+    setSelectedIndex(-1);
   }, [location.search]);
 
-  // 🔍 handle Enter to update URL (so it’s shareable + consistent)
+  // Handle keyboard navigation and Enter
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (!searchQuery.trim()) return;
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    if (!showSuggestions || suggestions.length === 0) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (!searchQuery.trim()) return;
+        setShowSuggestions(false);
+        navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          prev < suggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+          const selected = suggestions[selectedIndex];
+          navigate(`/search?q=${encodeURIComponent(selected)}`);
+          setShowSuggestions(false);
+          setSelectedIndex(-1);
+        } else if (searchQuery.trim()) {
+          setShowSuggestions(false);
+          navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        }
+        break;
+      case "Escape":
+        setShowSuggestions(false);
+        setSelectedIndex(-1);
+        inputRef.current?.blur();
+        break;
+      default:
+        break;
     }
   };
 
@@ -43,16 +83,30 @@ export default function SearchResult() {
     if (!searchQuery.trim()) {
       setSuggestions([]);
       setShowSuggestions(false);
+      setLoadingSuggestions(false);
+      setSelectedIndex(-1);
       return;
     }
 
+    setLoadingSuggestions(true);
     const timeout = setTimeout(async () => {
-      const data = await fetchSuggestions(searchQuery);
-      setSuggestions(data);
-      setShowSuggestions(true);
+      try {
+        const data = await fetchSuggestions(searchQuery);
+        setSuggestions(data);
+        setShowSuggestions(true);
+        setSelectedIndex(-1);
+      } catch (err) {
+        console.error("Failed to fetch suggestions:", err);
+        setSuggestions([]);
+      } finally {
+        setLoadingSuggestions(false);
+      }
     }, 300);
 
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      setLoadingSuggestions(false);
+    };
   }, [searchQuery]);
 
   // Fetch search results
@@ -137,31 +191,94 @@ export default function SearchResult() {
     <main className="w-full lg:w-2/3">
       {/* Sticky Search Bar */}
       <div className="sticky top-0 z-50 bg-white rounded-lg shadow p-4 mb-4">
-        <input
-          type="text"
-          placeholder="Search posts or users..."
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setShowSuggestions(true);
-          }}
-          onKeyDown={handleKeyDown} // ✅ press Enter updates URL
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-          className="w-full bg-gray-100 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900"
-        />
+        <div className="relative">
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search posts or users..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onKeyDown={handleKeyDown}
+            onFocus={() => {
+              if (suggestions.length > 0) setShowSuggestions(true);
+            }}
+            onBlur={() =>
+              setTimeout(() => {
+                setShowSuggestions(false);
+                setSelectedIndex(-1);
+              }, 200)
+            }
+            className="w-full bg-gray-100 border border-gray-300 rounded-full px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900 transition-all"
+            autoComplete="off"
+          />
+          {loadingSuggestions && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <svg
+                className="animate-spin h-5 w-5 text-cyan-500"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            </div>
+          )}
+        </div>
 
         {showSuggestions && suggestions.length > 0 && (
-          <ul className="absolute bg-white border border-gray-200 rounded-lg shadow-md w-full mt-1 z-50 max-h-48 overflow-y-auto">
+          <ul className="absolute left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-2 z-50 max-h-64 overflow-y-auto custom-scrollbar">
             {suggestions.map((item, i) => (
               <li
                 key={i}
-                onClick={() => {
-                  navigate(`/search?q=${encodeURIComponent(item)}`); // ✅ suggestion click navigates
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  navigate(`/search?q=${encodeURIComponent(item)}`);
                   setShowSuggestions(false);
+                  setSelectedIndex(-1);
                 }}
-                className="px-4 py-2 hover:bg-cyan-50 cursor-pointer text-gray-700"
+                onMouseEnter={() => setSelectedIndex(i)}
+                className={`px-4 py-3 cursor-pointer text-gray-700 transition-colors flex items-center space-x-2 ${
+                  selectedIndex === i
+                    ? "bg-cyan-100 text-cyan-900"
+                    : "hover:bg-cyan-50"
+                }`}
               >
-                {item.length > 60 ? item.slice(0, 60) + "..." : item}
+                <svg
+                  className="w-4 h-4 text-gray-400 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <span className="flex-1 truncate">
+                  {item.length > 70 ? item.slice(0, 70) + "..." : item}
+                </span>
+                {selectedIndex === i && (
+                  <kbd className="px-2 py-0.5 text-xs bg-gray-200 rounded text-gray-600">
+                    Enter
+                  </kbd>
+                )}
               </li>
             ))}
           </ul>
