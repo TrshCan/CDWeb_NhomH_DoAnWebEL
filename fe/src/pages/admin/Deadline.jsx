@@ -1,50 +1,113 @@
-import React, { useState, useEffect } from 'react';
-import { graphqlRequest } from '../../api/graphql';
+import React, { useState, useEffect } from "react";
+import { graphqlRequest } from "../../api/graphql";
 import AdminSidebar from "../../components/AdminSidebar";
-
 
 // --- SVG Icons ---
 const PlusIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+  >
+    <path
+      fillRule="evenodd"
+      d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 const SearchIcon = () => (
-  <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    className="h-5 w-5 text-gray-400"
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <circle cx="11" cy="11" r="8"></circle>
     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
   </svg>
 );
 const EditIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+    />
   </svg>
 );
 const DeleteIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+    />
   </svg>
 );
 const RestoreIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 4l16 16" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-5 w-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M4 4v5h5M20 20v-5h-5M4 4l16 16"
+    />
   </svg>
 );
 const CloseIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="h-6 w-6"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M6 18L18 6M6 6l12 12"
+    />
   </svg>
 );
 
 // --- GraphQL Queries ---
-const GET_PAGINATED_DEADLINES = `
-  query GetPaginatedDeadlines($perPage: Int, $page: Int, $includeDeleted: Boolean) {
-    getPaginatedDeadlines(perPage: $perPage, page: $page, includeDeleted: $includeDeleted) {
+const GET_PAGINATED_EVENTS = `
+  query GetPaginatedEvents($perPage: Int, $page: Int, $includeDeleted: Boolean) {
+    getPaginatedEvents(perPage: $perPage, page: $page, includeDeleted: $includeDeleted) {
       data {
         id
         title
-        deadline_date
-        details
+        event_date
+        location
         created_by
         created_at
         updated_at
@@ -62,14 +125,14 @@ const GET_PAGINATED_DEADLINES = `
   }
 `;
 
-const SEARCH_DEADLINES = `
-  query SearchDeadlines($filter: DeadlineFilterInput, $perPage: Int, $page: Int) {
-    searchDeadlines(filter: $filter, perPage: $perPage, page: $page) {
+const SEARCH_EVENTS = `
+  query SearchEvents($filter: EventFilterInput, $perPage: Int, $page: Int) {
+    searchEvents(filter: $filter, perPage: $perPage, page: $page) {
       data {
         id
         title
-        deadline_date
-        details
+        event_date
+        location
         created_by
         created_at
         updated_at
@@ -87,13 +150,13 @@ const SEARCH_DEADLINES = `
   }
 `;
 
-const CREATE_DEADLINE = `
-  mutation CreateDeadline($input: DeadlineInput!) {
-    createDeadline(input: $input) {
+const CREATE_EVENT = `
+  mutation CreateEvent($input: EventInput!) {
+    createEvent(input: $input) {
       id
       title
-      deadline_date
-      details
+      event_date
+      location
       created_by
       created_at
       updated_at
@@ -107,13 +170,13 @@ const CREATE_DEADLINE = `
   }
 `;
 
-const UPDATE_DEADLINE = `
-  mutation UpdateDeadline($id: ID!, $input: DeadlineInput!) {
-    updateDeadline(id: $id, input: $input) {
+const UPDATE_EVENT = `
+  mutation UpdateEvent($id: ID!, $input: EventInput!) {
+    updateEvent(id: $id, input: $input) {
       id
       title
-      deadline_date
-      details
+      event_date
+      location
       created_by
       created_at
       updated_at
@@ -127,118 +190,84 @@ const UPDATE_DEADLINE = `
   }
 `;
 
-const DELETE_DEADLINE = `
-  mutation DeleteDeadline($id: ID!) {
-    deleteDeadline(id: $id)
+const DELETE_EVENT = `
+  mutation DeleteEvent($id: ID!) {
+    deleteEvent(id: $id)
   }
 `;
 
-const RESTORE_DEADLINE = `
-  mutation RestoreDeadline($id: ID!) {
-    restoreDeadline(id: $id)
+const RESTORE_EVENT = `
+  mutation RestoreEvent($id: ID!) {
+    restoreEvent(id: $id)
   }
 `;
 
 // --- Utility ---
 const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
+  if (!dateString) return "N/A";
   const date = new Date(dateString);
-  if (isNaN(date)) return 'N/A';
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  if (isNaN(date)) return "N/A";
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
 };
 
 // --- Toast Component ---
 const Toast = ({ message, type, visible }) => {
   if (!visible) return null;
-  const baseClasses = 'toast fixed top-5 right-5 z-[100] rounded-lg p-4 text-white shadow-lg transition-transform transform';
-  const typeClasses = type === 'success' ? 'bg-green-500' : 'bg-red-500';
-  return <div className={`${baseClasses} ${typeClasses}`}>{message}</div>;
-};
-
-// --- Delete Modal ---
-const DeleteModal = ({ modalData, closeModal, confirmDelete }) => {
-  const [isDeleting, setIsDeleting] = useState(false);
-  
-  if (modalData.type !== 'delete') return null;
-  
-  const handleDelete = async () => {
-    if (isDeleting) return;
-    setIsDeleting(true);
-    try {
-      await confirmDelete();
-    } catch (error) {
-      // Error is handled in confirmDelete
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-  
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" onClick={closeModal}>
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center p-5 border-b">
-          <h3 className="text-xl font-semibold text-gray-800">Xác nhận xóa</h3>
-          <button 
-            onClick={closeModal} 
-            disabled={isDeleting}
-            className="ml-auto text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <CloseIcon />
-          </button>
+    <div className={`fixed top-6 right-6 z-[100] rounded-xl px-6 py-4 shadow-2xl max-w-md border-2 backdrop-blur-sm transform transition-all duration-300 ${
+      type === "success" 
+        ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-400 text-green-900 shadow-green-200/50" 
+        : "bg-gradient-to-r from-red-50 to-rose-50 border-red-400 text-red-900 shadow-red-200/50"
+    }`}>
+      <div className="flex items-start gap-4">
+        <div className={`flex-shrink-0 mt-0.5 ${
+          type === "success" ? "text-green-600" : "text-red-600"
+        }`}>
+          {type === "success" ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
         </div>
-        <p className="p-6">Bạn có chắc muốn xóa deadline "{modalData.deadline.title}"?</p>
-        <div className="flex justify-end gap-4 p-6 pt-0">
-          <button 
-            onClick={closeModal} 
-            disabled={isDeleting}
-            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Hủy
-          </button>
-          <button 
-            onClick={handleDelete} 
-            disabled={isDeleting}
-            className="px-4 py-2 bg-red-500 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {isDeleting && (
-              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            )}
-            {isDeleting ? "Đang xóa..." : "Xóa"}
-          </button>
-        </div>
+        <div className="flex-1 text-base font-medium whitespace-pre-line leading-relaxed">{message}</div>
       </div>
     </div>
   );
 };
 
-// --- Deadline Modal ---
-const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
-  const [formData, setFormData] = useState({ title: '', deadline_date: '', details: '' });
+// --- Event Modal ---
+const EventModal = ({ modalData, closeModal, handleSave }) => {
+  const [formData, setFormData] = useState({
+    title: "",
+    event_date: "",
+    location: "",
+  });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generalError, setGeneralError] = useState('');
 
   useEffect(() => {
-    if (modalData.type === 'edit' && modalData.deadline) {
-      const deadlineDate = modalData.deadline.deadline_date
-        ? new Date(modalData.deadline.deadline_date).toISOString().slice(0, 16)
-        : '';
+    if (modalData.type === "edit" && modalData.event) {
+      // Convert event_date to datetime-local format (YYYY-MM-DDTHH:mm)
+      const eventDate = modalData.event.event_date
+        ? new Date(modalData.event.event_date).toISOString().slice(0, 16)
+        : "";
       setFormData({
-        title: modalData.deadline.title || '',
-        deadline_date: deadlineDate,
-        details: modalData.deadline.details || '',
+        title: modalData.event.title,
+        event_date: eventDate,
+        location: modalData.event.location || "",
       });
     } else {
-      setFormData({ title: '', deadline_date: '', details: '' });
+      setFormData({ title: "", event_date: "", location: "" });
     }
     setErrors({});
     setGeneralError('');
@@ -248,27 +277,29 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
   const validate = () => {
     const newErrors = {};
     if (!formData.title.trim()) {
-      newErrors.title = "Tiêu đề deadline không được để trống.";
+      newErrors.title = "Tiêu đề sự kiện không được để trống.";
     } else if (formData.title.length > 255) {
-      newErrors.title = "Tiêu đề deadline không được vượt quá 255 ký tự.";
+      newErrors.title = "Tiêu đề sự kiện không được vượt quá 255 ký tự.";
     } else if (!/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/.test(formData.title)) {
       newErrors.title = "Tiêu đề chứa ký tự không hợp lệ.";
     }
-    if (!formData.deadline_date) newErrors.deadline_date = "Ngày giờ kết thúc không được để trống.";
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(formData.deadline_date)) {
-      newErrors.deadline_date = "Ngày giờ kết thúc không hợp lệ. Định dạng hợp lệ: YYYY-MM-DD HH:MM.";
+    if (!formData.event_date)
+      newErrors.event_date = "Ngày giờ diễn ra không được để trống.";
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(formData.event_date)) {
+      newErrors.event_date =
+        "Ngày giờ diễn ra không hợp lệ. Định dạng hợp lệ: DD/MM/YYYY HH:mm.";
     } else {
-      // Kiểm tra deadline_date phải lớn hơn thời điểm hiện tại
-      const deadlineDate = new Date(formData.deadline_date);
+      // Kiểm tra event_date phải lớn hơn thời điểm hiện tại
+      const eventDate = new Date(formData.event_date);
       const now = new Date();
-      if (deadlineDate <= now) {
-        newErrors.deadline_date = "Ngày giờ kết thúc phải sau thời điểm hiện tại.";
+      if (eventDate <= now) {
+        newErrors.event_date = "Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.";
       }
     }
-    if (formData.details && formData.details.length > 255) {
-      newErrors.details = "Ghi chú không được vượt quá 255 ký tự.";
-    } else if (formData.details && !/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/.test(formData.details)) {
-      newErrors.details = "Ghi chú chứa ký tự không hợp lệ.";
+    if (formData.location && formData.location.length > 255) {
+      newErrors.location = "Địa điểm không được vượt quá 255 ký tự.";
+    } else if (formData.location && !/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/.test(formData.location)) {
+      newErrors.location = "Địa điểm chứa ký tự không hợp lệ.";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -289,148 +320,190 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
     if (validate()) {
       setIsSubmitting(true);
       try {
-        const formattedDeadlineDate = formData.deadline_date.replace('T', ' ') + ':00';
-        await handleSave({ ...formData, deadline_date: formattedDeadlineDate }, setErrors, setGeneralError);
+        // Convert event_date to backend-compatible format (e.g., YYYY-MM-DD HH:mm:ss)
+        const formattedEventDate = new Date(formData.event_date)
+          .toISOString()
+          .replace("T", " ")
+          .slice(0, 19);
+        await handleSave({ ...formData, event_date: formattedEventDate }, setErrors, setGeneralError);
       } catch (error) {
         // Error is handled in handleSave
         // Ensure generalError is set if not already set by handleSave
         console.log("Error caught in handleSubmit, generalError state:", generalError);
+        // Error is handled in handleSave
       } finally {
         setIsSubmitting(false);
       }
     }
   };
 
-  if (modalData.type !== 'add' && modalData.type !== 'edit') return null;
-  const isEditing = modalData.type === 'edit';
+  if (modalData.type !== "add" && modalData.type !== "edit") return null;
+  const isEditing = modalData.type === "edit";
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" onClick={closeModal}>
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg animate-scale-in" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center p-5 border-b">
-          <h3 className="text-xl font-semibold text-gray-800">
-            {isEditing ? 'Chỉnh sửa deadline' : 'Thêm deadline mới'}
-          </h3>
-          <button onClick={closeModal} className="ml-auto text-gray-400 hover:text-gray-600">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"
+      onClick={closeModal}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-8 py-6 bg-gradient-to-r from-orange-50 via-amber-50 to-yellow-50 border-b-2 border-orange-200">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+              {isEditing ? "Chỉnh sửa deadline" : "Thêm deadline mới"}
+            </h3>
+          </div>
+          <button
+            onClick={closeModal}
+            className="text-gray-500 hover:text-gray-900 hover:bg-white rounded-full p-2 transition-all duration-200 hover:scale-110 shadow-sm hover:shadow-md"
+          >
             <CloseIcon />
           </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-8 space-y-5">
           {generalError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {generalError}
+            <div className="bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-300 text-red-800 px-4 py-3 rounded-xl shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-semibold">{generalError}</span>
+              </div>
             </div>
           )}
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-gray-700 w-32">
-              <span className="text-red-500">*</span> Tên deadline
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              Tiêu đề deadline <span className="text-red-500">*</span>
             </label>
-            <div className="flex-1">
-              <input
-                type="text"
-                value={formData.title}
-                maxLength={255}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setFormData({ ...formData, title: value });
-                  // Real-time validation for length
-                  if (value.length > 255) {
-                    setErrors({ ...errors, title: "Tiêu đề deadline không được vượt quá 255 ký tự." });
-                  } else if (errors.title && errors.title.includes("255")) {
-                    // Clear length error if within limit
-                    const newErrors = { ...errors };
-                    delete newErrors.title;
-                    setErrors(newErrors);
-                  } else if (errors.title) {
-                    setErrors({ ...errors, title: "" });
-                  }
-                }}
-                className={`bg-gray-50 border ${errors.title ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2.5`}
-              />
-              <div className="flex justify-between items-center mt-1">
-                {errors.title && <p className="text-red-500 text-xs">{errors.title}</p>}
-                <p className={`text-xs ml-auto ${formData.title.length > 255 ? 'text-red-500' : 'text-gray-400'}`}>
-                  {formData.title.length}/255
-                </p>
-              </div>
+            <input
+              type="text"
+              value={formData.title}
+              maxLength={255}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData({ ...formData, title: value });
+                // Real-time validation for length
+                if (value.length > 255) {
+                  setErrors({ ...errors, title: "Tiêu đề deadline không được vượt quá 255 ký tự." });
+                } else if (errors.title && errors.title.includes("255")) {
+                  // Clear length error if within limit
+                  const newErrors = { ...errors };
+                  delete newErrors.title;
+                  setErrors(newErrors);
+                } else if (errors.title) {
+                  setErrors({ ...errors, title: "" });
+                }
+              }}
+              className={`border-2 ${
+                errors.title ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
+              } rounded-xl w-full p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 shadow-sm hover:shadow-md`}
+            />
+            <div className="flex justify-between items-center mt-1">
+              {errors.title && (
+                <p className="text-red-500 text-xs">{errors.title}</p>
+              )}
+              <p className={`text-xs ml-auto ${formData.title.length > 255 ? 'text-red-500' : 'text-gray-400'}`}>
+                {formData.title.length}/255
+              </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-gray-700 w-32">
-              <span className="text-red-500">*</span> Ngày giờ kết thúc
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Ngày giờ hết hạn <span className="text-red-500">*</span>
             </label>
-            <div className="flex-1">
-              <input
-                type="datetime-local"
-                value={formData.deadline_date}
-                onChange={(e) => {
-                  setFormData({ ...formData, deadline_date: e.target.value });
-                  // Clear error when user changes the date
-                  if (errors.deadline_date) {
-                    setErrors({ ...errors, deadline_date: "" });
-                  }
-                }}
-                min={new Date().toISOString().slice(0, 16)}
-                className={`bg-gray-50 border ${errors.deadline_date ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2.5`}
-              />
-              {errors.deadline_date && <p className="text-red-500 text-xs mt-1">{errors.deadline_date}</p>}
+            <input
+              type="datetime-local"
+              value={formData.event_date}
+              onChange={(e) => {
+                setFormData({ ...formData, event_date: e.target.value });
+                // Clear error when user changes the date
+                if (errors.event_date) {
+                  setErrors({ ...errors, event_date: "" });
+                }
+              }}
+              min={new Date().toISOString().slice(0, 16)}
+              className={`border-2 ${
+                errors.event_date ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
+              } rounded-xl w-full p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 shadow-sm hover:shadow-md`}
+            />
+            {errors.event_date && (
+              <p className="text-red-500 text-xs mt-1">{errors.event_date}</p>
+            )}
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Địa điểm
+            </label>
+            <input
+              type="text"
+              value={formData.location}
+              maxLength={255}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData({ ...formData, location: value });
+                // Real-time validation for length
+                if (value.length > 255) {
+                  setErrors({ ...errors, location: "Địa điểm không được vượt quá 255 ký tự." });
+                } else if (errors.location && errors.location.includes("255")) {
+                  // Clear length error if within limit
+                  const newErrors = { ...errors };
+                  delete newErrors.location;
+                  setErrors(newErrors);
+                } else if (errors.location) {
+                  setErrors({ ...errors, location: "" });
+                }
+              }}
+              className={`border-2 ${
+                errors.location ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
+              } rounded-xl w-full p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 shadow-sm hover:shadow-md`}
+            />
+            <div className="flex justify-between items-center mt-1">
+              {errors.location && (
+                <p className="text-red-500 text-xs">{errors.location}</p>
+              )}
+              <p className={`text-xs ml-auto ${formData.location.length > 255 ? 'text-red-500' : 'text-gray-400'}`}>
+                {formData.location.length}/255
+              </p>
             </div>
           </div>
-
-          <div className="flex items-start gap-3">
-            <label className="text-sm font-medium text-gray-700 w-32">Ghi chú / Mô tả</label>
-            <div className="flex-1">
-              <textarea
-                value={formData.details}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setFormData({ ...formData, details: value });
-                  // Real-time validation for length
-                  if (value.length > 255) {
-                    setErrors({ ...errors, details: "Ghi chú không được vượt quá 255 ký tự." });
-                  } else if (errors.details && errors.details.includes("255")) {
-                    // Clear length error if within limit
-                    const newErrors = { ...errors };
-                    delete newErrors.details;
-                    setErrors(newErrors);
-                  } else if (errors.details) {
-                    setErrors({ ...errors, details: "" });
-                  }
-                }}
-                rows={3}
-                maxLength={255}
-                className={`bg-gray-50 border ${errors.details ? 'border-red-500' : 'border-gray-300'} rounded-lg w-full p-2.5`}
-              />
-              <div className="flex justify-between items-center mt-1">
-                {errors.details && <p className="text-red-500 text-xs">{errors.details}</p>}
-                <p className="text-gray-400 text-xs ml-auto">{formData.details.length}/255</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-4">
-            <button 
-              type="button" 
-              onClick={closeModal} 
+          <div className="flex justify-end gap-3 border-t-2 border-gray-200 pt-6 bg-gray-50 -mx-8 -mb-8 px-8 pb-6">
+            <button
+              type="button"
+              onClick={closeModal}
               disabled={isSubmitting}
-              className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
             >
               Hủy
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-xl hover:from-orange-700 hover:to-amber-700 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
             >
               {isSubmitting && (
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               )}
-              {isSubmitting ? "Đang xử lý..." : "Lưu"}
+              {isSubmitting ? "Đang xử lý..." : (isEditing ? "Cập nhật" : "Tạo deadline")}
             </button>
           </div>
         </form>
@@ -439,79 +512,187 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
   );
 };
 
-// --- Main Component ---
-export default function Deadline() {
-  const [deadlines, setDeadlines] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchError, setSearchError] = useState('');
-  const [showDeleted, setShowDeleted] = useState(false);
-  const [modalData, setModalData] = useState({ type: null, deadline: null });
-  const [toast, setToast] = useState({ message: '', type: '', visible: false });
-
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type, visible: true });
-    setTimeout(() => setToast({ ...toast, visible: false }), 3000);
-  };
-
-  const fetchDeadlines = async () => {
+// --- Delete Modal ---
+const DeleteModal = ({ modalData, closeModal, confirmDelete }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  if (modalData.type !== "delete") return null;
+  
+  const handleDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
     try {
-      const variables = { perPage: 10, page: currentPage, includeDeleted: showDeleted };
-      let res;
-      if (searchQuery) {
-        variables.filter = { title: searchQuery };
-        res = await graphqlRequest(SEARCH_DEADLINES, variables);
-        console.log('Search response:', res);
-        setDeadlines(res.data.searchDeadlines.data);
-        setTotalPages(res.data.searchDeadlines.last_page);
-      } else {
-        res = await graphqlRequest(GET_PAGINATED_DEADLINES, variables);
-        console.log('Paginated response:', res);
-        setDeadlines(res.data.getPaginatedDeadlines.data);
-        setTotalPages(res.data.getPaginatedDeadlines.last_page);
-      }
+      await confirmDelete();
     } catch (error) {
-      console.error('Fetch deadlines error:', error);
-      showToast('Lỗi khi tải danh sách deadline', 'error');
+      // Error is handled in confirmDelete
+    } finally {
+      setIsDeleting(false);
     }
   };
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="p-8 text-center">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-red-100 to-rose-100 mb-4 shadow-lg ring-4 ring-red-50">
+            <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            Bạn có chắc chắn muốn xóa?
+          </h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Hành động này sẽ ẩn deadline khỏi danh sách, nhưng bạn có thể khôi phục lại sau.
+          </p>
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={closeModal}
+              disabled={isDeleting}
+              className="px-5 py-2.5 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+            >
+              {isDeleting && (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {isDeleting ? "Đang xóa..." : "Vâng, xóa"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-  useEffect(() => {
-    fetchDeadlines();
-  }, [currentPage, searchQuery, showDeleted]);
+// --- Main Component ---
+export default function EventManager() {
+  const [events, setEvents] = useState([]);
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchError, setSearchError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [modalData, setModalData] = useState({ type: null, event: null });
+  const [toast, setToast] = useState({
+    message: "",
+    type: "success",
+    visible: false,
+  });
+  const ITEMS_PER_PAGE = 10;
+
+  const showToast = (msg, type = "success") =>
+    setToast({ message: msg, type, visible: true });
 
   const handleShowDeletedChange = (e) => {
     setShowDeleted(e.target.checked);
     setCurrentPage(1);
   };
 
-  const handleSaveDeadline = async (formData, setFieldErrors, setGeneralError) => {
-    try {
-      let res;
-      if (modalData.type === 'add') {
-        res = await graphqlRequest(CREATE_DEADLINE, { input: formData });
-        if (res.data.createDeadline) {
-          setDeadlines([...deadlines, res.data.createDeadline]);
-          showToast('Thêm deadline thành công');
-          closeModal();
+  // Fetch events
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await graphqlRequest(
+          searchQuery ? SEARCH_EVENTS : GET_PAGINATED_EVENTS,
+          searchQuery
+            ? {
+                filter: {
+                  title: searchQuery,
+                  location: searchQuery,
+                  include_deleted: showDeleted,
+                },
+                perPage: ITEMS_PER_PAGE,
+                page: currentPage,
+              }
+            : {
+                perPage: ITEMS_PER_PAGE,
+                page: currentPage,
+                includeDeleted: showDeleted,
+              }
+        );
+        const paginated =
+          response.data.getPaginatedEvents || response.data.searchEvents;
+        if (!paginated || !Array.isArray(paginated.data)) {
+          showToast("Dữ liệu phản hồi không hợp lệ.", "error");
+          return;
         }
-      } else if (modalData.type === 'edit') {
-        // Gửi updated_at từ deadline hiện tại để optimistic locking
+        setEvents(paginated.data);
+        setCurrentPage(paginated.current_page);
+        setTotalPages(paginated.last_page);
+      } catch (error) {
+        if (error.message.includes("Failed to fetch")) {
+          showToast(
+            "Kết nối máy chủ bị gián đoạn. Vui lòng kiểm tra đường truyền.",
+            "error"
+          );
+        } else if (error.message.includes("Không tìm thấy sự kiện")) {
+          showToast(
+            "Không tìm thấy sự kiện. Vui lòng làm mới danh sách.",
+            "error"
+          );
+        } else {
+          showToast(
+            "Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.",
+            "error"
+          );
+        }
+      }
+    };
+    fetchEvents();
+  }, [searchQuery, showDeleted, currentPage]);
+
+  useEffect(() => {
+    if (toast.visible)
+      setTimeout(() => setToast((t) => ({ ...t, visible: false })), 3000);
+  }, [toast]);
+
+  const handleSaveEvent = async (formData, setFieldErrors, setGeneralError) => {
+    try {
+      if (modalData.type === "edit") {
+        // Gửi updated_at từ event hiện tại để optimistic locking
         const inputData = {
           ...formData,
-          updated_at: modalData.deadline.updated_at || modalData.deadline.created_at
+          updated_at: modalData.event.updated_at || modalData.event.created_at
         };
         
-        res = await graphqlRequest(UPDATE_DEADLINE, { id: modalData.deadline.id, input: inputData });
-        if (res.data.updateDeadline) {
-          setDeadlines(deadlines.map((d) => (d.id === modalData.deadline.id ? res.data.updateDeadline : d)));
-          showToast('Cập nhật deadline thành công');
+        const res = await graphqlRequest(UPDATE_EVENT, {
+          id: modalData.event.id,
+          input: inputData,
+        });
+        if (res.data.updateEvent) {
+          setEvents(
+            events.map((e) =>
+              e.id === modalData.event.id ? res.data.updateEvent : e
+            )
+          );
+          showToast("Cập nhật thông tin sự kiện thành công");
           closeModal();
+        } else {
+          throw new Error(
+            "Cập nhật thất bại: Không nhận được dữ liệu từ server"
+          );
+        }
+      } else {
+        const res = await graphqlRequest(CREATE_EVENT, { input: formData });
+        if (res.data.createEvent) {
+          setEvents([res.data.createEvent, ...events]);
+          showToast("Tạo sự kiện thành công");
+          closeModal();
+        } else {
+          throw new Error("Tạo thất bại: Không nhận được dữ liệu từ server");
         }
       }
     } catch (error) {
-      console.error("Save deadline error:", error);
+      console.error("Save event error:", error);
       console.error("Error details:", {
         message: error.message,
         response: error.response,
@@ -530,15 +711,15 @@ export default function Deadline() {
             ? validationErrors.title[0] 
             : validationErrors.title;
         }
-        if (validationErrors.deadline_date) {
-          fieldErrors.deadline_date = Array.isArray(validationErrors.deadline_date) 
-            ? validationErrors.deadline_date[0] 
-            : validationErrors.deadline_date;
+        if (validationErrors.event_date) {
+          fieldErrors.event_date = Array.isArray(validationErrors.event_date) 
+            ? validationErrors.event_date[0] 
+            : validationErrors.event_date;
         }
-        if (validationErrors.details) {
-          fieldErrors.details = Array.isArray(validationErrors.details) 
-            ? validationErrors.details[0] 
-            : validationErrors.details;
+        if (validationErrors.location) {
+          fieldErrors.location = Array.isArray(validationErrors.location) 
+            ? validationErrors.location[0] 
+            : validationErrors.location;
         }
         
         if (Object.keys(fieldErrors).length > 0 && setFieldErrors) {
@@ -598,18 +779,18 @@ export default function Deadline() {
         showToast(errorMessage, "error");
         // Don't return early - let the error continue to be processed
         // The generalError state will be set and displayed in the modal
-      } else if (errorMessage.includes("Ngày giờ kết thúc phải sau thời điểm hiện tại") || errorMessage.includes("after:now")) {
-        errorMessage = "Ngày giờ kết thúc phải sau thời điểm hiện tại.";
-        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, deadline_date: errorMessage }));
+      } else if (errorMessage.includes("Ngày giờ diễn ra sự kiện phải lớn hơn") || errorMessage.includes("after:now")) {
+        errorMessage = "Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.";
+        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, event_date: errorMessage }));
         if (setGeneralError) setGeneralError('');
         return;
-      } else if (errorMessage.includes("Xung đột với deadline") || errorMessage.includes("Đã tồn tại deadline")) {
-        errorMessage = "Xung đột với deadline khác. Vui lòng chọn giờ hoặc tiêu đề khác.";
+      } else if (errorMessage.includes("Xung đột với sự kiện") || errorMessage.includes("Đã tồn tại sự kiện")) {
+        errorMessage = "Xung đột với sự kiện khác. Vui lòng chọn giờ hoặc tiêu đề khác.";
         if (setGeneralError) setGeneralError(errorMessage);
         showToast(errorMessage, "error");
         return; // Return early để không xử lý tiếp
-      } else if (errorMessage.includes("Không tìm thấy deadline")) {
-        errorMessage = "Không tìm thấy deadline. Vui lòng làm mới danh sách.";
+      } else if (errorMessage.includes("Không tìm thấy sự kiện")) {
+        errorMessage = "Không tìm thấy sự kiện. Vui lòng làm mới danh sách.";
       } else if (errorMessage.includes("Phiên đăng nhập") || errorMessage.includes("session")) {
         errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
         setTimeout(() => (window.location.href = "/login"), 5000);
@@ -617,22 +798,22 @@ export default function Deadline() {
         errorMessage = "Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.";
       } else if (errorMessage.includes("Lỗi cấu trúc dữ liệu") || errorMessage.includes("Unknown column")) {
         errorMessage = "Lỗi cấu trúc dữ liệu. Vui lòng liên hệ quản trị viên.";
-      } else if (errorMessage.includes("Deadline này đã tồn tại") || errorMessage.includes("Duplicate entry")) {
-        errorMessage = "Deadline này đã tồn tại. Vui lòng kiểm tra lại tiêu đề hoặc ngày giờ.";
+      } else if (errorMessage.includes("Sự kiện này đã tồn tại") || errorMessage.includes("Duplicate entry")) {
+        errorMessage = "Sự kiện này đã tồn tại. Vui lòng kiểm tra lại tiêu đề hoặc ngày giờ.";
         if (setGeneralError) setGeneralError(errorMessage);
         showToast(errorMessage, "error");
         return; // Return early để không xử lý tiếp
       } else if (errorMessage.includes("Định dạng ngày tháng không hợp lệ") || errorMessage.includes("date_format")) {
         errorMessage = "Định dạng ngày tháng không hợp lệ. Vui lòng kiểm tra lại.";
-        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, deadline_date: errorMessage }));
+        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, event_date: errorMessage }));
         if (setGeneralError) setGeneralError('');
         return;
-      } else if (errorMessage.includes("Tên deadline không được để trống") || errorMessage.includes("title.required")) {
-        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, title: "Tiêu đề deadline không được để trống." }));
+      } else if (errorMessage.includes("Tên sự kiện không được để trống") || errorMessage.includes("title.required")) {
+        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, title: "Tiêu đề sự kiện không được để trống." }));
         if (setGeneralError) setGeneralError('');
         return;
-      } else if (errorMessage.includes("Ngày giờ kết thúc không được để trống") || errorMessage.includes("deadline_date.required")) {
-        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, deadline_date: "Ngày giờ kết thúc không được để trống." }));
+      } else if (errorMessage.includes("Ngày giờ diễn ra không được để trống") || errorMessage.includes("event_date.required")) {
+        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, event_date: "Ngày giờ diễn ra không được để trống." }));
         if (setGeneralError) setGeneralError('');
         return;
       } else if (errorMessage === "Internal server error" || errorMessage === "Có lỗi xảy ra") {
@@ -645,9 +826,9 @@ export default function Deadline() {
       
       // Hiển thị lỗi chung nếu không phải lỗi field cụ thể
       // Nếu đã set generalError ở trên (như "Dữ liệu đã được cập nhật"), không set lại
-      if (!errorMessage.includes("Ngày giờ kết thúc") && !errorMessage.includes("Tên deadline")) {
+      if (!errorMessage.includes("Ngày giờ diễn ra") && !errorMessage.includes("Tên sự kiện")) {
         // Only set if not already set for specific errors like "Dữ liệu đã được cập nhật"
-        if (!errorMessage.includes("Dữ liệu đã được cập nhật") && !errorMessage.includes("Xung đột với deadline") && !errorMessage.includes("Deadline này đã tồn tại")) {
+        if (!errorMessage.includes("Dữ liệu đã được cập nhật") && !errorMessage.includes("Xung đột với sự kiện") && !errorMessage.includes("Sự kiện này đã tồn tại")) {
           if (setGeneralError) setGeneralError(errorMessage);
         }
         showToast(errorMessage, "error");
@@ -659,279 +840,291 @@ export default function Deadline() {
     }
   };
 
-  const handleDeleteDeadline = async () => {
+  const handleDeleteEvent = async () => {
     try {
-      const res = await graphqlRequest(DELETE_DEADLINE, { id: modalData.deadline.id });
-      if (res.data.deleteDeadline) {
-        setDeadlines(deadlines.map((d) => (d.id === modalData.deadline.id ? { ...d, deleted_at: new Date().toISOString() } : d)));
-        showToast('Xóa deadline thành công');
-      } else {
-        throw new Error('Xóa thất bại: Không nhận được dữ liệu từ server');
-      }
-      closeModal();
-    } catch (error) {
-      console.error("Delete deadline error:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response,
-        extensions: error.response?.data?.errors?.[0]?.extensions,
-        stack: error.stack
+      const res = await graphqlRequest(DELETE_EVENT, {
+        id: modalData.event.id,
       });
-      
-      // Extract error message từ nhiều nguồn
+      if (res.data.deleteEvent) {
+        setEvents(
+          events.map((e) =>
+            e.id === modalData.event.id
+              ? { ...e, deleted_at: new Date().toISOString() }
+              : e
+          )
+        );
+        showToast("Xóa sự kiện thành công");
+        closeModal();
+      } else {
+        throw new Error("Xóa thất bại: Không nhận được dữ liệu từ server");
+      }
+    } catch (error) {
+      console.error("Delete event error:", error);
       let errorMessage = error.message || "Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.";
       
-      // Check GraphQL error extensions trực tiếp (nếu graphql.js chưa extract)
-      if (error.response?.data?.errors?.[0]?.extensions?.exception?.message) {
-        errorMessage = error.response.data.errors[0].extensions.exception.message;
-      } else if (error.response?.data?.errors?.[0]?.extensions?.validation) {
-        const validationErrors = error.response.data.errors[0].extensions.validation;
-        const firstError = Object.values(validationErrors)[0];
-        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
-      } else if (error.response?.data?.errors?.[0]?.extensions?.message) {
-        errorMessage = error.response.data.errors[0].extensions.message;
-      } else if (error.response?.data?.errors?.[0]?.message) {
-        errorMessage = error.response.data.errors[0].message;
-      }
-      
-      // Xử lý các loại lỗi cụ thể - ưu tiên các message cụ thể trước
-      if (!errorMessage || errorMessage === "Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.") {
-        // Chỉ set default nếu thực sự không có message
-        if (!errorMessage) {
-          errorMessage = "Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.";
-        }
-      } else if (errorMessage.includes("Deadline đã bị xóa trước đó") || errorMessage.includes("đã bị xóa trước đó")) {
-        errorMessage = "Deadline đã bị xóa trước đó. Không thể xóa lại.";
-      } else if (errorMessage.includes("Đang xử lý yêu cầu xóa")) {
+      if (error.message.includes("Đang xử lý yêu cầu xóa")) {
         errorMessage = "Đang xử lý yêu cầu xóa. Vui lòng đợi và thử lại sau vài giây.";
-      } else if (errorMessage.includes("Không tìm thấy deadline. Deadline không tồn tại")) {
-        errorMessage = "Không tìm thấy deadline. Deadline không tồn tại.";
-      } else if (errorMessage.includes("Không tìm thấy deadline")) {
-        errorMessage = "Không tìm thấy deadline. Vui lòng làm mới danh sách.";
-      } else if (errorMessage.includes("Bạn chưa đăng nhập") || errorMessage.includes("Unauthenticated") || errorMessage.includes("auth")) {
+      } else if (error.message.includes("Sự kiện đã bị xóa trước đó")) {
+        errorMessage = "Sự kiện đã bị xóa trước đó. Không thể xóa lại.";
+      } else if (error.message.includes("Không tìm thấy sự kiện. Sự kiện không tồn tại")) {
+        errorMessage = "Không tìm thấy sự kiện. Sự kiện không tồn tại.";
+      } else if (error.message.includes("Không tìm thấy sự kiện")) {
+        errorMessage = "Không tìm thấy sự kiện. Vui lòng làm mới danh sách.";
+      } else if (error.message.includes("Bạn chưa đăng nhập") || error.message.includes("auth")) {
         errorMessage = "Bạn chưa đăng nhập. Vui lòng đăng nhập lại.";
         setTimeout(() => (window.location.href = "/login"), 2000);
-      } else if (errorMessage.includes("Bạn không có quyền") || errorMessage.includes("permission") || errorMessage.includes("Chỉ admin")) {
-        errorMessage = errorMessage || "Bạn không có quyền xóa deadline.";
-      } else if (errorMessage.includes("Phiên đăng nhập") || errorMessage.includes("session")) {
+      } else if (error.message.includes("Bạn không có quyền") || error.message.includes("permission")) {
+        errorMessage = error.message || "Bạn không có quyền xóa sự kiện.";
+      } else if (error.message.includes("Phiên đăng nhập")) {
         errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
         setTimeout(() => (window.location.href = "/login"), 5000);
-      } else if (errorMessage.includes("Không thể kết nối đến cơ sở dữ liệu") || errorMessage.includes("SQLSTATE")) {
+      } else if (error.message.includes("Không thể kết nối đến cơ sở dữ liệu")) {
         errorMessage = "Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.";
-      } else if (errorMessage.includes("đang được sử dụng") || errorMessage.includes("Foreign key constraint")) {
-        errorMessage = "Không thể xóa deadline vì đang được sử dụng ở nơi khác.";
-      } else if (errorMessage === "Internal server error" || errorMessage === "Có lỗi xảy ra") {
-        errorMessage = "Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.";
+      } else if (error.message.includes("đang được sử dụng")) {
+        errorMessage = "Không thể xóa sự kiện vì đang được sử dụng ở nơi khác.";
+      } else if (error.message && error.message !== "Internal server error" && error.message !== "Có lỗi xảy ra") {
+        // Sử dụng message từ backend nếu có
+        errorMessage = error.message;
       }
-      // Nếu không match với bất kỳ pattern nào, sử dụng message từ backend
-      
-      console.log("Final error message to display:", errorMessage);
       showToast(errorMessage, "error");
       throw error; // Re-throw để component có thể xử lý
     }
   };
 
-  const handleRestoreDeadline = async (id) => {
+  const handleRestoreEvent = async (id) => {
     try {
-      const res = await graphqlRequest(RESTORE_DEADLINE, { id });
-      if (res.data.restoreDeadline) {
-        setDeadlines(deadlines.map((d) => (d.id === id ? { ...d, deleted_at: null } : d)));
-        showToast('Khôi phục deadline thành công');
+      const res = await graphqlRequest(RESTORE_EVENT, { id });
+      if (res.data.restoreEvent) {
+        setEvents(events.filter((e) => e.id !== id));
+        showToast("Khôi phục sự kiện thành công");
       } else {
-        throw new Error('Khôi phục thất bại: Không nhận được dữ liệu từ server');
+        throw new Error(
+          "Khôi phục thất bại: Không nhận được dữ liệu từ server"
+        );
       }
     } catch (error) {
-      console.error("Restore deadline error:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response,
-        extensions: error.response?.data?.errors?.[0]?.extensions,
-      });
-      
-      // Extract error message từ nhiều nguồn
       let errorMessage = error.message || "Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.";
-      
-      // Check GraphQL error extensions trực tiếp
-      if (error.response?.data?.errors?.[0]?.extensions?.exception?.message) {
-        errorMessage = error.response.data.errors[0].extensions.exception.message;
-      } else if (error.response?.data?.errors?.[0]?.extensions?.validation) {
-        const validationErrors = error.response.data.errors[0].extensions.validation;
-        const firstError = Object.values(validationErrors)[0];
-        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
-      } else if (error.response?.data?.errors?.[0]?.extensions?.message) {
-        errorMessage = error.response.data.errors[0].extensions.message;
-      } else if (error.response?.data?.errors?.[0]?.message) {
-        errorMessage = error.response.data.errors[0].message;
-      }
-      
-      // Xử lý các loại lỗi cụ thể
-      if (errorMessage.includes("Đang xử lý yêu cầu")) {
+      if (error.message.includes("Đang xử lý yêu cầu")) {
         errorMessage = "Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.";
-      } else if (errorMessage.includes("Kiểm tra dữ liệu hoặc xung đột") || errorMessage.includes("xung đột")) {
-        errorMessage = "Không thể khôi phục deadline. Kiểm tra dữ liệu hoặc xung đột với deadline khác.";
-      } else if (errorMessage.includes("Không tìm thấy deadline")) {
-        errorMessage = "Không tìm thấy deadline. Vui lòng làm mới danh sách.";
-      } else if (errorMessage.includes("Bạn không có quyền") || errorMessage.includes("permission") || errorMessage.includes("Chỉ admin")) {
-        errorMessage = errorMessage || "Bạn không có quyền khôi phục deadline.";
-      } else if (errorMessage.includes("Phiên đăng nhập") || errorMessage.includes("session")) {
+      } else if (error.message.includes("Kiểm tra dữ liệu hoặc xung đột")) {
+        errorMessage =
+          "Không thể khôi phục sự kiện. Kiểm tra dữ liệu hoặc xung đột với sự kiện khác.";
+      } else if (error.message.includes("Không tìm thấy sự kiện")) {
+        errorMessage = "Không tìm thấy sự kiện. Vui lòng làm mới danh sách.";
+      } else if (error.message.includes("Bạn không có quyền")) {
+        errorMessage = error.message;
+      } else if (error.message.includes("Phiên đăng nhập")) {
         errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
         setTimeout(() => (window.location.href = "/login"), 5000);
-      } else if (errorMessage.includes("Không thể kết nối đến cơ sở dữ liệu") || errorMessage.includes("SQLSTATE")) {
+      } else if (error.message.includes("Không thể kết nối đến cơ sở dữ liệu")) {
         errorMessage = "Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.";
-      } else if (errorMessage === "Internal server error" || errorMessage === "Có lỗi xảy ra") {
-        errorMessage = "Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.";
+      } else if (error.message && error.message !== "Internal server error" && error.message !== "Có lỗi xảy ra") {
+        // Sử dụng message từ backend nếu có
+        errorMessage = error.message;
       }
-      // Nếu không match, sử dụng message từ backend
-      
       showToast(errorMessage, "error");
     }
   };
 
-  const closeModal = () => setModalData({ type: null, deadline: null });
+  const closeModal = () => setModalData({ type: null, event: null });
 
   return (
-    <>
-      <style>{`
-        @keyframes slide-in {
-          from { transform: translateY(-100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes fade-out {
-          from { opacity: 1; }
-          to { opacity: 0; }
-        }
-        @keyframes scale-in {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .animate-scale-in {
-          animation: scale-in 0.3s ease-out;
-        }
-        .toast {
-          animation: slide-in 0.5s forwards, fade-out 0.5s 2.5s forwards;
-        }
-        th {
-          text-align: left !important;
-        }
-      `}</style>
-      <div className="flex min-h-screen bg-gray-100">
-        <AdminSidebar />
-        
-        <main className="flex-1 p-8 overflow-y-auto">
-          <Toast {...toast} />
-          <DeadlineModal modalData={modalData} closeModal={closeModal} handleSave={handleSaveDeadline} />
-          <DeleteModal modalData={modalData} closeModal={closeModal} confirmDelete={handleDeleteDeadline} />
+    <div className="min-h-screen bg-gray-100 text-gray-800 flex">
+      <AdminSidebar /> {/* Sidebar bên trái */}
+      <div className="flex-1 p-4 max-w-7xl mx-auto">
+        <Toast {...toast} />
+        <EventModal
+          modalData={modalData}
+          closeModal={closeModal}
+          handleSave={handleSaveEvent}
+        />
+        <DeleteModal
+          modalData={modalData}
+          closeModal={closeModal}
+          confirmDelete={handleDeleteEvent}
+        />
 
-          <div className="max-w-7xl mx-auto">
-          <header className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900">Quản lý Deadline</h1>
-            <p className="text-gray-500 mt-2">Tạo, cập nhật và quản lý các deadline quan trọng.</p>
-          </header>
-
-          <div className="bg-white p-5 rounded-xl shadow-sm mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <button onClick={() => setModalData({ type: 'add', deadline: null })} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2">
-              <PlusIcon /> Thêm mới
-            </button>
-            <div className="flex flex-col sm:flex-row gap-4 items-center">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  maxLength={255}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSearchQuery(value);
-                    // Clear error when user types
-                    if (searchError) {
-                      setSearchError("");
-                    }
-                  }}
-                  placeholder="Tìm kiếm deadline..."
-                  className={`pl-10 pr-16 py-2 border rounded-lg w-64 ${searchError ? 'border-red-500' : 'border-gray-300'}`}
-                />
-                <div className="absolute left-3 top-1/2 -translate-y-1/2"><SearchIcon /></div>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                  <span className={`text-xs ${searchQuery.length >= 250 ? 'text-orange-500' : searchQuery.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
-                    {searchQuery.length}/255
-                  </span>
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={showDeleted} onChange={handleShowDeletedChange} /> Hiển thị deadline đã xóa
-              </label>
+        <header className="text-center mb-8">
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-600 shadow-lg">
+              <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 bg-clip-text text-transparent">Quản lý Deadline</h1>
           </div>
+          <p className="text-gray-600 mt-2 text-lg">
+            Thêm, sửa, xóa và tìm kiếm deadline dễ dàng
+          </p>
+        </header>
 
-          <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
-                <tr>
-                  <th className="px-6 py-3">Tên deadline</th>
-                  <th className="px-6 py-3">Ngày giờ kết thúc</th>
-                  <th className="px-6 py-3">Ghi chú</th>
-                  <th className="px-6 py-3">Người tạo</th>
-                  <th className="px-6 py-3">Ngày tạo</th>
-                  <th className="px-6 py-3 text-center">Hành động</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {deadlines.length > 0 ? (
-                  deadlines.map((d) => (
-                    <tr key={d.id} className={`hover:bg-gray-50 ${d.deleted_at ? 'bg-gray-100 opacity-75' : ''}`}>
-                      <td className="px-6 py-3 font-medium">{d.title}</td>
-                      <td className="px-6 py-3">{formatDate(d.deadline_date)}</td>
-                      <td className="px-6 py-3">{d.details || 'N/A'}</td>
-                      <td className="px-6 py-3">{d.user?.name || 'N/A'}</td>
-                      <td className="px-6 py-3">{formatDate(d.created_at)}</td>
-                      <td className="px-6 py-3 text-center">
-                        {d.deleted_at ? (
-                          <button onClick={() => handleRestoreDeadline(d.id)} className="text-green-500 hover:text-green-700"><RestoreIcon /></button>
+        <div className="bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl shadow-xl border-2 border-gray-100 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <button
+            onClick={() => setModalData({ type: "add", event: null })}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-xl hover:from-orange-700 hover:to-amber-700 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <PlusIcon /> Thêm mới
+          </button>
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                maxLength={255}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  // Clear error when user types
+                  if (searchError) {
+                    setSearchError("");
+                  }
+                }}
+                placeholder="Tìm kiếm deadline..."
+                className={`pl-10 pr-16 py-2.5 border-2 rounded-xl w-64 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 shadow-sm hover:shadow-md ${searchError ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                <SearchIcon />
+              </div>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <span className={`text-xs font-medium ${searchQuery.length >= 250 ? 'text-orange-500' : searchQuery.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
+                  {searchQuery.length}/255
+                </span>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer hover:text-orange-600 transition-colors">
+              <input
+                type="checkbox"
+                checked={showDeleted}
+                onChange={handleShowDeletedChange}
+                className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+              />
+              Hiển thị deadline đã xóa
+            </label>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gradient-to-r from-gray-50 via-orange-50 to-amber-50 border-b-2 border-gray-200">
+              <tr>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Tiêu đề</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Ngày giờ hết hạn</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Địa điểm</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Người tạo</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Ngày tạo</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider text-center">Hành động</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {events.length > 0 ? (
+                events.map((e) => (
+                  <tr
+                    key={e.id}
+                    className={`hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group ${
+                      e.deleted_at ? "bg-gray-100 opacity-75" : ""
+                    }`}
+                  >
+                    <td className="px-6 py-4 font-semibold text-gray-900">{e.title}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatDate(e.event_date)}</td>
+                    <td className="px-6 py-4 text-gray-600">{e.location || "N/A"}</td>
+                    <td className="px-6 py-4 text-gray-600">{e.user?.name || "N/A"}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatDate(e.created_at)}</td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {e.deleted_at ? (
+                          <button
+                            onClick={() => handleRestoreEvent(e.id)}
+                            className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                            title="Khôi phục"
+                          >
+                            <RestoreIcon />
+                          </button>
                         ) : (
                           <>
-                            <button onClick={() => setModalData({ type: 'edit', deadline: d })} className="text-indigo-500 hover:text-indigo-700"><EditIcon /></button>
-                            <button onClick={() => setModalData({ type: 'delete', deadline: d })} className="text-red-500 hover:text-red-700 ml-2"><DeleteIcon /></button>
+                            <button
+                              onClick={() =>
+                                setModalData({ type: "edit", event: e })
+                              }
+                              className="p-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                              title="Chỉnh sửa"
+                            >
+                              <EditIcon />
+                            </button>
+                            <button
+                              onClick={() =>
+                                setModalData({ type: "delete", event: e })
+                              }
+                              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                              title="Xóa"
+                            >
+                              <DeleteIcon />
+                            </button>
                           </>
                         )}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="text-center py-8 text-gray-500">
-                      {showDeleted ? 'Không có deadline đã xóa' : 'Không có deadline nào'}
+                      </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="text-center py-16">
+                    <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-lg">
+                      <svg className="h-8 w-8 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-lg font-bold text-gray-800 mb-2">
+                      {showDeleted
+                        ? "Không có deadline đã xóa"
+                        : "Không có deadline nào"}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {showDeleted
+                        ? "Tất cả deadline đang hoạt động"
+                        : "Hãy thêm deadline mới để bắt đầu"}
+                    </p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-6">
-              <span>
-                Trang <b>{currentPage}</b> / <b>{totalPages}</b>
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border rounded disabled:opacity-50"
-                >
-                  Trước
-                </button>
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 border rounded disabled:opacity-50"
-                >
-                  Sau
-                </button>
-              </div>
+        {totalPages > 1 && (
+          <div className="flex justify-between items-center mt-8 bg-white rounded-xl shadow-lg border-2 border-gray-100 p-4">
+            <div className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Trang <span className="text-orange-600 font-bold">{currentPage}</span> / <span className="text-orange-600 font-bold">{totalPages}</span>
             </div>
-          )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 border-2 border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400 transition-all duration-200 font-semibold text-gray-700 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Trước
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 border-2 border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400 transition-all duration-200 font-semibold text-gray-700 flex items-center gap-2"
+              >
+                Sau
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
           </div>
-        </main>
+        )}
       </div>
-    </>
+    </div>
   );
 }

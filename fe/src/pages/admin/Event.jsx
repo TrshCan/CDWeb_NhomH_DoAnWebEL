@@ -218,10 +218,30 @@ const formatDate = (dateString) => {
 // --- Toast Component ---
 const Toast = ({ message, type, visible }) => {
   if (!visible) return null;
-  const baseClasses =
-    "toast fixed top-5 right-5 z-[100] rounded-lg p-4 text-white shadow-lg transition-transform transform";
-  const typeClasses = type === "success" ? "bg-green-500" : "bg-red-500";
-  return <div className={`${baseClasses} ${typeClasses}`}>{message}</div>;
+  return (
+    <div className={`fixed top-6 right-6 z-[100] rounded-xl px-6 py-4 shadow-2xl max-w-md border-2 backdrop-blur-sm transform transition-all duration-300 ${
+      type === "success" 
+        ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-400 text-green-900 shadow-green-200/50" 
+        : "bg-gradient-to-r from-red-50 to-rose-50 border-red-400 text-red-900 shadow-red-200/50"
+    }`}>
+      <div className="flex items-start gap-4">
+        <div className={`flex-shrink-0 mt-0.5 ${
+          type === "success" ? "text-green-600" : "text-red-600"
+        }`}>
+          {type === "success" ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+        </div>
+        <div className="flex-1 text-base font-medium whitespace-pre-line leading-relaxed">{message}</div>
+      </div>
+    </div>
+  );
 };
 
 // --- Event Modal ---
@@ -322,32 +342,47 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/30 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"
       onClick={closeModal}
     >
       <div
-        className="bg-white rounded-lg shadow-2xl w-full max-w-lg animate-scale-in"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-5 border-b">
-          <h3 className="text-xl font-semibold text-gray-800">
-            {isEditing ? "Chỉnh sửa sự kiện" : "Thêm sự kiện mới"}
-          </h3>
+        <div className="flex items-center justify-between px-8 py-6 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-b-2 border-indigo-200">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              {isEditing ? "Chỉnh sửa sự kiện" : "Thêm sự kiện mới"}
+            </h3>
+          </div>
           <button
             onClick={closeModal}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-500 hover:text-gray-900 hover:bg-white rounded-full p-2 transition-all duration-200 hover:scale-110 shadow-sm hover:shadow-md"
           >
             <CloseIcon />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-8 space-y-5">
           {generalError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {generalError}
+            <div className="bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-300 text-red-800 px-4 py-3 rounded-xl shadow-sm">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-semibold">{generalError}</span>
+              </div>
             </div>
           )}
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">
+            <label className="block mb-2 text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
               Tiêu đề sự kiện <span className="text-red-500">*</span>
             </label>
             <input
@@ -369,9 +404,9 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
                   setErrors({ ...errors, title: "" });
                 }
               }}
-              className={`bg-gray-50 border ${
-                errors.title ? "border-red-500" : "border-gray-300"
-              } rounded-lg w-full p-2.5`}
+              className={`border-2 ${
+                errors.title ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
+              } rounded-xl w-full p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md`}
             />
             <div className="flex justify-between items-center mt-1">
               {errors.title && (
@@ -383,7 +418,10 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
             </div>
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">
+            <label className="block mb-2 text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
               Ngày giờ diễn ra <span className="text-red-500">*</span>
             </label>
             <input
@@ -397,16 +435,20 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
                 }
               }}
               min={new Date().toISOString().slice(0, 16)}
-              className={`bg-gray-50 border ${
-                errors.event_date ? "border-red-500" : "border-gray-300"
-              } rounded-lg w-full p-2.5`}
+              className={`border-2 ${
+                errors.event_date ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
+              } rounded-xl w-full p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md`}
             />
             {errors.event_date && (
               <p className="text-red-500 text-xs mt-1">{errors.event_date}</p>
             )}
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-700">
+            <label className="block mb-2 text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
               Địa điểm
             </label>
             <input
@@ -428,9 +470,9 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
                   setErrors({ ...errors, location: "" });
                 }
               }}
-              className={`bg-gray-50 border ${
-                errors.location ? "border-red-500" : "border-gray-300"
-              } rounded-lg w-full p-2.5`}
+              className={`border-2 ${
+                errors.location ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
+              } rounded-xl w-full p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md`}
             />
             <div className="flex justify-between items-center mt-1">
               {errors.location && (
@@ -441,22 +483,22 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
               </p>
             </div>
           </div>
-          <div className="flex justify-end gap-3 border-t pt-4">
+          <div className="flex justify-end gap-3 border-t-2 border-gray-200 pt-6 bg-gray-50 -mx-8 -mb-8 px-8 pb-6">
             <button
               type="button"
               onClick={closeModal}
               disabled={isSubmitting}
-              className="text-gray-700 bg-white border px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
             >
               {isSubmitting && (
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -489,49 +531,42 @@ const DeleteModal = ({ modalData, closeModal, confirmDelete }) => {
   };
   
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 text-center animate-scale-in">
-        <svg
-          className="mx-auto mb-4 text-red-500 w-12 h-12"
-          fill="none"
-          viewBox="0 0 20 20"
-        >
-          <path
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-          />
-        </svg>
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          Bạn có chắc chắn muốn xóa?
-        </h3>
-        <p className="text-sm text-gray-500 mb-6">
-          Hành động này sẽ ẩn sự kiện khỏi danh sách, nhưng bạn có thể khôi phục
-          lại sau.
-        </p>
-        <div className="flex justify-center gap-4">
-          <button
-            onClick={closeModal}
-            disabled={isDeleting}
-            className="text-gray-700 bg-white border px-5 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Hủy
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="text-white bg-red-600 hover:bg-red-700 px-5 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
-          >
-            {isDeleting && (
-              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            )}
-            {isDeleting ? "Đang xóa..." : "Vâng, xóa"}
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="p-8 text-center">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-red-100 to-rose-100 mb-4 shadow-lg ring-4 ring-red-50">
+            <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            Bạn có chắc chắn muốn xóa?
+          </h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Hành động này sẽ ẩn sự kiện khỏi danh sách, nhưng bạn có thể khôi phục lại sau.
+          </p>
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={closeModal}
+              disabled={isDeleting}
+              className="px-5 py-2.5 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+            >
+              {isDeleting && (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {isDeleting ? "Đang xóa..." : "Vâng, xóa"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -910,16 +945,23 @@ export default function EventManager() {
         />
 
         <header className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Quản lý Sự kiện</h1>
-          <p className="text-gray-500 mt-2">
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-600 shadow-lg">
+              <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Quản lý Sự kiện</h1>
+          </div>
+          <p className="text-gray-600 mt-2 text-lg">
             Thêm, sửa, xóa và tìm kiếm sự kiện dễ dàng
           </p>
         </header>
 
-        <div className="bg-white p-5 rounded-xl shadow-sm mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl shadow-xl border-2 border-gray-100 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <button
             onClick={() => setModalData({ type: "add", event: null })}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <PlusIcon /> Thêm mới
           </button>
@@ -938,91 +980,109 @@ export default function EventManager() {
                   }
                 }}
                 placeholder="Tìm kiếm sự kiện..."
-                className={`pl-10 pr-16 py-2 border rounded-lg w-64 ${searchError ? 'border-red-500' : 'border-gray-300'}`}
+                className={`pl-10 pr-16 py-2.5 border-2 rounded-xl w-64 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md ${searchError ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2">
                 <SearchIcon />
               </div>
               <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <span className={`text-xs ${searchQuery.length >= 250 ? 'text-orange-500' : searchQuery.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
+                <span className={`text-xs font-medium ${searchQuery.length >= 250 ? 'text-orange-500' : searchQuery.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
                   {searchQuery.length}/255
                 </span>
               </div>
             </div>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer hover:text-indigo-600 transition-colors">
               <input
                 type="checkbox"
                 checked={showDeleted}
                 onChange={handleShowDeletedChange}
-              />{" "}
+                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2"
+              />
               Hiển thị sự kiện đã xóa
             </label>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
+        <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
+            <thead className="bg-gradient-to-r from-gray-50 via-indigo-50 to-purple-50 border-b-2 border-gray-200">
               <tr>
-                <th className="px-6 py-3">Tiêu đề</th>
-                <th className="px-6 py-3">Ngày giờ diễn ra</th>
-                <th className="px-6 py-3">Địa điểm</th>
-                <th className="px-6 py-3">Người tạo</th>
-                <th className="px-6 py-3">Ngày tạo</th>
-                <th className="px-6 py-3 text-center">Hành động</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Tiêu đề</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Ngày giờ diễn ra</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Địa điểm</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Người tạo</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Ngày tạo</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider text-center">Hành động</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-gray-200 bg-white">
               {events.length > 0 ? (
                 events.map((e) => (
                   <tr
                     key={e.id}
-                    className={`hover:bg-gray-50 ${
+                    className={`hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200 group ${
                       e.deleted_at ? "bg-gray-100 opacity-75" : ""
                     }`}
                   >
-                    <td className="px-6 py-3 font-medium">{e.title}</td>
-                    <td className="px-6 py-3">{formatDate(e.event_date)}</td>
-                    <td className="px-6 py-3">{e.location || "N/A"}</td>
-                    <td className="px-6 py-3">{e.user?.name || "N/A"}</td>
-                    <td className="px-6 py-3">{formatDate(e.created_at)}</td>
-                    <td className="px-6 py-3 text-center">
-                      {e.deleted_at ? (
-                        <button
-                          onClick={() => handleRestoreEvent(e.id)}
-                          className="text-green-500 hover:text-green-700"
-                        >
-                          <RestoreIcon />
-                        </button>
-                      ) : (
-                        <>
+                    <td className="px-6 py-4 font-semibold text-gray-900">{e.title}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatDate(e.event_date)}</td>
+                    <td className="px-6 py-4 text-gray-600">{e.location || "N/A"}</td>
+                    <td className="px-6 py-4 text-gray-600">{e.user?.name || "N/A"}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatDate(e.created_at)}</td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {e.deleted_at ? (
                           <button
-                            onClick={() =>
-                              setModalData({ type: "edit", event: e })
-                            }
-                            className="text-indigo-500 hover:text-indigo-700"
+                            onClick={() => handleRestoreEvent(e.id)}
+                            className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                            title="Khôi phục"
                           >
-                            <EditIcon />
+                            <RestoreIcon />
                           </button>
-                          <button
-                            onClick={() =>
-                              setModalData({ type: "delete", event: e })
-                            }
-                            className="text-red-500 hover:text-red-700 ml-2"
-                          >
-                            <DeleteIcon />
-                          </button>
-                        </>
-                      )}
+                        ) : (
+                          <>
+                            <button
+                              onClick={() =>
+                                setModalData({ type: "edit", event: e })
+                              }
+                              className="p-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                              title="Chỉnh sửa"
+                            >
+                              <EditIcon />
+                            </button>
+                            <button
+                              onClick={() =>
+                                setModalData({ type: "delete", event: e })
+                              }
+                              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                              title="Xóa"
+                            >
+                              <DeleteIcon />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="text-center py-8 text-gray-500">
-                    {showDeleted
-                      ? "Không có sự kiện đã xóa"
-                      : "Không có sự kiện nào"}
+                  <td colSpan="6" className="text-center py-16">
+                    <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-lg">
+                      <svg className="h-8 w-8 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-lg font-bold text-gray-800 mb-2">
+                      {showDeleted
+                        ? "Không có sự kiện đã xóa"
+                        : "Không có sự kiện nào"}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {showDeleted
+                        ? "Tất cả sự kiện đang hoạt động"
+                        : "Hãy thêm sự kiện mới để bắt đầu"}
+                    </p>
                   </td>
                 </tr>
               )}
@@ -1031,16 +1091,22 @@ export default function EventManager() {
         </div>
 
         {totalPages > 1 && (
-          <div className="flex justify-between items-center mt-6">
-            <span>
-              Trang <b>{currentPage}</b> / <b>{totalPages}</b>
-            </span>
+          <div className="flex justify-between items-center mt-8 bg-white rounded-xl shadow-lg border-2 border-gray-100 p-4">
+            <div className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Trang <span className="text-indigo-600 font-bold">{currentPage}</span> / <span className="text-indigo-600 font-bold">{totalPages}</span>
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 border rounded disabled:opacity-50"
+                className="px-4 py-2 border-2 border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400 transition-all duration-200 font-semibold text-gray-700 flex items-center gap-2"
               >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
                 Trước
               </button>
               <button
@@ -1048,9 +1114,12 @@ export default function EventManager() {
                   setCurrentPage((p) => Math.min(totalPages, p + 1))
                 }
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 border rounded disabled:opacity-50"
+                className="px-4 py-2 border-2 border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400 transition-all duration-200 font-semibold text-gray-700 flex items-center gap-2"
               >
                 Sau
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </button>
             </div>
           </div>
