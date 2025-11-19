@@ -80,7 +80,9 @@ class EventService
 
             // Check conflict
             if ($this->repository->checkConflict($data['title'], $data['event_date'])) {
-                throw new \Exception("Đã tồn tại sự kiện khác vào cùng thời điểm hoặc cùng tiêu đề.");
+                $validator = Validator::make([], []);
+                $validator->errors()->add('title', 'Đã tồn tại sự kiện khác vào cùng thời điểm hoặc cùng tiêu đề.');
+                throw new ValidationException($validator);
             }
 
             $data['created_by'] = $user->id;
@@ -215,7 +217,9 @@ class EventService
                 $data['event_date'] ?? $event->event_date,
                 $id
             )) {
-                throw new \Exception("Xung đột với sự kiện khác. Vui lòng chọn thời điểm hoặc tiêu đề khác.");
+                $validator = Validator::make([], []);
+                $validator->errors()->add('title', 'Xung đột với sự kiện khác. Vui lòng chọn thời điểm hoặc tiêu đề khác.');
+                throw new ValidationException($validator);
             }
 
             return DB::transaction(function () use ($id, $data) {

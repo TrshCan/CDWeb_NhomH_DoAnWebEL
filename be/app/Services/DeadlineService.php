@@ -81,7 +81,9 @@ class DeadlineService
 
             // Kiểm tra xung đột
             if ($this->repository->checkConflict($data['title'], $data['deadline_date'])) {
-                throw new Exception("Đã tồn tại deadline khác vào cùng thời điểm hoặc cùng tiêu đề.");
+                $validator = Validator::make([], []);
+                $validator->errors()->add('title', 'Đã tồn tại deadline khác vào cùng thời điểm hoặc cùng tiêu đề.');
+                throw new ValidationException($validator);
             }
 
             // Set created_by và created_at
@@ -232,7 +234,9 @@ class DeadlineService
             }
             
             if ($this->repository->checkConflict($titleToCheck, $deadlineDateToCheck, $id)) {
-                throw new Exception("Xung đột với deadline khác. Vui lòng chọn thời điểm hoặc tiêu đề khác.");
+                $validator = Validator::make([], []);
+                $validator->errors()->add('title', 'Xung đột với deadline khác. Vui lòng chọn thời điểm hoặc tiêu đề khác.');
+                throw new ValidationException($validator);
             }
 
             // Thực hiện cập nhật trong transaction
