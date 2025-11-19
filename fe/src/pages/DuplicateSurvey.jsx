@@ -108,15 +108,7 @@ const DuplicateSurvey = () => {
     });
 
     if (result.errors) {
-      let errorMessage = result.errors[0]?.message || 'Không thể sao chép khảo sát';
-      
-      // Handle specific error messages
-      if (errorMessage.includes('Đang xử lý yêu cầu')) {
-        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
-      } else if (errorMessage.includes('Dữ liệu đã được cập nhật')) {
-        errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
-      }
-      
+      const errorMessage = result.errors[0]?.message || 'Không thể sao chép khảo sát';
       throw new Error(errorMessage);
     }
 
@@ -133,11 +125,6 @@ const DuplicateSurvey = () => {
 
     const surveyId = surveyToDuplicate.id;
     const surveyName = surveyToDuplicate.name;
-
-    // Prevent spam submit
-    if (isProcessing[surveyId]) {
-      return;
-    }
 
     setIsDuplicateModalOpen(false);
     setIsProcessing((prev) => ({ ...prev, [surveyId]: true }));
@@ -158,15 +145,7 @@ const DuplicateSurvey = () => {
         throw new Error('Không nhận được dữ liệu từ server');
       }
     } catch (error) {
-      let errorMessage = error.message || 'Không thể sao chép khảo sát, vui lòng thử lại sau.';
-      
-      // Handle specific error messages
-      if (errorMessage.includes('Đang xử lý yêu cầu')) {
-        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
-      } else if (errorMessage.includes('Dữ liệu đã được cập nhật')) {
-        errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
-      }
-      
+      const errorMessage = error.message || 'Không thể sao chép khảo sát, vui lòng thử lại sau.';
       showNotification(errorMessage, 'error');
       console.error(`[ERROR] ${errorMessage}`, error);
     } finally {
@@ -580,17 +559,10 @@ const DuplicateSurvey = () => {
                 </button>
                 <button
                   type="button"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                   onClick={handleDuplicateConfirm}
-                  disabled={surveyToDuplicate && isProcessing[surveyToDuplicate.id]}
                 >
-                  {surveyToDuplicate && isProcessing[surveyToDuplicate.id] && (
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  )}
-                  {surveyToDuplicate && isProcessing[surveyToDuplicate.id] ? 'Đang xử lý...' : 'Xác nhận'}
+                  Xác nhận
                 </button>
               </div>
             </div>
