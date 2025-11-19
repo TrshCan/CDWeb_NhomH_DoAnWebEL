@@ -343,4 +343,9 @@ class DeadlineService
             throw $e;
         }
     }
+
+    public function upcoming()
+    {
+        return $this->repository->upcoming();
+    }
 }

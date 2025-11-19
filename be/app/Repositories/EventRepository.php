@@ -87,4 +87,32 @@ class EventRepository
 
         return $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
     }
+
+    public function getAll()
+    {
+        return Event::with('createdBy')->whereNull('deleted_at')->orderBy('event_date', 'asc')->get();
+    }
+
+    public function find($id)
+    {
+        return Event::with('createdBy')->whereNull('deleted_at')->findOrFail($id);
+    }
+
+    public function findByUser($userId)
+    {
+        return Event::with('createdBy')->whereNull('deleted_at')->where('created_by', $userId)->get();
+    }
+
+    public function today()
+    {
+        return Event::whereBetween('event_date', [
+            Carbon::today()->startOfDay(),
+            Carbon::today()->endOfDay()
+        ])
+            ->whereNull('deleted_at')
+            ->with(['createdBy'])
+            ->orderBy('event_date', 'asc')
+            ->get();
+    }
+    
 }

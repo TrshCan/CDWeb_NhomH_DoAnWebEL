@@ -122,4 +122,9 @@ class DeadlineResolver
         $id = is_numeric($args['id']) ? (int)$args['id'] : $args['id'];
         return $this->deadlineService->getDeadlineById($id);
     }
+
+    public function upcoming($_, array $args)
+    {
+        return $this->deadlineService->upcoming();
+    }
 }

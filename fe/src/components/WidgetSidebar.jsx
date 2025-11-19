@@ -12,14 +12,17 @@ export default function WidgetSidebar() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const [eventsData, deadlinesData] = await Promise.all([
           getTodayEvents(),
           getUpcomingDeadlines(),
         ]);
-        setEvents(eventsData);
-        setDeadlines(deadlinesData);
+        setEvents(Array.isArray(eventsData) ? eventsData : []);
+        setDeadlines(Array.isArray(deadlinesData) ? deadlinesData : []);
       } catch (err) {
         console.error("Failed fetching widget data:", err);
+        setEvents([]);
+        setDeadlines([]);
       } finally {
         setLoading(false);
       }
@@ -213,7 +216,7 @@ export default function WidgetSidebar() {
                   </p>
                   {d.details && (
                     <p className="text-xs text-gray-500">
-                      {truncateText(d.details, 10)}
+                      {truncateText(d.details, 50)}
                     </p>
                   )}
                 </div>
@@ -268,11 +271,6 @@ export default function WidgetSidebar() {
                 {selectedItem.location && (
                   <p className="text-gray-600 text-sm mb-1">
                     📍 {selectedItem.location}
-                  </p>
-                )}
-                {selectedItem.description && (
-                  <p className="text-gray-500 text-sm mt-2">
-                    {selectedItem.description}
                   </p>
                 )}
               </>

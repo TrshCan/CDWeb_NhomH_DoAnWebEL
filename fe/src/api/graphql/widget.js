@@ -16,8 +16,17 @@ export const getTodayEvents = async () => {
       }
     }
   `;
-  const res = await graphqlClient.post("", { query });
-  return res.data.data?.eventsToday || [];
+  try {
+    const response = await graphqlClient.post("", { query });
+    if (response.data.errors) {
+      console.error("GraphQL Errors:", response.data.errors);
+      throw new Error(response.data.errors[0].message);
+    }
+    return response.data.data?.eventsToday || [];
+  } catch (err) {
+    console.error("Failed fetching today events:", err);
+    return [];
+  }
 };
 
 export const getAllEvents = async () => {
@@ -98,8 +107,17 @@ export const getUpcomingDeadlines = async () => {
       }
     }
   `;
-  const res = await graphqlClient.post("", { query });
-  return res.data.data?.upcomingDeadlines || [];
+  try {
+    const response = await graphqlClient.post("", { query });
+    if (response.data.errors) {
+      console.error("GraphQL Errors:", response.data.errors);
+      throw new Error(response.data.errors[0].message);
+    }
+    return response.data.data?.upcomingDeadlines || [];
+  } catch (err) {
+    console.error("Failed fetching upcoming deadlines:", err);
+    return [];
+  }
 };
 export const getAllDeadlines = async () => {
   const query = `

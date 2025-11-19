@@ -74,4 +74,13 @@ class DeadlineRepository
 
         return $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
     }
+
+    public function upcoming()
+    {
+        return Deadline::whereNull('deleted_at')
+            ->where('deadline_date', '>=', Carbon::now())
+            ->orderBy('deadline_date', 'asc')
+            ->limit(10)
+            ->get();
+    }
 }

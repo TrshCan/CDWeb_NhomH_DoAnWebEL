@@ -152,4 +152,20 @@ class EventService
         }
         return $event;
     }
+
+    public function getAllEvents()
+    {
+        return $this->repository->getAll();
+    }
+
+    public function getEventsByUser($userId)
+    {
+        return $this->repository->findByUser($userId);
+    }
+
+    public function today()
+    {
+        return $this->repository->today();
+    }
+    
 }

@@ -146,4 +146,25 @@ class EventResolver
     {
         return $this->eventService->getEventById($args['id']);
     }
+
+    public function all($_, array $args)
+    {
+        return $this->eventService->getAllEvents();
+    }
+
+    public function find($_, array $args)
+    {
+        return $this->eventService->getEventById($args['id']);
+    }
+
+    public function byUser($_, array $args)
+    {
+        return $this->eventService->getEventsByUser($args['user_id']);
+    }
+
+    public function today($_, array $args)
+    {
+        return $this->eventService->today();
+    }
+    
 }
