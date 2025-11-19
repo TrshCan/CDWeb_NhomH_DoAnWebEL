@@ -86,14 +86,33 @@ class DeadlineService
 
             // Set created_by và created_at
             $data['created_by'] = $userId ?? 1;
-            $data['created_at'] = now();
+            $data['created_at'] = Carbon::now()->toDateTimeString();
+            $data['updated_at'] = Carbon::now()->toDateTimeString(); // Set updated_at khi tạo mới
 
             // Thực hiện tạo deadline trong transaction
             return DB::transaction(function () use ($data) {
                 try {
                     return $this->repository->create($data);
                 } catch (QueryException $e) {
-                    throw new Exception("Không thể lưu dữ liệu. Vui lòng thử lại sau.");
+                    // Log chi tiết lỗi để debug
+                    \Log::error('DeadlineService createDeadline QueryException:', [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'sql' => $e->getSql() ?? null,
+                        'bindings' => $e->getBindings() ?? null,
+                    ]);
+                    
+                    // Phân tích lỗi cụ thể
+                    $errorMsg = $e->getMessage();
+                    if (strpos($errorMsg, 'Duplicate entry') !== false) {
+                        throw new Exception("Deadline này đã tồn tại. Vui lòng kiểm tra lại tiêu đề hoặc ngày giờ.");
+                    } elseif (strpos($errorMsg, 'Unknown column') !== false) {
+                        throw new Exception("Lỗi cấu trúc dữ liệu. Vui lòng liên hệ quản trị viên.");
+                    } elseif (strpos($errorMsg, 'SQLSTATE[HY000]') !== false) {
+                        throw new Exception("Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.");
+                    } else {
+                        throw new Exception("Không thể tạo deadline. " . $errorMsg);
+                    }
                 }
             });
         } catch (ValidationException $e) {
@@ -133,8 +152,23 @@ class DeadlineService
             }
 
             // Optimistic locking: Kiểm tra nếu có updated_at và không khớp
-            if ($updatedAt && $deadline->created_at && $deadline->created_at->toDateTimeString() !== $updatedAt) {
-                throw new Exception("Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.");
+            if ($updatedAt) {
+                // Lấy updated_at hiện tại, nếu không có thì dùng created_at (cho records cũ)
+                $currentUpdatedAt = null;
+                if ($deadline->updated_at) {
+                    $currentUpdatedAt = is_string($deadline->updated_at)
+                        ? Carbon::parse($deadline->updated_at)->toDateTimeString()
+                        : $deadline->updated_at->toDateTimeString();
+                } elseif ($deadline->created_at) {
+                    // Fallback cho records cũ chưa có updated_at
+                    $currentUpdatedAt = is_string($deadline->created_at)
+                        ? Carbon::parse($deadline->created_at)->toDateTimeString()
+                        : $deadline->created_at->toDateTimeString();
+                }
+                
+                if ($currentUpdatedAt && $currentUpdatedAt !== $updatedAt) {
+                    throw new Exception("Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.");
+                }
             }
 
             // Sanitize và validate title nếu có
@@ -204,9 +238,30 @@ class DeadlineService
             // Thực hiện cập nhật trong transaction
             return DB::transaction(function () use ($id, $data) {
                 try {
+                    // Set updated_at khi update
+                    $data['updated_at'] = Carbon::now()->toDateTimeString();
                     return $this->repository->update($id, $data);
                 } catch (QueryException $e) {
-                    throw new Exception("Không thể lưu dữ liệu. Vui lòng thử lại sau.");
+                    // Log chi tiết lỗi để debug
+                    \Log::error('DeadlineService updateDeadline QueryException:', [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'sql' => $e->getSql() ?? null,
+                        'bindings' => $e->getBindings() ?? null,
+                        'id' => $id,
+                    ]);
+                    
+                    // Phân tích lỗi cụ thể
+                    $errorMsg = $e->getMessage();
+                    if (strpos($errorMsg, 'Duplicate entry') !== false) {
+                        throw new Exception("Deadline này đã tồn tại. Vui lòng kiểm tra lại tiêu đề hoặc ngày giờ.");
+                    } elseif (strpos($errorMsg, 'Unknown column') !== false) {
+                        throw new Exception("Lỗi cấu trúc dữ liệu. Vui lòng liên hệ quản trị viên.");
+                    } elseif (strpos($errorMsg, 'SQLSTATE[HY000]') !== false) {
+                        throw new Exception("Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.");
+                    } else {
+                        throw new Exception("Không thể cập nhật deadline. " . $errorMsg);
+                    }
                 }
             });
         } catch (ValidationException $e) {
@@ -233,24 +288,79 @@ class DeadlineService
         // Validate ID
         $id = ValidationHelper::validateId($id);
 
-        // Check if already deleted
-        $deletedDeadline = $this->repository->findDeletedById($id);
-        if ($deletedDeadline) {
-            throw new Exception("Deadline đã bị xóa trước đó. Không thể xóa lại.");
+        // Lock để tránh concurrent deletes
+        $lockKey = 'deadline_delete_' . $id;
+        $lock = Cache::lock($lockKey, 10); // 10 seconds lock
+
+        if (!$lock->get()) {
+            throw new Exception("Đang xử lý yêu cầu xóa. Vui lòng đợi và thử lại.");
         }
 
-        $deadline = $this->repository->findById($id);
-        if (!$deadline) {
-            throw new Exception("Không tìm thấy deadline ID: $id hoặc deadline đã bị xóa.");
-        }
-
-        return DB::transaction(function () use ($id) {
-            try {
-                return $this->repository->softDelete($id);
-            } catch (QueryException $e) {
-                throw new Exception("Không thể xóa deadline. Vui lòng thử lại sau.");
+        try {
+            // Check if already deleted (sau khi có lock để tránh race condition)
+            $deletedDeadline = $this->repository->findDeletedById($id);
+            if ($deletedDeadline) {
+                throw new Exception("Deadline đã bị xóa trước đó. Không thể xóa lại.");
             }
-        });
+
+            // Check if exists (chỉ tìm các deadline chưa bị xóa)
+            $deadline = $this->repository->findById($id);
+            if (!$deadline) {
+                // Kiểm tra lại xem có phải đã bị xóa không
+                $checkDeletedAgain = $this->repository->findDeletedById($id);
+                if ($checkDeletedAgain) {
+                    throw new Exception("Deadline đã bị xóa trước đó. Không thể xóa lại.");
+                }
+                // Nếu không tìm thấy cả deleted và active, có nghĩa là không tồn tại
+                throw new Exception("Không tìm thấy deadline. Deadline không tồn tại.");
+            }
+
+            return DB::transaction(function () use ($id) {
+                try {
+                    // Kiểm tra lại một lần nữa trong transaction để đảm bảo
+                    $checkDeleted = $this->repository->findDeletedById($id);
+                    if ($checkDeleted) {
+                        throw new Exception("Deadline đã bị xóa trước đó. Không thể xóa lại.");
+                    }
+                    
+                    $checkExists = $this->repository->findById($id);
+                    if (!$checkExists) {
+                        // Kiểm tra lại xem có phải đã bị xóa không
+                        $checkDeletedInTransaction = $this->repository->findDeletedById($id);
+                        if ($checkDeletedInTransaction) {
+                            throw new Exception("Deadline đã bị xóa trước đó. Không thể xóa lại.");
+                        }
+                        throw new Exception("Không tìm thấy deadline. Deadline không tồn tại.");
+                    }
+                    
+                    return $this->repository->softDelete($id);
+                } catch (QueryException $e) {
+                    // Log chi tiết lỗi để debug
+                    \Log::error('DeadlineService deleteDeadline QueryException:', [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'id' => $id,
+                    ]);
+                    
+                    // Phân tích lỗi cụ thể
+                    $errorMsg = $e->getMessage();
+                    if (strpos($errorMsg, 'SQLSTATE[HY000]') !== false) {
+                        throw new Exception("Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.");
+                    } elseif (strpos($errorMsg, 'Foreign key constraint') !== false) {
+                        throw new Exception("Không thể xóa deadline vì đang được sử dụng ở nơi khác.");
+                    } else {
+                        throw new Exception("Không thể xóa deadline. " . $errorMsg);
+                    }
+                } catch (Exception $e) {
+                    // Re-throw exception với message gốc
+                    throw $e;
+                }
+            });
+        } catch (Exception $e) {
+            throw $e;
+        } finally {
+            $lock->release();
+        }
     }
 
     public function restoreDeadline(int $id): bool

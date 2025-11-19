@@ -12,8 +12,8 @@ class EventSeeder extends Seeder
     public function run(): void
     {
         $faker = Faker::create();
-
         $events = [];
+
         $eventTitles = [
             'Career Fair {year}',
             '{club} Club Meeting',
@@ -35,11 +35,15 @@ class EventSeeder extends Seeder
         $locations = [
             'Lecture Hall A', 'Campus Quad', 'Library Seminar Room', 'Student Union',
             'Science Building B-101', 'Sports Complex', 'Auditorium', 'Cafeteria',
-            'Online (Zoom)', null, // Một vài sự kiện không có location
+            'Online (Zoom)', null,
         ];
 
         for ($i = 1; $i <= 20; $i++) {
-            $pastDate = $faker->dateTimeBetween('-15 days', '+15 days');
+
+            // Tạo ngày sự kiện, có thể trong quá khứ hoặc tương lai 15 ngày
+            $eventDate = $faker->dateTimeBetween('-15 days', '+15 days');
+
+            // Các placeholder
             $club = $faker->randomElement(['Robotics', 'Photography', 'Debate', 'Chess', 'Drama']);
             $eventType = $faker->randomElement(['Networking', 'Coding', 'Leadership', 'Creative Writing']);
             $culture = $faker->randomElement(['Vietnamese', 'International', 'Asian', 'Western']);
@@ -48,24 +52,29 @@ class EventSeeder extends Seeder
             $techTopic = $faker->randomElement(['Cloud Computing', 'Machine Learning', 'Web Development']);
             $year = Carbon::today()->year;
 
-            // Tạo tiêu đề sự kiện
+            // Template tiêu đề
             $titleTemplate = $faker->randomElement($eventTitles);
+
+            // Tạo tiêu đề với placeholder động
             $title = str_replace(
                 ['{club}', '{event_type}', '{culture}', '{sport}', '{topic}', '{tech_topic}', '{year}'],
                 [$club, $eventType, $culture, $sport, $topic, $techTopic, $year],
                 $titleTemplate
             );
 
+            // Build data
             $events[] = [
-                'title' => $title,
-                'event_date' => $pastDate,
-                'location' => $faker->randomElement($locations),
-                'created_by' => rand(1, 10), // ID user tạo event (đảm bảo có user id 1–10)
-                'created_at' => $pastDate,
+                'title'       => $title,
+                'event_date'  => $eventDate,
+                'location'    => $faker->randomElement($locations),
+                'created_by'  => rand(1, 10), // id user (phải tồn tại)
+
+                'created_at'  => $eventDate,
+                'updated_at'  => $eventDate,   // Đồng bộ thời gian
+                'deleted_at'  => null,
             ];
         }
 
-        // Insert một lần cho hiệu suất
         DB::table('events')->insert($events);
     }
 }

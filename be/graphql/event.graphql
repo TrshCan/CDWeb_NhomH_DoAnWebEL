@@ -5,6 +5,7 @@ type Event {
   location: String
   created_by: Int!
   created_at: String
+  updated_at: String
   deleted_at: String
 }
 
@@ -12,6 +13,7 @@ input EventInput {
   title: String!
   event_date: String!
   location: String
+  updated_at: String
 }
 
 input EventFilterInput {

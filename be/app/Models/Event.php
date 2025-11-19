@@ -9,14 +9,15 @@ class Event extends Model
 {
     use SoftDeletes;
 
-    public $timestamps = false; // vì chỉ có created_at, không có updated_at
+    public $timestamps = false; // Tự quản lý timestamps
 
     protected $fillable = [
         'title',
         'event_date',
         'location',
         'created_by',
-        'created_at'
+        'created_at',
+        'updated_at'
     ];
 
     public function createdBy()

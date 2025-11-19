@@ -17,6 +17,7 @@ class Deadline extends Model
         'details',
         'created_by',
         'created_at',
+        'updated_at',
     ];
 
     protected $dates = ['deadline_date', 'created_at', 'deleted_at'];

@@ -93,11 +93,16 @@ class EventResolver
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
+            // Đảm bảo message được truyền đúng
+            $message = $e->getMessage();
+            if (empty($message)) {
+                $message = 'Không thể xóa sự kiện. Vui lòng thử lại sau.';
+            }
             Log::error('EventResolver deleteEvent error:', [
-                'message' => $e->getMessage(),
+                'message' => $message,
                 'trace' => $e->getTraceAsString(),
             ]);
-            throw new \Exception($e->getMessage());
+            throw new \Exception($message);
         }
     }
 

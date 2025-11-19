@@ -250,6 +250,7 @@ return new class extends Migration {
             $table->dateTime('event_date');
             $table->text('location')->nullable();
             $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->softDeletes();
         });
@@ -261,6 +262,7 @@ return new class extends Migration {
             $table->dateTime('deadline_date');
             $table->text('details')->nullable();
             $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->softDeletes();
         });

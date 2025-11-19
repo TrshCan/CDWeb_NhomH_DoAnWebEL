@@ -5,7 +5,9 @@ namespace App\GraphQL\Resolvers;
 use App\Services\DeadlineService;
 use App\Services\PermissionService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use GraphQL\Error\Error;
 
 class DeadlineResolver
 {
@@ -35,7 +37,18 @@ class DeadlineResolver
             // Re-throw validation exceptions as-is
             throw $e;
         } catch (\Exception $e) {
-            throw new \Exception($e->getMessage());
+            // Đảm bảo message được truyền đúng
+            $message = $e->getMessage();
+            if (empty($message)) {
+                $message = 'Không thể tạo deadline. Vui lòng thử lại sau.';
+            }
+            Log::error('DeadlineResolver createDeadline error:', [
+                'message' => $message,
+                'userId' => $user->id ?? null,
+                'input' => $args['input'] ?? null,
+            ]);
+            // Sử dụng GraphQL Error để đảm bảo message được truyền đúng
+            throw new Error($message);
         }
     }
 
@@ -61,7 +74,18 @@ class DeadlineResolver
             // Re-throw validation exceptions as-is
             throw $e;
         } catch (\Exception $e) {
-            throw new \Exception($e->getMessage());
+            // Đảm bảo message được truyền đúng
+            $message = $e->getMessage();
+            if (empty($message)) {
+                $message = 'Không thể cập nhật deadline. Vui lòng thử lại sau.';
+            }
+            Log::error('DeadlineResolver updateDeadline error:', [
+                'message' => $message,
+                'id' => $id ?? null,
+                'userId' => $user->id ?? null,
+            ]);
+            // Sử dụng GraphQL Error để đảm bảo message được truyền đúng
+            throw new Error($message);
         }
     }
 
@@ -82,7 +106,19 @@ class DeadlineResolver
             // Re-throw validation exceptions as-is
             throw $e;
         } catch (\Exception $e) {
-            throw new \Exception($e->getMessage());
+            // Đảm bảo message được truyền đúng
+            $message = $e->getMessage();
+            if (empty($message)) {
+                $message = 'Không thể xóa deadline. Vui lòng thử lại sau.';
+            }
+            Log::error('DeadlineResolver deleteDeadline error:', [
+                'message' => $message,
+                'id' => $id ?? null,
+                'userId' => $user->id ?? null,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            // Sử dụng GraphQL Error để đảm bảo message được truyền đúng
+            throw new Error($message);
         }
     }
 
@@ -103,7 +139,18 @@ class DeadlineResolver
             // Re-throw validation exceptions as-is
             throw $e;
         } catch (\Exception $e) {
-            throw new \Exception($e->getMessage());
+            // Đảm bảo message được truyền đúng
+            $message = $e->getMessage();
+            if (empty($message)) {
+                $message = 'Không thể khôi phục deadline. Vui lòng thử lại sau.';
+            }
+            Log::error('DeadlineResolver restoreDeadline error:', [
+                'message' => $message,
+                'id' => $id ?? null,
+                'userId' => $user->id ?? null,
+            ]);
+            // Sử dụng GraphQL Error để đảm bảo message được truyền đúng
+            throw new Error($message);
         }
     }
 

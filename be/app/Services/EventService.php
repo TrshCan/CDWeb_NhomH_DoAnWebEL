@@ -47,14 +47,22 @@ class EventService
                 try {
                     $date = \Carbon\Carbon::parse($data['event_date']);
                     $data['event_date'] = $date->format('Y-m-d H:i:s');
+                    
+                    // Kiểm tra event_date phải lớn hơn thời điểm hiện tại
+                    if ($date->lte(\Carbon\Carbon::now())) {
+                        throw new \Exception("Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.");
+                    }
                 } catch (\Exception $e) {
+                    if (strpos($e->getMessage(), 'Ngày giờ diễn ra sự kiện') !== false) {
+                        throw $e;
+                    }
                     throw new \Exception("Định dạng ngày tháng không hợp lệ. Định dạng yêu cầu: YYYY-MM-DD HH:mm:ss.");
                 }
             }
 
             $validator = Validator::make($data, [
                 'title' => 'required|string|max:255',
-                'event_date' => ['required', 'date', 'date_format:Y-m-d H:i:s'],
+                'event_date' => ['required', 'date', 'date_format:Y-m-d H:i:s', 'after:now'],
                 'location' => 'nullable|string|max:255',
             ], [
                 'title.required' => 'Tiêu đề không được để trống.',
@@ -62,6 +70,7 @@ class EventService
                 'event_date.required' => 'Ngày giờ sự kiện không được để trống.',
                 'event_date.date' => 'Ngày giờ sự kiện không hợp lệ.',
                 'event_date.date_format' => 'Định dạng ngày giờ không hợp lệ. Định dạng yêu cầu: YYYY-MM-DD HH:mm:ss.',
+                'event_date.after' => 'Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.',
                 'location.max' => 'Địa điểm không được vượt quá 255 ký tự.',
             ]);
 
@@ -75,13 +84,32 @@ class EventService
             }
 
             $data['created_by'] = $user->id;
-            $data['created_at'] = now();
+            $data['created_at'] = now()->toDateTimeString();
+            $data['updated_at'] = now()->toDateTimeString(); // Set updated_at khi tạo mới
 
             return DB::transaction(function () use ($data) {
                 try {
                     return $this->repository->create($data);
                 } catch (QueryException $e) {
-                    throw new \Exception("Không thể lưu dữ liệu. Vui lòng thử lại sau.");
+                    // Log chi tiết lỗi để debug
+                    \Log::error('EventService createEvent QueryException:', [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'sql' => $e->getSql() ?? null,
+                        'bindings' => $e->getBindings() ?? null,
+                    ]);
+                    
+                    // Phân tích lỗi cụ thể
+                    $errorMsg = $e->getMessage();
+                    if (strpos($errorMsg, 'Duplicate entry') !== false) {
+                        throw new \Exception("Sự kiện này đã tồn tại. Vui lòng kiểm tra lại tiêu đề hoặc ngày giờ.");
+                    } elseif (strpos($errorMsg, 'Unknown column') !== false) {
+                        throw new \Exception("Lỗi cấu trúc dữ liệu. Vui lòng liên hệ quản trị viên.");
+                    } elseif (strpos($errorMsg, 'SQLSTATE[HY000]') !== false) {
+                        throw new \Exception("Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.");
+                    } else {
+                        throw new \Exception("Không thể tạo sự kiện. " . $errorMsg);
+                    }
                 }
             });
         } finally {
@@ -109,8 +137,23 @@ class EventService
             }
 
             // Optimistic locking: Kiểm tra nếu có updated_at và không khớp
-            if ($updatedAt && $event->created_at && $event->created_at->toDateTimeString() !== $updatedAt) {
-                throw new \Exception("Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.");
+            if ($updatedAt) {
+                // Lấy updated_at hiện tại, nếu không có thì dùng created_at (cho records cũ)
+                $currentUpdatedAt = null;
+                if ($event->updated_at) {
+                    $currentUpdatedAt = is_string($event->updated_at) 
+                        ? \Carbon\Carbon::parse($event->updated_at)->toDateTimeString()
+                        : $event->updated_at->toDateTimeString();
+                } elseif ($event->created_at) {
+                    // Fallback cho records cũ chưa có updated_at
+                    $currentUpdatedAt = is_string($event->created_at)
+                        ? \Carbon\Carbon::parse($event->created_at)->toDateTimeString()
+                        : $event->created_at->toDateTimeString();
+                }
+                
+                if ($currentUpdatedAt && $currentUpdatedAt !== $updatedAt) {
+                    throw new \Exception("Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.");
+                }
             }
 
             if (!$user->isAdmin() && $event->created_by !== $user->id) {
@@ -136,20 +179,29 @@ class EventService
                 try {
                     $date = \Carbon\Carbon::parse($data['event_date']);
                     $data['event_date'] = $date->format('Y-m-d H:i:s');
+                    
+                    // Kiểm tra event_date phải lớn hơn thời điểm hiện tại
+                    if ($date->lte(\Carbon\Carbon::now())) {
+                        throw new \Exception("Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.");
+                    }
                 } catch (\Exception $e) {
+                    if (strpos($e->getMessage(), 'Ngày giờ diễn ra sự kiện') !== false) {
+                        throw $e;
+                    }
                     throw new \Exception("Định dạng ngày tháng không hợp lệ. Định dạng yêu cầu: YYYY-MM-DD HH:mm:ss.");
                 }
             }
 
             $validator = Validator::make($data, [
                 'title' => 'sometimes|required|string|max:255',
-                'event_date' => 'sometimes|required|date_format:Y-m-d H:i:s',
+                'event_date' => 'sometimes|required|date_format:Y-m-d H:i:s|after:now',
                 'location' => 'nullable|string|max:255',
             ], [
                 'title.required' => 'Tiêu đề không được để trống.',
                 'title.max' => 'Tiêu đề không được vượt quá 255 ký tự.',
                 'event_date.required' => 'Ngày giờ sự kiện không được để trống.',
                 'event_date.date_format' => 'Định dạng ngày giờ không hợp lệ. Định dạng yêu cầu: YYYY-MM-DD HH:mm:ss.',
+                'event_date.after' => 'Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.',
                 'location.max' => 'Địa điểm không được vượt quá 255 ký tự.',
             ]);
 
@@ -168,9 +220,30 @@ class EventService
 
             return DB::transaction(function () use ($id, $data) {
                 try {
+                    // Set updated_at khi update
+                    $data['updated_at'] = now()->toDateTimeString();
                     return $this->repository->update($id, $data);
                 } catch (QueryException $e) {
-                    throw new \Exception("Không thể lưu dữ liệu. Vui lòng thử lại sau.");
+                    // Log chi tiết lỗi để debug
+                    \Log::error('EventService updateEvent QueryException:', [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'sql' => $e->getSql() ?? null,
+                        'bindings' => $e->getBindings() ?? null,
+                        'id' => $id,
+                    ]);
+                    
+                    // Phân tích lỗi cụ thể
+                    $errorMsg = $e->getMessage();
+                    if (strpos($errorMsg, 'Duplicate entry') !== false) {
+                        throw new \Exception("Sự kiện này đã tồn tại. Vui lòng kiểm tra lại tiêu đề hoặc ngày giờ.");
+                    } elseif (strpos($errorMsg, 'Unknown column') !== false) {
+                        throw new \Exception("Lỗi cấu trúc dữ liệu. Vui lòng liên hệ quản trị viên.");
+                    } elseif (strpos($errorMsg, 'SQLSTATE[HY000]') !== false) {
+                        throw new \Exception("Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.");
+                    } else {
+                        throw new \Exception("Không thể cập nhật sự kiện. " . $errorMsg);
+                    }
                 }
             });
         } finally {
@@ -183,24 +256,80 @@ class EventService
         // Validate ID
         $id = ValidationHelper::validateId($id);
 
-        // Check if already deleted
-        $deletedEvent = $this->repository->findDeletedById($id);
-        if ($deletedEvent) {
-            throw new \Exception("Sự kiện đã bị xóa trước đó. Không thể xóa lại.");
+        // Lock để tránh concurrent deletes
+        $lockKey = 'event_delete_' . $id;
+        $lock = Cache::lock($lockKey, 10); // 10 seconds lock
+
+        if (!$lock->get()) {
+            throw new \Exception("Đang xử lý yêu cầu xóa. Vui lòng đợi và thử lại.");
         }
 
-        $event = $this->repository->findById($id);
-        if (!$event) {
-            throw new \Exception("Không tìm thấy sự kiện ID: $id hoặc sự kiện đã bị xóa.");
-        }
-
-        return DB::transaction(function () use ($id) {
-            try {
-                return $this->repository->softDelete($id);
-            } catch (QueryException $e) {
-                throw new \Exception("Không thể xóa sự kiện. Vui lòng thử lại sau.");
+        try {
+            // Check if already deleted (sau khi có lock để tránh race condition)
+            $deletedEvent = $this->repository->findDeletedById($id);
+            if ($deletedEvent) {
+                throw new \Exception("Sự kiện đã bị xóa trước đó. Không thể xóa lại.");
             }
-        });
+
+            // Check if exists (chỉ tìm các event chưa bị xóa)
+            $event = $this->repository->findById($id);
+            if (!$event) {
+                // Kiểm tra lại xem có phải đã bị xóa không
+                $checkDeletedAgain = $this->repository->findDeletedById($id);
+                if ($checkDeletedAgain) {
+                    throw new \Exception("Sự kiện đã bị xóa trước đó. Không thể xóa lại.");
+                }
+                // Nếu không tìm thấy cả deleted và active, có nghĩa là không tồn tại
+                throw new \Exception("Không tìm thấy sự kiện. Sự kiện không tồn tại.");
+            }
+
+            return DB::transaction(function () use ($id) {
+                try {
+                    // Kiểm tra lại một lần nữa trong transaction để đảm bảo
+                    $checkDeleted = $this->repository->findDeletedById($id);
+                    if ($checkDeleted) {
+                        throw new \Exception("Sự kiện đã bị xóa trước đó. Không thể xóa lại.");
+                    }
+                    
+                    $checkExists = $this->repository->findById($id);
+                    if (!$checkExists) {
+                        // Kiểm tra lại xem có phải đã bị xóa không
+                        $checkDeletedInTransaction = $this->repository->findDeletedById($id);
+                        if ($checkDeletedInTransaction) {
+                            throw new \Exception("Sự kiện đã bị xóa trước đó. Không thể xóa lại.");
+                        }
+                        throw new \Exception("Không tìm thấy sự kiện. Sự kiện không tồn tại.");
+                    }
+                    
+                    return $this->repository->softDelete($id);
+                } catch (QueryException $e) {
+                    // Log chi tiết lỗi để debug
+                    \Log::error('EventService deleteEvent QueryException:', [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'id' => $id,
+                    ]);
+                    
+                    // Phân tích lỗi cụ thể
+                    $errorMsg = $e->getMessage();
+                    if (strpos($errorMsg, 'SQLSTATE[HY000]') !== false) {
+                        throw new \Exception("Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.");
+                    } elseif (strpos($errorMsg, 'Foreign key constraint') !== false) {
+                        throw new \Exception("Không thể xóa sự kiện vì đang được sử dụng ở nơi khác.");
+                    } else {
+                        throw new \Exception("Không thể xóa sự kiện. " . $errorMsg);
+                    }
+                } catch (\Exception $e) {
+                    // Re-throw exception với message gốc
+                    throw $e;
+                }
+            });
+        } catch (\Exception $e) {
+            // Đảm bảo message được giữ nguyên
+            throw $e;
+        } finally {
+            $lock->release();
+        }
     }
 
     public function restoreEvent(int $id): bool
