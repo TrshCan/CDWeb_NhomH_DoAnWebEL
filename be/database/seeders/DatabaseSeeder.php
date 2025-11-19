@@ -181,6 +181,40 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
+        // ===== Role Default Permissions =====
+        $roles = ['student', 'lecturer', 'admin'];
+        foreach ($roles as $role) {
+            // assign 2 random permission ids to each role
+            $permIds = DB::table('permissions')->inRandomOrder()->limit(2)->pluck('id')->toArray();
+            foreach ($permIds as $pid) {
+                DB::table('role_default_permissions')->insert([
+                    'role' => $role,
+                    'permission_id' => $pid,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+        }
+
+        // ===== User Permissions =====
+        // Assign some sample permissions to random users
+        $userPermPairs = [];
+        $userPermissions = [];
+        while (count($userPermissions) < 20) {
+            $u = rand(1, 12);
+            $p = DB::table('permissions')->inRandomOrder()->first()->id;
+            $key = $u . '-' . $p;
+            if (isset($userPermPairs[$key])) continue;
+            $userPermPairs[$key] = true;
+            $userPermissions[] = [
+                'user_id' => $u,
+                'permission_id' => $p,
+                'granted_at' => $now,
+                'granted_by' => rand(1, 12),
+            ];
+        }
+        DB::table('user_permissions')->insert($userPermissions);
+
         // ===== Groups =====
         for ($i = 1; $i <= 10; $i++) {
             DB::table('groups')->insert([
@@ -191,6 +225,26 @@ class DatabaseSeeder extends Seeder
                 'updated_at' => $now,
             ]);
         }
+
+        // ===== Group Members =====
+        // Create random membership rows (avoid duplicates)
+        $pairs = [];
+        $groupMembers = [];
+        $roles = ['member', 'moderator', 'lecturer', 'admin'];
+        while (count($groupMembers) < 40) {
+            $g = rand(1, 10);
+            $u = rand(1, 12); // ensure covers test users as well
+            $key = $g . '-' . $u;
+            if ($g === 0 || $u === 0 || isset($pairs[$key])) continue;
+            $pairs[$key] = true;
+            $groupMembers[] = [
+                'group_id' => $g,
+                'user_id' => $u,
+                'role' => $roles[array_rand($roles)],
+                'joined_at' => $now,
+            ];
+        }
+        DB::table('group_members')->insert($groupMembers);
 
         // ===== Categories =====
         for ($i = 1; $i <= 10; $i++) {
@@ -395,6 +449,59 @@ class DatabaseSeeder extends Seeder
 
         // Insert all 10 posts in a single, efficient query
         DB::table('posts')->insert($posts);
+
+        // ===== Group Posts (mapping posts to groups/senders) =====
+        $gpPairs = [];
+        $groupPosts = [];
+        while (count($groupPosts) < 30) {
+            $g = rand(1, 10);
+            $p = rand(1, 100);
+            $s = rand(1, 12);
+            $key = $g . '-' . $p;
+            if (isset($gpPairs[$key])) continue;
+            $gpPairs[$key] = true;
+            $groupPosts[] = [
+                'group_id' => $g,
+                'sender_id' => $s,
+                'post_id' => $p,
+                'sent_at' => $now,
+            ];
+        }
+        DB::table('group_posts')->insert($groupPosts);
+
+        // ===== Post Likes =====
+        $likePairs = [];
+        $postLikes = [];
+        while (count($postLikes) < 120) {
+            $postId = rand(1, 100);
+            $userId = rand(1, 12);
+            $key = $postId . '-' . $userId;
+            if (isset($likePairs[$key])) continue;
+            $likePairs[$key] = true;
+            $postLikes[] = [
+                'post_id' => $postId,
+                'user_id' => $userId,
+                'created_at' => $now,
+            ];
+        }
+        DB::table('post_likes')->insert($postLikes);
+
+        // ===== Post Shares =====
+        $sharePairs = [];
+        $postShares = [];
+        while (count($postShares) < 40) {
+            $postId = rand(1, 100);
+            $userId = rand(1, 12);
+            $key = $postId . '-' . $userId;
+            if (isset($sharePairs[$key])) continue;
+            $sharePairs[$key] = true;
+            $postShares[] = [
+                'post_id' => $postId,
+                'user_id' => $userId,
+                'created_at' => $now,
+            ];
+        }
+        DB::table('post_shares')->insert($postShares);
 
 
 

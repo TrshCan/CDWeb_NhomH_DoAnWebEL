@@ -18,8 +18,9 @@ class SurveyAnswer extends Model
         'selected_option_id',
         'answer_text',
         'answered_at',
-        'score'
+        'score',
     ];
+
     protected $casts = [
         'answered_at' => 'datetime',
         'score' => 'integer',
@@ -29,12 +30,19 @@ class SurveyAnswer extends Model
     {
         return $this->belongsTo(SurveyQuestion::class, 'question_id');
     }
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
     public function selectedOption()
     {
         return $this->belongsTo(SurveyOption::class, 'selected_option_id');
+    }
+
+    public function optionSelections()
+    {
+        return $this->hasMany(SurveyAnswerOption::class, 'answer_id');
     }
 }

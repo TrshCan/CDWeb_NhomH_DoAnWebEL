@@ -170,3 +170,77 @@ export async function getSurveysCompletedByUser(userId) {
   }
   return response.data.data.surveysCompleted;
 }
+  
+// Query survey details for joining/taking the survey
+export async function getSurveyJoinDetail(surveyId) {
+  const query = `
+    query ($surveyId: Int!) {
+      surveyJoinDetail(surveyId: $surveyId) {
+        id
+        title
+        description
+        time_limit
+        total_points
+        questions {
+          id
+          question_text
+          question_type
+          points
+          options {
+            id
+            option_text
+          }
+        }
+      }
+    }
+  `;
+
+  const response = await graphqlClient.post("", {
+    query,
+    variables: { surveyId: parseInt(surveyId, 10) },
+  });
+
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+
+  return response.data.data.surveyJoinDetail;
+}
+
+// Submit survey answers
+export async function submitSurveyAnswers(surveyId, answers) {
+  const mutation = `
+    mutation ($surveyId: Int!, $answers: [SurveyAnswerInput!]!) {
+      submitSurveyAnswers(surveyId: $surveyId, answers: $answers) {
+        success
+        message
+        total_score
+        max_score
+        score_percentage
+      }
+    }
+  `;
+
+  console.log("[API][submitSurveyAnswers] Sending request", {
+    surveyId,
+    parsedSurveyId: parseInt(surveyId, 10),
+    answers,
+  });
+
+  const response = await graphqlClient.post("", {
+    query: mutation,
+    variables: {
+      surveyId: parseInt(surveyId, 10),
+      answers,
+    },
+  });
+
+  console.log("[API][submitSurveyAnswers] Raw response", response);
+
+  if (response.data.errors) {
+    console.error("[API][submitSurveyAnswers] GraphQL errors", response.data.errors);
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+
+  return response.data.data.submitSurveyAnswers;
+}
