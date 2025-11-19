@@ -719,6 +719,7 @@ const SurveyFilter = () => {
             object
             created_by
             creator_name
+            updated_at
           }
         }
       `);
@@ -744,7 +745,8 @@ const SurveyFilter = () => {
         points: s.points,
         object: s.object,
         timeLimit: s.time_limit ?? '',
-        creatorName: s.creator_name || (s.created_by ? `Người dùng #${s.created_by}` : 'Không xác định')
+        creatorName: s.creator_name || (s.created_by ? `Người dùng #${s.created_by}` : 'Không xác định'),
+        updatedAt: s.updated_at || null
       }));
 
       setSurveysList(surveys);
@@ -819,7 +821,8 @@ const SurveyFilter = () => {
   const handleEdit = (survey) => {
     setSelectedSurvey({
       ...survey,
-      id: Number(survey.id)  // ĐẢM BẢO ID LÀ SỐ
+      id: Number(survey.id),  // ĐẢM BẢO ID LÀ SỐ
+      updatedAt: survey.updatedAt || null  // Lưu updated_at để optimistic locking
     });
     setEditForm({
       title: survey.title,
@@ -1044,22 +1047,39 @@ const SurveyFilter = () => {
       });
 
       if (result.errors?.length > 0) {
-        const messages = result.errors.map(e => {
-          let msg = e.message;
-          if (e.extensions?.validation) {
-            msg += '\n' + Object.entries(e.extensions.validation)
-              .map(([field, errs]) => `${field}: ${errs.join(', ')}`)
-              .join('\n');
+        // Ưu tiên lấy message từ validation errors
+        let errorMessage = '';
+        const firstError = result.errors[0];
+        
+        // Kiểm tra validation errors trước
+        if (firstError.extensions?.validation) {
+          const validationErrors = firstError.extensions.validation;
+          // Lấy tất cả messages từ validation errors
+          const validationMessages = Object.values(validationErrors)
+            .flat()
+            .filter(msg => msg && msg.trim() !== '');
+          
+          if (validationMessages.length > 0) {
+            errorMessage = validationMessages.join(', ');
           }
-          return msg;
-        }).join('\n');
+        }
+        
+        // Nếu không có validation errors, dùng message từ error
+        if (!errorMessage && firstError.message) {
+          errorMessage = firstError.message;
+        }
+        
+        // Fallback nếu vẫn không có message
+        if (!errorMessage) {
+          errorMessage = 'Tạo khảo sát thất bại';
+        }
         
         // Handle specific error messages
-        let errorMessage = 'Tạo khảo sát thất bại: ' + messages;
-        if (messages.includes('Đang xử lý yêu cầu')) {
+        if (errorMessage.includes('Đang xử lý yêu cầu')) {
           errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
-        } else if (messages.includes('Dữ liệu đã được cập nhật')) {
-          errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
+        } else if (errorMessage.includes('Tiêu đề khảo sát đã tồn tại')) {
+          // Hiển thị lỗi duplicate title và set form error
+          setFormErrors(prev => ({ ...prev, add: { ...prev.add, title: errorMessage } }));
         }
         
         pushToast(errorMessage, 'error');
@@ -1188,10 +1208,15 @@ const SurveyFilter = () => {
         input.points = editForm.points || 0;
       }
 
+      // Gửi updated_at để optimistic locking
+      if (selectedSurvey.updatedAt) {
+        input.updated_at = selectedSurvey.updatedAt;
+      }
+
       const result = await graphqlRequest(`
         mutation UpdateSurvey($id: Int!, $input: UpdateSurveyInput!) {
           updateSurvey(id: $id, input: $input) {
-            id title description categories_id type status start_at end_at points object time_limit created_by creator_name
+            id title description categories_id type status start_at end_at points object time_limit created_by creator_name updated_at
           }
         }
       `, {
@@ -1200,22 +1225,37 @@ const SurveyFilter = () => {
       });
 
       if (result.errors?.length > 0) {
-        // Hiển thị chi tiết validation nếu có
-        const messages = result.errors.map(e => {
-          let msg = e.message;
-          if (e.extensions?.validation) {
-            msg += '\n' + Object.entries(e.extensions.validation)
-              .map(([field, errs]) => `${field}: ${errs.join(', ')}`)
-              .join('\n');
+        // Ưu tiên lấy message từ validation errors
+        let errorMessage = '';
+        const firstError = result.errors[0];
+        
+        // Kiểm tra validation errors trước
+        if (firstError.extensions?.validation) {
+          const validationErrors = firstError.extensions.validation;
+          // Lấy tất cả messages từ validation errors
+          const validationMessages = Object.values(validationErrors)
+            .flat()
+            .filter(msg => msg && msg.trim() !== '');
+          
+          if (validationMessages.length > 0) {
+            errorMessage = validationMessages.join(', ');
           }
-          return msg;
-        }).join('\n');
+        }
+        
+        // Nếu không có validation errors, dùng message từ error
+        if (!errorMessage && firstError.message) {
+          errorMessage = firstError.message;
+        }
+        
+        // Fallback nếu vẫn không có message
+        if (!errorMessage) {
+          errorMessage = 'Cập nhật thất bại';
+        }
         
         // Handle specific error messages
-        let errorMessage = 'Cập nhật thất bại: ' + messages;
-        if (messages.includes('Đang xử lý yêu cầu')) {
+        if (errorMessage.includes('Đang xử lý yêu cầu')) {
           errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
-        } else if (messages.includes('Dữ liệu đã được cập nhật')) {
+        } else if (errorMessage.includes('Dữ liệu đã được cập nhật') || errorMessage.includes('Vui lòng tải lại trang')) {
           errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
         }
         
@@ -1241,7 +1281,8 @@ const SurveyFilter = () => {
         points: updated.points,
         object: updated.object,
         timeLimit: updated.time_limit ?? '',
-        creatorName: updated.creator_name || (updated.created_by ? `Người dùng #${updated.created_by}` : 'Không xác định')
+        creatorName: updated.creator_name || (updated.created_by ? `Người dùng #${updated.created_by}` : 'Không xác định'),
+        updatedAt: updated.updated_at || null
       };
 
       closeEditModal();
@@ -1250,10 +1291,10 @@ const SurveyFilter = () => {
       loadSurveys(filters);
     } catch (error) {
       console.error('Lỗi:', error);
-      let errorMessage = 'Lỗi hệ thống: ' + error.message;
-      if (error.message.includes('Đang xử lý yêu cầu')) {
+      let errorMessage = 'Lỗi hệ thống: ' + (error.message || 'Không xác định');
+      if (error.message && error.message.includes('Đang xử lý yêu cầu')) {
         errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
-      } else if (error.message.includes('Dữ liệu đã được cập nhật')) {
+      } else if (error.message && (error.message.includes('Dữ liệu đã được cập nhật') || error.message.includes('Vui lòng tải lại trang'))) {
         errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
       }
       pushToast(errorMessage, 'error');

@@ -38,20 +38,28 @@ class SurveyService
             'end_at' => null,
         ], $data);
 
-        // === KIỂM TRA TRÙNG TIÊU ĐỀ CỦA CÙNG NGƯỜI TẠO ===
-        if (!empty($data['title']) && !empty($data['created_by'])) {
-            $exists = Survey::where('title', $data['title'])
-                ->where('created_by', $data['created_by'])
-                ->whereNull('deleted_at')
-                ->exists();
+        // === PREVENT DUPLICATE SUBMISSIONS USING CACHE LOCK ===
+        $lockKey = 'survey_create_' . md5(json_encode($data) . ($data['created_by'] ?? ''));
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 5); // 5 seconds lock
 
-            if ($exists) {
-                $validator = Validator::make([], []);
-                throw new ValidationException($validator, response()->json([
-                    'errors' => ['title' => ['Tiêu đề khảo sát đã tồn tại. Vui lòng chọn tiêu đề khác.']]
-                ], 422));
-            }
+        if (!$lock->get()) {
+            throw new Exception("Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.", 429);
         }
+
+        try {
+            // === KIỂM TRA TRÙNG TIÊU ĐỀ CỦA CÙNG NGƯỜI TẠO ===
+            if (!empty($data['title']) && !empty($data['created_by'])) {
+                $exists = Survey::where('title', $data['title'])
+                    ->where('created_by', $data['created_by'])
+                    ->whereNull('deleted_at')
+                    ->exists();
+
+                if ($exists) {
+                    $validator = Validator::make([], []);
+                    $validator->errors()->add('title', 'Tiêu đề khảo sát đã tồn tại. Vui lòng chọn tiêu đề khác.');
+                    throw new ValidationException($validator);
+                }
+            }
 
         // === VALIDATION TIẾNG VIỆT ===
         $rules = [
@@ -104,35 +112,39 @@ class SurveyService
             throw new ValidationException($validator);
         }
 
-        try {
-            DB::beginTransaction();
-            $survey = $this->repository->create($data);
-            DB::commit();
+            try {
+                DB::beginTransaction();
+                $survey = $this->repository->create($data);
+                DB::commit();
 
-            // Load lại survey với creator_name
-            $surveyWithCreator = $this->repository->findWithCreatorNameAfterSave($survey->id);
-            
-            Log::info('Tạo khảo sát thành công', ['id' => $survey->id, 'title' => $survey->title]);
-            return $surveyWithCreator ?: $survey;
-        } catch (\Exception $e) {
-            DB::rollBack();
+                // Load lại survey với creator_name
+                $surveyWithCreator = $this->repository->findWithCreatorNameAfterSave($survey->id);
+                
+                Log::info('Tạo khảo sát thành công', ['id' => $survey->id, 'title' => $survey->title]);
+                return $surveyWithCreator ?: $survey;
+            } catch (\Exception $e) {
+                DB::rollBack();
 
-            if ($e instanceof \Illuminate\Database\QueryException) {
-                if (str_contains($e->getMessage(), 'foreign key constraint')) {
-                    throw new Exception('Danh mục hoặc người tạo không hợp lệ.', 422);
+                if ($e instanceof \Illuminate\Database\QueryException) {
+                    if (str_contains($e->getMessage(), 'foreign key constraint')) {
+                        throw new Exception('Danh mục hoặc người tạo không hợp lệ.', 422);
+                    }
+                    if (str_contains($e->getMessage(), 'Data too long')) {
+                        throw new Exception('Tiêu đề quá dài.', 422);
+                    }
                 }
-                if (str_contains($e->getMessage(), 'Data too long')) {
-                    throw new Exception('Tiêu đề quá dài.', 422);
-                }
+
+                Log::error('Lỗi tạo khảo sát', [
+                    'error' => $e->getMessage(),
+                    'data' => $data,
+                    'trace' => $e->getTraceAsString()
+                ]);
+
+                throw new Exception('Không thể tạo khảo sát. Vui lòng thử lại.', 500);
             }
-
-            Log::error('Lỗi tạo khảo sát', [
-                'error' => $e->getMessage(),
-                'data' => $data,
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            throw new Exception('Không thể tạo khảo sát. Vui lòng thử lại.', 500);
+        } finally {
+            // Release lock sau khi xong
+            $lock->release();
         }
     }
 
@@ -143,6 +155,12 @@ class SurveyService
     {
         try {
             DB::beginTransaction();
+
+            // Kiểm tra xem survey đã bị soft delete chưa
+            $deletedSurvey = $this->repository->findDeletedById($id);
+            if ($deletedSurvey) {
+                throw new Exception('Khảo sát đã bị xóa trước đó. Không thể xóa lại.', 422);
+            }
 
             $survey = $this->repository->findById($id);
             if (!$survey) {
@@ -217,6 +235,21 @@ class SurveyService
         $survey = $this->repository->findById($id);
         if (!$survey) {
             throw new Exception('Khảo sát không tồn tại hoặc đã bị xóa.', 404);
+        }
+
+        // === OPTIMISTIC LOCKING: Kiểm tra updated_at ===
+        if (isset($data['updated_at'])) {
+            $clientUpdatedAt = Carbon::parse($data['updated_at']);
+            $serverUpdatedAt = Carbon::parse($survey->updated_at);
+            
+            // So sánh timestamp (chính xác đến giây)
+            if ($clientUpdatedAt->format('Y-m-d H:i:s') !== $serverUpdatedAt->format('Y-m-d H:i:s')) {
+                $validator = Validator::make([], []);
+                $validator->errors()->add('updated_at', 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.');
+                throw new ValidationException($validator);
+            }
+            // Xóa updated_at khỏi data vì không cần update field này
+            unset($data['updated_at']);
         }
 
         $now = Carbon::now();

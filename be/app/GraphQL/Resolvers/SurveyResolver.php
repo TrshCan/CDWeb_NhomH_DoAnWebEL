@@ -71,10 +71,8 @@ class SurveyResolver
 
             return $updatedSurvey;
         } catch (ValidationException $e) {
-            throw new \Nuwave\Lighthouse\Exceptions\ValidationException(
-                'Validation failed.',
-                $e->validator
-            );
+            // Re-throw validation exceptions as-is để Lighthouse xử lý đúng
+            throw $e;
         } catch (\Exception $e) {
             throw new \GraphQL\Error\Error(
                 $e->getMessage(),
@@ -124,10 +122,8 @@ class SurveyResolver
 
             return $this->service->createSurvey($data);
         } catch (ValidationException $e) {
-            throw new \Nuwave\Lighthouse\Exceptions\ValidationException(
-                'Validation failed.',
-                $e->validator
-            );
+            // Re-throw validation exceptions as-is để Lighthouse xử lý đúng
+            throw $e;
         } catch (\Exception $e) {
             throw new \GraphQL\Error\Error(
                 $e->getMessage(),

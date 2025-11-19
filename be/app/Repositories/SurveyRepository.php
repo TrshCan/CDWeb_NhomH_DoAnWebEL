@@ -74,6 +74,14 @@ class SurveyRepository
     }
 
     /**
+     * Tìm survey đã bị soft delete
+     */
+    public function findDeletedById(int $id): ?Survey
+    {
+        return Survey::onlyTrashed()->find($id);
+    }
+
+    /**
      * Lấy survey với creator_name
      */
     public function findWithCreatorName(int $id): ?Survey

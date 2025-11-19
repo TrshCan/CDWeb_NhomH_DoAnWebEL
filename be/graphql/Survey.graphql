@@ -42,6 +42,7 @@ input UpdateSurveyInput {
     points: Int
     object: String
     status: String # ✅ cho phép cập nhật trạng thái
+    updated_at: String # ✅ cho optimistic locking
 }
 
 input SurveyFilterInput {
