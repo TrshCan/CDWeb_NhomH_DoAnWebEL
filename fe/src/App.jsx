@@ -8,11 +8,9 @@ import Feed from "./components/Feed.jsx";
 import Profile from "./pages/Profile.jsx";
 import MainLayout from "./layouts/MainLayout.jsx";
 import SurveysCreated from "./pages/SurveysCreated.jsx";
-import SurveysDid from "./pages/SurveysDid.jsx";
 import RawDataList from "./pages/RawDataList.jsx";
 import SurveyOverview from "./pages/SurveyOverview.jsx";
 import ResponseDetail from "./pages/ResponseDetail.jsx";
-import SurveysMade from "./pages/SurveysMade.jsx";
 import SurveysCompleted from "./pages/SurveysCompleted.jsx";
 
 export default function App() {
@@ -23,8 +21,6 @@ export default function App() {
         {/* các route con  */}
         <Route index element={<Feed />} /> {/* mặc định là Feed */}
         <Route path="profile" element={<Profile />} />
-        <Route path="surveys/did" element={<SurveysDid />} />
-        <Route path="surveys/made" element={<SurveysMade />} />
         {/* sau này sẽ thêm các route như profile expole v.v*/}
       </Route>
       {/* Independent pages outside MainLayout */}
