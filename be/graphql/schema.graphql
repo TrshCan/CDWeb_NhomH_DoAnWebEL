@@ -12,7 +12,7 @@ type Query {
 #import types/user.graphql
 #import types/postMedia.graphql
 #import types/postLike.graphql
-
+#import types/deadline.graphql
 #import types/event.graphql
 #import types/permission.graphql
 
