@@ -1128,103 +1128,72 @@ const SurveyFilter = () => {
     <>
       <button 
         onClick={closeEditModal} 
-        disabled={isSubmitting.edit}
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
       >
         Hủy
       </button>
       <button 
         type="submit" 
         form="editForm" 
-        disabled={isSubmitting.edit}
-        className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+        className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
       >
-        {isSubmitting.edit && (
-          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        )}
-        {isSubmitting.edit ? "Đang xử lý..." : "Lưu thay đổi"}
+        Lưu thay đổi
       </button>
     </>
-  ), [closeEditModal, isSubmitting.edit]);
+  ), [closeEditModal]);
 
   const addFooter = useMemo(() => (
     <>
       <button 
         onClick={closeAddModal} 
-        disabled={isSubmitting.add}
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
       >
         Hủy
       </button>
       <button 
         type="submit" 
         form="addForm" 
-        disabled={isSubmitting.add}
-        className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+        className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
       >
-        {isSubmitting.add && (
-          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        )}
-        {isSubmitting.add ? "Đang xử lý..." : "Thêm khảo sát"}
+        Thêm khảo sát
       </button>
     </>
-  ), [closeAddModal, isSubmitting.add]);
+  ), [closeAddModal]);
 
   const deleteFooter = useMemo(() => (
     <>
       <button 
         onClick={closeDeleteModal} 
-        disabled={isSubmitting.delete}
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
       >
         Hủy
       </button>
       <button 
         onClick={handleDelete} 
-        disabled={isSubmitting.delete}
-        className="px-8 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold rounded-lg hover:from-red-700 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+        className="px-8 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold rounded-lg hover:from-red-700 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
       >
-        {isSubmitting.delete && (
-          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        )}
-        {isSubmitting.delete ? "Đang xóa..." : "Xóa khảo sát"}
+        Xóa khảo sát
       </button>
     </>
-  ), [closeDeleteModal, handleDelete, isSubmitting.delete]);
+  ), [closeDeleteModal, handleDelete]);
 
   const duplicateFooter = useMemo(() => (
     <>
       <button 
         onClick={closeDuplicateModal} 
-        disabled={isSubmitting.duplicate}
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
       >
         Hủy
       </button>
       <button 
         onClick={handleDuplicateConfirm} 
-        disabled={isSubmitting.duplicate}
-        className="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+        disabled={loading}
+        className="px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
       >
-        {isSubmitting.duplicate && (
-          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        )}
-        {isSubmitting.duplicate ? 'Đang sao chép...' : 'Sao chép khảo sát'}
+        {loading ? 'Đang sao chép...' : 'Sao chép khảo sát'}
       </button>
     </>
-  ), [closeDuplicateModal, handleDuplicateConfirm, isSubmitting.duplicate]);
+  ), [closeDuplicateModal, handleDuplicateConfirm, loading]);
 
   return (
     <div className="bg-gray-50 p-8">

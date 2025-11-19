@@ -38,7 +38,6 @@ const StatusManagement = () => {
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState('bottom'); // 'bottom' or 'top'
   const buttonRefs = useRef({}); // 🔹 ref riêng cho từng survey
-  const [isProcessing, setIsProcessing] = useState({ action: false, toggle: {} }); // Loading state cho actions
   const itemsPerPage = 10;
   const lastRefreshTime = useRef(0); // Lưu thời gian refresh cuối cùng
   const isRefreshing = useRef(false); // Flag để tránh refresh đồng thời
@@ -332,13 +331,6 @@ const StatusManagement = () => {
   };
 
   const handleToggleReview = async (surveyId, isAllowed) => {
-    // Prevent spam submit
-    if (isProcessing.toggle[surveyId]) {
-      return;
-    }
-    
-    setIsProcessing(prev => ({ ...prev, toggle: { ...prev.toggle, [surveyId]: true } }));
-    
     try {
       const result = await graphqlRequest(`
         mutation ToggleReviewPermission($id: ID!, $allowReview: Boolean!) {
@@ -360,15 +352,7 @@ const StatusManagement = () => {
       });
 
       if (result.errors) {
-        let errorMessage = result.errors[0]?.message || 'Không thể cập nhật quyền xem lại';
-        
-        // Handle specific error messages
-        if (errorMessage.includes('Đang xử lý yêu cầu')) {
-          errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
-        } else if (errorMessage.includes('Dữ liệu đã được cập nhật')) {
-          errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
-        }
-        
+        const errorMessage = result.errors[0]?.message || 'Không thể cập nhật quyền xem lại';
         showToast(errorMessage, 'error');
         return;
       }
@@ -393,15 +377,7 @@ const StatusManagement = () => {
       }
     } catch (error) {
       console.error('Lỗi toggle review permission:', error);
-      let errorMessage = error.message || 'Lỗi hệ thống khi cập nhật quyền xem lại';
-      if (errorMessage.includes('Đang xử lý yêu cầu')) {
-        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
-      } else if (errorMessage.includes('Dữ liệu đã được cập nhật')) {
-        errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
-      }
-      showToast(errorMessage, 'error');
-    } finally {
-      setIsProcessing(prev => ({ ...prev, toggle: { ...prev.toggle, [surveyId]: false } }));
+      showToast('Lỗi hệ thống khi cập nhật quyền xem lại', 'error');
     }
   };
 
@@ -436,13 +412,6 @@ const StatusManagement = () => {
 
   const handleConfirmAction = async () => {
     const { surveyId, action } = activeAction;
-    
-    // Prevent spam submit
-    if (isProcessing.action) {
-      return;
-    }
-    
-    setIsProcessing(prev => ({ ...prev, action: true }));
     hideConfirmationModal();
 
     // Map action sang status
@@ -455,7 +424,6 @@ const StatusManagement = () => {
     const newStatus = statusMap[action];
     if (!newStatus) {
       showToast('Hành động không hợp lệ', 'error');
-      setIsProcessing(prev => ({ ...prev, action: false }));
       return;
     }
 
@@ -480,15 +448,7 @@ const StatusManagement = () => {
       });
 
       if (result.errors) {
-        let errorMessage = result.errors[0]?.message || 'Không thể thay đổi trạng thái';
-        
-        // Handle specific error messages
-        if (errorMessage.includes('Đang xử lý yêu cầu')) {
-          errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
-        } else if (errorMessage.includes('Dữ liệu đã được cập nhật')) {
-          errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
-        }
-        
+        const errorMessage = result.errors[0]?.message || 'Không thể thay đổi trạng thái';
         showToast(errorMessage, 'error');
         return;
       }
@@ -513,15 +473,7 @@ const StatusManagement = () => {
       }
     } catch (error) {
       console.error('Lỗi change status:', error);
-      let errorMessage = error.message || 'Lỗi hệ thống khi thay đổi trạng thái';
-      if (errorMessage.includes('Đang xử lý yêu cầu')) {
-        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
-      } else if (errorMessage.includes('Dữ liệu đã được cập nhật')) {
-        errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
-      }
-      showToast(errorMessage, 'error');
-    } finally {
-      setIsProcessing(prev => ({ ...prev, action: false }));
+      showToast('Lỗi hệ thống khi thay đổi trạng thái', 'error');
     }
   };
 
@@ -580,24 +532,14 @@ const StatusManagement = () => {
       if (currentUserRole === 'admin') {
         reviewPermissionHtml = (
           <td className="px-4 md:px-6 py-4">
-            <label className={`relative inline-flex items-center ${isProcessing.toggle[survey.id] ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+            <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
                 className="sr-only peer review-toggle"
                 checked={survey.allowReview}
-                disabled={isProcessing.toggle[survey.id]}
                 onChange={(e) => handleToggleReview(survey.id, e.target.checked)}
               />
-              <div className={`w-11 h-6 bg-gray-200 peer-checked:bg-blue-600 rounded-full after:content-[''] after:absolute after:w-5 after:h-5 after:bg-white after:rounded-full after:top-[2px] after:left-[2px] peer-checked:after:translate-x-full after:transition-all relative ${isProcessing.toggle[survey.id] ? 'opacity-50' : ''}`}>
-                {isProcessing.toggle[survey.id] && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <svg className="animate-spin h-3 w-3 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  </div>
-                )}
-              </div>
+              <div className="w-11 h-6 bg-gray-200 peer-checked:bg-blue-600 rounded-full after:content-[''] after:absolute after:w-5 after:h-5 after:bg-white after:rounded-full after:top-[2px] after:left-[2px] peer-checked:after:translate-x-full after:transition-all"></div>
             </label>
           </td>
         );
@@ -761,22 +703,11 @@ const StatusManagement = () => {
               <div className="flex justify-center space-x-4">
                 <button
                   onClick={handleConfirmAction}
-                  disabled={isProcessing.action}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
-                  {isProcessing.action && (
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  )}
-                  {isProcessing.action ? "Đang xử lý..." : "Xác nhận"}
+                  Xác nhận
                 </button>
-                <button 
-                  onClick={hideConfirmationModal} 
-                  disabled={isProcessing.action}
-                  className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <button onClick={hideConfirmationModal} className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">
                   Hủy
                 </button>
               </div>
