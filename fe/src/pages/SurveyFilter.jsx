@@ -127,7 +127,7 @@ const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
   </div>
 );
 
-const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig }) => (
+const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig, formErrors = {}, setFormErrors }) => (
   <form id="editForm" onSubmit={onSubmit} className="space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
@@ -135,41 +135,80 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
         <input
           type="text"
           value={editForm.title}
-          onChange={(e) => onChange.title(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          maxLength={255}
+          onChange={(e) => {
+            const value = e.target.value;
+            onChange.title(value);
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.title ? 'border-red-500' : 'border-gray-300'}`}
           required
           autoFocus
         />
+        <div className="flex justify-between items-center mt-1">
+          {formErrors?.title && (
+            <p className="text-red-500 text-xs">{formErrors.title}</p>
+          )}
+          <p className={`text-xs ml-auto ${editForm.title.length >= 250 ? 'text-orange-500' : editForm.title.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
+            {editForm.title.length}/255
+          </p>
+        </div>
       </div>
       <div className="col-span-2">
         <label className="block text-left text-sm font-semibold mb-1.5">Mô tả</label>
         <textarea
           value={editForm.description}
-          onChange={(e) => onChange.description(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          maxLength={255}
+          onChange={(e) => {
+            const value = e.target.value;
+            onChange.description(value);
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.description ? 'border-red-500' : 'border-gray-300'}`}
           rows="3"
           placeholder="Nhập mô tả cho khảo sát..."
           required
         />
+        <div className="flex justify-between items-center mt-1">
+          {formErrors?.description && (
+            <p className="text-red-500 text-xs">{formErrors.description}</p>
+          )}
+          <p className={`text-xs ml-auto ${editForm.description.length >= 250 ? 'text-orange-500' : editForm.description.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
+            {editForm.description.length}/255
+          </p>
+        </div>
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Danh mục</label>
         <select
           value={editForm.category}
-          onChange={(e) => onChange.category(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          onChange={(e) => {
+            onChange.category(e.target.value);
+            // Clear error when user selects
+            if (formErrors?.category) {
+              setFormErrors(prev => ({ ...prev, category: undefined }));
+            }
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.category ? 'border-red-500' : 'border-gray-300'}`}
           required
         >
           <option value="">Chọn danh mục</option>
           {categories.filter(c => c).map(cat => <option key={cat} value={cat}>{cat}</option>)}
         </select>
+        {formErrors?.category && (
+          <p className="text-red-500 text-xs mt-1">{formErrors.category}</p>
+        )}
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Loại</label>
         <select
           value={editForm.type}
-          onChange={(e) => onChange.type(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          onChange={(e) => {
+            onChange.type(e.target.value);
+            // Clear error when user selects
+            if (formErrors?.type) {
+              setFormErrors(prev => ({ ...prev, type: undefined }));
+            }
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.type ? 'border-red-500' : 'border-gray-300'}`}
           required
         >
           <option value="">Chọn loại</option>
@@ -179,6 +218,9 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
             </option>
           ))}
         </select>
+        {formErrors?.type && (
+          <p className="text-red-500 text-xs mt-1">{formErrors.type}</p>
+        )}
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Bắt đầu</label>
@@ -226,8 +268,14 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
         <label className="block text-left text-sm font-semibold mb-1.5">Đối tượng</label>
         <select
           value={editForm.object}
-          onChange={(e) => onChange.object(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          onChange={(e) => {
+            onChange.object(e.target.value);
+            // Clear error when user selects
+            if (formErrors?.object) {
+              setFormErrors(prev => ({ ...prev, object: undefined }));
+            }
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.object ? 'border-red-500' : 'border-gray-300'}`}
           required
         >
           <option value="">Chọn đối tượng</option>
@@ -235,13 +283,22 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
           <option value="students">Sinh viên</option>
           <option value="lecturers">Giảng viên</option>
         </select>
+        {formErrors?.object && (
+          <p className="text-red-500 text-xs mt-1">{formErrors.object}</p>
+        )}
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Trạng thái</label>
         <select
           value={editForm.status}
-          onChange={(e) => onChange.status(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          onChange={(e) => {
+            onChange.status(e.target.value);
+            // Clear error when user selects
+            if (formErrors?.status) {
+              setFormErrors(prev => ({ ...prev, status: undefined }));
+            }
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.status ? 'border-red-500' : 'border-gray-300'}`}
           required
         >
           <option value="">Chọn trạng thái</option>
@@ -249,12 +306,15 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
             <option key={s} value={s}>{statusConfig[s]?.label}</option>
           ))}
         </select>
+        {formErrors?.status && (
+          <p className="text-red-500 text-xs mt-1">{formErrors.status}</p>
+        )}
       </div>
     </div>
   </form>
 );
 
-const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig }) => (
+const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig, formErrors = {}, setFormErrors }) => (
   <form id="addForm" onSubmit={onSubmit} className="space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
@@ -262,41 +322,80 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
         <input
           type="text"
           value={addForm.title}
-          onChange={(e) => onChange.title(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          maxLength={255}
+          onChange={(e) => {
+            const value = e.target.value;
+            onChange.title(value);
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.title ? 'border-red-500' : 'border-gray-300'}`}
           required
           autoFocus
         />
+        <div className="flex justify-between items-center mt-1">
+          {formErrors?.title && (
+            <p className="text-red-500 text-xs">{formErrors.title}</p>
+          )}
+          <p className={`text-xs ml-auto ${addForm.title.length >= 250 ? 'text-orange-500' : addForm.title.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
+            {addForm.title.length}/255
+          </p>
+        </div>
       </div>
       <div className="col-span-2">
         <label className="block text-left text-sm font-semibold mb-1.5">Mô tả</label>
         <textarea
           value={addForm.description}
-          onChange={(e) => onChange.description(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          maxLength={255}
+          onChange={(e) => {
+            const value = e.target.value;
+            onChange.description(value);
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.description ? 'border-red-500' : 'border-gray-300'}`}
           rows="3"
           placeholder="Nhập mô tả cho khảo sát..."
           required
         />
+        <div className="flex justify-between items-center mt-1">
+          {formErrors?.description && (
+            <p className="text-red-500 text-xs">{formErrors.description}</p>
+          )}
+          <p className={`text-xs ml-auto ${addForm.description.length >= 250 ? 'text-orange-500' : addForm.description.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
+            {addForm.description.length}/255
+          </p>
+        </div>
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Danh mục</label>
         <select
           value={addForm.category}
-          onChange={(e) => onChange.category(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          onChange={(e) => {
+            onChange.category(e.target.value);
+            // Clear error when user selects
+            if (formErrors?.category) {
+              setFormErrors(prev => ({ ...prev, category: undefined }));
+            }
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.category ? 'border-red-500' : 'border-gray-300'}`}
           required
         >
           <option value="">Chọn danh mục</option>
           {categories.filter(c => c).map(cat => <option key={cat} value={cat}>{cat}</option>)}
         </select>
+        {formErrors?.category && (
+          <p className="text-red-500 text-xs mt-1">{formErrors.category}</p>
+        )}
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Loại</label>
         <select
           value={addForm.type}
-          onChange={(e) => onChange.type(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          onChange={(e) => {
+            onChange.type(e.target.value);
+            // Clear error when user selects
+            if (formErrors?.type) {
+              setFormErrors(prev => ({ ...prev, type: undefined }));
+            }
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.type ? 'border-red-500' : 'border-gray-300'}`}
           required
         >
           <option value="">Chọn loại</option>
@@ -306,6 +405,9 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
             </option>
           ))}
         </select>
+        {formErrors?.type && (
+          <p className="text-red-500 text-xs mt-1">{formErrors.type}</p>
+        )}
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Bắt đầu</label>
@@ -353,8 +455,14 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
         <label className="block text-left text-sm font-semibold mb-1.5">Đối tượng</label>
         <select
           value={addForm.object}
-          onChange={(e) => onChange.object(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          onChange={(e) => {
+            onChange.object(e.target.value);
+            // Clear error when user selects
+            if (formErrors?.object) {
+              setFormErrors(prev => ({ ...prev, object: undefined }));
+            }
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.object ? 'border-red-500' : 'border-gray-300'}`}
           required
         >
           <option value="">Chọn đối tượng</option>
@@ -362,13 +470,22 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
           <option value="students">Sinh viên</option>
           <option value="lecturers">Giảng viên</option>
         </select>
+        {formErrors?.object && (
+          <p className="text-red-500 text-xs mt-1">{formErrors.object}</p>
+        )}
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Trạng thái</label>
         <select
           value={addForm.status}
-          onChange={(e) => onChange.status(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+          onChange={(e) => {
+            onChange.status(e.target.value);
+            // Clear error when user selects
+            if (formErrors?.status) {
+              setFormErrors(prev => ({ ...prev, status: undefined }));
+            }
+          }}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.status ? 'border-red-500' : 'border-gray-300'}`}
           required
         >
           <option value="">Chọn trạng thái</option>
@@ -376,6 +493,9 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
             <option key={s} value={s}>{statusConfig[s]?.label}</option>
           ))}
         </select>
+        {formErrors?.status && (
+          <p className="text-red-500 text-xs mt-1">{formErrors.status}</p>
+        )}
       </div>
     </div>
   </form>
@@ -387,6 +507,7 @@ const SurveyFilter = () => {
   const [categoryIdMap, setCategoryIdMap] = useState({});
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [filters, setFilters] = useState({ category: '', type: '', status: '', keyword: '', creatorName: '' });
+  const [formErrors, setFormErrors] = useState({ add: {}, edit: {}, filter: {} });
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSurvey, setSelectedSurvey] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -653,7 +774,34 @@ const SurveyFilter = () => {
   const paginatedSurveys = filteredSurveys.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleFilterChange = (e) => {
-    const newFilters = { ...filters, [e.target.name]: e.target.value };
+    const { name, value } = e.target;
+    const newFilters = { ...filters, [name]: value };
+    
+    // Validate filter select fields
+    if (name === 'type' && value && !['', 'survey', 'quiz'].includes(value)) {
+      setFormErrors(prev => ({ ...prev, filter: { ...prev.filter, type: 'Loại không hợp lệ.' } }));
+      pushToast('Loại không hợp lệ', 'error');
+      return;
+    }
+    
+    if (name === 'status' && value && !['', 'pending', 'active', 'paused', 'closed'].includes(value)) {
+      setFormErrors(prev => ({ ...prev, filter: { ...prev.filter, status: 'Trạng thái không hợp lệ.' } }));
+      pushToast('Trạng thái không hợp lệ', 'error');
+      return;
+    }
+    
+    // Validate category exists in list
+    if (name === 'category' && value && !categories.includes(value)) {
+      setFormErrors(prev => ({ ...prev, filter: { ...prev.filter, category: 'Danh mục không tồn tại.' } }));
+      pushToast('Danh mục không tồn tại', 'error');
+      return;
+    }
+    
+    // Clear errors when valid value is selected
+    if (formErrors.filter[name]) {
+      setFormErrors(prev => ({ ...prev, filter: { ...prev.filter, [name]: '' } }));
+    }
+    
     setFilters(newFilters);
     setCurrentPage(1);
     // loadSurveys sẽ được gọi tự động qua useEffect khi filters thay đổi
@@ -685,6 +833,7 @@ const SurveyFilter = () => {
       object: survey.object || 'public',
       timeLimit: survey.timeLimit ?? ''
     });
+    setFormErrors(prev => ({ ...prev, edit: {} }));
     setShowEditModal(true);
   };
 
@@ -786,14 +935,32 @@ const SurveyFilter = () => {
       object: 'public',
       timeLimit: ''
     });
+    setFormErrors(prev => ({ ...prev, add: {} }));
     setShowAddModal(true);
   };
 
   const closeViewModal = () => { setShowViewModal(false); setSelectedSurvey(null); };
-  const closeEditModal = () => { setShowEditModal(false); setSelectedSurvey(null); };
-  const closeDeleteModal = () => { setShowDeleteModal(false); setSelectedSurvey(null); };
-  const closeDuplicateModal = () => { setShowDuplicateModal(false); setSelectedSurvey(null); };
-  const closeAddModal = () => setShowAddModal(false);
+  const closeEditModal = () => { 
+    setShowEditModal(false); 
+    setSelectedSurvey(null);
+    setFormErrors(prev => ({ ...prev, edit: {} }));
+    setIsSubmitting(prev => ({ ...prev, edit: false }));
+  };
+  const closeDeleteModal = () => { 
+    setShowDeleteModal(false); 
+    setSelectedSurvey(null);
+    setIsSubmitting(prev => ({ ...prev, delete: false }));
+  };
+  const closeDuplicateModal = () => { 
+    setShowDuplicateModal(false); 
+    setSelectedSurvey(null);
+    setIsSubmitting(prev => ({ ...prev, duplicate: false }));
+  };
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setFormErrors(prev => ({ ...prev, add: {} }));
+    setIsSubmitting(prev => ({ ...prev, add: false }));
+  };
 
   // ADD SUBMIT
   const handleAddSubmit = async (e) => {
@@ -801,6 +968,43 @@ const SurveyFilter = () => {
 
     // Prevent spam submit
     if (isSubmitting.add) {
+      return;
+    }
+
+    // Validate select fields
+    const validTypes = ['survey', 'quiz'];
+    const validStatuses = ['pending', 'active', 'paused', 'closed'];
+    const validObjects = ['public', 'students', 'lecturers'];
+    
+    if (!addForm.category || addForm.category.trim() === '') {
+      setFormErrors(prev => ({ ...prev, add: { ...prev.add, category: 'Vui lòng chọn danh mục.' } }));
+      pushToast('Vui lòng chọn danh mục', 'error');
+      return;
+    }
+    
+    if (!validTypes.includes(addForm.type)) {
+      setFormErrors(prev => ({ ...prev, add: { ...prev.add, type: 'Loại khảo sát không hợp lệ.' } }));
+      pushToast('Loại khảo sát không hợp lệ', 'error');
+      return;
+    }
+    
+    if (!validStatuses.includes(addForm.status)) {
+      setFormErrors(prev => ({ ...prev, add: { ...prev.add, status: 'Trạng thái không hợp lệ.' } }));
+      pushToast('Trạng thái không hợp lệ', 'error');
+      return;
+    }
+    
+    if (!validObjects.includes(addForm.object)) {
+      setFormErrors(prev => ({ ...prev, add: { ...prev.add, object: 'Đối tượng không hợp lệ.' } }));
+      pushToast('Đối tượng không hợp lệ', 'error');
+      return;
+    }
+    
+    // Validate category exists in list
+    const categoryId = Object.entries(categoryIdMap).find(([_, name]) => name === addForm.category)?.[0];
+    if (!categoryId || !categories.includes(addForm.category)) {
+      setFormErrors(prev => ({ ...prev, add: { ...prev.add, category: 'Danh mục không tồn tại.' } }));
+      pushToast('Danh mục không tồn tại', 'error');
       return;
     }
 
@@ -816,11 +1020,6 @@ const SurveyFilter = () => {
     setIsSubmitting(prev => ({ ...prev, add: true }));
     try {
       setLoading(true);
-      const categoryId = Object.entries(categoryIdMap).find(([_, name]) => name === addForm.category)?.[0];
-      if (!categoryId) {
-        pushToast('Vui lòng chọn danh mục hợp lệ', 'error');
-        return;
-      }
 
       const result = await graphqlRequest(`
         mutation CreateSurvey($input: SurveyInput!) {
@@ -916,6 +1115,43 @@ const SurveyFilter = () => {
       return;
     }
 
+    // Validate select fields
+    const validTypes = ['survey', 'quiz'];
+    const validStatuses = ['pending', 'active', 'paused', 'closed'];
+    const validObjects = ['public', 'students', 'lecturers'];
+    
+    if (!editForm.category || editForm.category.trim() === '') {
+      setFormErrors(prev => ({ ...prev, edit: { ...prev.edit, category: 'Vui lòng chọn danh mục.' } }));
+      pushToast('Vui lòng chọn danh mục', 'error');
+      return;
+    }
+    
+    if (!validTypes.includes(editForm.type)) {
+      setFormErrors(prev => ({ ...prev, edit: { ...prev.edit, type: 'Loại khảo sát không hợp lệ.' } }));
+      pushToast('Loại khảo sát không hợp lệ', 'error');
+      return;
+    }
+    
+    if (!validStatuses.includes(editForm.status)) {
+      setFormErrors(prev => ({ ...prev, edit: { ...prev.edit, status: 'Trạng thái không hợp lệ.' } }));
+      pushToast('Trạng thái không hợp lệ', 'error');
+      return;
+    }
+    
+    if (!validObjects.includes(editForm.object)) {
+      setFormErrors(prev => ({ ...prev, edit: { ...prev.edit, object: 'Đối tượng không hợp lệ.' } }));
+      pushToast('Đối tượng không hợp lệ', 'error');
+      return;
+    }
+    
+    // Validate category exists in list
+    const categoryId = Object.entries(categoryIdMap).find(([_, name]) => name === editForm.category)?.[0];
+    if (!categoryId || !categories.includes(editForm.category)) {
+      setFormErrors(prev => ({ ...prev, edit: { ...prev.edit, category: 'Danh mục không tồn tại.' } }));
+      pushToast('Danh mục không tồn tại', 'error');
+      return;
+    }
+
     if (!editForm.startAt || !editForm.endAt) {
       pushToast('Vui lòng chọn thời gian', 'error');
       return;
@@ -928,11 +1164,6 @@ const SurveyFilter = () => {
     setIsSubmitting(prev => ({ ...prev, edit: true }));
     try {
       setLoading(true);
-      const categoryId = Object.entries(categoryIdMap).find(([_, name]) => name === editForm.category)?.[0];
-      if (!categoryId) {
-        pushToast('Danh mục không hợp lệ', 'error');
-        return;
-      }
 
       // Chỉ gửi các trường hợp lệ/đã thay đổi để tránh vi phạm validation phía BE
       const input = {
@@ -1127,55 +1358,79 @@ const SurveyFilter = () => {
   const editFooter = useMemo(() => (
     <>
       <button 
-        onClick={closeEditModal} 
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+        onClick={closeEditModal}
+        disabled={isSubmitting.edit}
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Hủy
       </button>
       <button 
         type="submit" 
-        form="editForm" 
-        className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        form="editForm"
+        disabled={isSubmitting.edit}
+        className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
       >
-        Lưu thay đổi
+        {isSubmitting.edit && (
+          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+        {isSubmitting.edit ? 'Đang xử lý...' : 'Lưu thay đổi'}
       </button>
     </>
-  ), [closeEditModal]);
+  ), [closeEditModal, isSubmitting.edit]);
 
   const addFooter = useMemo(() => (
     <>
       <button 
-        onClick={closeAddModal} 
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+        onClick={closeAddModal}
+        disabled={isSubmitting.add}
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Hủy
       </button>
       <button 
         type="submit" 
-        form="addForm" 
-        className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        form="addForm"
+        disabled={isSubmitting.add}
+        className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
       >
-        Thêm khảo sát
+        {isSubmitting.add && (
+          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+        {isSubmitting.add ? 'Đang xử lý...' : 'Thêm khảo sát'}
       </button>
     </>
-  ), [closeAddModal]);
+  ), [closeAddModal, isSubmitting.add]);
 
   const deleteFooter = useMemo(() => (
     <>
       <button 
-        onClick={closeDeleteModal} 
-        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200"
+        onClick={closeDeleteModal}
+        disabled={isSubmitting.delete}
+        className="px-8 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Hủy
       </button>
       <button 
-        onClick={handleDelete} 
-        className="px-8 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold rounded-lg hover:from-red-700 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+        onClick={handleDelete}
+        disabled={isSubmitting.delete}
+        className="px-8 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold rounded-lg hover:from-red-700 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
       >
-        Xóa khảo sát
+        {isSubmitting.delete && (
+          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+        {isSubmitting.delete ? 'Đang xóa...' : 'Xóa khảo sát'}
       </button>
     </>
-  ), [closeDeleteModal, handleDelete]);
+  ), [closeDeleteModal, handleDelete, isSubmitting.delete]);
 
   const duplicateFooter = useMemo(() => (
     <>
@@ -1276,25 +1531,59 @@ const SurveyFilter = () => {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-2">Tìm kiếm</label>
-              <input 
-                type="text"
-                name="keyword"
-                value={filters.keyword}
-                onChange={handleFilterChange}
-                placeholder="Tiêu đề hoặc mô tả..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="relative">
+                <input 
+                  type="text"
+                  name="keyword"
+                  value={filters.keyword}
+                  maxLength={255}
+                  onChange={(e) => {
+                    handleFilterChange(e);
+                    // Clear error when user types
+                    if (formErrors.filter.keyword) {
+                      setFormErrors(prev => ({ ...prev, filter: { ...prev.filter, keyword: '' } }));
+                    }
+                  }}
+                  placeholder="Tiêu đề hoặc mô tả..."
+                  className={`w-full p-3 pr-16 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.filter.keyword ? 'border-red-500' : 'border-gray-300'}`}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <span className={`text-xs ${filters.keyword.length >= 250 ? 'text-orange-500' : filters.keyword.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {filters.keyword.length}/255
+                  </span>
+                </div>
+              </div>
+              {formErrors.filter.keyword && (
+                <p className="text-red-500 text-xs mt-1">{formErrors.filter.keyword}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-2">Người tạo (Giảng viên)</label>
-              <input 
-                type="text"
-                name="creatorName"
-                value={filters.creatorName}
-                onChange={handleFilterChange}
-                placeholder="Tên giảng viên..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="relative">
+                <input 
+                  type="text"
+                  name="creatorName"
+                  value={filters.creatorName}
+                  maxLength={255}
+                  onChange={(e) => {
+                    handleFilterChange(e);
+                    // Clear error when user types
+                    if (formErrors.filter.creatorName) {
+                      setFormErrors(prev => ({ ...prev, filter: { ...prev.filter, creatorName: '' } }));
+                    }
+                  }}
+                  placeholder="Tên giảng viên..."
+                  className={`w-full p-3 pr-16 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.filter.creatorName ? 'border-red-500' : 'border-gray-300'}`}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <span className={`text-xs ${filters.creatorName.length >= 250 ? 'text-orange-500' : filters.creatorName.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {filters.creatorName.length}/255
+                  </span>
+                </div>
+              </div>
+              {formErrors.filter.creatorName && (
+                <p className="text-red-500 text-xs mt-1">{formErrors.filter.creatorName}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-2">Danh mục</label>
@@ -1303,7 +1592,7 @@ const SurveyFilter = () => {
                 value={filters.category} 
                 onChange={handleFilterChange} 
                 disabled={categoriesLoading}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${formErrors.filter.category ? 'border-red-500' : 'border-gray-300'}`}
               >
                 {categoriesLoading ? (
                   <option value="">Đang tải...</option>
@@ -1317,18 +1606,37 @@ const SurveyFilter = () => {
                   <option value="">Không có danh mục</option>
                 )}
               </select>
+              {formErrors.filter.category && (
+                <p className="text-red-500 text-xs mt-1">{formErrors.filter.category}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-2">Loại</label>
-              <select name="type" value={filters.type} onChange={handleFilterChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <select 
+                name="type" 
+                value={filters.type} 
+                onChange={handleFilterChange} 
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.filter.type ? 'border-red-500' : 'border-gray-300'}`}
+              >
                 {types.map(t => <option key={t} value={t}>{t === 'survey' ? 'Survey' : t === 'quiz' ? 'Quiz' : 'Tất cả'}</option>)}
               </select>
+              {formErrors.filter.type && (
+                <p className="text-red-500 text-xs mt-1">{formErrors.filter.type}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-2">Trạng thái</label>
-              <select name="status" value={filters.status} onChange={handleFilterChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <select 
+                name="status" 
+                value={filters.status} 
+                onChange={handleFilterChange} 
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.filter.status ? 'border-red-500' : 'border-gray-300'}`}
+              >
                 {statuses.map(s => <option key={s} value={s}>{statusConfig[s]?.label || 'Tất cả'}</option>)}
               </select>
+              {formErrors.filter.status && (
+                <p className="text-red-500 text-xs mt-1">{formErrors.filter.status}</p>
+              )}
             </div>
           </div>
         </div>
@@ -1428,7 +1736,7 @@ const SurveyFilter = () => {
           <ViewModalBody selectedSurvey={selectedSurvey} statusConfig={statusConfig} formatTimeRange={formatTimeRange} />
         </Modal>
 
-        <Modal key="edit-modal" isOpen={showEditModal} onClose={closeEditModal} title="Chỉnh sửa khảo sát" size="max-w-6xl" footer={editFooter}>
+        <Modal key="edit-modal" isOpen={showEditModal} onClose={() => { closeEditModal(); setFormErrors(prev => ({ ...prev, edit: {} })); }} title="Chỉnh sửa khảo sát" size="max-w-6xl" footer={editFooter}>
           <EditModalBody
             editForm={editForm}
             onSubmit={handleEditSubmit}
@@ -1449,10 +1757,12 @@ const SurveyFilter = () => {
             statuses={statuses}
             objects={objects}
             statusConfig={statusConfig}
+            formErrors={formErrors.edit}
+            setFormErrors={(errors) => setFormErrors(prev => ({ ...prev, edit: errors }))}
           />
         </Modal>
 
-        <Modal key="add-modal" isOpen={showAddModal} onClose={closeAddModal} title="Thêm khảo sát mới" size="max-w-6xl" footer={addFooter}>
+        <Modal key="add-modal" isOpen={showAddModal} onClose={() => { closeAddModal(); setFormErrors(prev => ({ ...prev, add: {} })); }} title="Thêm khảo sát mới" size="max-w-6xl" footer={addFooter}>
           <AddModalBody
             addForm={addForm}
             onSubmit={handleAddSubmit}
@@ -1473,6 +1783,8 @@ const SurveyFilter = () => {
             statuses={statuses}
             objects={objects}
             statusConfig={statusConfig}
+            formErrors={formErrors.add}
+            setFormErrors={(errors) => setFormErrors(prev => ({ ...prev, add: errors }))}
           />
         </Modal>
 
