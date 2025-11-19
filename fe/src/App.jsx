@@ -13,9 +13,9 @@ export default function App() {
           {/* 👇 These are children rendered inside <Outlet /> */}
           <Route index element={<Feed />} />           {/* / */}
           <Route path="explore" element={<Search />} />
+          <Route path="search" element={<Search />} />
         </Route>
         <Route path="/register" element={<Register />} />
-        <Route path="/search" element={<Search />} />
       </Routes>
     </BrowserRouter>
   );

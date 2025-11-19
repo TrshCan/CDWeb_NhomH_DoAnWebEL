@@ -242,7 +242,7 @@ export default function WidgetSidebar() {
       {/* Modal */}
       {selectedItem && (
         <div
-          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${
+          className={`fixed inset-0 flex items-center justify-center z-[60] transition-opacity duration-200 ${
             showModal ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         >
