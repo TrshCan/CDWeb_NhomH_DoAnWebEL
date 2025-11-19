@@ -56,13 +56,14 @@ export default function SurveysCreated() {
       setLoading(true);
       try {
         const userIdStr = localStorage.getItem("userId");
-        if (!userIdStr) {
+        const token = localStorage.getItem("token");
+        
+        if (!userIdStr || !token) {
           toast.error("Vui lòng đăng nhập để xem khảo sát đã tạo");
-          setSurveys([]);
-          setFilteredSurveys([]);
-          setLoading(false);
+          navigate("/login");
           return;
         }
+        
         const data = await getSurveysMadeByUser(parseInt(userIdStr));
         const mapped = (data || []).map((s) => ({
           id: s.id,
@@ -76,7 +77,20 @@ export default function SurveysCreated() {
         setFilteredSurveys(mapped);
       } catch (err) {
         console.error(err);
-        toast.error("Không tải được danh sách khảo sát");
+        
+        // Check if it's an authentication error
+        if (err.message?.includes("Authentication") || 
+            err.message?.includes("Unauthorized") ||
+            err.message?.includes("Invalid or expired token")) {
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại");
+          localStorage.removeItem("token");
+          localStorage.removeItem("userId");
+          localStorage.removeItem("user");
+          navigate("/login");
+        } else {
+          toast.error("Không tải được danh sách khảo sát");
+        }
+        
         setSurveys([]);
         setFilteredSurveys([]);
       } finally {
@@ -84,7 +98,7 @@ export default function SurveysCreated() {
       }
     };
     fetchData();
-  }, []);
+  }, [navigate]);
 
   // Calculate metrics
   const metrics = {

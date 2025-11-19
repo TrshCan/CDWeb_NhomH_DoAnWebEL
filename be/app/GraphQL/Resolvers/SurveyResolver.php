@@ -19,10 +19,27 @@ class SurveyResolver
      */
     public function surveysMade($_, array $args)
     {
+        // Verify authentication
+        $token = request()->bearerToken();
+        if (!$token) {
+            throw new \Exception('Authentication required');
+        }
+
+        $user = \App\Models\User::where('remember_token', $token)->first();
+        if (!$user) {
+            throw new \Exception('Invalid or expired token');
+        }
+
         $createdBy = (int) ($args['createdBy'] ?? 0);
         if ($createdBy <= 0) {
             return [];
         }
+
+        // Verify the user is requesting their own surveys
+        if ($user->id !== $createdBy) {
+            throw new \Exception('Unauthorized: You can only view your own surveys');
+        }
+
         return $this->service->listByCreatorWithStatus($createdBy);
     }
 
@@ -32,6 +49,17 @@ class SurveyResolver
      */
     public function surveyRawData($_, array $args)
     {
+        // Verify authentication
+        $token = request()->bearerToken();
+        if (!$token) {
+            throw new \Exception('Authentication required');
+        }
+
+        $user = \App\Models\User::where('remember_token', $token)->first();
+        if (!$user) {
+            throw new \Exception('Invalid or expired token');
+        }
+
         $surveyId = (int) ($args['surveyId'] ?? 0);
         if ($surveyId <= 0) {
             return [
@@ -39,6 +67,13 @@ class SurveyResolver
                 'responses' => [],
             ];
         }
+
+        // Verify the user owns this survey
+        $survey = \App\Models\Survey::find($surveyId);
+        if (!$survey || $survey->created_by !== $user->id) {
+            throw new \Exception('Unauthorized: You can only view data for your own surveys');
+        }
+
         return $this->service->getRawData($surveyId);
     }
 
@@ -48,6 +83,17 @@ class SurveyResolver
      */
     public function surveyOverview($_, array $args)
     {
+        // Verify authentication
+        $token = request()->bearerToken();
+        if (!$token) {
+            throw new \Exception('Authentication required');
+        }
+
+        $user = \App\Models\User::where('remember_token', $token)->first();
+        if (!$user) {
+            throw new \Exception('Invalid or expired token');
+        }
+
         $surveyId = (int) ($args['surveyId'] ?? 0);
         if ($surveyId <= 0) {
             return [
@@ -56,6 +102,13 @@ class SurveyResolver
                 'questions' => [],
             ];
         }
+
+        // Verify the user owns this survey
+        $survey = \App\Models\Survey::find($surveyId);
+        if (!$survey || $survey->created_by !== $user->id) {
+            throw new \Exception('Unauthorized: You can only view overview for your own surveys');
+        }
+
         return $this->service->getSurveyOverview($surveyId);
     }
 
@@ -65,6 +118,17 @@ class SurveyResolver
      */
     public function surveyResponseDetail($_, array $args)
     {
+        // Verify authentication
+        $token = request()->bearerToken();
+        if (!$token) {
+            throw new \Exception('Authentication required');
+        }
+
+        $user = \App\Models\User::where('remember_token', $token)->first();
+        if (!$user) {
+            throw new \Exception('Invalid or expired token');
+        }
+
         $surveyId = (int) ($args['surveyId'] ?? 0);
         $responseId = (string) ($args['responseId'] ?? '');
 
@@ -72,13 +136,36 @@ class SurveyResolver
             return null;
         }
 
+        // Verify the user owns this survey
+        $survey = \App\Models\Survey::find($surveyId);
+        if (!$survey || $survey->created_by !== $user->id) {
+            throw new \Exception('Unauthorized: You can only view responses for your own surveys');
+        }
+
         return $this->service->getResponseDetail($surveyId, $responseId);
     }
 
     public function surveysCompleted($_, array $args)
     {
+        // Verify authentication
+        $token = request()->bearerToken();
+        if (!$token) {
+            throw new \Exception('Authentication required');
+        }
+
+        $user = \App\Models\User::where('remember_token', $token)->first();
+        if (!$user) {
+            throw new \Exception('Invalid or expired token');
+        }
+
         $userId = (int) ($args['userId'] ?? 0);
         if ($userId <= 0) return [];
+
+        // Verify the user is requesting their own completed surveys
+        if ($user->id !== $userId) {
+            throw new \Exception('Unauthorized: You can only view your own completed surveys');
+        }
+
         return $this->service->listCompletedByUser($userId);
     }
 }

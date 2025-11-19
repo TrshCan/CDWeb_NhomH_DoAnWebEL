@@ -1,7 +1,5 @@
 // src/App.jsx
-import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import MainPage from "./pages/MainPage";
+import { Routes, Route } from "react-router-dom";
 import Register from "./pages/Register";
 import Login from "./pages/Login.jsx";
 import Feed from "./components/Feed.jsx";
@@ -13,6 +11,7 @@ import SurveyOverview from "./pages/SurveyOverview.jsx";
 import ResponseDetail from "./pages/ResponseDetail.jsx";
 import SurveysCompleted from "./pages/SurveysCompleted.jsx";
 import SurveyJoin from "./pages/SurveyJoin.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 export default function App() {
   return (
@@ -24,15 +23,38 @@ export default function App() {
         <Route path="profile" element={<Profile />} />
         {/* sau này sẽ thêm các route như profile expole v.v*/}
       </Route>
-      {/* Independent pages outside MainLayout */}
-      <Route path="/surveys/completed" element={<SurveysCompleted />} />
+      {/* Protected survey pages */}
+      <Route path="/surveys/completed" element={
+        <ProtectedRoute>
+          <SurveysCompleted />
+        </ProtectedRoute>
+      } />
       
-      {/* Independent pages outside MainLayout */}
-      <Route path="/surveys/created" element={<SurveysCreated />} />
+      <Route path="/surveys/created" element={
+        <ProtectedRoute>
+          <SurveysCreated />
+        </ProtectedRoute>
+      } />
+      
       <Route path="/surveys/:surveyId/join" element={<SurveyJoin />} />
-      <Route path="/surveys/:surveyId/overview" element={<SurveyOverview />} />
-      <Route path="/surveys/:surveyId/raw-data" element={<RawDataList />} />
-      <Route path="/surveys/:surveyId/responses/:responseId" element={<ResponseDetail />} />
+      
+      <Route path="/surveys/:surveyId/overview" element={
+        <ProtectedRoute>
+          <SurveyOverview />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/surveys/:surveyId/raw-data" element={
+        <ProtectedRoute>
+          <RawDataList />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/surveys/:surveyId/responses/:responseId" element={
+        <ProtectedRoute>
+          <ResponseDetail />
+        </ProtectedRoute>
+      } />
       
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
