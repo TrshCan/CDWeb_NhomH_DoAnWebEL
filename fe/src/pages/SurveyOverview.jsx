@@ -7,6 +7,7 @@ import "../assets/css/RawDataList.css";
 import { exportSurveyOverviewCSV } from "../utils/exports/overview/csv";
 import { exportSurveyOverviewExcel } from "../utils/exports/overview/excel";
 import { exportSurveyOverviewPDF } from "../utils/exports/overview/pdf";
+import { ensureSurveyOwnership } from "../utils/surveyOwnership";
 
 Chart.register(...registerables);
 
@@ -26,13 +27,53 @@ export default function SurveyOverview() {
   const [filterKhoa, setFilterKhoa] = useState("all");
   const [filterKhoaHoc, setFilterKhoaHoc] = useState("all");
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [accessChecking, setAccessChecking] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
 
   // Chart refs for question-specific charts
   const chartRefs = useRef({});
   const chartInstances = useRef({});
 
+  // Guard access to prevent unauthorized viewing via URL manipulation
+  useEffect(() => {
+    let isMounted = true;
+
+    const guardSurvey = async () => {
+      if (!surveyId) return;
+      setAccessChecking(true);
+      const result = await ensureSurveyOwnership(Number(surveyId));
+      if (!isMounted) return;
+
+      if (result.allowed) {
+        setHasAccess(true);
+      } else {
+        setHasAccess(false);
+        if (result.reason === "AUTH_REQUIRED") {
+          toast.error("Vui lòng đăng nhập để tiếp tục");
+          navigate("/login", { replace: true });
+        } else if (result.reason === "NOT_OWNER") {
+          toast.error("Bạn không có quyền truy cập khảo sát này");
+          navigate("/surveys/created", { replace: true });
+        } else {
+          toast.error("Không thể xác minh quyền truy cập khảo sát");
+          navigate("/surveys/created", { replace: true });
+        }
+      }
+
+      setAccessChecking(false);
+    };
+
+    guardSurvey();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [surveyId, navigate]);
+
   // Fetch data
   useEffect(() => {
+    if (!surveyId || !hasAccess) return;
+
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -72,10 +113,8 @@ export default function SurveyOverview() {
       }
     };
 
-    if (surveyId) {
-      fetchData();
-    }
-  }, [surveyId]);
+    fetchData();
+  }, [surveyId, hasAccess]);
 
   // Determine active tab from URL
   useEffect(() => {
@@ -307,6 +346,17 @@ export default function SurveyOverview() {
   }, [loading, overviewData]);
 
   const questionData = overviewData ? getQuestionData(overviewData) : null;
+
+  if (accessChecking || loading) {
+    return (
+      <div className="raw-data-list-page">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="raw-data-list-page">

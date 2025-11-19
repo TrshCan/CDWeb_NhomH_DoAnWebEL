@@ -7,6 +7,7 @@ import { getSurveyResponseDetail } from "../api/graphql/survey";
 import { exportResponseDetailCSV } from "../utils/exports/responseDetail/csv";
 import { exportResponseDetailExcel } from "../utils/exports/responseDetail/excel";
 import { exportResponseDetailPDF } from "../utils/exports/responseDetail/pdf";
+import { ensureSurveyOwnership } from "../utils/surveyOwnership";
 
 export default function ResponseDetail() {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ export default function ResponseDetail() {
   const [expandedQuestions, setExpandedQuestions] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [accessChecking, setAccessChecking] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
   const itemsPerPage = 10;
 
   const participant = responseData?.participant ?? {};
@@ -47,6 +50,42 @@ export default function ResponseDetail() {
       : null;
 
   useEffect(() => {
+    let isMounted = true;
+    const guardSurvey = async () => {
+      if (!surveyId) return;
+      setAccessChecking(true);
+      const result = await ensureSurveyOwnership(Number(surveyId));
+      if (!isMounted) return;
+
+      if (result.allowed) {
+        setHasAccess(true);
+      } else {
+        setHasAccess(false);
+        if (result.reason === "AUTH_REQUIRED") {
+          toast.error("Vui lòng đăng nhập để tiếp tục");
+          navigate("/login", { replace: true });
+        } else if (result.reason === "NOT_OWNER") {
+          toast.error("Bạn không có quyền truy cập khảo sát này");
+          navigate("/surveys/created", { replace: true });
+        } else {
+          toast.error("Không thể xác minh quyền truy cập khảo sát");
+          navigate("/surveys/created", { replace: true });
+        }
+      }
+
+      setAccessChecking(false);
+    };
+
+    guardSurvey();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [surveyId, navigate]);
+
+  useEffect(() => {
+    if (!surveyId || !responseId || !hasAccess) return;
+
     const fetchResponseDetail = async () => {
       setLoading(true);
       try {
@@ -66,10 +105,8 @@ export default function ResponseDetail() {
       }
     };
 
-    if (surveyId && responseId) {
-      fetchResponseDetail();
-    }
-  }, [surveyId, responseId]);
+    fetchResponseDetail();
+  }, [surveyId, responseId, hasAccess]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -157,12 +194,12 @@ export default function ResponseDetail() {
     setExpandedQuestions(new Set());
   };
 
-  if (loading) {
+  if (accessChecking || loading) {
     return (
       <div className="response-detail-page">
         <div className="loading-container">
           <div className="spinner"></div>
-          <p>Loading response details...</p>
+          <p>Đang tải chi tiết phản hồi...</p>
         </div>
       </div>
     );

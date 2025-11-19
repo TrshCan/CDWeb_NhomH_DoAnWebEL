@@ -7,6 +7,7 @@ import { getSurveyRawData } from "../api/graphql/survey";
 import { exportSurveyRawCSV as exportCSV, sanitizeFileName } from "../utils/exports/surveyRaw/csv";
 import { exportSurveyRawExcel as exportExcel } from "../utils/exports/surveyRaw/excel";
 import { exportSurveyRawPDF as exportPDF } from "../utils/exports/surveyRaw/pdf";
+import { ensureSurveyOwnership } from "../utils/surveyOwnership";
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -23,6 +24,8 @@ export default function RawDataList() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("raw-data");
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [accessChecking, setAccessChecking] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
   
   const pieChartRef = useRef(null);
   const barChartRef = useRef(null);
@@ -31,8 +34,45 @@ export default function RawDataList() {
   const barChartInstance = useRef(null);
   const lineChartInstance = useRef(null);
 
+  // Guard against unauthorized access
+  useEffect(() => {
+    let isMounted = true;
+    const guardSurvey = async () => {
+      if (!surveyId) return;
+      setAccessChecking(true);
+      const result = await ensureSurveyOwnership(Number(surveyId));
+      if (!isMounted) return;
+
+      if (result.allowed) {
+        setHasAccess(true);
+      } else {
+        setHasAccess(false);
+        if (result.reason === "AUTH_REQUIRED") {
+          toast.error("Vui lòng đăng nhập để tiếp tục");
+          navigate("/login", { replace: true });
+        } else if (result.reason === "NOT_OWNER") {
+          toast.error("Bạn không có quyền truy cập khảo sát này");
+          navigate("/surveys/created", { replace: true });
+        } else {
+          toast.error("Không thể xác minh quyền truy cập khảo sát");
+          navigate("/surveys/created", { replace: true });
+        }
+      }
+
+      setAccessChecking(false);
+    };
+
+    guardSurvey();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [surveyId, navigate]);
+
   // Fetch data from API
   useEffect(() => {
+    if (!surveyId || !hasAccess) return;
+
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -60,10 +100,8 @@ export default function RawDataList() {
       }
     };
 
-    if (surveyId) {
-      fetchData();
-    }
-  }, [surveyId]);
+    fetchData();
+  }, [surveyId, hasAccess]);
 
   // Filter data
   useEffect(() => {
@@ -406,6 +444,17 @@ export default function RawDataList() {
     };
     return labels[khoa] || khoa;
   };
+
+  if (accessChecking || loading) {
+    return (
+      <div className="raw-data-list-page">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="raw-data-list-page">
