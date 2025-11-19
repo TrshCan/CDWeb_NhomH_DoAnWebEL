@@ -42,6 +42,31 @@ export default function WidgetSidebar() {
     return "text-cyan-500 border-cyan-400";
   };
 
+  const getDeadlineGradient = (deadlineDate) => {
+    const today = new Date();
+    const deadline = new Date(deadlineDate);
+    const diffTime = deadline - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 7)
+      return {
+        header: "bg-gradient-to-r from-red-500 to-rose-500",
+        button:
+          "bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600",
+      };
+    if (diffDays <= 30)
+      return {
+        header: "bg-gradient-to-r from-yellow-500 to-orange-500",
+        button:
+          "bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600",
+      };
+    return {
+      header: "bg-gradient-to-r from-cyan-500 to-blue-500",
+      button:
+        "bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600",
+    };
+  };
+
   const truncateText = (text, length) =>
     text.length > length ? text.slice(0, length) + "..." : text;
 
@@ -230,65 +255,293 @@ export default function WidgetSidebar() {
       {/* Modal */}
       {selectedItem && (
         <div
-          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 ${
+          className={`fixed inset-0 flex items-center justify-center z-50 px-4 transition-all duration-300 ${
             showModal ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         >
+          {/* Backdrop with blur */}
           <div
-            className="absolute inset-0 bg-black bg-opacity-50"
+            className={`absolute inset-0 backdrop-blur-md bg-white/30 transition-all duration-300 ${
+              showModal ? "backdrop-blur-md" : "backdrop-blur-none"
+            }`}
             onClick={closeModal}
           ></div>
 
+          {/* Modal Content */}
           <div
-            className={`bg-white rounded-xl shadow-2xl p-6 max-w-md w-full relative transform transition-all duration-300 ${
+            className={`bg-white rounded-2xl shadow-2xl max-w-lg w-full relative transform transition-all duration-300 overflow-hidden ${
               showModal ? "scale-100 opacity-100" : "scale-95 opacity-0"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={closeModal}
-              className="absolute top-3 right-3 text-cyan-600 hover:text-cyan-800 text-xl font-bold"
+            {/* Header with gradient */}
+            <div
+              className={`${
+                modalType === "event"
+                  ? "bg-gradient-to-r from-cyan-500 to-blue-500"
+                  : getDeadlineGradient(selectedItem.deadline_date).header
+              } p-6 pb-20 relative`}
             >
-              ✕
-            </button>
+              <button
+                onClick={closeModal}
+                className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-2 transition-all"
+                aria-label="Close modal"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
 
-            <h2 className="text-lg font-bold text-gray-800 mb-3">
-              {selectedItem.title}
-            </h2>
+              <div className="flex items-center space-x-3 text-white">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
+                  {modalType === "event" ? (
+                    <svg
+                      className="w-8 h-8"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-8 h-8"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">
+                    {modalType === "event" ? "Campus Event" : "Deadline"}
+                  </p>
+                  <h2 className="text-xl font-bold mt-1">
+                    {selectedItem.title}
+                  </h2>
+                </div>
+              </div>
+            </div>
 
-            {modalType === "event" ? (
-              <>
-                <p className="text-gray-600 text-sm mb-1">
-                  📅{" "}
-                  {new Date(selectedItem.event_date).toLocaleString([], {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </p>
-                {selectedItem.location && (
-                  <p className="text-gray-600 text-sm mb-1">
-                    📍 {selectedItem.location}
-                  </p>
+            {/* Content */}
+            <div className="p-6 -mt-12 relative">
+              <div className="bg-white rounded-xl shadow-lg p-5 space-y-4">
+                {modalType === "event" ? (
+                  <>
+                    {/* Date & Time */}
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center">
+                        <svg
+                          className="w-5 h-5 text-cyan-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                          Date & Time
+                        </p>
+                        <p className="text-sm text-gray-800 font-semibold mt-1">
+                          {new Date(selectedItem.event_date).toLocaleString(
+                            [],
+                            {
+                              dateStyle: "full",
+                              timeStyle: "short",
+                            }
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    {selectedItem.location && (
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <svg
+                            className="w-5 h-5 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                            Location
+                          </p>
+                          <p className="text-sm text-gray-800 font-semibold mt-1">
+                            {selectedItem.location}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Description */}
+                    {selectedItem.description && (
+                      <div className="pt-3 border-t border-gray-100">
+                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">
+                          Description
+                        </p>
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {selectedItem.description}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Deadline Date */}
+                    <div className="flex items-start space-x-3">
+                      <div
+                        className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
+                          getDeadlineColor(selectedItem.deadline_date).includes(
+                            "red"
+                          )
+                            ? "bg-red-100"
+                            : getDeadlineColor(
+                                selectedItem.deadline_date
+                              ).includes("yellow")
+                            ? "bg-yellow-100"
+                            : "bg-cyan-100"
+                        }`}
+                      >
+                        <svg
+                          className={`w-5 h-5 ${
+                            getDeadlineColor(
+                              selectedItem.deadline_date
+                            ).includes("red")
+                              ? "text-red-600"
+                              : getDeadlineColor(
+                                  selectedItem.deadline_date
+                                ).includes("yellow")
+                              ? "text-yellow-600"
+                              : "text-cyan-600"
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+                          Due Date
+                        </p>
+                        <p className="text-sm text-gray-800 font-semibold mt-1">
+                          {new Date(
+                            selectedItem.deadline_date
+                          ).toLocaleDateString([], {
+                            dateStyle: "full",
+                          })}
+                        </p>
+                        <p
+                          className={`text-xs font-medium mt-1 ${
+                            getDeadlineColor(
+                              selectedItem.deadline_date
+                            ).includes("red")
+                              ? "text-red-600"
+                              : getDeadlineColor(
+                                  selectedItem.deadline_date
+                                ).includes("yellow")
+                              ? "text-yellow-600"
+                              : "text-cyan-600"
+                          }`}
+                        >
+                          {(() => {
+                            const today = new Date();
+                            const deadline = new Date(
+                              selectedItem.deadline_date
+                            );
+                            const diffTime = deadline - today;
+                            const diffDays = Math.ceil(
+                              diffTime / (1000 * 60 * 60 * 24)
+                            );
+                            if (diffDays < 0) return "Overdue!";
+                            if (diffDays === 0) return "Due today!";
+                            if (diffDays === 1) return "Due tomorrow";
+                            return `${diffDays} days remaining`;
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Details */}
+                    {selectedItem.details && (
+                      <div className="pt-3 border-t border-gray-100">
+                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">
+                          Details
+                        </p>
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {selectedItem.details}
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
-                {selectedItem.description && (
-                  <p className="text-gray-500 text-sm mt-2">
-                    {selectedItem.description}
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="text-gray-600 text-sm mb-1">
-                  ⏰ Due{" "}
-                  {new Date(selectedItem.deadline_date).toLocaleDateString()}
-                </p>
-                {selectedItem.details && (
-                  <p className="text-gray-500 text-sm mt-2">
-                    {selectedItem.details}
-                  </p>
-                )}
-              </>
-            )}
+              </div>
+
+              {/* Action Button */}
+              <div className="mt-4">
+                <button
+                  onClick={closeModal}
+                  className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-all hover:shadow-lg ${
+                    modalType === "event"
+                      ? "bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
+                      : getDeadlineGradient(selectedItem.deadline_date).button
+                  }`}
+                >
+                  Got it!
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
