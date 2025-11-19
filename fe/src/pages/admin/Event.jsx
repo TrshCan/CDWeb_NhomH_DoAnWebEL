@@ -552,7 +552,7 @@ export default function EventManager() {
     type: "success",
     visible: false,
   });
-  const ITEMS_PER_PAGE = 5;
+  const ITEMS_PER_PAGE = 10;
 
   const showToast = (msg, type = "success") =>
     setToast({ message: msg, type, visible: true });

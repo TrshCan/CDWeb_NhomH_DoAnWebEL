@@ -67,7 +67,7 @@ class SurveyService
             'description' => 'required|string',
             'categories_id' => 'required|integer|exists:categories,id',
             'type' => 'required|in:survey,quiz',
-            'start_at' => 'required|date_format:Y-m-d H:i:s|after_or_equal:now',
+            'start_at' => 'required|date_format:Y-m-d H:i:s|after:now',
             'end_at' => 'required|date_format:Y-m-d H:i:s|after:start_at',
             'time_limit' => 'nullable|integer|min:1',
             'object' => 'required|in:public,students,lecturers',
@@ -92,7 +92,7 @@ class SurveyService
             'type.required' => 'Loại khảo sát là bắt buộc.',
             'type.in' => 'Loại phải là "survey" hoặc "quiz".',
             'start_at.required' => 'Thời gian bắt đầu là bắt buộc.',
-            'start_at.after_or_equal' => 'Thời gian bắt đầu phải lớn hơn hoặc bằng thời điểm hiện tại.',
+            'start_at.after' => 'Thời gian bắt đầu phải lớn hơn thời gian tạo khảo sát.',
             'end_at.required' => 'Thời gian kết thúc là bắt buộc.',
             'end_at.after' => 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu.',
             'time_limit.min' => 'Giới hạn thời gian phải là số nguyên dương.',
@@ -112,9 +112,38 @@ class SurveyService
             throw new ValidationException($validator);
         }
 
+        // === KIỂM TRA start_at PHẢI LỚN HƠN created_at ===
+        // Vì created_at sẽ được set khi save, nên kiểm tra start_at > now (đã có ở trên)
+        // Nhưng để chắc chắn, kiểm tra thêm sau khi save
+        if (isset($data['start_at'])) {
+            $startAt = Carbon::parse($data['start_at']);
+            $now = Carbon::now();
+            
+            // start_at phải lớn hơn thời điểm hiện tại (tức là lớn hơn created_at sẽ được set)
+            if ($startAt->lte($now)) {
+                $validator = Validator::make([], []);
+                $validator->errors()->add('start_at', 'Thời gian bắt đầu phải lớn hơn thời gian tạo khảo sát.');
+                throw new ValidationException($validator);
+            }
+        }
+
             try {
                 DB::beginTransaction();
                 $survey = $this->repository->create($data);
+                
+                // Kiểm tra lại sau khi save để đảm bảo start_at > created_at
+                if ($survey->start_at && $survey->created_at) {
+                    $startAt = Carbon::parse($survey->start_at);
+                    $createdAt = Carbon::parse($survey->created_at);
+                    
+                    if ($startAt->lte($createdAt)) {
+                        DB::rollBack();
+                        $validator = Validator::make([], []);
+                        $validator->errors()->add('start_at', 'Thời gian bắt đầu phải lớn hơn thời gian tạo khảo sát.');
+                        throw new ValidationException($validator);
+                    }
+                }
+                
                 DB::commit();
 
                 // Load lại survey với creator_name
@@ -290,7 +319,7 @@ class SurveyService
             'description' => 'sometimes|required|string',
             'categories_id' => 'sometimes|integer|exists:categories,id',
             'type' => 'sometimes|in:survey,quiz',
-            'start_at' => 'sometimes|required|date_format:Y-m-d H:i:s|after_or_equal:now',
+            'start_at' => 'sometimes|required|date_format:Y-m-d H:i:s',
             'end_at' => 'sometimes|required|date_format:Y-m-d H:i:s|after:start_at',
             'time_limit' => 'nullable|integer|min:1',
             'points' => $pointsRule,
@@ -298,7 +327,6 @@ class SurveyService
             'status' => 'sometimes|in:pending,active,paused,closed',
         ], [
             'description.required' => 'Mô tả khảo sát không được để trống.',
-            'start_at.after_or_equal' => 'Thời gian bắt đầu phải lớn hơn hoặc bằng thời điểm hiện tại.',
             'end_at.after' => 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu.',
             'points.required' => 'Điểm là bắt buộc khi loại là quiz.',
             'points.integer' => 'Điểm phải là số nguyên.',
@@ -311,9 +339,36 @@ class SurveyService
             throw new ValidationException($validator);
         }
 
+        // === KIỂM TRA start_at PHẢI LỚN HƠN created_at ===
+        if (isset($data['start_at'])) {
+            $startAt = Carbon::parse($data['start_at']);
+            $createdAt = Carbon::parse($survey->created_at);
+            
+            // start_at phải lớn hơn created_at của survey
+            if ($startAt->lte($createdAt)) {
+                $validator = Validator::make([], []);
+                $validator->errors()->add('start_at', 'Thời gian bắt đầu phải lớn hơn thời gian tạo khảo sát.');
+                throw new ValidationException($validator);
+            }
+        }
+
         try {
             DB::beginTransaction();
             $updatedSurvey = $this->repository->update($survey, $data);
+            
+            // Kiểm tra lại sau khi update để đảm bảo start_at > created_at
+            if ($updatedSurvey->start_at && $updatedSurvey->created_at) {
+                $startAt = Carbon::parse($updatedSurvey->start_at);
+                $createdAt = Carbon::parse($updatedSurvey->created_at);
+                
+                if ($startAt->lte($createdAt)) {
+                    DB::rollBack();
+                    $validator = Validator::make([], []);
+                    $validator->errors()->add('start_at', 'Thời gian bắt đầu phải lớn hơn thời gian tạo khảo sát.');
+                    throw new ValidationException($validator);
+                }
+            }
+            
             DB::commit();
 
             // Load lại survey với creator_name

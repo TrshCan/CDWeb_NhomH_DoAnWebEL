@@ -457,7 +457,7 @@ export default function Deadline() {
 
   const fetchDeadlines = async () => {
     try {
-      const variables = { perPage: 5, page: currentPage, includeDeleted: showDeleted };
+      const variables = { perPage: 10, page: currentPage, includeDeleted: showDeleted };
       let res;
       if (searchQuery) {
         variables.filter = { title: searchQuery };

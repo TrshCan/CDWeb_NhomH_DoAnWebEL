@@ -95,6 +95,15 @@ class StateManagementService
                 // === 2. TỰ ĐỘNG SYNC TRẠNG THÁI ===
                 $survey = $this->syncStatus($survey);
 
+                // === 2.1. KIỂM TRA NẾU SAU SYNC ĐÃ LÀ CLOSED (QUÁ THỜI GIAN) ===
+                // Nếu sau khi sync, status đã là 'closed' (do quá thời gian), 
+                // thì không cho phép chuyển sang trạng thái khác (trừ khi đang cố đóng)
+                if ($survey->status === 'closed' && $newStatus !== 'closed') {
+                    throw ValidationException::withMessages([
+                        'status' => 'Khảo sát đã quá thời gian và đã được tự động đóng. Không thể thay đổi trạng thái.'
+                    ]);
+                }
+
                 // === 3. KIỂM TRA TRẠNG THÁI TRÙNG ===
                 if ($survey->status === $newStatus) {
                     if ($originalStatus !== $survey->status) {
@@ -193,7 +202,7 @@ class StateManagementService
         return match ($current) {
             'pending' => $this->fromPending($newStatus, $now, $startAt),
             'active'  => $this->fromActive($newStatus, $now, $endAt, $survey),
-            'paused'  => $this->fromPaused($newStatus),
+            'paused'  => $this->fromPaused($newStatus, $now, $endAt, $survey),
             'closed' => throw ValidationException::withMessages(['status' => 'Khảo sát đã đóng, không thể thay đổi.']),
             default   => throw ValidationException::withMessages(['status' => 'Trạng thái hiện tại không hợp lệ.']),
         };
@@ -252,10 +261,34 @@ class StateManagementService
         }
     }
 
-    private function fromPaused($newStatus)
+    private function fromPaused($newStatus, $now, $endAt, $survey)
     {
         if (!in_array($newStatus, ['active', 'closed'])) {
             throw ValidationException::withMessages(['status' => 'Chỉ có thể chuyển sang "Tiếp tục" hoặc "Đóng".']);
+        }
+
+        if ($newStatus === 'closed') {
+            try {
+                // Chỉ cấm đóng sớm nếu: KHÔNG CÓ time_limit + end_at chưa qua
+                if (
+                    (!$survey->time_limit || $survey->time_limit <= 0) &&
+                    $endAt && 
+                    $now->lt($endAt)
+                ) {
+                    throw ValidationException::withMessages(['status' => 'Chưa đến thời gian kết thúc.']);
+                }
+                // Nếu có time_limit → cho phép đóng sớm (hệ thống tự động đóng nếu quá)
+            } catch (ValidationException $e) {
+                // Re-throw ValidationException
+                throw $e;
+            } catch (\Exception $e) {
+                Log::warning("Lỗi so sánh end_at trong fromPaused", [
+                    'error' => $e->getMessage(),
+                    'end_at' => $endAt?->format('Y-m-d H:i:s'),
+                    'survey_id' => $survey->id ?? null
+                ]);
+                // Cho phép đóng nếu có lỗi so sánh (an toàn hơn)
+            }
         }
     }
 

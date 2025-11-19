@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { graphqlRequest } from "../api/graphql";
 
 const statusConfig = {
-  pending: { text: 'Chưa bắt đầu', color: 'gray', actions: ['activate'] },
-  active: { text: 'Đang hoạt động', color: 'green', actions: ['pause', 'close'] },
-  paused: { text: 'Tạm dừng', color: 'yellow', actions: ['activate', 'close'] },
-  closed: { text: 'Đã đóng', color: 'red', actions: [] },
+  pending: { text: 'Chưa bắt đầu', color: 'gray', actions: ['activate'], icon: '⏳' },
+  active: { text: 'Đang hoạt động', color: 'green', actions: ['pause', 'close'], icon: '🟢' },
+  paused: { text: 'Tạm dừng', color: 'yellow', actions: ['activate', 'close'], icon: '⏸️' },
+  closed: { text: 'Đã đóng', color: 'red', actions: [], icon: '🔴' },
 };
 
 const actionConfig = {
@@ -17,13 +18,14 @@ const actionConfig = {
 };
 
 const colorMap = {
-  gray: 'text-gray-900 bg-gray-200',
-  green: 'text-green-900 bg-green-200',
-  yellow: 'text-yellow-900 bg-yellow-200',
-  red: 'text-red-900 bg-red-200',
+  gray: 'text-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300 shadow-sm',
+  green: 'text-green-700 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 shadow-sm',
+  yellow: 'text-amber-700 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 shadow-sm',
+  red: 'text-red-700 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 shadow-sm',
 };
 
 const StatusManagement = () => {
+  const navigate = useNavigate();
   const [surveysState, setSurveysState] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date()); // Thời gian thực
@@ -41,11 +43,29 @@ const StatusManagement = () => {
   const itemsPerPage = 10;
   const lastRefreshTime = useRef(0); // Lưu thời gian refresh cuối cùng
   const isRefreshing = useRef(false); // Flag để tránh refresh đồng thời
+  const [processingActions, setProcessingActions] = useState(new Set()); // Track các action đang xử lý
 
   const showToast = (message, type = 'success') => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3000);
+  };
+
+  // Helper functions để quản lý processing actions
+  const startProcessing = (actionKey) => {
+    setProcessingActions((prev) => new Set([...prev, actionKey]));
+  };
+
+  const stopProcessing = (actionKey) => {
+    setProcessingActions((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(actionKey);
+      return newSet;
+    });
+  };
+
+  const isProcessing = (actionKey) => {
+    return processingActions.has(actionKey);
   };
 
   // Load surveys từ API
@@ -265,25 +285,32 @@ const StatusManagement = () => {
   const Pagination = () => {
     if (totalPages <= 1) return null;
     return (
-      <div className="bg-white p-4 flex-shrink-0">
+      <div className="bg-gradient-to-r from-gray-50 to-white border-t border-gray-200 px-6 py-4 flex-shrink-0">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <span className="text-sm text-gray-700">
-            Trang <b>{currentPage}</b> trên <b>{totalPages}</b> ({surveysState.length} khảo sát)
+          <span className="text-sm text-gray-600 font-medium">
+            Trang <span className="text-blue-600 font-semibold">{currentPage}</span> trên <span className="text-blue-600 font-semibold">{totalPages}</span> 
+            <span className="text-gray-500 ml-1">({surveysState.length} khảo sát)</span>
           </span>
-          <div className="inline-flex rounded-md shadow-sm -space-x-px">
+          <div className="inline-flex rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <button
               onClick={() => handlePageChange(-1)}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="relative inline-flex items-center px-5 py-2.5 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 transition-all duration-200 border-r border-gray-200"
             >
+              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
               Trước
             </button>
             <button
               onClick={() => handlePageChange(1)}
               disabled={currentPage === totalPages}
-              className="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="relative inline-flex items-center px-5 py-2.5 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 transition-all duration-200"
             >
               Sau
+              <svg className="w-4 h-4 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
         </div>
@@ -331,7 +358,16 @@ const StatusManagement = () => {
   };
 
   const handleToggleReview = async (surveyId, isAllowed) => {
+    const actionKey = `toggle-review-${surveyId}`;
+    
+    // Ngăn spam click
+    if (isProcessing(actionKey)) {
+      return;
+    }
+
     try {
+      startProcessing(actionKey);
+      
       const result = await graphqlRequest(`
         mutation ToggleReviewPermission($id: ID!, $allowReview: Boolean!) {
           toggleReviewPermission(id: $id, allowReview: $allowReview) {
@@ -378,6 +414,8 @@ const StatusManagement = () => {
     } catch (error) {
       console.error('Lỗi toggle review permission:', error);
       showToast('Lỗi hệ thống khi cập nhật quyền xem lại', 'error');
+    } finally {
+      stopProcessing(actionKey);
     }
   };
 
@@ -412,6 +450,18 @@ const StatusManagement = () => {
 
   const handleConfirmAction = async () => {
     const { surveyId, action } = activeAction;
+    
+    if (!surveyId || !action) {
+      return;
+    }
+
+    const actionKey = `change-status-${surveyId}-${action}`;
+    
+    // Ngăn spam click
+    if (isProcessing(actionKey)) {
+      return;
+    }
+
     hideConfirmationModal();
 
     // Map action sang status
@@ -428,6 +478,8 @@ const StatusManagement = () => {
     }
 
     try {
+      startProcessing(actionKey);
+      
       const result = await graphqlRequest(`
         mutation ChangeSurveyStatus($id: ID!, $status: SurveyStatus!) {
           changeSurveyStatus(id: $id, status: $status) {
@@ -474,6 +526,8 @@ const StatusManagement = () => {
     } catch (error) {
       console.error('Lỗi change status:', error);
       showToast('Lỗi hệ thống khi thay đổi trạng thái', 'error');
+    } finally {
+      stopProcessing(actionKey);
     }
   };
 
@@ -530,21 +584,24 @@ const StatusManagement = () => {
       let reviewPermissionHtml = null;
 
       if (currentUserRole === 'admin') {
+        const isToggleProcessing = isProcessing(`toggle-review-${survey.id}`);
         reviewPermissionHtml = (
-          <td className="px-4 md:px-6 py-4">
-            <label className="relative inline-flex items-center cursor-pointer">
+          <td className="px-6 py-5">
+            <label className={`relative inline-flex items-center ${isToggleProcessing ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} group`}>
               <input
                 type="checkbox"
                 className="sr-only peer review-toggle"
                 checked={survey.allowReview}
+                disabled={isToggleProcessing}
                 onChange={(e) => handleToggleReview(survey.id, e.target.checked)}
               />
-              <div className="w-11 h-6 bg-gray-200 peer-checked:bg-blue-600 rounded-full after:content-[''] after:absolute after:w-5 after:h-5 after:bg-white after:rounded-full after:top-[2px] after:left-[2px] peer-checked:after:translate-x-full after:transition-all"></div>
+              <div className="w-12 h-6 bg-gray-300 peer-checked:bg-blue-600 rounded-full shadow-inner transition-colors duration-200 peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-2"></div>
+              <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-200 peer-checked:translate-x-6"></div>
             </label>
           </td>
         );
       } else {
-        reviewPermissionHtml = <td className={currentUserRole === 'admin' ? 'px-4 md:px-6 py-4' : 'hidden'}></td>;
+        reviewPermissionHtml = <td className={currentUserRole === 'admin' ? 'px-6 py-5' : 'hidden'}></td>;
       }
 
       const isDropdownOpen = openDropdownId === survey.id;
@@ -558,11 +615,18 @@ const StatusManagement = () => {
                 e.stopPropagation();
                 handleToggleDropdown(survey.id);
               }}
-              className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className={`inline-flex justify-center items-center gap-2 rounded-lg border shadow-sm px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                isDropdownOpen
+                  ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-md'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:shadow-md'
+              }`}
             >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
               Tùy chọn
               <svg
-                className={`ml-2 h-4 w-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                className={`h-4 w-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -572,163 +636,316 @@ const StatusManagement = () => {
             </button>
             {isDropdownOpen && (
               <div
-                className={`absolute right-0 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 ${positionClasses} dropdown-content show`}  // 🔹 Tăng z-index lên 50
+                className={`absolute right-0 w-56 rounded-lg shadow-xl bg-white border border-gray-200 z-50 transition-all duration-200 ease-out opacity-100 transform translate-y-0 ${positionClasses}`}
               >
-                <div className="py-1 max-h-48 overflow-y-auto">
-                  {availableActions.map((action) => (
-                    <button
-                      key={action}
-                      type="button"
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleActionClick(survey.id, action);
-                        setOpenDropdownId(null);
-                      }}
-                    >
-                      {actionConfig[action].text}
-                    </button>
-                  ))}
+                <div className="py-1.5 max-h-64 overflow-y-auto">
+                  {availableActions.map((action) => {
+                    const isActionProcessing = isProcessing(`change-status-${survey.id}-${action}`);
+                    return (
+                      <button
+                        key={action}
+                        type="button"
+                        disabled={isActionProcessing}
+                        className={`block w-full text-left px-4 py-2.5 text-sm transition-colors duration-150 ${
+                          isActionProcessing
+                            ? 'text-gray-400 cursor-not-allowed opacity-50'
+                            : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                        }`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!isActionProcessing) {
+                            handleActionClick(survey.id, action);
+                            setOpenDropdownId(null);
+                          }
+                        }}
+                      >
+                        <span className="flex items-center gap-2">
+                          {isActionProcessing && (
+                            <svg className="animate-spin h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          )}
+                          {!isActionProcessing && action === 'activate' && <span className="text-green-600">▶</span>}
+                          {!isActionProcessing && action === 'pause' && <span className="text-amber-600">⏸</span>}
+                          {!isActionProcessing && action === 'close' && <span className="text-red-600">⏹</span>}
+                          {!isActionProcessing && (action === 'view_results' || action === 'review_results') && <span className="text-blue-600">👁</span>}
+                          {actionConfig[action].text}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <span className="text-sm text-gray-500">Không có</span>
+          <span className="text-sm text-gray-400 italic">Không có hành động</span>
         );
 
       return (
-        <tr key={survey.id} className="bg-white hover:bg-gray-50 transition-colors">
-          <td className="px-4 md:px-6 py-4 font-medium text-gray-900">
-            <div className="max-w-md truncate" title={survey.name}>{survey.name}</div>
+        <tr key={survey.id} className="bg-white hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 border-b border-gray-100 transition-all duration-300 group cursor-pointer">
+          <td className="px-6 py-5">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0 relative">
+                <div className="w-3 h-3 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 group-hover:from-blue-400 group-hover:to-blue-600 transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:scale-125"></div>
+                <div className="absolute inset-0 w-3 h-3 rounded-full bg-blue-400 opacity-0 group-hover:opacity-30 group-hover:animate-ping"></div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-gray-900 truncate group-hover:text-blue-700 transition-colors duration-200" title={survey.name}>
+                  {survey.name}
+                </div>
+                {survey.description && (
+                  <div className="text-xs text-gray-500 truncate mt-1 group-hover:text-gray-600 transition-colors duration-200" title={survey.description}>
+                    {survey.description}
+                  </div>
+                )}
+              </div>
+            </div>
           </td>
-          <td className="px-4 md:px-6 py-4">
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorMap[statusInfo.color]}`}>
-              {statusInfo.text}
+          <td className="px-6 py-5">
+            <span className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold ${colorMap[statusInfo.color]} transition-all duration-200 hover:scale-105 hover:shadow-md`}>
+              <span className="text-sm">{statusInfo.icon}</span>
+              <span>{statusInfo.text}</span>
             </span>
           </td>
           {reviewPermissionHtml}
-          <td className="px-4 md:px-6 py-4 text-center relative">{actions}</td>
+          <td className="px-6 py-5 text-center relative">{actions}</td>
         </tr>
       );
     });
   };
 
   return (
-    <>
-      <style>{`
-        .dropdown-content {
-          transition: transform 0.2s ease, opacity 0.2s ease;
-        }
-        .dropdown-content.show {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      `}</style>
-
-      <div className="w-full h-screen antialiased text-slate-700 bg-gray-100 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex-shrink-0">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Quản Lý Trạng Thái Khảo Sát</h1>
-              <p className="text-sm md:text-base text-slate-500 mt-1">Thay đổi trạng thái hoạt động và quyền xem lại của các khảo sát.</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-                <div className="text-xs md:text-sm text-gray-600">Thời gian hiện tại</div>
-                <div className="text-sm md:text-lg font-mono font-semibold text-blue-600">
-                  {currentTime.toLocaleString('vi-VN', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                  })}
+    <div className="w-full h-screen antialiased text-slate-700 bg-gradient-to-br from-gray-50 via-white to-gray-50 flex flex-col overflow-hidden">
+        <header className="bg-white shadow-md border-b border-gray-200 px-6 py-5 flex-shrink-0">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div className="flex items-center gap-4 flex-1">
+              <button 
+                onClick={() => navigate('/')} 
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600 transition-all duration-200 shadow-sm hover:shadow-md"
+                title="Trở về trang chủ"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Trang chủ
+              </button>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-1.5">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                  </div>
+                  <h1 className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-slate-800 via-blue-700 to-slate-800 bg-clip-text text-transparent">
+                    Quản Lý Trạng Thái Khảo Sát
+                  </h1>
                 </div>
-                <button
-                  onClick={() => loadSurveys()}
-                  className="mt-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                >
-                  🔄 Làm mới
-                </button>
+                <p className="text-sm md:text-base text-slate-500 ml-[52px]">Thay đổi trạng thái hoạt động và quyền xem lại của các khảo sát.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 w-full lg:w-auto">
+              <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-5 rounded-2xl shadow-lg border-2 border-blue-100/50 flex-1 lg:flex-none relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200/20 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-200/20 rounded-full -ml-12 -mb-12 blur-xl"></div>
+                <div className="relative flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-lg shadow-green-500/50"></div>
+                      <div className="text-xs font-bold text-blue-700 uppercase tracking-wider">Thời gian hiện tại</div>
+                    </div>
+                    <div className="text-base md:text-lg font-mono font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
+                      {currentTime.toLocaleString('vi-VN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => loadSurveys()}
+                    disabled={loading || isRefreshing.current}
+                    className="flex-shrink-0 px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 transform hover:rotate-180 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-indigo-600 disabled:hover:rotate-0 disabled:active:scale-100"
+                    title="Làm mới danh sách"
+                  >
+                    <svg className={`w-5 h-5 ${loading || isRefreshing.current ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </header>
 
         {/* 🔹 Bỏ overflow-hidden để dropdown không bị clip */}
-        <div className="flex-1 overflow-auto bg-white">
+        <div className="flex-1 overflow-auto bg-gradient-to-b from-gray-50 to-white">
           <div className="h-full flex flex-col">
             {loading ? (
-              <div className="flex-1 flex items-center justify-center p-8">
+              <div className="flex-1 flex items-center justify-center p-12">
                 <div className="text-center">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                  <p className="mt-4 text-gray-600">Đang tải danh sách khảo sát...</p>
+                  <div className="relative inline-block">
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-8 w-8 rounded-full bg-blue-100"></div>
+                    </div>
+                  </div>
+                  <p className="mt-6 text-gray-600 font-medium text-lg">Đang tải danh sách khảo sát...</p>
+                  <p className="mt-2 text-gray-400 text-sm">Vui lòng đợi trong giây lát</p>
                 </div>
               </div>
             ) : surveysState.length === 0 ? (
               <div className="flex-1 flex items-center justify-center p-12">
-                <p className="text-gray-600 text-lg">Không có khảo sát nào</p>
+                <div className="text-center max-w-md">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
+                    <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">Không có khảo sát nào</h3>
+                  <p className="text-gray-500">Hiện tại chưa có khảo sát nào trong hệ thống.</p>
+                </div>
               </div>
             ) : (
               <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-auto">
-                  <table className="w-full text-sm text-left text-gray-700 min-w-full">
-                    <thead className="bg-gray-100 text-gray-900 text-xs uppercase font-semibold sticky top-0 z-10">
-                      <tr>
-                        <th className="px-4 md:px-6 py-3">Tên khảo sát</th>
-                        <th className="px-4 md:px-6 py-3">Trạng thái</th>
-                        {currentUserRole === 'admin' && <th className="px-4 md:px-6 py-3">Cho phép xem lại</th>}
-                        <th className="px-4 md:px-6 py-3 text-center">Hành động</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">{renderSurveyList()}</tbody>
-                  </table>
+                <div className="flex-1 overflow-auto px-6 py-6">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table className="w-full text-sm text-left text-gray-700 min-w-full">
+                      <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50 text-gray-700 text-xs uppercase font-extrabold sticky top-0 z-10 border-b-2 border-gray-300 shadow-sm">
+                        <tr>
+                          <th className="px-6 py-5 text-gray-700 tracking-wider">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              Tên khảo sát
+                            </div>
+                          </th>
+                          <th className="px-6 py-5 text-gray-700 tracking-wider">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Trạng thái
+                            </div>
+                          </th>
+                          {currentUserRole === 'admin' && (
+                            <th className="px-6 py-5 text-gray-700 tracking-wider">
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                Cho phép xem lại
+                              </div>
+                            </th>
+                          )}
+                          <th className="px-6 py-5 text-center text-gray-700 tracking-wider">
+                            <div className="flex items-center justify-center gap-2">
+                              <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                              </svg>
+                              Hành động
+                            </div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">{renderSurveyList()}</tbody>
+                    </table>
+                  </div>
                 </div>
-                <div className="border-t border-gray-200">
-                  <Pagination />
-                </div>
+                <Pagination />
               </div>
             )}
           </div>
         </div>
 
         {confirmationModal.show && (
-          <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">{confirmationModal.title}</h2>
-              <p className="text-gray-600 mb-6 whitespace-pre-line text-left">{confirmationModal.text}</p>
-              <div className="flex justify-center space-x-4">
-                <button
-                  onClick={handleConfirmAction}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Xác nhận
-                </button>
-                <button onClick={hideConfirmationModal} className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">
-                  Hủy
-                </button>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4 transition-opacity duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-200 scale-100">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-800">{confirmationModal.title}</h2>
+                </div>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-600 mb-6 whitespace-pre-line text-left leading-relaxed">{confirmationModal.text}</p>
+                <div className="flex justify-end gap-3">
+                  {(() => {
+                    const actionKey = activeAction.surveyId && activeAction.action 
+                      ? `change-status-${activeAction.surveyId}-${activeAction.action}` 
+                      : null;
+                    const isConfirmProcessing = actionKey ? isProcessing(actionKey) : false;
+                    
+                    return (
+                      <>
+                        <button
+                          onClick={hideConfirmationModal}
+                          disabled={isConfirmProcessing}
+                          className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-100"
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          onClick={handleConfirmAction}
+                          disabled={isConfirmProcessing}
+                          className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:active:scale-100 flex items-center gap-2"
+                        >
+                          {isConfirmProcessing && (
+                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          )}
+                          Xác nhận
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        <div className="fixed top-4 right-4 space-y-2 z-50">
+        <div className="fixed top-6 right-6 space-y-3 z-50">
           {toasts.map((toast) => (
             <div
               key={toast.id}
-              className={`px-4 py-2 rounded-md shadow-md text-white ${
-                toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+              className={`px-5 py-3 rounded-xl shadow-xl text-white min-w-[300px] max-w-md transform transition-all duration-300 translate-x-0 ${
+                toast.type === 'success' 
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
+                  : 'bg-gradient-to-r from-red-500 to-rose-600'
               }`}
             >
-              {toast.message}
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  {toast.type === 'success' ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </div>
+                <p className="flex-1 font-medium text-sm leading-relaxed">{toast.message}</p>
+              </div>
             </div>
           ))}
         </div>
       </div>
-    </>
   );
 };
 

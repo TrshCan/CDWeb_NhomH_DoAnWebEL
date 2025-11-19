@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { graphqlRequest } from '../api/graphql';
 
 const statusConfig = {
-  pending: { label: 'Chưa bắt đầu', class: 'bg-blue-100 text-blue-800' },
-  active: { label: 'Đang hoạt động', class: 'bg-green-100 text-green-800' },
-  paused: { label: 'Tạm dừng', class: 'bg-amber-100 text-amber-800' },
-  closed: { label: 'Đã đóng', class: 'bg-gray-100 text-gray-800' },
+  pending: { label: 'Chưa bắt đầu', class: 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border-blue-300', icon: '⏳' },
+  active: { label: 'Đang hoạt động', class: 'bg-gradient-to-r from-green-100 to-emerald-200 text-green-800 border-green-300', icon: '🟢' },
+  paused: { label: 'Tạm dừng', class: 'bg-gradient-to-r from-amber-100 to-yellow-200 text-amber-800 border-amber-300', icon: '⏸️' },
+  closed: { label: 'Đã đóng', class: 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border-gray-300', icon: '🔴' },
 };
 
 const types = ['', 'survey', 'quiz'];
@@ -19,11 +20,18 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' })
         className={`relative ${size} w-full mx-auto rounded-xl bg-white shadow-2xl overflow-hidden max-h-[98vh] overflow-y-auto transform transition-all animate-in fade-in zoom-in-95`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-8 py-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-200 sticky top-0 z-10">
-          <h3 className="text-3xl font-bold text-gray-900">{title}</h3>
+        <div className="flex items-center justify-between px-8 py-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b-2 border-blue-200 sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{title}</h3>
+          </div>
           <button 
             onClick={onClose} 
-            className="text-gray-500 hover:text-gray-900 hover:bg-white rounded-full p-2 transition-all duration-200 hover:scale-110"
+            className="text-gray-500 hover:text-gray-900 hover:bg-white rounded-full p-2 transition-all duration-200 hover:scale-110 shadow-sm hover:shadow-md"
             aria-label="Đóng"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,8 +66,8 @@ const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87V14.13a1 1 0 001.555.834l3.197-2.132a1 1 0 000-1.664z"/></svg>
                 {selectedSurvey.type === 'survey' ? 'Survey' : 'Quiz'}
               </span>
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold border-2 ${statusConfig[selectedSurvey.status]?.class} ${statusConfig[selectedSurvey.status]?.class?.includes('green') ? 'border-green-300' : statusConfig[selectedSurvey.status]?.class?.includes('red') || statusConfig[selectedSurvey.status]?.class?.includes('amber') ? 'border-amber-300' : 'border-gray-300'}`}>
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold border-2 ${statusConfig[selectedSurvey.status]?.class} shadow-sm hover:scale-105 transition-transform duration-200`}>
+                <span className="text-sm">{statusConfig[selectedSurvey.status]?.icon}</span>
                 {statusConfig[selectedSurvey.status]?.label}
               </span>
             </div>
@@ -502,6 +510,7 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
 );
 
 const SurveyFilter = () => {
+  const navigate = useNavigate();
   const [surveysList, setSurveysList] = useState([]);
   const [categories, setCategories] = useState([]);
   const [categoryIdMap, setCategoryIdMap] = useState({});
@@ -1546,23 +1555,55 @@ const SurveyFilter = () => {
       </div>
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Danh sách Khảo sát</h1>
-          <button onClick={handleAddClick} className="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate('/')} 
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 rounded-xl hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400 hover:shadow-md transition-all duration-200 transform hover:scale-105"
+              title="Trở về trang chủ"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              Trang chủ
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 shadow-lg">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Danh sách Khảo sát</h1>
+            </div>
+          </div>
+          <button 
+            onClick={handleAddClick} 
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
             Thêm khảo sát
           </button>
         </div>
 
         {/* Bộ lọc */}
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+        <div className="bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl shadow-xl border-2 border-gray-100 mb-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Bộ lọc</h2>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent">Bộ lọc</h2>
+            </div>
             {(filters.category || filters.type || filters.status || filters.keyword || filters.creatorName) && (
               <button 
                 onClick={handleResetFilters} 
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border-2 border-gray-300 text-gray-700 bg-white hover:bg-gradient-to-r hover:from-red-50 hover:to-rose-50 hover:border-red-300 hover:text-red-700 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
                 title="Xóa bộ lọc"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
                 Xóa bộ lọc
@@ -1571,7 +1612,12 @@ const SurveyFilter = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-2">Tìm kiếm</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Tìm kiếm
+              </label>
               <div className="relative">
                 <input 
                   type="text"
@@ -1586,7 +1632,7 @@ const SurveyFilter = () => {
                     }
                   }}
                   placeholder="Tiêu đề hoặc mô tả..."
-                  className={`w-full p-3 pr-16 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.filter.keyword ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full p-3 pr-16 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md ${formErrors.filter.keyword ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}
                 />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                   <span className={`text-xs ${filters.keyword.length >= 250 ? 'text-orange-500' : filters.keyword.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
@@ -1599,7 +1645,12 @@ const SurveyFilter = () => {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-2">Người tạo (Giảng viên)</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Người tạo
+              </label>
               <div className="relative">
                 <input 
                   type="text"
@@ -1614,7 +1665,7 @@ const SurveyFilter = () => {
                     }
                   }}
                   placeholder="Tên giảng viên..."
-                  className={`w-full p-3 pr-16 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.filter.creatorName ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full p-3 pr-16 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md ${formErrors.filter.creatorName ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}
                 />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                   <span className={`text-xs ${filters.creatorName.length >= 250 ? 'text-orange-500' : filters.creatorName.length >= 255 ? 'text-red-500' : 'text-gray-400'}`}>
@@ -1627,13 +1678,18 @@ const SurveyFilter = () => {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-2">Danh mục</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                Danh mục
+              </label>
               <select 
                 name="category" 
                 value={filters.category} 
                 onChange={handleFilterChange} 
                 disabled={categoriesLoading}
-                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${formErrors.filter.category ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full p-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-gray-100 disabled:cursor-not-allowed ${formErrors.filter.category ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}
               >
                 {categoriesLoading ? (
                   <option value="">Đang tải...</option>
@@ -1652,12 +1708,17 @@ const SurveyFilter = () => {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-2">Loại</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Loại
+              </label>
               <select 
                 name="type" 
                 value={filters.type} 
                 onChange={handleFilterChange} 
-                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.filter.type ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full p-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md ${formErrors.filter.type ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}
               >
                 {types.map(t => <option key={t} value={t}>{t === 'survey' ? 'Survey' : t === 'quiz' ? 'Quiz' : 'Tất cả'}</option>)}
               </select>
@@ -1666,12 +1727,17 @@ const SurveyFilter = () => {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-2">Trạng thái</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Trạng thái
+              </label>
               <select 
                 name="status" 
                 value={filters.status} 
                 onChange={handleFilterChange} 
-                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.filter.status ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full p-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md ${formErrors.filter.status ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'}`}
               >
                 {statuses.map(s => <option key={s} value={s}>{statusConfig[s]?.label || 'Tất cả'}</option>)}
               </select>
@@ -1683,25 +1749,33 @@ const SurveyFilter = () => {
         </div>
 
         {/* Bảng */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center">Đang tải...</div>
+            <div className="p-16 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 mb-4">
+                <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <p className="text-lg font-semibold text-gray-700">Đang tải dữ liệu...</p>
+            </div>
           ) : paginatedSurveys.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center">
-                <svg className="h-7 w-7 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <div className="p-16 text-center">
+              <div className="mx-auto mb-6 h-20 w-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-lg">
+                <svg className="h-10 w-10 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              <p className="text-lg font-semibold text-gray-800">Không có khảo sát nào</p>
-              <p className="mt-1 text-sm text-gray-500">Hãy thay đổi điều kiện lọc hoặc xóa bộ lọc để xem thêm kết quả.</p>
+              <p className="text-xl font-bold text-gray-800 mb-2">Không có khảo sát nào</p>
+              <p className="text-sm text-gray-500 mb-6">Hãy thay đổi điều kiện lọc hoặc xóa bộ lọc để xem thêm kết quả.</p>
               {(filters.category || filters.type || filters.status || filters.keyword) && (
                 <div className="mt-4">
                   <button 
                     onClick={handleResetFilters}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9M4 20v-5h-.418m0 0A8.003 8.003 0 0019.418 15" />
                     </svg>
                     Xóa bộ lọc
@@ -1711,40 +1785,48 @@ const SurveyFilter = () => {
             </div>
           ) : (
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gradient-to-r from-gray-50 via-blue-50 to-indigo-50 border-b-2 border-gray-200">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Tiêu đề</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Danh mục</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Loại</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Người tạo</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Điểm</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Đối tượng</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">Thời gian</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500">Hành động</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span>Tiêu đề</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Danh mục</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Loại</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Người tạo</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Điểm</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Đối tượng</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Trạng thái</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Thời gian</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Hành động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 bg-white">
                 {paginatedSurveys.map(survey => (
-                  <tr key={survey.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{survey.title}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{survey.category}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{survey.type === 'survey' ? 'Survey' : 'Quiz'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{survey.creatorName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{survey.points}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}</td>
+                  <tr key={survey.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group">
+                    <td className="px-6 py-4 text-sm font-semibold text-gray-900">{survey.title}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{survey.category}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{survey.type === 'survey' ? 'Survey' : 'Quiz'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{survey.creatorName}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 font-medium">{survey.points}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${statusConfig[survey.status]?.class}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm ${statusConfig[survey.status]?.class} transform group-hover:scale-105 transition-transform duration-200`}>
+                        <span className="text-sm">{statusConfig[survey.status]?.icon}</span>
                         {statusConfig[survey.status]?.label}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{formatTimeRange(survey.startAt, survey.endAt)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">{formatTimeRange(survey.startAt, survey.endAt)}</td>
                     <td className="px-6 py-4">
                       <div className="flex space-x-2">
-                        <button onClick={() => handleView(survey)} className="p-1 text-gray-500 hover:text-gray-900 transition-colors" title="Xem"><ViewIcon /></button>
-                        <button onClick={() => handleEdit(survey)} className="p-1 text-gray-500 hover:text-gray-900 transition-colors" title="Sửa"><EditIcon /></button>
-                        <button onClick={() => handleDuplicate(survey)} className="p-1 text-gray-500 hover:text-purple-600 transition-colors" title="Sao chép"><DuplicateIcon /></button>
-                        <button onClick={() => handleDeleteConfirm(survey)} className="p-1 text-gray-500 hover:text-red-600 transition-colors" title="Xóa"><DeleteIcon /></button>
+                        <button onClick={() => handleView(survey)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Xem"><ViewIcon /></button>
+                        <button onClick={() => handleEdit(survey)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Sửa"><EditIcon /></button>
+                        <button onClick={() => handleDuplicate(survey)} className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Sao chép"><DuplicateIcon /></button>
+                        <button onClick={() => handleDeleteConfirm(survey)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Xóa"><DeleteIcon /></button>
                       </div>
                     </td>
                   </tr>
@@ -1756,18 +1838,47 @@ const SurveyFilter = () => {
 
         {/* Phân trang */}
         {totalPages > 1 && (
-          <div className="mt-6 flex justify-between items-center">
-            <div className="text-sm text-gray-700">
-              Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredSurveys.length)} của {filteredSurveys.length}
+          <div className="mt-8 flex justify-between items-center bg-white rounded-xl shadow-lg border-2 border-gray-100 p-4">
+            <div className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Hiển thị <span className="text-blue-600 font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="text-blue-600 font-bold">{Math.min(currentPage * itemsPerPage, filteredSurveys.length)}</span> của <span className="text-blue-600 font-bold">{filteredSurveys.length}</span>
             </div>
             <div className="flex space-x-2">
-              <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-2 border rounded disabled:opacity-50 hover:bg-gray-50">Trước</button>
+              <button 
+                onClick={() => handlePageChange(currentPage - 1)} 
+                disabled={currentPage === 1} 
+                className="px-4 py-2 border-2 border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400 transition-all duration-200 font-semibold text-gray-700 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Trước
+              </button>
               {Array.from({ length: totalPages }, (_, i) => (
-                <button key={i + 1} onClick={() => handlePageChange(i + 1)} className={`px-3 py-2 border rounded ${currentPage === i + 1 ? 'bg-blue-500 text-white' : 'hover:bg-gray-50'}`}>
+                <button 
+                  key={i + 1} 
+                  onClick={() => handlePageChange(i + 1)} 
+                  className={`px-4 py-2 border-2 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 ${
+                    currentPage === i + 1 
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg' 
+                      : 'border-gray-300 text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400'
+                  }`}
+                >
                   {i + 1}
                 </button>
               ))}
-              <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-2 border rounded disabled:opacity-50 hover:bg-gray-50">Sau</button>
+              <button 
+                onClick={() => handlePageChange(currentPage + 1)} 
+                disabled={currentPage === totalPages} 
+                className="px-4 py-2 border-2 border-gray-300 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400 transition-all duration-200 font-semibold text-gray-700 flex items-center gap-2"
+              >
+                Sau
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
           </div>
         )}
