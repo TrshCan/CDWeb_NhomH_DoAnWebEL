@@ -1,0 +1,9 @@
+extend type Query {
+  surveyJoinDetail(surveyId: Int!): SurveyJoinDetail
+    @field(resolver: "App\\GraphQL\\Resolvers\\SurveyJoinResolver@surveyJoinDetail")
+}
+
+extend type Mutation {
+  submitSurveyAnswers(surveyId: Int!, answers: [SurveyAnswerInput!]!): SurveySubmissionResult!
+    @field(resolver: "App\\GraphQL\\Resolvers\\SurveyJoinResolver@submitSurveyAnswers")
+}

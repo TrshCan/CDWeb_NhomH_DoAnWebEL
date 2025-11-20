@@ -1,16 +1,35 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
+import { getUserProfile } from "../api/graphql/user";
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+  const [showSurveysExpanded, setShowSurveysExpanded] = useState(false);
 
   // Check login status based on token
-  const checkLoginStatus = () => {
+  const checkLoginStatus = async () => {
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
+
+    // Fetch user role if logged in
+    if (token) {
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        try {
+          const userProfile = await getUserProfile(parseInt(userId));
+          setUserRole(userProfile?.role || null);
+        } catch (error) {
+          console.error("Failed to fetch user role:", error);
+          setUserRole(null);
+        }
+      }
+    } else {
+      setUserRole(null);
+    }
   };
 
   useEffect(() => {
@@ -29,6 +48,13 @@ export default function Sidebar() {
       window.removeEventListener("tokenChanged", handleTokenChange);
     };
   }, [location]); // Re-check when route changes (optional but safe)
+
+  // Auto-expand Surveys if on a surveys route
+  useEffect(() => {
+    if (location.pathname.startsWith("/surveys")) {
+      setShowSurveysExpanded(true);
+    }
+  }, [location]);
 
   // Sidebar links
   const allLinks = [
@@ -68,7 +94,7 @@ export default function Sidebar() {
   );
 
   // Handle navigation with auth check
-  const handleLinkClick = (e, path, requiresAuth) => {
+  const handleLinkClick = (e, path, requiresAuth, isSurveys = false) => {
     if (requiresAuth && !isLoggedIn) {
       e.preventDefault();
       toast.error("Bruh, you gotta log in first", {
@@ -81,6 +107,14 @@ export default function Sidebar() {
       });
       return;
     }
+
+    // Handle Surveys expand/collapse
+    if (isSurveys && isLoggedIn) {
+      e.preventDefault();
+      setShowSurveysExpanded(!showSurveysExpanded);
+      return;
+    }
+
     navigate(path);
   };
 
@@ -111,30 +145,152 @@ export default function Sidebar() {
 
       <aside className="w-16 lg:w-1/4 bg-white rounded-r-lg shadow p-4 flex flex-col space-y-2 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
         <nav className="flex flex-col space-y-2 flex-grow">
-          {visibleLinks.map((item, index) => (
-            <Link
-              key={index}
-              to={item.path}
-              onClick={(e) => handleLinkClick(e, item.path, item.requiresAuth)}
-              className="flex items-center space-x-2 text-cyan-600 hover:bg-cyan-50 p-2 rounded-lg cursor-pointer transition-all duration-150"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+          {visibleLinks.map((item, index) => {
+            // Special handling for Surveys expandable section
+            if (item.label === "Surveys" && isLoggedIn) {
+              const isLecturerOrAdmin =
+                userRole === "lecturer" || userRole === "admin";
+              const isActiveSurveysRoute = location.pathname.startsWith("/surveys");
+
+              return (
+                <div key={index} className="flex flex-col">
+                  <button
+                    onClick={(e) =>
+                      handleLinkClick(e, item.path, item.requiresAuth, true)
+                    }
+                    className={`w-full flex items-center space-x-2 p-2 rounded-lg cursor-pointer transition-all duration-150 ${
+                      isActiveSurveysRoute
+                        ? "bg-cyan-100 text-cyan-700"
+                        : "text-cyan-600 hover:bg-cyan-50"
+                    }`}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d={item.icon}
+                      />
+                    </svg>
+                    <span className="hidden lg:inline flex-1 text-left">
+                      {item.label}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 hidden lg:block transition-transform duration-200 ${
+                        showSurveysExpanded ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Expanded Sub-items */}
+                  {showSurveysExpanded && (
+                    <div className="flex flex-col space-y-1 mt-1 ml-2 lg:ml-4 border-l-2 border-cyan-200 pl-2">
+                      {isLecturerOrAdmin && (
+                        <Link
+                          to="/surveys/created"
+                          onClick={() => setShowSurveysExpanded(true)}
+                          className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-150 ${
+                            location.pathname === "/surveys/created"
+                              ? "bg-cyan-100 text-cyan-700 font-medium"
+                              : "text-gray-600 hover:bg-cyan-50 hover:text-cyan-600"
+                          }`}
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                          <span className="hidden lg:inline text-sm">
+                            Surveys I Made
+                          </span>
+                        </Link>
+                      )}
+                      <Link
+                        to="/surveys/completed"
+                        onClick={() => setShowSurveysExpanded(true)}
+                        className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-150 ${
+                          location.pathname === "/surveys/did"
+                            ? "bg-cyan-100 text-cyan-700 font-medium"
+                            : "text-gray-600 hover:bg-cyan-50 hover:text-cyan-600"
+                        }`}
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                          />
+                        </svg>
+                        <span className="hidden lg:inline text-sm">
+                          Surveys I Did
+                        </span>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Regular link
+            return (
+              <Link
+                key={index}
+                to={item.path}
+                onClick={(e) =>
+                  handleLinkClick(e, item.path, item.requiresAuth)
+                }
+                className="flex items-center space-x-2 text-cyan-600 hover:bg-cyan-50 p-2 rounded-lg cursor-pointer transition-all duration-150"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d={item.icon}
-                />
-              </svg>
-              <span className="hidden lg:inline">{item.label}</span>
-            </Link>
-          ))}
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d={item.icon}
+                  />
+                </svg>
+                <span className="hidden lg:inline">{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Auth Section */}

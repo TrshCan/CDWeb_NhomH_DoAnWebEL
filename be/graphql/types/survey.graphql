@@ -1,0 +1,115 @@
+type SurveySummary {
+  id: ID!
+  title: String!
+  created_at: DateTime
+  end_at: DateTime
+  status: String!
+  responses: Int!
+}
+
+type SurveyRawDataResponse {
+  id: ID!
+  studentId: String!
+  studentName: String!
+  khoa: String!
+  completedDate: String!
+}
+
+type SurveyRawData {
+  title: String!
+  responses: [SurveyRawDataResponse!]!
+}
+
+type SurveyOption {
+  id: ID!
+  option_text: String!
+}
+
+type QuestionAnswerStat {
+  option_text: String
+  count: Int
+}
+
+type SurveyQuestionOverview {
+  id: ID!
+  question_text: String!
+  question_type: String!
+  options: [SurveyOption!]!
+  answer_stats: [QuestionAnswerStat!]!
+}
+
+type SurveyOverview {
+  title: String!
+  totalResponses: Int!
+  questions: [SurveyQuestionOverview!]!
+}
+
+type SurveyResponseParticipant {
+  name: String!
+  studentId: String
+  faculty: String
+  class: String
+  completedAt: String
+}
+
+type SurveyResponseStats {
+  completionTime: String
+  answeredQuestions: Int!
+  totalQuestions: Int!
+  totalScore: Float
+  maxScore: Float
+  scorePercentage: Float
+}
+
+type SurveyResponseOption {
+  id: ID!
+  text: String!
+  selected: Boolean!
+  isCorrect: Boolean
+}
+
+type SurveyResponseQuestion {
+  id: ID!
+  question: String!
+  type: String!
+  answerText: String
+  options: [SurveyResponseOption!]
+  score: Float
+  points: Float
+}
+
+type SurveyResponseNavigation {
+  previous: String
+  next: String
+}
+
+type SurveyResponseDetail {
+  responseId: ID!
+  surveyId: ID!
+  surveyTitle: String!
+  participant: SurveyResponseParticipant!
+  stats: SurveyResponseStats!
+  questions: [SurveyResponseQuestion!]!
+  navigation: SurveyResponseNavigation
+}
+
+
+type CompletedSurveySummary {
+  id: ID!
+  name: String!
+  creator: String
+  completedAt: DateTime
+  canView: Boolean!
+}
+
+type SurveySummary {
+  id: ID!
+  title: String!
+  created_at: DateTime
+  end_at: DateTime
+  status: String!
+  responses: Int!
+}
+
+
+

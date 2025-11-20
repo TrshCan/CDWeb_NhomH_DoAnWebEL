@@ -3,28 +3,32 @@
 import axios from "axios";
 
 const graphqlClient = axios.create({
-  baseURL: "http://localhost:8000/graphql", // or your deployed URL
+  baseURL: "http://localhost:8000/graphql",
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Thêm interceptor để tự động thêm token vào header
 graphqlClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Safely read token
+    try {
+      const token = window.localStorage.getItem("token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      // Ignore if localStorage unavailable
     }
-    // Không set Content-Type cho FormData, để browser tự set với boundary
+
+    // IMPORTANT: Allow FormData to auto-set correct Content-Type
     if (config.data instanceof FormData) {
-      delete config.headers['Content-Type'];
+      delete config.headers["Content-Type"];
     }
+
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 export default graphqlClient;

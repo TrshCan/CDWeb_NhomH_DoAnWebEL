@@ -1,36 +1,47 @@
 #import scalars.graphql
 
-type Query {
-    _empty: String
-}
+# ──────────────────────────────────────────────────────────────
+# ROOT TYPES – DO NOT define Query/Mutation here at all!
+# They will be automatically created and extended by Lighthouse
+# ──────────────────────────────────────────────────────────────
 
+# Import all your types
 #import types/post.graphql
 #import types/user.graphql
 #import types/postMedia.graphql
 #import types/postLike.graphql
 #import types/deadline.graphql
 #import types/event.graphql
-#import types/badge.graphql
+#import types/survey.graphql
+#import types/surveyJoin.graphql
 
+# Import inputs
 #import inputs/postCreateInput.graphql
 #import inputs/postUpdateInput.graphql
 
+# Import queries (this is where extend type Query lives!)
 #import queries/postQueries.graphql
 #import queries/eventQueries.graphql
 #import queries/deadlineQueries.graphql
+#import queries/surveyQueries.graphql
 #import queries/getProfileQueries.graphql
 #import queries/adminUserQueries.graphql
 #import queries/adminBadgeQueries.graphql
+#import queries/surveyJoinQueries.graphql
+
+# Import mutations
 #import mutations/postMutations.graphql
 #import mutations/userMutations.graphql
 #import mutations/adminUserMutations.graphql
 #import mutations/adminBadgeMutations.graphql
 
-type Mutation {
+# Your custom root mutations (login, register) – move them to a file or use extend
+extend type Mutation {
   loginUser(
     email: String!
     password: String!
-  ): AuthPayload @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@loginUser")
+  ): AuthPayload
+    @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@loginUser")
 
   registerUser(
       name: String!
@@ -60,7 +71,6 @@ type Mutation {
 type AuthPayload {
   token: String!
   user: User!
-  _empty: String
 }
 
 

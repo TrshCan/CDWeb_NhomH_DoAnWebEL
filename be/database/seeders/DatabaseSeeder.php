@@ -16,9 +16,12 @@ class DatabaseSeeder extends Seeder
         $now = Carbon::now();
 
         // ===== Faculties =====
+        // Generate faculty codes (2 letters, unique)
+        $facultyCodes = ['TT', 'CN', 'KT', 'NN', 'SP', 'YT', 'QT', 'LD', 'TH', 'VL'];
         for ($i = 1; $i <= 10; $i++) {
             DB::table('faculties')->insert([
                 'name' => "Faculty $i",
+                'code' => $facultyCodes[$i - 1] ?? str_pad((string) $i, 2, '0', STR_PAD_LEFT),
                 'description' => "Description for faculty $i",
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -43,7 +46,48 @@ class DatabaseSeeder extends Seeder
         }
 
         // ===== Users =====
+        // Helper function to generate student code
+        $generateStudentCode = function ($facultyId) use ($now) {
+            $faculty = DB::table('faculties')->where('id', $facultyId)->first();
+            if (!$faculty || !$faculty->code) {
+                return null;
+            }
+
+            $facultyCode = strtoupper($faculty->code);
+            // Get last 2 digits of year, minimum is 23 (first year is 2023)
+            $yearPart = max(23, (int) substr($now->year, -2));
+            $yearPart = str_pad((string) $yearPart, 2, '0', STR_PAD_LEFT);
+
+            // Generate unique 4-digit number
+            $maxAttempts = 100;
+            $attempt = 0;
+
+            do {
+                $randomPart = str_pad((string) rand(0, 9999), 4, '0', STR_PAD_LEFT);
+                $studentCode = $yearPart . '211' . $facultyCode . $randomPart;
+
+                // Check if this code already exists
+                $exists = DB::table('users')->where('student_code', $studentCode)->exists();
+                $attempt++;
+
+                if ($attempt >= $maxAttempts) {
+                    throw new \Exception("Could not generate unique student code after {$maxAttempts} attempts");
+                }
+            } while ($exists);
+
+            return $studentCode;
+        };
+
         for ($i = 1; $i <= 10; $i++) {
+            $role = $i <= 8 ? 'student' : ($i === 9 ? 'lecturer' : 'admin');
+            $facultyId = rand(1, 10);
+            $studentCode = null;
+
+            // Generate student code only for students
+            if ($role === 'student') {
+                $studentCode = $generateStudentCode($facultyId);
+            }
+
             DB::table('users')->insert([
                 'name' => "User $i",
                 'email' => "user$i@example.com",
@@ -52,9 +96,10 @@ class DatabaseSeeder extends Seeder
                 'remember_token' => Str::random(10),
                 'phone' => '090' . rand(1000000, 9999999),
                 'address' => "Address $i",
-                'role' => ['student', 'lecturer', 'admin'][rand(0, 2)],
+                'role' => $role,
                 'class_id' => rand(1, 10),
-                'faculty_id' => rand(1, 10),
+                'faculty_id' => $facultyId,
+                'student_code' => $studentCode,
                 'status_id' => 1,
                 'ban_reason' => null,
                 'point' => rand(0, 100),
@@ -91,10 +136,36 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($testUsers as $u) {
+            $studentCode = null;
+            
+            // Generate student code for test student
+            if (isset($u['role']) && $u['role'] === 'student' && isset($u['faculty_id'])) {
+                $faculty = DB::table('faculties')->where('id', $u['faculty_id'])->first();
+                if ($faculty && $faculty->code) {
+                    $facultyCode = strtoupper($faculty->code);
+                    // Get last 2 digits of year, minimum is 23 (first year is 2023)
+                    $yearPart = max(23, (int) substr($now->year, -2));
+                    $yearPart = str_pad((string) $yearPart, 2, '0', STR_PAD_LEFT);
+                    
+                    $maxAttempts = 100;
+                    $attempt = 0;
+                    do {
+                        $randomPart = str_pad((string) rand(0, 9999), 4, '0', STR_PAD_LEFT);
+                        $studentCode = $yearPart . '211' . $facultyCode . $randomPart;
+                        $exists = DB::table('users')->where('student_code', $studentCode)->exists();
+                        $attempt++;
+                        if ($attempt >= $maxAttempts) {
+                            throw new \Exception("Could not generate unique student code for test user");
+                        }
+                    } while ($exists);
+                }
+            }
+
             DB::table('users')->insert(array_merge($u, [
                 'email_verified_at' => $now,
                 'remember_token' => Str::random(10),
                 'ban_reason' => null,
+                'student_code' => $studentCode,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]));
@@ -125,6 +196,40 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
+        // ===== Role Default Permissions =====
+        $roles = ['student', 'lecturer', 'admin'];
+        foreach ($roles as $role) {
+            // assign 2 random permission ids to each role
+            $permIds = DB::table('permissions')->inRandomOrder()->limit(2)->pluck('id')->toArray();
+            foreach ($permIds as $pid) {
+                DB::table('role_default_permissions')->insert([
+                    'role' => $role,
+                    'permission_id' => $pid,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+        }
+
+        // ===== User Permissions =====
+        // Assign some sample permissions to random users
+        $userPermPairs = [];
+        $userPermissions = [];
+        while (count($userPermissions) < 20) {
+            $u = rand(1, 12);
+            $p = DB::table('permissions')->inRandomOrder()->first()->id;
+            $key = $u . '-' . $p;
+            if (isset($userPermPairs[$key])) continue;
+            $userPermPairs[$key] = true;
+            $userPermissions[] = [
+                'user_id' => $u,
+                'permission_id' => $p,
+                'granted_at' => $now,
+                'granted_by' => rand(1, 12),
+            ];
+        }
+        DB::table('user_permissions')->insert($userPermissions);
+
         // ===== Groups =====
         for ($i = 1; $i <= 10; $i++) {
             DB::table('groups')->insert([
@@ -135,6 +240,26 @@ class DatabaseSeeder extends Seeder
                 'updated_at' => $now,
             ]);
         }
+
+        // ===== Group Members =====
+        // Create random membership rows (avoid duplicates)
+        $pairs = [];
+        $groupMembers = [];
+        $roles = ['member', 'moderator', 'lecturer', 'admin'];
+        while (count($groupMembers) < 40) {
+            $g = rand(1, 10);
+            $u = rand(1, 12); // ensure covers test users as well
+            $key = $g . '-' . $u;
+            if ($g === 0 || $u === 0 || isset($pairs[$key])) continue;
+            $pairs[$key] = true;
+            $groupMembers[] = [
+                'group_id' => $g,
+                'user_id' => $u,
+                'role' => $roles[array_rand($roles)],
+                'joined_at' => $now,
+            ];
+        }
+        DB::table('group_members')->insert($groupMembers);
 
         // ===== Categories =====
         for ($i = 1; $i <= 10; $i++) {
@@ -156,22 +281,6 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // ===== Surveys =====
-        for ($i = 1; $i <= 10; $i++) {
-            DB::table('surveys')->insert([
-                'title' => "Survey $i",
-                'description' => "Survey description $i",
-                'categories_id' => rand(1, 10),
-                'type' => ['survey', 'quiz'][rand(0, 1)],
-                'start_at' => $now,
-                'end_at' => $now->copy()->addDays(7),
-                'points' => rand(0, 10),
-                'object' => ['public', 'students', 'lecturers'][rand(0, 2)],
-                'created_by' => rand(1, 10),
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-        }
 
         // ===== Events Seeder =====
         $events = [];
@@ -356,6 +465,59 @@ class DatabaseSeeder extends Seeder
         // Insert all 10 posts in a single, efficient query
         DB::table('posts')->insert($posts);
 
+        // ===== Group Posts (mapping posts to groups/senders) =====
+        $gpPairs = [];
+        $groupPosts = [];
+        while (count($groupPosts) < 30) {
+            $g = rand(1, 10);
+            $p = rand(1, 100);
+            $s = rand(1, 12);
+            $key = $g . '-' . $p;
+            if (isset($gpPairs[$key])) continue;
+            $gpPairs[$key] = true;
+            $groupPosts[] = [
+                'group_id' => $g,
+                'sender_id' => $s,
+                'post_id' => $p,
+                'sent_at' => $now,
+            ];
+        }
+        DB::table('group_posts')->insert($groupPosts);
+
+        // ===== Post Likes =====
+        $likePairs = [];
+        $postLikes = [];
+        while (count($postLikes) < 120) {
+            $postId = rand(1, 100);
+            $userId = rand(1, 12);
+            $key = $postId . '-' . $userId;
+            if (isset($likePairs[$key])) continue;
+            $likePairs[$key] = true;
+            $postLikes[] = [
+                'post_id' => $postId,
+                'user_id' => $userId,
+                'created_at' => $now,
+            ];
+        }
+        DB::table('post_likes')->insert($postLikes);
+
+        // ===== Post Shares =====
+        $sharePairs = [];
+        $postShares = [];
+        while (count($postShares) < 40) {
+            $postId = rand(1, 100);
+            $userId = rand(1, 12);
+            $key = $postId . '-' . $userId;
+            if (isset($sharePairs[$key])) continue;
+            $sharePairs[$key] = true;
+            $postShares[] = [
+                'post_id' => $postId,
+                'user_id' => $userId,
+                'created_at' => $now,
+            ];
+        }
+        DB::table('post_shares')->insert($postShares);
+
 
 
         // ===== Post Media =====
@@ -414,6 +576,10 @@ class DatabaseSeeder extends Seeder
 
         // ---- 2. Helper: pick random users (exclude admin if you want) ----
         $allUserIds = range(1, 12); // 10 random + 2 test users
+        $studentUserIds = DB::table('users')
+            ->where('role', 'student')
+            ->pluck('id')
+            ->toArray();
 
         // ---- 3. Survey definitions (easy to read & tweak) ----
         $surveyTemplates = [
@@ -535,7 +701,7 @@ class DatabaseSeeder extends Seeder
                 'time_limit' => $tmpl['type'] === 'quiz' ? rand(10, 30) : null,
                 'points' => $tmpl['points'] ?? 0,
                 'object' => $tmpl['object'],
-                'created_by' => $faker->randomElement($allUserIds),
+                'created_by' => rand(1, 10),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -543,6 +709,7 @@ class DatabaseSeeder extends Seeder
             $surveyIds[] = $surveyId;
 
             // ----- Questions -----
+            $questionIds = [];
             foreach ($tmpl['questions'] as $qData) {
                 $questionId = DB::table('survey_questions')->insertGetId([
                     'survey_id' => $surveyId,
@@ -550,6 +717,8 @@ class DatabaseSeeder extends Seeder
                     'question_type' => $qData['type'],
                     'points' => $qData['points'],
                 ]);
+
+                $questionIds[] = ['id' => $questionId, 'data' => $qData];
 
                 // ----- Options (only for choice questions) -----
                 if (in_array($qData['type'], ['single_choice', 'multiple_choice'])) {
@@ -564,13 +733,18 @@ class DatabaseSeeder extends Seeder
                         ]);
                     }
                 }
+            }
 
-                // ----- Answers (simulate 3–8 users answering) -----
-                $answerCount = rand(3, 8);
-                $answeredUserIds = (array) $faker->randomElements($allUserIds, $answerCount);
+            // ----- Answers (exactly 5 users answer ALL questions in this survey) -----
+            $answeredUserIds = (array) $faker->randomElements($studentUserIds, 5);
 
-                foreach ($answeredUserIds as $userId) {
-                    $answeredAt = $faker->dateTimeBetween($start, $end);
+            foreach ($answeredUserIds as $userId) {
+                $answeredAt = $faker->dateTimeBetween($start, $end);
+
+                // Each user answers ALL questions in this survey
+                foreach ($questionIds as $qInfo) {
+                    $questionId = $qInfo['id'];
+                    $qData = $qInfo['data'];
 
                     if ($qData['type'] === 'text') {
                         DB::table('survey_answers')->insert([
@@ -604,23 +778,19 @@ class DatabaseSeeder extends Seeder
                             $selectedCount = rand(1, min(3, count($optionIds)));
                             $chosen = $faker->randomElements($optionIds, $selectedCount);
 
-                            $earned = 0;
                             foreach ($chosen as $optId) {
                                 $isCorrect = DB::table('survey_options')
                                     ->where('id', $optId)
                                     ->value('is_correct');
-                                if ($isCorrect)
-                                    $earned += $qData['points'] / count((array) $qData['correct']);
 
                                 DB::table('survey_answers')->insert([
                                     'question_id' => $questionId,
                                     'user_id' => $userId,
                                     'selected_option_id' => $optId,
                                     'answered_at' => $answeredAt,
-                                    'score' => 0, // score calculated later if needed
+                                    'score' => $isCorrect ? ($qData['points'] / count((array) $qData['correct'])) : 0,
                                 ]);
                             }
-                            // Optional: update a total score row – omitted for simplicity
                         }
                     }
                 }

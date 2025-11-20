@@ -71,6 +71,10 @@ class UserServices
         $user->remember_token = $token;
         $user->save();
 
+        // Lưu token vào cột remember_token để sử dụng cho xác thực bằng Bearer token
+        $user->remember_token = $token;
+        $user->save();
+
         return [
             'token' => $token,
             'user' => $user,

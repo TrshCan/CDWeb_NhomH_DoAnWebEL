@@ -39,6 +39,7 @@ return new class extends Migration {
             $table->bigIncrements('id');
             $table->string('code', 2)->unique(); 
             $table->string('name', 100)->unique();
+            $table->string('code', 2)->unique();
             $table->text('description')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();

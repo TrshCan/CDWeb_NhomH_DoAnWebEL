@@ -8,6 +8,7 @@ export const getUserProfile = async (id) => {
         id
         name
         email
+        role
       }
     }
   `;

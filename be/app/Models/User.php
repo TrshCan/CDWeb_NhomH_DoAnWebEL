@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
+use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -27,6 +28,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'ban_reason',
         'point',
         'email_verified_at',
+        'student_code',
     ];
 
     protected $hidden = [
@@ -100,8 +102,65 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     // ============================
+    // 🔹 BOOT METHOD - Auto-generate student_code
+    // ============================
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($user) {
+            // Auto-generate student_code for students
+            if ($user->role === 'student' && empty($user->student_code) && $user->faculty_id) {
+                $user->student_code = static::generateStudentCode($user->faculty_id);
+            }
+        });
+    }
+
+    // ============================
     // 🔹 HELPER / LOGIC METHODS
     // ============================
+
+    /**
+     * Generate a unique student code
+     * Format: [last 2 digits of year]211[faculty code][4 random unique numbers]
+     * Example: 23211TT4535
+     */
+    public static function generateStudentCode(int $facultyId): string
+    {
+        // Get faculty code
+        $faculty = Faculty::find($facultyId);
+        if (!$faculty || !$faculty->code) {
+            throw new \Exception("Faculty not found or has no code for faculty_id: {$facultyId}");
+        }
+
+        $facultyCode = strtoupper($faculty->code);
+        
+        // Get last 2 digits of current year
+        // First year is 2023, so minimum year part is 23
+        $currentYear = (int) date('Y');
+        $yearPart = max(23, (int) substr($currentYear, -2));
+        $yearPart = str_pad((string) $yearPart, 2, '0', STR_PAD_LEFT);
+
+        // Generate unique 4-digit number
+        $maxAttempts = 100;
+        $attempt = 0;
+
+        do {
+            $randomPart = str_pad((string) rand(0, 9999), 4, '0', STR_PAD_LEFT);
+            $studentCode = $yearPart . '211' . $facultyCode . $randomPart;
+
+            // Check if this code already exists
+            $exists = static::where('student_code', $studentCode)->exists();
+            $attempt++;
+
+            if ($attempt >= $maxAttempts) {
+                throw new \Exception("Could not generate unique student code after {$maxAttempts} attempts");
+            }
+        } while ($exists);
+
+        return $studentCode;
+    }
 
     public function isAdmin(): bool
     {
