@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { updatePost, deletePost, toggleLike } from "../api/graphql/post";
 import { toggleFollow } from "../api/graphql/user";
-import toast from "react-hot-toast";
+
 
 export default function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = false, onReply = null, followingUserIds = [], onFollowUpdate = null }) {
   const navigate = useNavigate();

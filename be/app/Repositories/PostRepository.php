@@ -57,7 +57,7 @@ class PostRepository
             ->get();
     }
 
-    
+
     public function byGroup($groupId)
     {
         return Post::where('group_id', $groupId)
@@ -86,13 +86,7 @@ class PostRepository
             ->get();
     }
 
-    public function byGroup($groupId)
-    {
-        return $this->model->where('group_id', $groupId)
-            ->with(['user', 'likes', 'shares', 'children'])
-            ->latest()
-            ->get();
-    }
+
 
     public function create(array $data)
     {
