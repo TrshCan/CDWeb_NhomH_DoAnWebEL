@@ -10,4 +10,10 @@ extend type Mutation {
         avatar: Upload
     ): User
     @field(resolver: "App\\GraphQL\\Resolvers\\UserManagementResolvers@updateProfile")
+    
+    toggleFollow(
+        follower_id: Int!
+        followed_id: Int!
+    ): Boolean
+    @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@toggleFollow")
 }

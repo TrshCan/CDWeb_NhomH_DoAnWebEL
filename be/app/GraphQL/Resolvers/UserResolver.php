@@ -72,6 +72,13 @@ class UserResolver
     {
         return $user->status;
     }
+
+    // Resolver for toggle follow/unfollow
+    public function toggleFollow($_, array $args)
+    {
+        return $this->userService->toggleFollow($args['follower_id'], $args['followed_id']);
+    }
 }
+
 
 ?>

@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import PostCard from "../components/PostCard";
-import { getPostsByType, createPost } from "../api/graphql/post";
-import { getUserProfile } from "../api/graphql/user";
+import {
+  getPostsByType,
+  getPostsOfFollowing,
+  createPost,
+} from "../api/graphql/post";
+import { getUserProfile, getUserFollowingIds } from "../api/graphql/user";
 
 import "../assets/css/feed.css"; // 👈 import the shimmer + fade css
 function timeAgo(createdAt) {
@@ -21,7 +25,7 @@ function timeAgo(createdAt) {
 }
 
 export default function Feed() {
-  const [activeTab, setActiveTab] = useState("forYou");
+  const [activeTab, setActiveTab] = useState("announcement");
   const [allPosts, setAllPosts] = useState([]);
   const [visibleCount, setVisibleCount] = useState(10);
   const [loading, setLoading] = useState(true);
@@ -30,12 +34,15 @@ export default function Feed() {
   const [user, setUser] = useState(null);
   const loadMoreRef = useRef(null);
 
+  // TODO: Replace with actual logged-in user's following list from your auth/user context
+  const [followingUserIds, setFollowingUserIds] = useState([]); // Array of user IDs that the logged-in user follows
+
   // ✅ Load current user from localStorage + GraphQL
   // Check login status based on token (same pattern as Sidebar)
   const checkLoginStatus = async () => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
-    
+
     if (!token || !userId) {
       setUser(null);
       return;
@@ -76,35 +83,66 @@ export default function Feed() {
     };
   }, []); // Run once on mount
 
+  // Keep Following tab hidden when logged out
+  useEffect(() => {
+    if (!user && activeTab === "following") {
+      setActiveTab("announcement");
+    }
+  }, [user, activeTab]);
+
+  // Load following IDs when user logs in
+  useEffect(() => {
+    const loadFollowing = async () => {
+      if (!user) {
+        setFollowingUserIds([]);
+        return;
+      }
+      try {
+        const ids = await getUserFollowingIds(parseInt(user.id));
+        setFollowingUserIds(ids);
+      } catch (err) {
+        console.error("Failed to load following ids:", err);
+        setFollowingUserIds([]);
+      }
+    };
+    loadFollowing();
+  }, [user]);
+
+  // ✅ Fetch posts
   // ✅ Fetch posts
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
       try {
-        const data =
-          activeTab === "forYou"
-            ? await getPostsByType("announcement")
-            : await getPostsByType("normal_post");
+        let data = [];
+
+        if (activeTab === "announcement") {
+          data = await getPostsByType("announcement");
+        } else if (activeTab === "campus") {
+          data = await getPostsByType("normal_post");
+        } else if (activeTab === "following" && user) {
+          // ←←←  USE FOLLOWING IDs instead of user.id
+          data = await getPostsOfFollowing(followingUserIds);
+        }
 
         const mapped = data.map((p) => ({
-            id: p.id,
-            type: p.type,
-            user: p.user?.name || "Anonymous",
-            userId: p.user?.id,
-            time: timeAgo(p.created_at),
-            content: p.content,
-            media: p.media
-              ? p.media.map((m) =>
-                  typeof m === "string"
-                    ? { filename: m }
-                    : m.url
-                    ? { url: m.url }
-                    : { filename: m.filename }
-                )
-              : [],
-            likes: p.likes || [],
-            children: p.children || [],
-          }))
+          id: p.id,
+          type: p.type,
+          user: p.user?.name || "Anonymous",
+          userId: p.user?.id,
+          time: timeAgo(p.created_at),
+          content: p.content,
+          media: p.media
+            ? p.media.map((m) =>
+                typeof m === "string"
+                  ? { filename: m }
+                  : m.url
+                  ? { url: m.url }
+                  : { filename: m.filename }
+              )
+            : [],
+        }));
+
         setAllPosts(mapped);
         setVisibleCount(10);
       } catch (err) {
@@ -116,7 +154,7 @@ export default function Feed() {
     };
 
     fetchPosts();
-  }, [activeTab]);
+  }, [activeTab, user, followingUserIds]); // ← add followingUserIds to deps
 
   // Setup intersection observer for infinite loading
   useEffect(() => {
@@ -233,8 +271,11 @@ export default function Feed() {
       <Toaster position="top-right" />
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow p-2 mb-4 flex space-x-4">
-        {["forYou", "following"].map((tab) => (
+      <div className="bg-white rounded-lg shadow p-2 mb-4 flex space-x-2">
+        {(user
+          ? ["announcement", "campus", "following"]
+          : ["announcement", "campus"]
+        ).map((tab) => (
           <button
             key={tab}
             className={`flex-1 py-2 rounded-lg ${
@@ -244,13 +285,16 @@ export default function Feed() {
             }`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab === "forYou" ? "For You" : "Following"}
+            {tab === "announcement"
+              ? "Announcement"
+              : tab === "campus"
+              ? "Campus"
+              : "Following"}
           </button>
         ))}
       </div>
 
-      {/* ✅ Only show Add Post if user is logged in */}
-      {activeTab === "following" && user && (
+      {activeTab === "campus" && user && (
         <div className="bg-white rounded-lg shadow p-4 mb-4">
           <div className="flex items-center space-x-2 mb-2">
             <div className="w-10 h-10 bg-cyan-600 rounded-full"></div>
@@ -379,8 +423,8 @@ export default function Feed() {
       )}
 
       {/* 🚫 Show login prompt if not logged in */}
-      {activeTab === "following" && !user && (
-        <div className="bg-white rounded-lg shadow p-6 text-center text-gray-600">
+      {activeTab === "campus" && !user && (
+        <div className="bg-white rounded-lg shadow p-6 text-center text-gray-600 mb-4">
           <p>Please log in to create posts.</p>
         </div>
       )}
@@ -411,8 +455,17 @@ export default function Feed() {
           <>
             {allPosts.slice(0, visibleCount).map((post, i) => (
               <div key={post.id} className="animate-fade-in">
-                <PostCard
-                  post={post}
+                <PostCard 
+                  post={post} 
+                  followingUserIds={followingUserIds}
+                  onFollowUpdate={(userId, isFollowing) => {
+                    // Update followingUserIds when follow status changes
+                    if (isFollowing) {
+                      setFollowingUserIds(prev => [...prev, parseInt(userId)]);
+                    } else {
+                      setFollowingUserIds(prev => prev.filter(id => id !== parseInt(userId)));
+                    }
+                  }}
                 />
               </div>
             ))}

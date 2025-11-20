@@ -15,6 +15,7 @@ type User {
   ban_reason: String
   stats: UserStats @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@stats")
   badges: [UserBadge!]! @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@badges")
+  following: [Int]! @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@following")
 }
 
 type Status {

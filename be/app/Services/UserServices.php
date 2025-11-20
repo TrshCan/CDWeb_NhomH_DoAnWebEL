@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Database\QueryException;
 use App\Models\User;
+use App\Models\Follow;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password as PasswordBroker;
@@ -375,5 +376,53 @@ class UserServices
         $user->sendEmailVerificationNotification();
 
         return true;
+    }
+
+    /**
+     * Toggle follow/unfollow relationship between two users
+     * Returns true if following, false if unfollowed
+     */
+    public function toggleFollow(int $followerId, int $followedId): bool
+    {
+        // Prevent users from following themselves
+        if ($followerId === $followedId) {
+            throw new \Exception('You cannot follow yourself');
+        }
+
+        // Check if both users exist
+        $follower = $this->userRepo->findById($followerId);
+        $followed = $this->userRepo->findById($followedId);
+
+        if (!$follower || !$followed) {
+            throw new \Exception('User not found');
+        }
+
+        // Check if follow relationship already exists
+        $follow = Follow::where('follower_id', $followerId)
+            ->where('followed_id', $followedId)
+            ->first();
+
+        if ($follow) {
+            // If exists and is active, unfollow (set status to blocked or delete)
+            if ($follow->status === 'active') {
+                $follow->status = 'blocked';
+                $follow->save();
+                return false; // Unfollowed
+            } else {
+                // If blocked, reactivate
+                $follow->status = 'active';
+                $follow->save();
+                return true; // Following
+            }
+        } else {
+            // Create new follow relationship
+            Follow::create([
+                'follower_id' => $followerId,
+                'followed_id' => $followedId,
+                'status' => 'active',
+                'created_at' => now(),
+            ]);
+            return true; // Following
+        }
     }
 }

@@ -319,3 +319,44 @@ export const createComment = async (postId, userId, content, files = []) => {
   };
   return await createPost(input, files);
 };
+
+export const getPostsOfFollowing = async (followingIds) => {
+  const query = `
+    query ($ids: [Int!]!) {
+      postsOfFollowing(followingIds: $ids) {
+        id
+        content
+        created_at
+        user {
+          id
+          name
+        }
+        likes {
+          id
+          user_id
+          user {
+            id
+            name
+          }
+        }
+        media {
+          id
+          url
+        }
+        children {
+          id
+        }
+      }
+    }
+  `;
+
+  const variables = { ids: followingIds };
+
+  const response = await graphqlClient.post("", { query, variables });
+
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+
+  return response.data.data.postsOfFollowing;
+};

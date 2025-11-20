@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { updatePost, deletePost, toggleLike } from "../api/graphql/post";
+import { toggleFollow } from "../api/graphql/user";
+import toast from "react-hot-toast";
 
-export default function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = false, onReply = null }) {
+export default function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = false, onReply = null, followingUserIds = [], onFollowUpdate = null }) {
   const navigate = useNavigate();
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -14,6 +16,7 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes?.length || 0);
   const [commentsCount, setCommentsCount] = useState(post.children?.length || 0);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   const currentUserId = (() => {
     try {
@@ -24,6 +27,16 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
   })();
   const ownerId = post.userId || post.user_id || null;
   const isOwner = ownerId && String(ownerId) === String(currentUserId);
+  
+  // Check if current user is following the post author
+  useEffect(() => {
+    if (ownerId && followingUserIds.length > 0) {
+      const following = followingUserIds.includes(parseInt(ownerId));
+      setIsFollowing(following);
+    } else {
+      setIsFollowing(false);
+    }
+  }, [ownerId, followingUserIds]);
   const handleCardClick = () => {
     if (!disableCommentNavigate) {
       navigate(`/post/${post.id}`);
@@ -229,14 +242,35 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
                   </>
                 ) : (
                   <button
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                    onClick={(e) => {
+                    className={`w-full text-left px-3 py-2 hover:bg-gray-50 ${
+                      isFollowing ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"
+                    }`}
+                    onClick={async (e) => {
                       e.stopPropagation();
                       setMenuOpen(false);
-                      alert(`Following ${post.user} (mock)`);
+                      
+                      if (!currentUserId) {
+                        toast.error("Please log in to follow users");
+                        return;
+                      }
+                      
+                      try {
+                        const newFollowingState = await toggleFollow(currentUserId, ownerId);
+                        setIsFollowing(newFollowingState);
+                        
+                        // Update following list in parent component if callback exists
+                        if (onFollowUpdate) {
+                          onFollowUpdate(ownerId, newFollowingState);
+                        }
+                        
+                        toast.success(newFollowingState ? `Now following ${post.user}` : `Unfollowed ${post.user}`);
+                      } catch (err) {
+                        console.error("Failed to toggle follow:", err);
+                        toast.error(err.message || "Failed to update follow status");
+                      }
                     }}
                   >
-                    Follow {post.user}
+                    {isFollowing ? `Unfollow ${post.user}` : `Follow ${post.user}`}
                   </button>
                 )}
               </div>
