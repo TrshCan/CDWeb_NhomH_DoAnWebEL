@@ -142,13 +142,16 @@ export default function SurveyForm({ surveyId = null }) {
 
   // ✅ State để lưu surveyId thực tế từ CSDL
   const [currentSurveyId, setCurrentSurveyId] = useState(surveyId);
-  
+
   // ✅ Ref để track surveyId đã load (tránh hiển thị toast 2 lần)
   const loadedSurveyIdRef = useRef(null);
   const isLoadingRef = useRef(false);
-  
+
   // ✅ BroadcastChannel để đồng bộ giữa các tab/cửa sổ
   const broadcastChannelRef = useRef(null);
+
+  // ✅ Track pending operations để hiển thị loading
+  const [pendingOperations, setPendingOperations] = useState(0);
 
   // ✅ Load survey từ CSDL (chỉ chỉnh sửa, không tạo mới)
   useEffect(() => {
@@ -160,26 +163,26 @@ export default function SurveyForm({ surveyId = null }) {
         isLoadingRef.current = false;
         return;
       }
-      
+
       // ✅ Kiểm tra xem đã load surveyId này chưa hoặc đang load (tránh load và hiển thị toast 2 lần)
       // Chỉ load nếu surveyId thay đổi hoặc chưa load lần nào
       if (loadedSurveyIdRef.current === surveyId || isLoadingRef.current) {
         return;
       }
-      
+
       isLoadingRef.current = true;
-      
+
       setLoading(true);
       try {
         const { getSurvey } = await import('../api/surveys');
-        
+
         // ✅ Load survey từ CSDL
         const surveyData = await getSurvey(surveyId);
         setCurrentSurveyId(surveyId);
-        
+
         // ✅ Đánh dấu đã load surveyId này
         loadedSurveyIdRef.current = surveyId;
-        
+
         // Cập nhật general settings từ CSDL
         setGeneralSettings({
           title: surveyData.title || "",
@@ -217,17 +220,17 @@ export default function SurveyForm({ surveyId = null }) {
                 id: (!isNaN(optionId) && optionId > 0) ? optionId : Date.now() + Math.random(),
                 text: backendOption.option_text || "",
               };
-              
+
               // Xử lý cho Ma trận (chọn điểm) - có is_subquestion
               if (backendQuestion.question_type === "Ma trận (chọn điểm)") {
                 frontendOption.isSubquestion = backendOption.is_subquestion || false;
               }
-              
+
               // Xử lý image cho option nếu có
               if (backendOption.image) {
                 frontendOption.image = backendOption.image;
               }
-              
+
               return frontendOption;
             });
 
@@ -458,7 +461,7 @@ export default function SurveyForm({ surveyId = null }) {
             ...group,
             questions: group.questions.map((q) => {
               if (String(q.id) !== questionIdStr) return q;
-              
+
               return {
                 ...q,
                 options: (q.options || []).filter((opt) => String(opt.id) !== deletedOptionIdStr),
@@ -745,42 +748,22 @@ export default function SurveyForm({ surveyId = null }) {
       return;
     }
 
-    // Kiểm tra xem option có ID từ CSDL không
-    // ID từ CSDL: số nguyên (integer) hoặc string có thể parse thành số nguyên
-    // ID tạm thời: số thập phân (Date.now() + Math.random() tạo ra số thập phân)
-    let isFromDB = false;
-    let optionIdToUpdate = null;
-    
-    if (optionId !== null && optionId !== undefined) {
-      if (typeof optionId === 'number') {
-        // Nếu là số nguyên thì là ID từ CSDL (ID từ CSDL luôn là số nguyên)
-        if (Number.isInteger(optionId) && optionId > 0) {
-          isFromDB = true;
-          optionIdToUpdate = optionId;
-        }
-        // Nếu là số thập phân thì là ID tạm thời, không lưu trong CSDL
-      } else if (typeof optionId === 'string') {
-        // Nếu string có thể parse thành số nguyên thì là ID từ CSDL
-        const parsed = parseInt(optionId, 10);
-        if (!isNaN(parsed) && String(parsed) === optionId && parsed > 0) {
-          isFromDB = true;
-          optionIdToUpdate = parsed;
-        }
-      }
+    // Chuyển optionId sang số nguyên
+    const optionIdToUpdate = typeof optionId === 'string' ? parseInt(optionId, 10) : optionId;
+
+    // Bỏ qua nếu là ID tạm (số âm) - đợi ID thật được cập nhật
+    if (isNaN(optionIdToUpdate) || optionIdToUpdate < 0) {
+      return;
     }
 
-    // Chỉ lưu vào CSDL nếu option đã có ID từ CSDL
-    if (!isFromDB || !optionIdToUpdate) {
-      // Option tạm thời, chỉ cập nhật UI (không lưu vào CSDL)
-      // Lưu ý: Option mới tạo sẽ có ID tạm thời (số thập phân) cho đến khi được lưu vào CSDL
+    if (optionIdToUpdate === 0) {
       return;
     }
 
     try {
       // Chuẩn bị dữ liệu cập nhật
-      // Đảm bảo value không phải undefined hoặc null (nếu là string rỗng thì vẫn lưu)
       const updateData = { [fieldName]: value ?? "" };
-      
+
       // Gọi API để cập nhật vào CSDL
       await updateOption(optionIdToUpdate, updateData);
 
@@ -798,9 +781,7 @@ export default function SurveyForm({ surveyId = null }) {
 
       setSavedAt(new Date());
     } catch (error) {
-      // Hiển thị lỗi chi tiết hơn để debug
       toast.error(`Không thể lưu ${fieldName}`);
-      throw error; // Re-throw để caller có thể xử lý
     }
   }, []);
 
@@ -849,11 +830,11 @@ export default function SurveyForm({ surveyId = null }) {
         questions: group.questions.map((q) =>
           q.id === questionId
             ? {
-                ...q,
-                options: q.options.map((opt) =>
-                  opt.id === optionId ? { ...opt, text: newText } : opt
-                ),
-              }
+              ...q,
+              options: q.options.map((opt) =>
+                opt.id === optionId ? { ...opt, text: newText } : opt
+              ),
+            }
             : q
         ),
       }))
@@ -895,7 +876,7 @@ export default function SurveyForm({ surveyId = null }) {
     }
   }, [saveOptionField]);
 
-  // ✅ Thêm option mới và lưu vào CSDL
+  // ✅ Thêm option mới với optimistic update
   const handleAddOption = async (questionId, isSubquestion = false) => {
     // Tìm question để lấy thông tin
     const question = allQuestions.find((q) => q.id === questionId);
@@ -908,28 +889,38 @@ export default function SurveyForm({ surveyId = null }) {
     const currentOptions = question.options || [];
     const newPosition = currentOptions.length + 1;
 
-    // Tạo option tạm thời với ID tạm
-    const tempId = Date.now() + Math.random();
-    const newOption = {
-      id: tempId,
-      text: "",
-      isSubquestion: isSubquestion,
-    };
+    // Tạo ID tạm để optimistic update (dùng số âm để phân biệt với ID thật)
+    const tempId = -(Date.now());
 
-    // Cập nhật UI ngay lập tức (optimistic update)
-    setQuestionGroups((prev) =>
-      prev.map((group) => ({
-        ...group,
-        questions: group.questions.map((q) => {
-          if (q.id === questionId) {
-            return { ...q, options: [...q.options, newOption] };
-          }
-          return q;
-        }),
-      }))
-    );
+    // 1. CẬP NHẬT UI NGAY LẬP TỨC (Optimistic Update) - Dùng startTransition để không block UI
+    startTransition(() => {
+      setQuestionGroups((prev) =>
+        prev.map((group) => ({
+          ...group,
+          questions: group.questions.map((q) => {
+            if (q.id === questionId) {
+              return {
+                ...q,
+                options: [
+                  ...q.options,
+                  {
+                    id: tempId,
+                    text: "",
+                    isSubquestion: isSubquestion,
+                    image: null,
+                    _pending: true, // Đánh dấu đang pending
+                  }
+                ],
+              };
+            }
+            return q;
+          }),
+        }))
+      );
+    });
 
-    // Lưu vào CSDL
+    // 2. LƯU VÀO CSDL NGẦM (Background)
+    setPendingOperations(prev => prev + 1);
     try {
       const optionData = {
         question_id: String(questionId),
@@ -939,51 +930,58 @@ export default function SurveyForm({ surveyId = null }) {
       };
 
       const savedOption = await addOption(optionData);
+      const realId = parseInt(savedOption.id);
 
-      // Cập nhật ID thực từ CSDL
-      setQuestionGroups((prev) =>
-        prev.map((group) => ({
-          ...group,
-          questions: group.questions.map((q) => {
-            if (q.id === questionId) {
-              return {
-                ...q,
-                options: q.options.map((opt) =>
-                  opt.id === tempId
-                    ? {
-                        id: parseInt(savedOption.id),
+      // 3. THAY THẾ ID TẠM BẰNG ID THẬT
+      startTransition(() => {
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) => {
+              if (q.id === questionId) {
+                return {
+                  ...q,
+                  options: q.options.map((opt) =>
+                    opt.id === tempId
+                      ? {
+                        id: realId,
                         text: savedOption.option_text || "",
                         isSubquestion: savedOption.is_subquestion || false,
                         image: savedOption.image || null,
                       }
-                    : opt
-                ),
-              };
-            }
-            return q;
-          }),
-        }))
-      );
+                      : opt
+                  ),
+                };
+              }
+              return q;
+            }),
+          }))
+        );
+      });
 
       setSavedAt(new Date());
-    } catch {
+    } catch (error) {
       toast.error("Không thể thêm option mới");
-      
-      // Rollback: xóa option tạm thời
-      setQuestionGroups((prev) =>
-        prev.map((group) => ({
-          ...group,
-          questions: group.questions.map((q) => {
-            if (q.id === questionId) {
-              return {
-                ...q,
-                options: q.options.filter((opt) => opt.id !== tempId),
-              };
-            }
-            return q;
-          }),
-        }))
-      );
+
+      // Rollback: Xóa option tạm
+      startTransition(() => {
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) => {
+              if (q.id === questionId) {
+                return {
+                  ...q,
+                  options: q.options.filter((opt) => opt.id !== tempId),
+                };
+              }
+              return q;
+            }),
+          }))
+        );
+      });
+    } finally {
+      setPendingOperations(prev => prev - 1);
     }
   };
 
@@ -992,7 +990,7 @@ export default function SurveyForm({ surveyId = null }) {
     // Lưu snapshot để rollback nếu lỗi
     const question = allQuestions.find((q) => q.id === questionId);
     const optionToDelete = question?.options?.find((opt) => opt.id === optionId);
-    
+
     if (!optionToDelete) {
       toast.error("Không tìm thấy option cần xóa");
       return;
@@ -1003,7 +1001,7 @@ export default function SurveyForm({ surveyId = null }) {
     // ID tạm thời: số thập phân (Date.now() + Math.random() tạo ra số thập phân)
     let isFromDB = false;
     let optionIdToDelete = null;
-    
+
     if (optionId !== null && optionId !== undefined) {
       if (typeof optionId === 'number') {
         // Nếu là số nguyên thì là ID từ CSDL (ID từ CSDL luôn là số nguyên)
@@ -1029,9 +1027,9 @@ export default function SurveyForm({ surveyId = null }) {
         questions: group.questions.map((q) =>
           q.id === questionId
             ? {
-                ...q,
-                options: q.options.filter((opt) => opt.id !== optionId),
-              }
+              ...q,
+              options: q.options.filter((opt) => opt.id !== optionId),
+            }
             : q
         ),
       }))
@@ -1042,7 +1040,7 @@ export default function SurveyForm({ surveyId = null }) {
       try {
         await deleteOption(optionIdToDelete);
         setSavedAt(new Date());
-        
+
         // ✅ Gửi message qua BroadcastChannel để đồng bộ với các tab khác
         if (broadcastChannelRef.current) {
           broadcastChannelRef.current.postMessage({
@@ -1055,7 +1053,7 @@ export default function SurveyForm({ surveyId = null }) {
         }
       } catch {
         toast.error("Không thể xóa option");
-        
+
         // Rollback: khôi phục option
         setQuestionGroups((prev) =>
           prev.map((group) => ({
@@ -1137,7 +1135,7 @@ export default function SurveyForm({ surveyId = null }) {
         setSavedAt(new Date());
       } catch {
         toast.error("Không thể cập nhật thứ tự option");
-        
+
         // Rollback: khôi phục thứ tự ban đầu
         setQuestionGroups((prev) =>
           prev.map((group) => ({
@@ -1266,7 +1264,7 @@ export default function SurveyForm({ surveyId = null }) {
   const convertQuestionToBackend = useCallback((frontendQuestion, questionSettingsData, surveyIdParam) => {
     // ✅ Đảm bảo question_text không rỗng (backend yêu cầu String!)
     const questionText = frontendQuestion.text?.trim() || "Câu hỏi mới";
-    
+
     return {
       survey_id: String(surveyIdParam), // Đảm bảo là string
       question_code: questionSettingsData?.questionCode || undefined,
@@ -1290,7 +1288,7 @@ export default function SurveyForm({ surveyId = null }) {
   const addQuestionItem = async (questionType = "Mặc định", groupId = null) => {
     // ✅ Kiểm tra đã có surveyId chưa (survey phải được tạo trước bởi người khác)
     const surveyIdToUse = currentSurveyId || surveyId;
-    
+
     if (!surveyIdToUse) {
       toast.error("Vui lòng chọn survey để chỉnh sửa");
       return;
@@ -1299,7 +1297,7 @@ export default function SurveyForm({ surveyId = null }) {
     // ✅ Tạo question mới TRƯỚC khi gọi setState (sử dụng functional update để đảm bảo có state mới nhất)
     let newItem = null;
     let newId = null;
-    
+
     // ✅ Sử dụng functional update và tạo newItem trong callback
     setQuestionGroups((prev) => {
       // Tạo group mới nếu chưa có
@@ -1439,37 +1437,27 @@ export default function SurveyForm({ surveyId = null }) {
         const savedQuestion = await addQuestion(backendQuestionData);
         const savedQuestionId = parseInt(savedQuestion.id);
 
-        // ✅ Lưu tất cả options mặc định vào CSDL
+        // ✅ Lưu tất cả options mặc định vào CSDL (SONG SONG để nhanh hơn)
         const defaultOptions = newItem.options || [];
-        const savedOptions = [];
-        
-        for (let i = 0; i < defaultOptions.length; i++) {
-          const option = defaultOptions[i];
-          try {
-            const optionData = {
-              question_id: String(savedQuestionId),
-              option_text: option.text || "",
-              is_subquestion: option.isSubquestion || false,
-              position: i + 1,
-            };
+        const optionPromises = defaultOptions.map((option, i) => {
+          const optionData = {
+            question_id: String(savedQuestionId),
+            option_text: option.text || "",
+            is_subquestion: option.isSubquestion || false,
+            position: i + 1,
+          };
+          return addOption(optionData).catch(() => null);
+        });
 
-            const savedOption = await addOption(optionData);
-            savedOptions.push({
-              id: parseInt(savedOption.id),
-              text: savedOption.option_text || "",
-              isSubquestion: savedOption.is_subquestion || false,
-              image: savedOption.image || null,
-            });
-          } catch {
-            // Vẫn tiếp tục với các option khác
-            savedOptions.push({
-              id: Date.now() + i, // ID tạm thời
-              text: option.text || "",
-              isSubquestion: option.isSubquestion || false,
-              image: null,
-            });
-          }
-        }
+        const savedOptionsResults = await Promise.all(optionPromises);
+        const savedOptions = savedOptionsResults
+          .filter(result => result !== null)
+          .map((savedOption) => ({
+            id: parseInt(savedOption.id),
+            text: savedOption.option_text || "",
+            isSubquestion: savedOption.is_subquestion || false,
+            image: savedOption.image || null,
+          }));
 
         // Cập nhật ID từ CSDL về frontend và cập nhật options đã lưu
         setQuestionGroups((prev) =>
@@ -1520,9 +1508,9 @@ export default function SurveyForm({ surveyId = null }) {
         setActiveSection(`question-${savedQuestionId}`);
         setActiveQuestionId(String(savedQuestionId));
 
-        } catch {
-          // Lỗi đã được xử lý, không cần hiển thị toast
-        }
+      } catch {
+        // Lỗi đã được xử lý, không cần hiển thị toast
+      }
     }
   };
 
@@ -1651,7 +1639,7 @@ export default function SurveyForm({ surveyId = null }) {
           toast.error("Không tìm thấy nhóm câu hỏi cần xóa");
           return;
         }
-        
+
         const questionIdsToDelete = groupToDelete.questions.map((q) => String(q.id));
         const shouldResetActive = activeQuestionId && questionIdsToDelete.includes(activeQuestionId);
         const questionIdsSet = new Set(questionIdsToDelete);
@@ -1672,7 +1660,7 @@ export default function SurveyForm({ surveyId = null }) {
         // ✅ OPTIMISTIC UPDATE: Update UI ngay lập tức với startTransition (không block UI)
         startTransition(() => {
           setQuestionGroups((prev) => prev.filter((g) => g.id !== groupId));
-          
+
           setQuestionSettings((prev) => {
             const newSettings = { ...prev };
             questionIdsSet.forEach((qId) => delete newSettings[qId]);
@@ -1731,7 +1719,7 @@ export default function SurveyForm({ surveyId = null }) {
           toast.error("Không tìm thấy câu hỏi cần xóa");
           return;
         }
-        
+
         const questionToDelete = group.questions[index];
         const questionIdToDelete = String(questionToDelete.id);
         const isActiveQuestion = activeQuestionId === questionIdToDelete;
@@ -1831,8 +1819,8 @@ export default function SurveyForm({ surveyId = null }) {
         const prevArray = Array.isArray(prevValue)
           ? prevValue.map(String)
           : prevValue != null
-          ? [String(prevValue)]
-          : [];
+            ? [String(prevValue)]
+            : [];
 
         let newArray;
         if (prevArray.includes(optionIdStr)) {
@@ -2029,6 +2017,7 @@ export default function SurveyForm({ surveyId = null }) {
         <HeaderBar
           title={generalSettings?.title || "Survey mới"}
           savedAt={savedAt}
+          isSaving={pendingOperations > 0}
           onActivate={() => toast.success("Đã kích hoạt")}
           onMore={() => setOpenPanel(openPanel === "settings" ? null : "settings")}
           onAddQuestion={() => {
@@ -2111,6 +2100,93 @@ export default function SurveyForm({ surveyId = null }) {
                     [activeQuestionId]: finalSettings,
                   }));
 
+                  // Xử lý thay đổi type NGOÀI setQuestionGroups để tránh race condition
+                  const currentQuestion = questionGroups
+                    .flatMap(g => g.questions)
+                    .find(q => String(q.id) === String(activeQuestionId));
+
+                  const questionNewType = finalSettings.type || currentQuestion?.type;
+                  const questionOldType = currentQuestion?.type;
+                  const isTypeChanged = questionNewType !== questionOldType;
+
+                  // Nếu thay đổi loại câu hỏi, xử lý async TRƯỚC khi update state
+                  if (isTypeChanged && currentQuestion) {
+                    setPendingOperations(prev => prev + 1);
+                    (async () => {
+                      try {
+                        // 1. Xóa tất cả options cũ SONG SONG
+                        const oldOptions = currentQuestion.options || [];
+                        const optionsToDelete = oldOptions.filter(opt => opt.id && typeof opt.id === 'number' && opt.id > 0);
+
+                        if (optionsToDelete.length > 0) {
+                          const deletePromises = optionsToDelete.map(opt =>
+                            deleteOption(opt.id).catch(() => null)
+                          );
+                          await Promise.all(deletePromises);
+                        }
+
+                        // 2. Tạo options mới trong CSDL SONG SONG
+                        const defaultOptionsTemplate = createDefaultOptions(questionNewType);
+                        const createPromises = defaultOptionsTemplate.map((optTemplate, i) => {
+                          const optionData = {
+                            question_id: String(activeQuestionId),
+                            option_text: optTemplate.text || "",
+                            is_subquestion: optTemplate.isSubquestion || false,
+                            position: i + 1,
+                          };
+                          return addOption(optionData).catch(() => null);
+                        });
+
+                        const savedOptionsResults = await Promise.all(createPromises);
+                        const newOptions = savedOptionsResults
+                          .filter(result => result !== null)
+                          .map((savedOption) => ({
+                            id: parseInt(savedOption.id),
+                            text: savedOption.option_text || "",
+                            isSubquestion: savedOption.is_subquestion || false,
+                            image: savedOption.image || null,
+                          }));
+
+                        // 3. Cập nhật question type trong CSDL
+                        await updateQuestion(activeQuestionId, {
+                          question_type: questionNewType,
+                        });
+
+                        // 4. Cập nhật UI với options mới có ID thật
+                        setQuestionGroups((prev) =>
+                          prev.map((g) => ({
+                            ...g,
+                            questions: g.questions.map((question) =>
+                              String(question.id) === String(activeQuestionId)
+                                ? { ...question, options: newOptions, type: questionNewType }
+                                : question
+                            ),
+                          }))
+                        );
+
+                        // 5. Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính và Có/Không
+                        if (questionNewType === "Giới tính" || questionNewType === "Có/Không") {
+                          const noAnswerOption = newOptions.find(
+                            (opt) => opt.text === "Không có câu trả lời"
+                          );
+                          if (noAnswerOption) {
+                            setSelectedAnswers((prev) => ({
+                              ...prev,
+                              [activeQuestionId]: noAnswerOption.id,
+                            }));
+                          }
+                        }
+
+                        setSavedAt(new Date());
+                      } catch (error) {
+                        toast.error('Không thể thay đổi loại câu hỏi');
+                      } finally {
+                        setPendingOperations(prev => prev - 1);
+                      }
+                    })();
+                  }
+
+                  // Cập nhật settings ngay lập tức
                   setQuestionGroups((prevGroups) =>
                     prevGroups.map((group) => ({
                       ...group,
@@ -2118,33 +2194,18 @@ export default function SurveyForm({ surveyId = null }) {
                         if (String(q.id) !== String(activeQuestionId)) return q;
 
                         let updated = { ...q, ...finalSettings };
-                        const questionNewType = finalSettings.type || q.type;
-                        const questionOldType = q.type;
 
-                        // Nếu thay đổi loại câu hỏi, cập nhật options
-                        if (questionNewType !== questionOldType) {
-                          const defaultOptions =
-                            createDefaultOptions(questionNewType);
+                        // Nếu thay đổi loại câu hỏi, tạm thời hiển thị options template
+                        if (isTypeChanged) {
+                          const defaultOptions = createDefaultOptions(questionNewType);
                           updated = {
                             ...updated,
-                            options: defaultOptions,
+                            options: defaultOptions.map((opt, i) => ({
+                              ...opt,
+                              id: -(Date.now() + i), // ID tạm âm
+                              _pending: true,
+                            })),
                           };
-
-                          // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính và Có/Không
-                          if (
-                            questionNewType === "Giới tính" ||
-                            questionNewType === "Có/Không"
-                          ) {
-                            const noAnswerOption = defaultOptions.find(
-                              (opt) => opt.text === "Không có câu trả lời"
-                            );
-                            if (noAnswerOption) {
-                              setSelectedAnswers((prev) => ({
-                                ...prev,
-                                [activeQuestionId]: noAnswerOption.id,
-                              }));
-                            }
-                          }
                         } else if (questionNewType === "Danh sách (nút chọn)") {
                           const options = updated.options || [];
 

@@ -311,11 +311,13 @@ export default function MatrixTypeUI({
                     }}>
                       {isActive ? (
                         <EditableField
+                          key={option.id}
                           placeholder="Answer option"
                           initialValue={option.text}
                           inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium text-center"
                           isTextarea={false}
                           onChange={(value) => onOptionChange?.(question.id, option.id, value)}
+                          onBlur={(value) => onOptionBlur?.(option.id, value)}
                         />
                       ) : (
                         <span 
@@ -445,11 +447,13 @@ export default function MatrixTypeUI({
                     >
                       {isActive ? (
                         <EditableField
+                          key={subquestion.id}
                           placeholder="Subquestion"
                           initialValue={subquestion.text}
                           inputClassName="text-sm text-gray-700 placeholder:italic placeholder:text-gray-400 font-medium"
                           isTextarea={true}
                           onChange={(value) => onOptionChange?.(question.id, subquestion.id, value)}
+                          onBlur={(value) => onOptionBlur?.(subquestion.id, value)}
                         />
                       ) : (
                         <span

@@ -2791,12 +2791,16 @@ export default function QuestionItem({
                         {/* Text của subquestion */}
                         <div className="flex items-center" style={{ width: "290px", wordWrap: "break-word" }}>
                           <EditableField
+                            key={option.id}
                             placeholder="Subquestion"
                             initialValue={option.text}
                             inputClassName="text-gray-800 font-medium"
                             isTextarea={true}
                             onChange={(value) =>
                               onOptionChange?.(question.id, option.id, value)
+                            }
+                            onBlur={(value) =>
+                              onOptionBlur?.(option.id, value)
                             }
                           />
                         </div>
@@ -3196,6 +3200,7 @@ export default function QuestionItem({
                                 }}
                               >
                                 <EditableField
+                                  key={option.id}
                                   placeholder={
                                     isRadioType()
                                       ? "Answer option"
@@ -3210,6 +3215,9 @@ export default function QuestionItem({
                                       option.id,
                                       value
                                     )
+                                  }
+                                  onBlur={(value) =>
+                                    onOptionBlur?.(option.id, value)
                                   }
                                 />
                               </div>

@@ -185,17 +185,28 @@ class QuestionResolver
      */
     public function deleteOption($rootValue, array $args)
     {
-        $option = SurveyOption::findOrFail($args['id']);
-        
-        // Kiểm tra quyền (optional - có thể bỏ qua nếu chưa có auth)
-        // $question = $option->question;
-        // if (Auth::id() !== $question->survey->created_by) {
-        //     throw new \Exception('Bạn không có quyền xóa option này');
-        // }
-        
-        // Xóa option
-        $option->delete();
-        
-        return true;
+        try {
+            $option = SurveyOption::findOrFail($args['id']);
+            
+            // Kiểm tra quyền (optional - có thể bỏ qua nếu chưa có auth)
+            // $question = $option->question;
+            // if (Auth::id() !== $question->survey->created_by) {
+            //     throw new \Exception('Bạn không có quyền xóa option này');
+            // }
+            
+            // Xóa các answers liên quan trước (nếu có)
+            // Cách 1: Set null cho selected_option_id
+            \DB::table('survey_answers')
+                ->where('selected_option_id', $option->id)
+                ->update(['selected_option_id' => null]);
+            
+            // Xóa option
+            $option->delete();
+            
+            return true;
+        } catch (\Exception $e) {
+            \Log::error('Error deleting option: ' . $e->getMessage());
+            throw new \Exception('Không thể xóa option: ' . $e->getMessage());
+        }
     }
 }
