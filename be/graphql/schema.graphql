@@ -41,6 +41,11 @@ type Survey {
     type: SurveyType!
     object: SurveyObject!
     status: SurveyStatus!
+    start_at: DateTime
+    end_at: DateTime
+    time_limit: Int
+    points: Int
+    allow_review: Boolean
     created_by: ID!
     creator: User
     questionGroups: [QuestionGroup!]

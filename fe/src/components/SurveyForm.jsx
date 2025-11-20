@@ -431,6 +431,16 @@ export default function SurveyForm({ surveyId = null }) {
           setRightPanel(null);
         }
       }
+      
+      // Xử lý khi có group title được cập nhật từ tab khác
+      if (type === 'GROUP_TITLE_UPDATED') {
+        const { groupId, title } = data;
+        setQuestionGroups((prev) =>
+          prev.map((g) =>
+            g.id === groupId ? { ...g, title } : g
+          )
+        );
+      }
 
       // Xử lý khi có field của câu hỏi được cập nhật từ tab khác (tối ưu - chỉ cập nhật field cụ thể)
       if (type === 'QUESTION_FIELD_UPDATED') {
@@ -653,6 +663,27 @@ export default function SurveyForm({ surveyId = null }) {
         reloadSurvey();
       }
       
+      // Xử lý khi có general settings được cập nhật từ tab khác
+      if (type === 'GENERAL_SETTINGS_UPDATED') {
+        const { title, type: surveyType, object } = data;
+        setGeneralSettings((prev) => ({ 
+          ...prev, 
+          title: title || prev.title,
+          type: surveyType || prev.type,
+          object: object || prev.object,
+        }));
+      }
+      
+      // Xử lý khi có publish settings được cập nhật từ tab khác
+      if (type === 'PUBLISH_SETTINGS_UPDATED') {
+        const { start_at, end_at } = data;
+        setPublishSettings((prev) => ({ 
+          ...prev, 
+          start_at: start_at !== undefined ? start_at : prev.start_at,
+          end_at: end_at !== undefined ? end_at : prev.end_at,
+        }));
+      }
+      
       // Xử lý khi có welcome text được cập nhật từ tab khác
       if (type === 'WELCOME_UPDATED') {
         const { field, value } = data;
@@ -746,13 +777,59 @@ export default function SurveyForm({ surveyId = null }) {
 
   // Log “Đã lưu lúc …” trên Header
   const [savedAt, setSavedAt] = useState(null);
-  const handleGeneralChange = (v) => {
+  const handleGeneralChange = async (v) => {
     setGeneralSettings(v);
-    setSavedAt(new Date());
+    
+    // Gọi API cập nhật survey
+    if (surveyId) {
+      try {
+        const { updateSurvey } = await import('../api/surveys');
+        await updateSurvey(surveyId, {
+          title: v.title,
+          type: v.type,
+          object: v.object,
+        });
+        setSavedAt(new Date());
+        
+        // Broadcast để đồng bộ với các tab khác
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.postMessage({
+            type: 'GENERAL_SETTINGS_UPDATED',
+            data: { title: v.title, type: v.type, object: v.object },
+          });
+        }
+      } catch (error) {
+        console.error('Error updating survey:', error);
+        toast.error('Không thể lưu thay đổi');
+      }
+    }
   };
-  const handlePublishChange = (v) => {
+  
+  const handlePublishChange = async (v) => {
     setPublishSettings(v);
-    setSavedAt(new Date());
+    
+    // Gọi API cập nhật survey
+    if (surveyId) {
+      try {
+        const { updateSurvey } = await import('../api/surveys');
+        await updateSurvey(surveyId, {
+          start_at: v.start_at,
+          end_at: v.end_at,
+        });
+        setSavedAt(new Date());
+        
+        // Broadcast để đồng bộ với các tab khác
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.postMessage({
+            type: 'PUBLISH_SETTINGS_UPDATED',
+            data: { start_at: v.start_at, end_at: v.end_at },
+          });
+        }
+      } catch (error) {
+        console.error('Error updating survey:', error);
+        toast.error('Không thể lưu thay đổi');
+      }
+    }
   };
 
   // ✅ Handlers cho Welcome text
@@ -2824,7 +2901,8 @@ export default function SurveyForm({ surveyId = null }) {
                               onTextBlur={handleQuestionTextBlur}
                               onHelpTextChange={handleHelpTextChange}
                               onHelpTextBlur={handleHelpTextBlur}
-                              onGroupTitleChange={(newTitle) => {
+                              onGroupTitleChange={async (newTitle) => {
+                                // Cập nhật state local ngay lập tức
                                 setQuestionGroups((prev) =>
                                   prev.map((g) =>
                                     g.id === group.id
@@ -2832,6 +2910,23 @@ export default function SurveyForm({ surveyId = null }) {
                                       : g
                                   )
                                 );
+                                
+                                // Gọi API cập nhật group title
+                                try {
+                                  await updateQuestionGroup(group.id, { title: newTitle });
+                                  setSavedAt(new Date());
+                                  
+                                  // Broadcast để đồng bộ với các tab khác
+                                  if (broadcastChannelRef.current) {
+                                    broadcastChannelRef.current.postMessage({
+                                      type: 'GROUP_TITLE_UPDATED',
+                                      data: { groupId: group.id, title: newTitle },
+                                    });
+                                  }
+                                } catch (error) {
+                                  console.error('Error updating group title:', error);
+                                  toast.error('Không thể lưu tiêu đề nhóm');
+                                }
                               }}
                               onAnswerSelect={handleAnswerSelect}
                               selectedAnswers={selectedAnswers}

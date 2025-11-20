@@ -49,10 +49,17 @@ export const getSurvey = async (surveyId) => {
         type
         object
         status
+        start_at
+        end_at
         created_at
         category {
           id
           name
+        }
+        creator {
+          id
+          name
+          email
         }
         questionGroups {
           id

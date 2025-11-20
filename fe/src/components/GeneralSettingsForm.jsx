@@ -41,7 +41,7 @@ export default function GeneralSettingsForm({ value, onChange }) {
   const VALID_LANGS = ["vi", "en"];
 
   const validateField = (key, raw) => {
-    if (key === "title" || key === "owner") {
+    if (key === "title") {
       const val = normalizeText(raw);
       if (!val) return "Trường này không được để trống.";
       if (val.length < 3) return "Phải có ít nhất 3 ký tự.";
@@ -66,7 +66,7 @@ export default function GeneralSettingsForm({ value, onChange }) {
   };
 
   const update = (key, val) => {
-    if (key === "title" || key === "owner") {
+    if (key === "title") {
       if (val.length > 256) {
         toast.error("Không được nhập quá 256 ký tự.", {
           style: { background: "#dc2626", color: "#fff" },
@@ -85,8 +85,7 @@ export default function GeneralSettingsForm({ value, onChange }) {
     if (newVal === oldVal) return;
 
     let finalVal = newVal;
-    if (key === "owner") finalVal = capitalizeWords(newVal);
-    else if (key === "title") finalVal = capitalizeFirstLetter(newVal);
+    if (key === "title") finalVal = capitalizeFirstLetter(newVal);
 
     const errorMsg = validateField(key, finalVal);
     if (errorMsg) {
@@ -181,15 +180,15 @@ export default function GeneralSettingsForm({ value, onChange }) {
           </label>
           <input
             type="text"
-            className={baseFieldCls}
+            className="w-full border border-gray-300 rounded-sm px-4 py-2 text-gray-600 bg-gray-100 cursor-not-allowed"
             value={form.owner}
-            onChange={(e) => update("owner", e.target.value)}
-            onBlur={() => blurPush("owner")}
-            placeholder="Nhập tên người tạo..."
+            readOnly
+            disabled
+            placeholder="Chưa có thông tin"
           />
-          {errors.owner && (
-            <p className="text-sm text-red-600 mt-2">{errors.owner}</p>
-          )}
+          <p className="text-xs text-gray-500 mt-1">
+            Thông tin này không thể chỉnh sửa
+          </p>
         </div>
       </div>
     </div>
