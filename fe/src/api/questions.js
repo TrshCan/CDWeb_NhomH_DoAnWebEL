@@ -210,3 +210,42 @@ export const deleteOption = async (optionId) => {
   const response = await graphqlRequest(mutation, variables);
   return response.data.deleteOption;
 };
+
+/**
+ * Duplicate câu hỏi (sao chép câu hỏi và tất cả options)
+ */
+export const duplicateQuestion = async (questionId) => {
+  const mutation = `
+    mutation DuplicateQuestion($id: ID!) {
+      duplicateQuestion(id: $id) {
+        id
+        question_code
+        question_text
+        question_type
+        required
+        image
+        conditions
+        max_length
+        numeric_only
+        max_questions
+        allowed_file_types
+        max_file_size_kb
+        help_text
+        points
+        default_scenario
+        options {
+          id
+          option_text
+          image
+          is_subquestion
+          position
+          is_correct
+        }
+      }
+    }
+  `;
+
+  const variables = { id: questionId };
+  const response = await graphqlRequest(mutation, variables);
+  return response.data.duplicateQuestion;
+};

@@ -14,6 +14,7 @@ export default function QuestionSection({
   groupId,
   groupTitle: initialGroupTitle,
   questionItems = [],
+  globalStartIndex = 0, // ✅ Thêm prop globalStartIndex
   activeSection,
   handleSetSection,
   moveQuestionItem,
@@ -88,6 +89,7 @@ export default function QuestionSection({
       if (!prevItem ||
         newItem.id !== prevItem.id ||
         newItem.text !== prevItem.text ||
+        newItem.helpText !== prevItem.helpText || // ✅ So sánh helpText
         newItem.image !== prevItem.image || // ✅ Quan trọng: so sánh image
         newItem.type !== prevItem.type ||
         newItem.required !== prevItem.required ||
@@ -364,15 +366,15 @@ export default function QuestionSection({
               >
                 <QuestionItem
                   question={question}
-                  index={index}
+                  index={globalStartIndex + index}
                   totalQuestions={items.length}
                   isActive={isActive}
                   onClick={() => handleSetSection(sectionId)}
                   moveQuestionItem={handleMove}
-                  onDuplicate={(questionIndex) => {
-                    // Duplicate câu hỏi trong group hiện tại, không tạo group mới
+                  onDuplicate={() => {
+                    // Duplicate câu hỏi trong group hiện tại, truyền index local (trong group)
                     if (typeof onDuplicate === "function") {
-                      onDuplicate(questionIndex);
+                      onDuplicate(index); // Sử dụng index local, không phải globalStartIndex + index
                     }
                   }}
                   onDelete={() => {

@@ -48,6 +48,11 @@ class Survey extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function questionGroups()
+    {
+        return $this->hasMany(QuestionGroup::class)->orderBy('position');
+    }
+
     public function questions()
     {
         return $this->hasMany(SurveyQuestion::class)->orderBy('id');

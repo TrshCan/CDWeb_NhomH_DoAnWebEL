@@ -17,7 +17,8 @@ import HeaderBar from "./HeaderBar";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 
 import { Toaster, toast } from "react-hot-toast";
-import { addQuestion, deleteQuestion, deleteQuestions, updateQuestion, updateOption, addOption, deleteOption } from "../api/questions";
+import { addQuestion, deleteQuestion, deleteQuestions, updateQuestion, updateOption, addOption, deleteOption, duplicateQuestion } from "../api/questions";
+import { createQuestionGroup, updateQuestionGroup, deleteQuestionGroup, duplicateQuestionGroup } from "../api/groups";
 
 export default function SurveyForm({ surveyId = null }) {
   const [activeSection, setActiveSection] = useState(null);
@@ -204,14 +205,13 @@ export default function SurveyForm({ surveyId = null }) {
           });
         }
 
-        // ✅ Load questions và convert sang format của questionGroups từ CSDL
-        if (surveyData.questions && surveyData.questions.length > 0) {
-          // ✅ Tối ưu: Thu thập tất cả data trước, sau đó batch update 1 lần
-          const newQuestionSettings = {};
-          const newSelectedAnswers = {};
+        // ✅ Load questionGroups và questions từ CSDL
+        const newQuestionSettings = {};
+        const newSelectedAnswers = {};
+        let newQuestionGroups = [];
 
-          // Convert backend questions to frontend format
-          const convertedQuestions = surveyData.questions.map((backendQuestion) => {
+        // Helper function để convert question từ backend sang frontend
+        const convertBackendQuestion = (backendQuestion) => {
             // Convert options từ backend format sang frontend format
             const convertedOptions = (backendQuestion.options || []).map((backendOption) => {
               // Đảm bảo ID luôn là số nguyên từ CSDL
@@ -263,25 +263,82 @@ export default function SurveyForm({ surveyId = null }) {
             }
 
             return frontendQuestion;
-          });
+        };
 
-          // ✅ Batch update: Gộp tất cả state updates thành 1 lần để tránh nhiều re-render
-          const newQuestionGroups = [
-            {
+        // ✅ Xử lý questionGroups từ backend
+        if (surveyData.questionGroups && surveyData.questionGroups.length > 0) {
+          // Có groups từ backend → dùng chúng
+          newQuestionGroups = surveyData.questionGroups.map((backendGroup) => ({
+            id: parseInt(backendGroup.id),
+            title: backendGroup.title || "Nhóm câu hỏi",
+            questions: (backendGroup.questions || []).map(convertBackendQuestion),
+          }));
+
+          // ✅ Kiểm tra xem có câu hỏi nào không có group_id không (orphan questions)
+          const allGroupQuestionIds = new Set(
+            newQuestionGroups.flatMap(g => g.questions.map(q => q.id))
+          );
+          const orphanQuestions = (surveyData.questions || [])
+            .filter(q => !allGroupQuestionIds.has(parseInt(q.id)))
+            .map(convertBackendQuestion);
+
+          // Nếu có orphan questions, gán chúng vào group đầu tiên
+          if (orphanQuestions.length > 0 && newQuestionGroups.length > 0) {
+            const firstGroupId = newQuestionGroups[0].id;
+            
+            // Cập nhật group_id cho orphan questions trong CSDL
+            const updatePromises = orphanQuestions.map((q) =>
+              updateQuestion(q.id, { group_id: String(firstGroupId) }).catch(() => null)
+            );
+            await Promise.all(updatePromises);
+
+            // Thêm orphan questions vào group đầu tiên
+            newQuestionGroups[0].questions = [
+              ...newQuestionGroups[0].questions,
+              ...orphanQuestions,
+            ];
+          }
+        } else if (surveyData.questions && surveyData.questions.length > 0) {
+          // Không có groups nhưng có questions → tạo group mặc định
+          const convertedQuestions = surveyData.questions.map(convertBackendQuestion);
+          
+          // Tạo group mặc định trong CSDL
+          try {
+            const defaultGroup = await createQuestionGroup({
+              survey_id: String(surveyId),
+              title: "Nhóm câu hỏi",
+              position: 1,
+            });
+            
+            // Cập nhật group_id cho tất cả questions
+            const updatePromises = convertedQuestions.map((q) =>
+              updateQuestion(q.id, { group_id: String(defaultGroup.id), position: convertedQuestions.indexOf(q) + 1 })
+            );
+            await Promise.all(updatePromises);
+            
+            newQuestionGroups = [{
+              id: parseInt(defaultGroup.id),
+              title: defaultGroup.title,
+              questions: convertedQuestions,
+            }];
+          } catch (error) {
+            console.error('Không thể tạo group mặc định:', error);
+            // Fallback: tạo group với ID tạm
+            newQuestionGroups = [{
               id: 1,
               title: "Nhóm câu hỏi",
               questions: convertedQuestions,
-            },
-          ];
-
-          // Cập nhật tất cả states trong 1 batch (React sẽ tự động batch các setState trong event handler)
-          setQuestionGroups(newQuestionGroups);
-          setQuestionSettings((prev) => ({ ...prev, ...newQuestionSettings }));
-          setSelectedAnswers((prev) => ({ ...prev, ...newSelectedAnswers }));
+            }];
+          }
         } else {
-          // ✅ Nếu không có questions, khởi tạo rỗng (không hardcode)
-          setQuestionGroups([]);
+          // Không có gì → khởi tạo rỗng
+          newQuestionGroups = [];
         }
+
+        // Cập nhật tất cả states trong 1 batch
+        setQuestionGroups(newQuestionGroups);
+        setQuestionSettings((prev) => ({ ...prev, ...newQuestionSettings }));
+        setSelectedAnswers((prev) => ({ ...prev, ...newSelectedAnswers }));
 
         toast.success(`Đã tải survey: ${surveyData.title}`);
       } catch (error) {
@@ -381,25 +438,33 @@ export default function SurveyForm({ surveyId = null }) {
         const questionIdStr = String(questionId);
 
         // Cập nhật chỉ field cụ thể (tối ưu - không reload toàn bộ)
-        setQuestionGroups((prev) =>
-          prev.map((group) => ({
-            ...group,
-            questions: group.questions.map((q) => {
-              if (String(q.id) !== questionIdStr) return q;
+        setQuestionGroups((prev) => {
+          // Tạo array mới hoàn toàn để force React re-render
+          return prev.map((group) => {
+            // Kiểm tra xem group có chứa question cần update không
+            const hasTargetQuestion = group.questions.some((q) => String(q.id) === questionIdStr);
+            if (!hasTargetQuestion) return group;
 
-              // Cập nhật field tương ứng
-              if (fieldName === 'question_text') {
-                return { ...q, text: value };
-              } else if (fieldName === 'help_text') {
-                return { ...q, helpText: value };
-              } else if (fieldName === 'max_length') {
-                return { ...q, maxLength: value };
-              }
-              // Có thể thêm các field khác nếu cần
-              return q;
-            }),
-          }))
-        );
+            // Tạo group mới với questions array mới
+            return {
+              ...group,
+              questions: group.questions.map((q) => {
+                if (String(q.id) !== questionIdStr) return q;
+                
+                // Tạo object mới hoàn toàn với tất cả properties
+                const updatedQuestion = {
+                  ...q,
+                  // Cập nhật field tương ứng
+                  ...(fieldName === 'question_text' && { text: value }),
+                  ...(fieldName === 'help_text' && { helpText: value }),
+                  ...(fieldName === 'max_length' && { maxLength: value }),
+                };
+                
+                return updatedQuestion;
+              }),
+            };
+          });
+        });
 
         // Cập nhật questionSettings nếu cần
         if (fieldName !== 'question_text' && fieldName !== 'help_text' && fieldName !== 'max_length') {
@@ -470,84 +535,184 @@ export default function SurveyForm({ surveyId = null }) {
           }))
         );
       }
+      
+      // Xử lý khi có option mới được thêm từ tab khác
+      if (type === 'OPTION_ADDED') {
+        const { questionId, option } = data;
+        const questionIdStr = String(questionId);
+
+        // Thêm option vào question tương ứng
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) => {
+              if (String(q.id) !== questionIdStr) return q;
+
+              // Kiểm tra xem option đã tồn tại chưa (tránh duplicate)
+              const optionExists = q.options?.some((opt) => String(opt.id) === String(option.id));
+              if (optionExists) return q;
+
+              return {
+                ...q,
+                options: [...(q.options || []), option],
+              };
+            }),
+          }))
+        );
+      }
 
       // Xử lý khi có câu hỏi mới được thêm từ tab khác
-      if (type === 'QUESTION_ADDED') {
+      if (type === 'QUESTION_ADDED' || type === 'GROUP_ADDED') {
         // Reload survey để lấy dữ liệu mới nhất
         const reloadSurvey = async () => {
           try {
             const { getSurvey } = await import('../api/surveys');
             const surveyData = await getSurvey(surveyId);
 
-            if (surveyData.questions && surveyData.questions.length > 0) {
-              const newQuestionSettings = {};
-              const newSelectedAnswers = {};
+            const newQuestionSettings = {};
+            const newSelectedAnswers = {};
 
-              const convertedQuestions = surveyData.questions.map((backendQuestion) => {
-                const convertedOptions = (backendQuestion.options || []).map((backendOption) => {
-                  // Đảm bảo ID luôn là số nguyên từ CSDL
-                  const optionId = backendOption.id ? parseInt(backendOption.id, 10) : null;
-                  const frontendOption = {
-                    id: (!isNaN(optionId) && optionId > 0) ? optionId : Date.now() + Math.random(),
-                    text: backendOption.option_text || "",
-                  };
-
-                  if (backendQuestion.question_type === "Ma trận (chọn điểm)") {
-                    frontendOption.isSubquestion = backendOption.is_subquestion || false;
-                  }
-
-                  if (backendOption.image) {
-                    frontendOption.image = backendOption.image;
-                  }
-
-                  return frontendOption;
-                });
-
-                const frontendQuestion = {
-                  id: parseInt(backendQuestion.id),
-                  text: backendQuestion.question_text || "",
-                  helpText: backendQuestion.help_text || "",
-                  type: backendQuestion.question_type || "Danh sách (nút chọn)",
-                  options: convertedOptions.length > 0 ? convertedOptions : createDefaultOptions(backendQuestion.question_type || "Danh sách (nút chọn)"),
+            // Helper function để convert backend question sang frontend format
+            const convertBackendQuestion = (backendQuestion) => {
+              const convertedOptions = (backendQuestion.options || []).map((backendOption) => {
+                const optionId = backendOption.id ? parseInt(backendOption.id, 10) : null;
+                const frontendOption = {
+                  id: (!isNaN(optionId) && optionId > 0) ? optionId : Date.now() + Math.random(),
+                  text: backendOption.option_text || "",
                 };
 
-                if (backendQuestion.max_length) {
-                  frontendQuestion.maxLength = backendQuestion.max_length;
+                if (backendQuestion.question_type === "Ma trận (chọn điểm)") {
+                  frontendOption.isSubquestion = backendOption.is_subquestion || false;
                 }
 
-                const questionId = String(frontendQuestion.id);
-                newQuestionSettings[questionId] = buildQuestionSettings(backendQuestion, frontendQuestion);
-
-                if (frontendQuestion.type === "Giới tính" || frontendQuestion.type === "Có/Không") {
-                  const noAnswerOption = frontendQuestion.options.find(
-                    (opt) => opt.text === "Không có câu trả lời"
-                  );
-                  if (noAnswerOption) {
-                    newSelectedAnswers[frontendQuestion.id] = noAnswerOption.id;
-                  }
+                if (backendOption.image) {
+                  frontendOption.image = backendOption.image;
                 }
 
-                return frontendQuestion;
+                return frontendOption;
               });
 
-              const newQuestionGroups = [
-                {
-                  id: 1,
-                  title: "Nhóm câu hỏi",
-                  questions: convertedQuestions,
-                },
-              ];
+              const frontendQuestion = {
+                id: parseInt(backendQuestion.id),
+                text: backendQuestion.question_text || "",
+                helpText: backendQuestion.help_text || "",
+                type: backendQuestion.question_type || "Danh sách (nút chọn)",
+                options: convertedOptions.length > 0 ? convertedOptions : createDefaultOptions(backendQuestion.question_type || "Danh sách (nút chọn)"),
+              };
 
-              setQuestionGroups(newQuestionGroups);
-              setQuestionSettings((prev) => ({ ...prev, ...newQuestionSettings }));
-              setSelectedAnswers((prev) => ({ ...prev, ...newSelectedAnswers }));
+              if (backendQuestion.max_length) {
+                frontendQuestion.maxLength = backendQuestion.max_length;
+              }
+
+              const questionId = String(frontendQuestion.id);
+              newQuestionSettings[questionId] = buildQuestionSettings(backendQuestion, frontendQuestion);
+
+              if (frontendQuestion.type === "Giới tính" || frontendQuestion.type === "Có/Không") {
+                const noAnswerOption = frontendQuestion.options.find(
+                  (opt) => opt.text === "Không có câu trả lời"
+                );
+                if (noAnswerOption) {
+                  newSelectedAnswers[frontendQuestion.id] = noAnswerOption.id;
+                }
+              }
+
+              return frontendQuestion;
+            };
+
+            // Xây dựng cấu trúc groups từ backend data
+            let newQuestionGroups = [];
+
+            if (surveyData.questionGroups && surveyData.questionGroups.length > 0) {
+              // Có groups → map từng group
+              newQuestionGroups = surveyData.questionGroups.map((backendGroup) => {
+                const groupQuestions = (backendGroup.questions || []).map(convertBackendQuestion);
+                return {
+                  id: parseInt(backendGroup.id),
+                  title: backendGroup.title || "Nhóm câu hỏi",
+                  questions: groupQuestions,
+                };
+              });
+            } else if (surveyData.questions && surveyData.questions.length > 0) {
+              // Không có groups nhưng có questions → tạo group mặc định
+              const convertedQuestions = surveyData.questions.map(convertBackendQuestion);
+              newQuestionGroups = [{
+                id: 1,
+                title: "Nhóm câu hỏi",
+                questions: convertedQuestions,
+              }];
             }
+
+            setQuestionGroups(newQuestionGroups);
+            setQuestionSettings((prev) => ({ ...prev, ...newQuestionSettings }));
+            setSelectedAnswers((prev) => ({ ...prev, ...newSelectedAnswers }));
           } catch {
             // Lỗi đã được xử lý
           }
         };
 
         reloadSurvey();
+      }
+      
+      // Xử lý khi có welcome text được cập nhật từ tab khác
+      if (type === 'WELCOME_UPDATED') {
+        const { field, value } = data;
+        setGeneralSettings((prev) => ({ ...prev, [field]: value }));
+      }
+      
+      // Xử lý khi có end text được cập nhật từ tab khác
+      if (type === 'END_UPDATED') {
+        const { field, value } = data;
+        setGeneralSettings((prev) => ({ ...prev, [field]: value }));
+      }
+      
+      // Xử lý khi có loại câu hỏi được thay đổi từ tab khác
+      if (type === 'QUESTION_TYPE_CHANGED') {
+        const { questionId, newType, newOptions } = data;
+        const questionIdStr = String(questionId);
+
+        // Cập nhật type và options của câu hỏi
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) => {
+              if (String(q.id) !== questionIdStr) return q;
+
+              return {
+                ...q,
+                type: newType,
+                options: newOptions,
+              };
+            }),
+          }))
+        );
+
+        // Cập nhật questionSettings
+        setQuestionSettings((prev) => {
+          const questionSettings = prev[questionIdStr];
+          if (questionSettings) {
+            return {
+              ...prev,
+              [questionIdStr]: {
+                ...questionSettings,
+                type: newType,
+              },
+            };
+          }
+          return prev;
+        });
+
+        // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính và Có/Không
+        if (newType === "Giới tính" || newType === "Có/Không") {
+          const noAnswerOption = newOptions.find(
+            (opt) => opt.text === "Không có câu trả lời"
+          );
+          if (noAnswerOption) {
+            setSelectedAnswers((prev) => ({
+              ...prev,
+              [questionIdStr]: noAnswerOption.id,
+            }));
+          }
+        }
       }
     };
 
@@ -605,6 +770,14 @@ export default function SurveyForm({ surveyId = null }) {
       const { updateSurvey } = await import('../api/surveys');
       await updateSurvey(currentSurveyId, { welcome_title: newText || "" });
       setSavedAt(new Date());
+      
+      // Broadcast
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: 'WELCOME_UPDATED',
+          data: { field: 'welcomeTitle', value: newText || "" },
+        });
+      }
     } catch (error) {
       console.error('Lỗi khi lưu welcome title:', error);
     }
@@ -616,6 +789,14 @@ export default function SurveyForm({ surveyId = null }) {
       const { updateSurvey } = await import('../api/surveys');
       await updateSurvey(currentSurveyId, { welcome_description: newText || "" });
       setSavedAt(new Date());
+      
+      // Broadcast
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: 'WELCOME_UPDATED',
+          data: { field: 'welcomeDescription', value: newText || "" },
+        });
+      }
     } catch (error) {
       console.error('Lỗi khi lưu welcome description:', error);
     }
@@ -636,6 +817,14 @@ export default function SurveyForm({ surveyId = null }) {
       const { updateSurvey } = await import('../api/surveys');
       await updateSurvey(currentSurveyId, { end_title: newText || "" });
       setSavedAt(new Date());
+      
+      // Broadcast
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: 'END_UPDATED',
+          data: { field: 'endTitle', value: newText || "" },
+        });
+      }
     } catch (error) {
       console.error('Lỗi khi lưu end title:', error);
     }
@@ -647,6 +836,14 @@ export default function SurveyForm({ surveyId = null }) {
       const { updateSurvey } = await import('../api/surveys');
       await updateSurvey(currentSurveyId, { end_description: newText || "" });
       setSavedAt(new Date());
+      
+      // Broadcast
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: 'END_UPDATED',
+          data: { field: 'endDescription', value: newText || "" },
+        });
+      }
     } catch (error) {
       console.error('Lỗi khi lưu end description:', error);
     }
@@ -717,7 +914,9 @@ export default function SurveyForm({ surveyId = null }) {
 
   // ✅ Helper function để lưu câu hỏi vào CSDL và đồng bộ với các tab
   const saveQuestionField = useCallback(async (questionId, fieldName, value, skipBroadcast = false) => {
-    if (!questionId || !currentSurveyId) return;
+    if (!questionId || !currentSurveyId) {
+      return;
+    }
 
     try {
       // Cập nhật state ngay lập tức (optimistic update)
@@ -737,7 +936,7 @@ export default function SurveyForm({ surveyId = null }) {
       }
 
       setSavedAt(new Date());
-    } catch {
+    } catch (error) {
       toast.error(`Không thể lưu ${fieldName}`);
     }
   }, [currentSurveyId]);
@@ -960,6 +1159,22 @@ export default function SurveyForm({ surveyId = null }) {
       });
 
       setSavedAt(new Date());
+      
+      // Broadcast để đồng bộ với các tab khác
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: 'OPTION_ADDED',
+          data: {
+            questionId,
+            option: {
+              id: realId,
+              text: savedOption.option_text || "",
+              isSubquestion: savedOption.is_subquestion || false,
+              image: savedOption.image || null,
+            },
+          },
+        });
+      }
     } catch (error) {
       toast.error("Không thể thêm option mới");
 
@@ -1261,12 +1476,13 @@ export default function SurveyForm({ surveyId = null }) {
 
 
   // ✅ Helper function để convert frontend question sang backend format
-  const convertQuestionToBackend = useCallback((frontendQuestion, questionSettingsData, surveyIdParam) => {
+  const convertQuestionToBackend = useCallback((frontendQuestion, questionSettingsData, surveyIdParam, groupIdParam = null) => {
     // ✅ Đảm bảo question_text không rỗng (backend yêu cầu String!)
     const questionText = frontendQuestion.text?.trim() || "Câu hỏi mới";
 
     return {
       survey_id: String(surveyIdParam), // Đảm bảo là string
+      group_id: groupIdParam ? String(groupIdParam) : null, // ✅ Thêm group_id
       question_code: questionSettingsData?.questionCode || undefined,
       question_text: questionText, // Backend yêu cầu String! (không null)
       image: questionSettingsData?.image || null,
@@ -1399,6 +1615,13 @@ export default function SurveyForm({ surveyId = null }) {
     // ✅ Lưu question lên CSDL
     if (newItem && surveyIdToUse) {
       try {
+        // ✅ Xác định groupId để lưu vào CSDL
+        let targetGroupId = groupId;
+        if (!targetGroupId && questionGroups.length > 0) {
+          // Nếu không có groupId, lấy group cuối cùng
+          targetGroupId = questionGroups[questionGroups.length - 1].id;
+        }
+
         // Tạo default questionSettings
         const defaultQuestionSettings = {
           questionCode: `Q${String(newId).padStart(3, "0")}`,
@@ -1430,8 +1653,8 @@ export default function SurveyForm({ surveyId = null }) {
           [newId]: questionSettingsData,
         }));
 
-        // Convert sang backend format
-        const backendQuestionData = convertQuestionToBackend(newItem, questionSettingsData, surveyIdToUse);
+        // Convert sang backend format với groupId
+        const backendQuestionData = convertQuestionToBackend(newItem, questionSettingsData, surveyIdToUse, targetGroupId);
 
         // ✅ Gọi API để lưu lên CSDL
         const savedQuestion = await addQuestion(backendQuestionData);
@@ -1539,101 +1762,363 @@ export default function SurveyForm({ surveyId = null }) {
   };
 
   // ===================== Duplicate & Delete =====================
-  const duplicateQuestionItem = (groupId, index) => {
-    setQuestionGroups((prev) => {
-      return prev.map((group) => {
-        if (group.id !== groupId) return group;
-        const src = group.questions[index];
-        if (!src) return group;
+  const duplicateQuestionItem = async (groupId, index) => {
+    // Tìm câu hỏi gốc
+    const group = questionGroups.find((g) => g.id === groupId);
+    if (!group) {
+      toast.error("Không tìm thấy nhóm câu hỏi");
+      return;
+    }
 
-        const maxId = Math.max(
-          ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
-        );
-        const newId = maxId + 1;
+    const src = group.questions[index];
+    if (!src) {
+      toast.error("Không tìm thấy câu hỏi");
+      return;
+    }
 
-        const clone = {
-          ...src,
-          id: newId,
-          text: "",
-          options: src.options || [
-            { id: 1, text: "Subquestion 1" },
-            { id: 2, text: "Subquestion 2" },
-            { id: 3, text: "Subquestion 3" },
-          ],
-        };
-        const newQuestions = [...group.questions];
-        newQuestions.splice(index + 1, 0, clone);
-        setActiveSection(`question-${newId}`);
+    // Tạo ID tạm để optimistic update
+    const tempId = -(Date.now());
 
-        // Copy questionSettings bao gồm ảnh từ câu hỏi gốc
-        const srcSettings = questionSettings[src.id];
-        if (srcSettings) {
-          setQuestionSettings((prevSettings) => ({
-            ...prevSettings,
-            [newId]: {
-              ...srcSettings,
-              questionCode: `Q${String(newId).padStart(3, "0")}`,
-            },
-          }));
-        }
+    // 1. CẬP NHẬT UI NGAY LẬP TỨC (Optimistic Update)
+    const clone = {
+      ...src,
+      id: tempId,
+      text: src.text || "",
+      helpText: src.helpText || "",
+      options: src.options || [],
+      _pending: true, // Đánh dấu đang pending
+    };
 
-        return { ...group, questions: newQuestions };
+    startTransition(() => {
+      setQuestionGroups((prev) => {
+        return prev.map((g) => {
+          if (g.id !== groupId) return g;
+          const newQuestions = [...g.questions];
+          newQuestions.splice(index + 1, 0, clone);
+          return { ...g, questions: newQuestions };
+        });
       });
     });
+
+    // Copy questionSettings từ câu hỏi gốc
+    const srcSettings = questionSettings[src.id];
+    if (srcSettings) {
+      setQuestionSettings((prevSettings) => ({
+        ...prevSettings,
+        [tempId]: {
+          ...srcSettings,
+          questionCode: `Q${String(tempId).padStart(3, "0")}`,
+        },
+      }));
+    }
+
+    // Set active cho câu hỏi mới
+    setActiveSection(`question-${tempId}`);
+    setActiveQuestionId(String(tempId));
+
+    // 2. GỌI API ĐỂ DUPLICATE TRONG CSDL
+    setPendingOperations(prev => prev + 1);
+    try {
+      const duplicatedQuestion = await duplicateQuestion(src.id);
+      const realId = parseInt(duplicatedQuestion.id);
+
+      // Convert options từ backend format sang frontend format
+      const convertedOptions = (duplicatedQuestion.options || []).map((backendOption) => {
+        const optionId = backendOption.id ? parseInt(backendOption.id, 10) : null;
+        return {
+          id: (!isNaN(optionId) && optionId > 0) ? optionId : Date.now() + Math.random(),
+          text: backendOption.option_text || "",
+          isSubquestion: backendOption.is_subquestion || false,
+          image: backendOption.image || null,
+        };
+      });
+
+      // 3. THAY THẾ ID TẠM BẰNG ID THẬT
+      startTransition(() => {
+        setQuestionGroups((prev) => {
+          return prev.map((g) => {
+            if (g.id !== groupId) return g;
+            return {
+              ...g,
+              questions: g.questions.map((q) => {
+                if (q.id !== tempId) return q;
+                return {
+                  id: realId,
+                  text: duplicatedQuestion.question_text || "",
+                  helpText: duplicatedQuestion.help_text || "",
+                  type: duplicatedQuestion.question_type || "Danh sách (nút chọn)",
+                  options: convertedOptions,
+                  maxLength: duplicatedQuestion.max_length || undefined,
+                };
+              }),
+            };
+          });
+        });
+      });
+
+      // Cập nhật questionSettings với ID thật
+      setQuestionSettings((prevSettings) => {
+        const newSettings = { ...prevSettings };
+        const tempSettings = newSettings[tempId];
+        if (tempSettings) {
+          delete newSettings[tempId];
+        }
+
+        newSettings[realId] = {
+          questionCode: duplicatedQuestion.question_code || `Q${String(realId).padStart(3, "0")}`,
+          type: duplicatedQuestion.question_type || "Danh sách (nút chọn)",
+          required: duplicatedQuestion.required || "soft",
+          image: duplicatedQuestion.image || null,
+          conditions: duplicatedQuestion.conditions || [],
+          defaultScenario: duplicatedQuestion.default_scenario || 1,
+          maxLength: duplicatedQuestion.max_length || undefined,
+          numericOnly: duplicatedQuestion.numeric_only || false,
+          maxQuestions: duplicatedQuestion.max_questions || undefined,
+          allowedFileTypes: duplicatedQuestion.allowed_file_types || undefined,
+          maxFileSizeKB: duplicatedQuestion.max_file_size_kb || undefined,
+          points: duplicatedQuestion.points || 0,
+        };
+
+        return newSettings;
+      });
+
+      // Cập nhật activeSection với ID thật
+      setActiveSection(`question-${realId}`);
+      setActiveQuestionId(String(realId));
+
+      // Đặt mặc định chọn "Không có câu trả lời" cho loại Giới tính và Có/Không
+      if (duplicatedQuestion.question_type === "Giới tính" || duplicatedQuestion.question_type === "Có/Không") {
+        const noAnswerOption = convertedOptions.find(
+          (opt) => opt.text === "Không có câu trả lời"
+        );
+        if (noAnswerOption) {
+          setSelectedAnswers((prev) => ({
+            ...prev,
+            [realId]: noAnswerOption.id,
+          }));
+        }
+      }
+
+      setSavedAt(new Date());
+
+      // Broadcast để đồng bộ với các tab khác
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: 'QUESTION_ADDED',
+          data: { questionId: realId },
+        });
+      }
+    } catch (error) {
+      // Rollback: Xóa câu hỏi tạm
+      startTransition(() => {
+        setQuestionGroups((prev) => {
+          return prev.map((g) => {
+            if (g.id !== groupId) return g;
+            return {
+              ...g,
+              questions: g.questions.filter((q) => q.id !== tempId),
+            };
+          });
+        });
+      });
+
+      // Xóa questionSettings tạm
+      setQuestionSettings((prevSettings) => {
+        const newSettings = { ...prevSettings };
+        delete newSettings[tempId];
+        return newSettings;
+      });
+    } finally {
+      setPendingOperations(prev => prev - 1);
+    }
   };
 
-  const duplicateGroup = (groupId = null) => {
-    setQuestionGroups((prev) => {
-      if (prev.length === 0) return prev;
+  const duplicateGroup = async (groupId = null) => {
+    // Tìm group cần duplicate
+    const sourceGroup = groupId
+      ? questionGroups.find((g) => g.id === groupId)
+      : questionGroups[0];
 
-      const sourceGroup = groupId
-        ? prev.find((g) => g.id === groupId)
-        : prev[0];
+    if (!sourceGroup) {
+      toast.error("Không tìm thấy nhóm câu hỏi");
+      return;
+    }
 
-      if (!sourceGroup) return prev;
+    // Kiểm tra xem group có ID từ backend không (số dương)
+    const hasBackendId = sourceGroup.id && typeof sourceGroup.id === 'number' && sourceGroup.id > 0;
 
-      const maxGroupId = Math.max(...prev.map((g) => g.id || 0));
-      const maxQuestionId = Math.max(
-        ...prev.flatMap((g) => g.questions.map((q) => q.id || 0))
-      );
+    if (!hasBackendId) {
+      toast.error("Nhóm câu hỏi chưa được lưu vào CSDL");
+      return;
+    }
 
-      const duplicatedQuestions = sourceGroup.questions.map(
-        (question, index) => ({
-          ...question,
-          id: maxQuestionId + index + 1,
-        })
-      );
+    // Tạo ID tạm cho group mới
+    const tempGroupId = -(Date.now());
 
-      const newGroup = {
-        id: maxGroupId + 1,
-        title: sourceGroup.title,
-        questions: duplicatedQuestions,
-      };
+    // Tạo ID tạm cho các câu hỏi mới
+    const tempQuestions = sourceGroup.questions.map((question, index) => ({
+      ...question,
+      id: -(Date.now() + index + 1), // ID tạm âm
+      text: question.text || "",
+      helpText: question.helpText || "",
+      options: question.options || [],
+      _pending: true,
+    }));
 
-      // Copy questionSettings bao gồm ảnh cho tất cả câu hỏi trong group
-      sourceGroup.questions.forEach((question, index) => {
-        const srcSettings = questionSettings[question.id];
-        const newQuestionId = maxQuestionId + index + 1;
-        if (srcSettings) {
-          setQuestionSettings((prevSettings) => ({
-            ...prevSettings,
-            [newQuestionId]: {
-              ...srcSettings,
-              questionCode: `Q${String(newQuestionId).padStart(3, "0")}`,
-            },
-          }));
+    // 1. CẬP NHẬT UI NGAY LẬP TỨC (Optimistic Update)
+    // ✅ Tạo group mới
+    const tempGroup = {
+      id: tempGroupId,
+      title: sourceGroup.title,
+      questions: tempQuestions,
+      _pending: true,
+    };
+
+    startTransition(() => {
+      setQuestionGroups((prev) => [...prev, tempGroup]);
+    });
+
+    // Copy questionSettings cho các câu hỏi tạm
+    tempQuestions.forEach((question) => {
+      const srcQuestion = sourceGroup.questions.find((q) => q.type === question.type);
+      const srcSettings = srcQuestion ? questionSettings[srcQuestion.id] : null;
+      if (srcSettings) {
+        setQuestionSettings((prevSettings) => ({
+          ...prevSettings,
+          [question.id]: {
+            ...srcSettings,
+            questionCode: `Q${String(question.id).padStart(3, "0")}`,
+          },
+        }));
+      }
+    });
+
+    // 2. GỌI API ĐỂ DUPLICATE GROUP (bao gồm tất cả questions)
+    setPendingOperations(prev => prev + 1);
+    try {
+      // Gọi API duplicate group
+      const duplicatedGroup = await duplicateQuestionGroup(sourceGroup.id);
+      const realGroupId = parseInt(duplicatedGroup.id);
+
+      // Convert questions từ backend format sang frontend format
+      const newQuestions = (duplicatedGroup.questions || []).map((backendQuestion) => {
+        const convertedOptions = (backendQuestion.options || []).map((backendOption) => {
+          const optionId = backendOption.id ? parseInt(backendOption.id, 10) : null;
+          return {
+            id: (!isNaN(optionId) && optionId > 0) ? optionId : Date.now() + Math.random(),
+            text: backendOption.option_text || "",
+            isSubquestion: backendOption.is_subquestion || false,
+            image: backendOption.image || null,
+          };
+        });
+
+        return {
+          id: parseInt(backendQuestion.id),
+          text: backendQuestion.question_text || "",
+          helpText: backendQuestion.help_text || "",
+          type: backendQuestion.question_type || "Danh sách (nút chọn)",
+          options: convertedOptions,
+          maxLength: backendQuestion.max_length || undefined,
+        };
+      });
+
+      // 3. THAY THẾ GROUP TẠM BẰNG GROUP THẬT
+      startTransition(() => {
+        setQuestionGroups((prev) => {
+          return prev.map((g) => {
+            if (g.id !== tempGroupId) return g;
+            
+            return {
+              id: realGroupId,
+              title: duplicatedGroup.title,
+              questions: newQuestions,
+            };
+          });
+        });
+      });
+
+      // Cập nhật questionSettings với ID thật
+      const tempQuestionIds = tempQuestions.map((q) => q.id);
+      setQuestionSettings((prevSettings) => {
+        const newSettings = { ...prevSettings };
+
+        // Xóa settings tạm
+        tempQuestionIds.forEach((tempId) => {
+          delete newSettings[tempId];
+        });
+
+        // Thêm settings thật
+        (duplicatedGroup.questions || []).forEach((backendQuestion) => {
+          const realId = parseInt(backendQuestion.id);
+          newSettings[realId] = {
+            questionCode: backendQuestion.question_code || `Q${String(realId).padStart(3, "0")}`,
+            type: backendQuestion.question_type || "Danh sách (nút chọn)",
+            required: backendQuestion.required || "soft",
+            image: backendQuestion.image || null,
+            conditions: backendQuestion.conditions || [],
+            defaultScenario: backendQuestion.default_scenario || 1,
+            maxLength: backendQuestion.max_length || undefined,
+            numericOnly: backendQuestion.numeric_only || false,
+            maxQuestions: backendQuestion.max_questions || undefined,
+            allowedFileTypes: backendQuestion.allowed_file_types || undefined,
+            maxFileSizeKB: backendQuestion.max_file_size_kb || undefined,
+            points: backendQuestion.points || 0,
+          };
+        });
+
+        return newSettings;
+      });
+
+      // Cập nhật selectedAnswers cho Giới tính và Có/Không
+      (duplicatedGroup.questions || []).forEach((backendQuestion, index) => {
+        if (backendQuestion.question_type === "Giới tính" || backendQuestion.question_type === "Có/Không") {
+          const convertedOptions = newQuestions[index].options;
+          const noAnswerOption = convertedOptions.find(
+            (opt) => opt.text === "Không có câu trả lời"
+          );
+          if (noAnswerOption) {
+            setSelectedAnswers((prev) => ({
+              ...prev,
+              [newQuestions[index].id]: noAnswerOption.id,
+            }));
+          }
         }
       });
 
-      return [...prev, newGroup];
-    });
+      setSavedAt(new Date());
+
+      // Broadcast để đồng bộ với các tab khác
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: 'GROUP_ADDED',
+          data: { groupId: realGroupId },
+        });
+      }
+    } catch (error) {
+      // Rollback: Xóa group tạm
+      startTransition(() => {
+        setQuestionGroups((prev) => prev.filter((g) => g.id !== tempGroupId));
+      });
+
+      // Xóa questionSettings tạm
+      const tempQuestionIds = tempQuestions.map((q) => q.id);
+      setQuestionSettings((prevSettings) => {
+        const newSettings = { ...prevSettings };
+        tempQuestionIds.forEach((tempId) => {
+          delete newSettings[tempId];
+        });
+        return newSettings;
+      });
+    } finally {
+      setPendingOperations(prev => prev - 1);
+    }
   };
 
   const deleteGroup = (groupId) => {
     setDeleteModal({
       isOpen: true,
       action: async () => {
-        // ✅ Tối ưu: Tìm group và lấy question IDs một lần
+        // Tìm group cần xóa
         const groupToDelete = questionGroups.find((g) => g.id === groupId);
         if (!groupToDelete) {
           toast.error("Không tìm thấy nhóm câu hỏi cần xóa");
@@ -1644,10 +2129,10 @@ export default function SurveyForm({ surveyId = null }) {
         const shouldResetActive = activeQuestionId && questionIdsToDelete.includes(activeQuestionId);
         const questionIdsSet = new Set(questionIdsToDelete);
 
-        // ✅ Đóng modal ngay để UI responsive hơn
+        // Đóng modal ngay để UI responsive hơn
         setDeleteModal((prev) => ({ ...prev, isOpen: false }));
 
-        // ✅ Lưu snapshot state để rollback nếu lỗi
+        // Lưu snapshot state để rollback nếu lỗi
         const stateSnapshot = {
           questionGroups: [...questionGroups],
           questionSettings: { ...questionSettings },
@@ -1657,7 +2142,7 @@ export default function SurveyForm({ surveyId = null }) {
           rightPanel,
         };
 
-        // ✅ OPTIMISTIC UPDATE: Update UI ngay lập tức với startTransition (không block UI)
+        // OPTIMISTIC UPDATE: Update UI ngay lập tức
         startTransition(() => {
           setQuestionGroups((prev) => prev.filter((g) => g.id !== groupId));
 
@@ -1680,10 +2165,10 @@ export default function SurveyForm({ surveyId = null }) {
           }
         });
 
-        // Gọi API ở background (không block UI) - không cần await
-        deleteQuestions(questionIdsToDelete)
+        // Gọi API xóa group (backend sẽ tự động xóa tất cả questions trong group)
+        deleteQuestionGroup(groupId)
           .then(() => {
-            // ✅ Gửi message qua BroadcastChannel để đồng bộ với các tab khác
+            // Gửi message qua BroadcastChannel để đồng bộ với các tab khác
             if (broadcastChannelRef.current) {
               broadcastChannelRef.current.postMessage({
                 type: 'GROUP_DELETED',
@@ -1696,6 +2181,7 @@ export default function SurveyForm({ surveyId = null }) {
           })
           .catch(() => {
             // Rollback state nếu lỗi
+            toast.error("Không thể xóa nhóm câu hỏi");
             setQuestionGroups(stateSnapshot.questionGroups);
             setQuestionSettings(stateSnapshot.questionSettings);
             setSelectedAnswers(stateSnapshot.selectedAnswers);
@@ -2178,6 +2664,18 @@ export default function SurveyForm({ surveyId = null }) {
                         }
 
                         setSavedAt(new Date());
+                        
+                        // Broadcast để đồng bộ với các tab khác
+                        if (broadcastChannelRef.current) {
+                          broadcastChannelRef.current.postMessage({
+                            type: 'QUESTION_TYPE_CHANGED',
+                            data: {
+                              questionId: activeQuestionId,
+                              newType: questionNewType,
+                              newOptions: newOptions,
+                            },
+                          });
+                        }
                       } catch (error) {
                         toast.error('Không thể thay đổi loại câu hỏi');
                       } finally {
@@ -2294,59 +2792,67 @@ export default function SurveyForm({ surveyId = null }) {
                         />
                       </div>
 
-                      {questionGroups.map((group) => (
-                        <React.Fragment key={group.id}>
-                          <QuestionSection
-                            groupId={group.id}
-                            groupTitle={group.title}
-                            questionItems={group.questions.filter((q) =>
-                              shouldShowQuestion(q.id)
-                            )}
-                            moveQuestionItem={(index, direction) =>
-                              moveQuestionItem(group.id, index, direction)
-                            }
-                            activeSection={activeSection}
-                            handleSetSection={handleSetSection}
-                            onDuplicate={(questionIndex) => {
-                              duplicateQuestionItem(group.id, questionIndex);
-                            }}
-                            onDuplicateGroup={() => duplicateGroup(group.id)}
-                            onDelete={(questionIndex) => {
-                              deleteQuestionItem(group.id, questionIndex);
-                            }}
-                            onDeleteGroup={() => deleteGroup(group.id)}
-                            onTextChange={handleQuestionTextChange}
-                            onTextBlur={handleQuestionTextBlur}
-                            onHelpTextChange={handleHelpTextChange}
-                            onHelpTextBlur={handleHelpTextBlur}
-                            onGroupTitleChange={(newTitle) => {
-                              setQuestionGroups((prev) =>
-                                prev.map((g) =>
-                                  g.id === group.id
-                                    ? { ...g, title: newTitle }
-                                    : g
-                                )
-                              );
-                            }}
-                            onAnswerSelect={handleAnswerSelect}
-                            selectedAnswers={selectedAnswers}
-                            getQuestionConditionInfo={getQuestionConditionInfo}
-                            onOptionChange={handleOptionChange}
-                            onOptionBlur={handleOptionBlur}
-                            onAddOption={handleAddOption}
-                            onRemoveOption={handleRemoveOption}
-                            onMoveOption={handleMoveOption}
-                            onOptionImageChange={handleOptionImageChange}
-                          />
-                          <AddSection
-                            onAddClick={() => {
-                              handleToggleModal();
-                              window.__currentGroupId = group.id;
-                            }}
-                            isModalOpen={isModalOpen}
-                          />
-                        </React.Fragment>
-                      ))}
+                      {questionGroups.map((group, groupIndex) => {
+                        // ✅ Tính global start index (tổng số câu hỏi của tất cả groups trước đó)
+                        const globalStartIndex = questionGroups
+                          .slice(0, groupIndex)
+                          .reduce((sum, g) => sum + g.questions.filter((q) => shouldShowQuestion(q.id)).length, 0);
+
+                        return (
+                          <React.Fragment key={group.id}>
+                            <QuestionSection
+                              groupId={group.id}
+                              groupTitle={group.title}
+                              questionItems={group.questions.filter((q) =>
+                                shouldShowQuestion(q.id)
+                              )}
+                              globalStartIndex={globalStartIndex}
+                              moveQuestionItem={(index, direction) =>
+                                moveQuestionItem(group.id, index, direction)
+                              }
+                              activeSection={activeSection}
+                              handleSetSection={handleSetSection}
+                              onDuplicate={(questionIndex) => {
+                                duplicateQuestionItem(group.id, questionIndex);
+                              }}
+                              onDuplicateGroup={() => duplicateGroup(group.id)}
+                              onDelete={(questionIndex) => {
+                                deleteQuestionItem(group.id, questionIndex);
+                              }}
+                              onDeleteGroup={() => deleteGroup(group.id)}
+                              onTextChange={handleQuestionTextChange}
+                              onTextBlur={handleQuestionTextBlur}
+                              onHelpTextChange={handleHelpTextChange}
+                              onHelpTextBlur={handleHelpTextBlur}
+                              onGroupTitleChange={(newTitle) => {
+                                setQuestionGroups((prev) =>
+                                  prev.map((g) =>
+                                    g.id === group.id
+                                      ? { ...g, title: newTitle }
+                                      : g
+                                  )
+                                );
+                              }}
+                              onAnswerSelect={handleAnswerSelect}
+                              selectedAnswers={selectedAnswers}
+                              getQuestionConditionInfo={getQuestionConditionInfo}
+                              onOptionChange={handleOptionChange}
+                              onOptionBlur={handleOptionBlur}
+                              onAddOption={handleAddOption}
+                              onRemoveOption={handleRemoveOption}
+                              onMoveOption={handleMoveOption}
+                              onOptionImageChange={handleOptionImageChange}
+                              />
+                            <AddSection
+                              onAddClick={() => {
+                                handleToggleModal();
+                                window.__currentGroupId = group.id;
+                              }}
+                              isModalOpen={isModalOpen}
+                            />
+                          </React.Fragment>
+                        );
+                      })}
 
                       <div
                         id="end"

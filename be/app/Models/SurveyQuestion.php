@@ -13,6 +13,8 @@ class SurveyQuestion extends Model
 
     protected $fillable = [
         'survey_id',
+        'group_id',
+        'position',
         'question_code',
         'question_text',
         'image',
@@ -37,12 +39,18 @@ class SurveyQuestion extends Model
         'max_questions' => 'integer',
         'max_file_size_kb' => 'integer',
         'points' => 'integer',
+        'position' => 'integer',
     ];
 
     // Relationships
     public function survey()
     {
         return $this->belongsTo(Survey::class);
+    }
+
+    public function group()
+    {
+        return $this->belongsTo(QuestionGroup::class, 'group_id');
     }
 
     public function options()
