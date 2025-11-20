@@ -103,7 +103,7 @@ class GroupService
             // Tạo bản sao group
             $newGroup = $this->groupRepository->replicate($originalGroup);
             $newGroup->survey_id = $originalGroup->survey_id;
-            $newGroup->title = $originalGroup->title . ' (Copy)';
+            $newGroup->title = $originalGroup->title;
 
             // Tạo position mới
             $groupCount = $this->groupRepository->countBySurveyId($originalGroup->survey_id);

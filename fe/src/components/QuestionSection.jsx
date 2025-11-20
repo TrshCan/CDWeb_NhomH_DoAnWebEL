@@ -142,10 +142,17 @@ export default function QuestionSection({
   // Đồng bộ tiêu đề ra ngoài nếu cần (chỉ khi groupTitle thay đổi)
   // Sử dụng ref để tránh re-run khi callback function reference thay đổi
   useEffect(() => {
-    if (typeof onGroupTitleChangeRef.current === "function") {
+    // Chỉ gọi callback nếu:
+    // 1. groupTitle khác với initialGroupTitle (có thay đổi thực sự)
+    // 2. groupId là số dương (không phải ID tạm)
+    if (
+      typeof onGroupTitleChangeRef.current === "function" &&
+      groupTitle !== initialGroupTitle &&
+      groupId > 0
+    ) {
       onGroupTitleChangeRef.current(groupTitle);
     }
-  }, [groupTitle]);
+  }, [groupTitle, initialGroupTitle, groupId]);
 
   // Đảm bảo hiển thị text = groupTitle khi không ở chế độ edit
   useEffect(() => {
