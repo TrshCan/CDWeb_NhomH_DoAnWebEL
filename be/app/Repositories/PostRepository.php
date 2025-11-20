@@ -6,10 +6,16 @@ use App\Models\Post;
 
 class PostRepository
 {
+    protected $model;
+
+    public function __construct(Post $model)
+    {
+        $this->model = $model;
+    }
+
     public function all()
     {
-        return Post::with(['user', 'group', 'likes.user', 'shares', 'children.user', 'children.likes.user', 'media'])
-            ->whereNull('parent_id')
+        return $this->model->with(['user', 'group', 'likes', 'shares', 'children'])
             ->latest()
             ->get();
     }
@@ -51,7 +57,7 @@ class PostRepository
             ->get();
     }
 
-
+    
     public function byGroup($groupId)
     {
         return Post::where('group_id', $groupId)
@@ -80,21 +86,29 @@ class PostRepository
             ->get();
     }
 
+    public function byGroup($groupId)
+    {
+        return $this->model->where('group_id', $groupId)
+            ->with(['user', 'likes', 'shares', 'children'])
+            ->latest()
+            ->get();
+    }
+
     public function create(array $data)
     {
-        return Post::create($data);
+        return $this->model->create($data);
     }
 
     public function update($id, array $data)
     {
-        $post = Post::findOrFail($id);
+        $post = $this->model->findOrFail($id);
         $post->update($data);
         return $post;
     }
 
     public function delete($id)
     {
-        $post = Post::findOrFail($id);
+        $post = $this->model->findOrFail($id);
         return $post->delete();
     }
 
