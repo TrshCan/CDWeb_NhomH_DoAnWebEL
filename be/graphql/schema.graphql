@@ -1,4 +1,81 @@
+#import scalars.graphql
+
 type Query {
-  hello: String! @field(resolver: "App\\GraphQL\\Queries\\HelloResolver")
+    _empty: String
 }
 
+#import types/post.graphql
+#import types/user.graphql
+#import types/postMedia.graphql
+#import types/postLike.graphql
+#import types/deadline.graphql
+#import types/event.graphql
+#import types/badge.graphql
+
+#import inputs/postCreateInput.graphql
+#import inputs/postUpdateInput.graphql
+
+#import queries/postQueries.graphql
+#import queries/eventQueries.graphql
+#import queries/deadlineQueries.graphql
+#import queries/getProfileQueries.graphql
+#import queries/adminUserQueries.graphql
+#import queries/adminBadgeQueries.graphql
+#import mutations/postMutations.graphql
+#import mutations/userMutations.graphql
+#import mutations/adminUserMutations.graphql
+#import mutations/adminBadgeMutations.graphql
+
+type Mutation {
+  loginUser(
+    email: String!
+    password: String!
+  ): AuthPayload @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@loginUser")
+
+  registerUser(
+      name: String!
+      email: String!
+      password: String!
+      phone: String
+      address: String
+    ): User
+      @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@registerUser")
+
+  forgotPassword(
+    email: String!
+  ): String @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@forgotPassword")
+
+  resetPassword(
+    token: String!
+    email: String!
+    password: String!
+    passwordConfirmation: String!
+  ): String @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@resetPassword")
+  resendVerificationEmail(
+      email: String!
+    ): Boolean!
+      @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@resendVerificationEmail")
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+  _empty: String
+}
+
+
+
+type UserStats {
+  posts: Int!
+  followers: Int!
+  following: Int!
+}
+
+type UserBadge {
+  id: ID!
+  badge_id: ID!
+  name: String!
+  description: String
+  created_at: DateTime
+  assigned_at: DateTime
+}

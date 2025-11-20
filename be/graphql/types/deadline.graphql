@@ -1,0 +1,14 @@
+# Deadline Type Definition
+type Deadline {
+    id: ID!
+    title: String
+    deadline_date: Date
+    details: String
+    created_at: DateTime
+    created_by: ID!
+    deleted_at: DateTime
+
+    # Relationships (mirrors Post structure)
+    user: User
+    group: Group
+}

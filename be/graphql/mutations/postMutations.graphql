@@ -1,0 +1,11 @@
+# be/graphql/mutations/postMutation.graphql
+extend type Mutation {
+    createPost(input: CreatePostInput!, media: [Upload]): Post
+        @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@create")
+    updatePost(input: UpdatePostInput!): Post
+        @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@update")
+    deletePost(id: ID!): Boolean
+        @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@delete")
+    toggleLike(post_id: ID!, user_id: ID!): Boolean
+        @field(resolver: "App\\GraphQL\\Resolvers\\PostResolver@toggleLike")
+}

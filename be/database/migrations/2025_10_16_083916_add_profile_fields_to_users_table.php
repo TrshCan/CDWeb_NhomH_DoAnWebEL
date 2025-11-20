@@ -10,7 +10,9 @@ return new class extends Migration {
         Schema::table('users', function (Blueprint $table) {
             // Mở rộng thông tin
             $table->string('phone', 255)->nullable()->after('email');
+            $table->unique('phone');
             $table->string('address', 255)->nullable()->after('phone');
+            $table->string('avatar', 255)->nullable()->default('default.png')->after('address');
             $table->enum('role', ['student','lecturer','admin'])->default('student')->after('address');
 
             // FK (các bảng đích phải tồn tại trước)

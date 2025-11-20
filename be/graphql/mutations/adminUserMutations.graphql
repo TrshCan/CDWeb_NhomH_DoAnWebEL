@@ -1,0 +1,26 @@
+extend type Mutation {
+  adminCreateUser(
+    name: String!
+    email: String!
+    password: String!
+    role: String
+    status_id: Int
+  ): User
+    @field(resolver: "App\\GraphQL\\Resolvers\\AdminUserResolver@createUser")
+  
+  adminUpdateUser(
+    id: Int!
+    name: String
+    email: String
+    role: String
+    status_id: Int
+  ): User
+    @field(resolver: "App\\GraphQL\\Resolvers\\AdminUserResolver@updateUser")
+  
+  adminDeleteUser(id: Int!): Boolean!
+    @field(resolver: "App\\GraphQL\\Resolvers\\AdminUserResolver@deleteUser")
+  
+  adminToggleUserStatus(id: Int!, ban_reason: String): User
+    @field(resolver: "App\\GraphQL\\Resolvers\\AdminUserResolver@toggleUserStatus")
+}
+

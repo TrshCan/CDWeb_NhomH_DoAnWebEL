@@ -37,6 +37,7 @@ return new class extends Migration {
         // 1) Faculties
         Schema::create('faculties', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->string('code', 2)->unique(); 
             $table->string('name', 100)->unique();
             $table->text('description')->nullable();
             $table->timestamp('created_at')->nullable();
@@ -130,7 +131,7 @@ return new class extends Migration {
                 ->constrained('groups')->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('parent_id')->nullable()
                 ->constrained('posts')->cascadeOnUpdate()->nullOnDelete();
-            $table->enum('type', ['announcement','group_post','comment'])->default('announcement');
+            $table->enum('type', ['announcement', 'group_post', 'comment','normal_post'])->default('announcement');
             $table->text('content')->nullable();
             $table->string('media_url', 255)->nullable();
             $table->timestamp('created_at')->nullable();
@@ -177,36 +178,91 @@ return new class extends Migration {
                 ->references('id')->on('categories')
                 ->cascadeOnUpdate()->restrictOnDelete();
 
-            $table->enum('type', ['survey','quiz'])->default('survey');
+            $table->enum('type', ['survey', 'quiz'])->default('survey');
             $table->timestamp('start_at')->nullable();
             $table->timestamp('end_at')->nullable();
             $table->integer('time_limit')->nullable();
             $table->integer('points')->default(0);
-            $table->enum('object', ['public','students','lecturers'])->default('public');
+            $table->enum('object', ['public', 'students', 'lecturers'])->default('public');
+
+            // THÊM MỚI: trạng thái survey/quiz + cho xem lại hay không
+            $table->enum('status', ['pending', 'active', 'paused', 'closed'])->default('pending');
+            $table->boolean('allow_review')->default(false);
+
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
             $table->softDeletes();
         });
 
-        // 12) SurveyQuestions
+        // 12) SurveyQuestions (MỞ RỘNG)
         Schema::create('survey_questions', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->foreignId('survey_id')->constrained('surveys')->cascadeOnUpdate()->cascadeOnDelete();
+
+            // Mã câu hỏi (Q001, Q002,...)
+            $table->string('question_code', 50)->nullable();
+
             $table->text('question_text');
-            $table->enum('question_type', ['text','single_choice','multiple_choice']);
+
+            // Ảnh câu hỏi
+            $table->text('image')->nullable();
+
+            // ĐỔI: từ enum cũ sang string linh hoạt cho 15 loại
+            $table->string('question_type', 50);
+
+            // bắt buộc: none / soft / hard
+            $table->enum('required', ['none', 'soft', 'hard'])->default('none');
+
+            // điều kiện logic (ẩn/hiện theo câu trước)
+            $table->json('conditions')->nullable();
+
+            // kịch bản mặc định (nếu dùng)
+            $table->unsignedInteger('default_scenario')->nullable();
+
+            // giới hạn độ dài cho text/number
+            $table->unsignedInteger('max_length')->nullable();
+
+            // chỉ cho phép số
+            $table->boolean('numeric_only')->default(false);
+
+            // cho file upload: số lượng file tối đa
+            $table->unsignedInteger('max_questions')->nullable();
+
+            // loại file cho phép, ví dụ: "jpg,png,pdf"
+            $table->string('allowed_file_types', 255)->nullable();
+
+            // kích thước tối đa mỗi file (KB)
+            $table->unsignedInteger('max_file_size_kb')->nullable();
+
+            // text trợ giúp dưới câu hỏi
+            $table->text('help_text')->nullable();
+
+            // điểm tối đa của câu
             $table->integer('points')->default(0);
         });
 
-        // 13) SurveyOptions
+        // 13) SurveyOptions (MỞ RỘNG)
         Schema::create('survey_options', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->foreignId('question_id')->constrained('survey_questions')->cascadeOnUpdate()->cascadeOnDelete();
             $table->string('option_text', 255);
+
+            // Ảnh của option (cho câu chọn hình)
+            $table->text('image')->nullable();
+
+            // cho ma trận: option này là subquestion hay không
+            $table->boolean('is_subquestion')->default(false);
+
+            // thứ tự hiển thị
+            $table->unsignedInteger('position')->nullable();
+
             $table->boolean('is_correct')->default(false);
+
+            $table->index(['question_id', 'position']);
         });
 
-        // 14) SurveyAnswers
+        // 14) SurveyAnswers (MỞ RỘNG)
         Schema::create('survey_answers', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->foreignId('question_id')->constrained('survey_questions')->cascadeOnUpdate()->cascadeOnDelete();
@@ -214,9 +270,57 @@ return new class extends Migration {
             $table->foreignId('selected_option_id')->nullable()
                 ->constrained('survey_options')->cascadeOnUpdate()->nullOnDelete();
             $table->text('answer_text')->nullable();
+
+            // text comment cho "Danh sách có nhận xét"
+            $table->text('comment_text')->nullable();
+
+            // lưu ma trận (JSON)
+            $table->json('matrix_answer')->nullable();
+
+            // fallback: nếu muốn lưu trực tiếp list URL file
+            $table->json('file_urls')->nullable();
+
             $table->timestamp('answered_at')->nullable();
             $table->integer('score')->default(0);
             $table->softDeletes();
+        });
+
+        // BẢNG MỚI:  Pivot lưu nhiều option cho 1 answer (multiple choice)
+        Schema::create('survey_answer_options', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->foreignId('answer_id')->constrained('survey_answers')->cascadeOnUpdate()->cascadeOnDelete();
+            $table->foreignId('option_id')->constrained('survey_options')->cascadeOnUpdate()->cascadeOnDelete();
+            $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
+            $table->unique(['answer_id', 'option_id']);
+        });
+
+        // BẢNG MỚI: lưu file upload cho câu trả lời
+        Schema::create('survey_answer_files', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->foreignId('answer_id')->constrained('survey_answers')->cascadeOnUpdate()->cascadeOnDelete();
+            $table->string('file_path', 255);
+            $table->string('original_name', 255)->nullable();
+            $table->unsignedInteger('file_size_kb')->nullable();
+            $table->string('mime_type', 100)->nullable();
+            $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
+        });
+
+        // BẢNG MỚI: tổng kết điểm quiz cho mỗi user
+        Schema::create('survey_results', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->foreignId('survey_id')->constrained('surveys')->cascadeOnUpdate()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
+
+            $table->integer('total_score')->default(0);
+            $table->integer('max_score')->default(0);
+            $table->enum('status', ['in_progress', 'completed'])->default('completed');
+
+            $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
+
+            $table->unique(['survey_id', 'user_id']);
         });
 
         // 15) GroupPosts
@@ -235,16 +339,16 @@ return new class extends Migration {
             $table->bigIncrements('id');
             $table->foreignId('follower_id')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->foreignId('followed_id')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
-            $table->enum('status', ['active','blocked'])->default('active');
+            $table->enum('status', ['active', 'blocked'])->default('active');
             $table->timestamp('created_at')->nullable();
-            $table->unique(['follower_id','followed_id']);
+            $table->unique(['follower_id', 'followed_id']);
         });
 
         // 17) Events
         Schema::create('events', function (Blueprint $table) {
             $table->increments('id'); // int auto-increment
             $table->text('title');
-            $table->date('event_date');
+            $table->datetime('event_date');
             $table->text('location')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
@@ -282,10 +386,22 @@ return new class extends Migration {
             $table->timestamp('assigned_at')->useCurrent();
             $table->timestamp('revoked_at')->nullable();
         });
+         // 21) PostImages
+        Schema::create('post_media', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('post_id')->constrained()->onDelete('cascade');
+            $table->string('url');
+            $table->timestamps();
+        });
     }
 
     public function down(): void
     {
+        // Bảng mới (phải drop trước vì FK)
+        Schema::dropIfExists('survey_results');
+        Schema::dropIfExists('survey_answer_files');
+        Schema::dropIfExists('survey_answer_options');
+        Schema::dropIfExists('post_media');
         Schema::dropIfExists('user_badges');
         Schema::dropIfExists('badges');
         Schema::dropIfExists('deadlines');
