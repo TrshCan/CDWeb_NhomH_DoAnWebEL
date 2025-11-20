@@ -8,8 +8,10 @@ import QuestionTypeModal from "./QuestionTypeModal";
 import SidebarRail from "./SidebarRail";
 import StructurePanel from "./StructurePanel";
 import SettingsPanel from "./SettingsPanel";
+import ShareSidePanel from "./ShareSidePanel";
 import GeneralSettingsForm from "./GeneralSettingsForm";
 import PublishAccessForm from "./PublishAccessForm";
+import SharePanel from "./SharePanel";
 
 import WelcomeSettingsPanel from "./WelcomeSettingsPanel";
 import QuestionSettingsPanel from "./QuestionSettingsPanel";
@@ -33,7 +35,7 @@ export default function SurveyForm({ surveyId = null }) {
     message: "Bạn không thể hoàn tác thao tác này!",
   });
 
-  // panel trái: null | 'structure' | 'settings'
+  // panel trái: null | 'structure' | 'settings' | 'share'
   const [openPanel, setOpenPanel] = useState("structure");
   const [settingsTab, setSettingsTab] = useState("general");
 
@@ -927,10 +929,11 @@ export default function SurveyForm({ surveyId = null }) {
   }, [currentSurveyId]);
 
   // ✅ Memoize centerWidth để tránh tính toán lại mỗi lần render
-  const centerWidth = useMemo(
-    () => openPanel === "settings" ? "900px" : "750px",
-    [openPanel]
-  );
+  const centerWidth = useMemo(() => {
+    if (openPanel === "settings") return "900px";
+    if (openPanel === "share") return "100%";
+    return "750px";
+  }, [openPanel]);
 
   const [prevRightPanel, setPrevRightPanel] = useState(null);
   const [savedRightPanel, setSavedRightPanel] = useState(null); // Lưu rightPanel khi mở modal thêm
@@ -1451,7 +1454,12 @@ export default function SurveyForm({ surveyId = null }) {
       setSettingsTab("general");
     }
 
-    if (openPanel === "settings" && panel !== "settings") {
+    if (panel === "share") {
+      if (rightPanel) setPrevRightPanel(rightPanel);
+      setRightPanel(null);
+    }
+
+    if ((openPanel === "settings" || openPanel === "share") && panel !== "settings" && panel !== "share") {
       if (prevRightPanel) {
         setRightPanel(prevRightPanel);
         setPrevRightPanel(null);
@@ -2514,7 +2522,7 @@ export default function SurveyForm({ surveyId = null }) {
           <div className="px-4 pt-4">
             <div className="h-12 bg-gray-200 flex items-center justify-between px-4">
               <span className="font-semibold text-gray-800">
-                {openPanel === "structure" ? "Kết cấu" : "Cài đặt"}
+                {openPanel === "structure" ? "Kết cấu" : openPanel === "share" ? "Chia sẻ" : "Cài đặt"}
               </span>
               <button
                 type="button"
@@ -2553,9 +2561,11 @@ export default function SurveyForm({ surveyId = null }) {
                   deleteQuestionItem(groupId, questionIndex);
                 }}
               />
-            ) : (
+            ) : openPanel === "settings" ? (
               <SettingsPanel tab={settingsTab} onSelect={setSettingsTab} />
-            )}
+            ) : openPanel === "share" ? (
+              <ShareSidePanel />
+            ) : null}
           </div>
         </div>
       </div>
@@ -2582,7 +2592,7 @@ export default function SurveyForm({ surveyId = null }) {
           savedAt={savedAt}
           isSaving={pendingOperations > 0}
           onActivate={() => toast.success("Đã kích hoạt")}
-          onMore={() => setOpenPanel(openPanel === "settings" ? null : "settings")}
+          onShare={() => setOpenPanel(openPanel === "share" ? null : "share")}
           onAddQuestion={() => {
             handleToggleModal();
             window.__currentGroupId = null;
@@ -2836,7 +2846,12 @@ export default function SurveyForm({ surveyId = null }) {
                 style={{ width: centerWidth, boxSizing: "content-box" }}
               >
                 <div className="flex flex-col space-y-6">
-                  {openPanel === "settings" ? (
+                  {openPanel === "share" ? (
+                    <SharePanel 
+                      surveyId={surveyId}
+                      surveyUrl={`${window.location.origin}/survey/${surveyId}`}
+                    />
+                  ) : openPanel === "settings" ? (
                     settingsTab === "general" ? (
                       <GeneralSettingsForm
                         value={generalSettings}

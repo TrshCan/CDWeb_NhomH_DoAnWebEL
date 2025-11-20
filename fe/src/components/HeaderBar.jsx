@@ -1,11 +1,12 @@
 import React from "react";
+import HeaderMenu from "./HeaderMenu";
 
 export default function HeaderBar({
   title = "",
   savedAt = null,
   isSaving = false,
   onActivate,
-  onMore,
+  onShare,
   onAddQuestion,
   logoSrc = "/fe/img/logo.jpg",
 }) {
@@ -91,25 +92,8 @@ export default function HeaderBar({
             Kích hoạt
           </button>
 
-          {/* 40 x 36 */}
-          <button
-            type="button"
-            aria-label="More"
-            className="w-10 h-9 inline-flex items-center justify-center rounded-md border border-gray-300 hover:bg-gray-50 active:bg-gray-100"
-            onClick={onMore}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="text-gray-800"
-            >
-              <circle cx="5" cy="12" r="2" />
-              <circle cx="12" cy="12" r="2" />
-              <circle cx="19" cy="12" r="2" />
-            </svg>
-          </button>
+          {/* Menu dropdown */}
+          <HeaderMenu onShare={onShare} />
         </div>
       </div>
     </header>
