@@ -64,6 +64,29 @@ class SurveyResolver
     }
     
     /**
+     * Cập nhật survey (partial update)
+     */
+    public function update($rootValue, array $args)
+    {
+        $survey = Survey::findOrFail($args['id']);
+        $input = $args['input'];
+        
+        // Kiểm tra quyền (optional - có thể bỏ qua nếu chưa có auth)
+        // if (Auth::id() !== $survey->created_by) {
+        //     throw new \Exception('Bạn không có quyền cập nhật survey này');
+        // }
+        
+        // Chỉ cập nhật các field có trong input (partial update)
+        $survey->fill($input);
+        $survey->save();
+        
+        // Load relationships
+        $survey->load(['category', 'creator', 'questions.options']);
+        
+        return $survey;
+    }
+    
+    /**
      * Lấy survey cho người tham gia (public access)
      */
     public function forParticipant($rootValue, array $args)

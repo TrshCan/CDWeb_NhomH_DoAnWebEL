@@ -32,6 +32,10 @@ type Survey {
     id: ID!
     title: String!
     description: String
+    welcome_title: String
+    welcome_description: String
+    end_title: String
+    end_description: String
     categories_id: Int!
     category: Category
     type: SurveyType!
@@ -65,7 +69,26 @@ enum SurveyStatus {
 input CreateSurveyInput {
     title: String!
     description: String
+    welcome_title: String
+    welcome_description: String
+    end_title: String
+    end_description: String
     categories_id: Int!
+    type: SurveyType
+    object: SurveyObject
+    status: SurveyStatus
+    start_at: DateTime
+    end_at: DateTime
+}
+
+input UpdateSurveyInput {
+    title: String
+    description: String
+    welcome_title: String
+    welcome_description: String
+    end_title: String
+    end_description: String
+    categories_id: Int
     type: SurveyType
     object: SurveyObject
     status: SurveyStatus
@@ -215,6 +238,9 @@ type Mutation {
     # Surveys
     createSurvey(input: CreateSurveyInput!): Survey
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@create")
+    
+    updateSurvey(id: ID!, input: UpdateSurveyInput!): Survey
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@update")
 
     # Questions
     addQuestion(input: CreateQuestionInput!): SurveyQuestion

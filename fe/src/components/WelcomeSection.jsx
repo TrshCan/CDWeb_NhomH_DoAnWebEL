@@ -5,7 +5,13 @@ export default function WelcomeSection({
   onClick, 
   questionCount = 0,
   showWelcome = true,
-  showXQuestions = true 
+  showXQuestions = true,
+  welcomeTitle = "",
+  welcomeDescription = "",
+  onWelcomeTitleChange,
+  onWelcomeDescriptionChange,
+  onWelcomeTitleBlur,
+  onWelcomeDescriptionBlur
 }) {
   const [collapsed, setCollapsed] = useState(!showWelcome);
 
@@ -102,12 +108,18 @@ export default function WelcomeSection({
               placeholder="Tiêu đề chào mừng"
               className="w-full bg-transparent focus:outline-none rounded-md p-2 -ml-2 focus:bg-black/5 transition-colors duration-200 text-4xl font-bold font-['Playfair_Display'] mb-4"
               type="text"
+              value={welcomeTitle}
+              onChange={(e) => onWelcomeTitleChange?.(e.target.value)}
+              onBlur={(e) => onWelcomeTitleBlur?.(e.target.value)}
             />
 
             <textarea
               placeholder="Mô tả chào mừng"
               className="w-full bg-transparent focus:outline-none rounded-md p-2 -ml-2 focus:bg-black/5 transition-colors duration-200 text-lg mb-4 resize-none"
               rows="1"
+              value={welcomeDescription}
+              onChange={(e) => onWelcomeDescriptionChange?.(e.target.value)}
+              onBlur={(e) => onWelcomeDescriptionBlur?.(e.target.value)}
             ></textarea>
 
             {showXQuestions && (

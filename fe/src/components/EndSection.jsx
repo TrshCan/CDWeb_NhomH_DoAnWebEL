@@ -1,6 +1,15 @@
 import React, { useState } from "react";
 
-export default function EndSection({ isActive, onClick }) {
+export default function EndSection({ 
+  isActive, 
+  onClick,
+  endTitle = "",
+  endDescription = "",
+  onEndTitleChange,
+  onEndDescriptionChange,
+  onEndTitleBlur,
+  onEndDescriptionBlur
+}) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -66,10 +75,22 @@ export default function EndSection({ isActive, onClick }) {
             }`}
             onClick={onClick}
           >
+            <input
+              placeholder="Tiêu đề kết thúc"
+              className="w-full bg-transparent focus:outline-none rounded-md p-2 -ml-2 focus:bg-black/5 transition-colors duration-200 text-4xl font-bold font-['Playfair_Display'] mb-4"
+              type="text"
+              value={endTitle}
+              onChange={(e) => onEndTitleChange?.(e.target.value)}
+              onBlur={(e) => onEndTitleBlur?.(e.target.value)}
+            />
+
             <textarea
-              placeholder="Nhập thông báo kết thúc của bạn tại đây."
-              className="w-full bg-transparent focus:outline-none rounded-sm p-2 -ml-2 focus:bg-black/5 transition-colors duration-200 resize-none text-lg text-gray-900 mb-6 italic"
+              placeholder="Mô tả kết thúc"
+              className="w-full bg-transparent focus:outline-none rounded-sm p-2 -ml-2 focus:bg-black/5 transition-colors duration-200 resize-none text-lg text-gray-900 mb-6"
               rows="1"
+              value={endDescription}
+              onChange={(e) => onEndDescriptionChange?.(e.target.value)}
+              onBlur={(e) => onEndDescriptionBlur?.(e.target.value)}
             ></textarea>
 
             <button className="bg-emerald-500 text-white font-bold py-2 px-4 rounded-md hover:bg-emerald-600 transition-colors">

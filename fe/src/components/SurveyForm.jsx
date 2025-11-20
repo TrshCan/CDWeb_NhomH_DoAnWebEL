@@ -134,6 +134,10 @@ export default function SurveyForm({ surveyId = null }) {
     object: "public",
     base_language: "vi",
     owner: "",
+    welcomeTitle: "",
+    welcomeDescription: "",
+    endTitle: "",
+    endDescription: "",
   });
 
   // ✅ State để lưu surveyId thực tế từ CSDL
@@ -183,6 +187,10 @@ export default function SurveyForm({ surveyId = null }) {
           object: surveyData.object || "public",
           base_language: "vi",
           owner: surveyData.creator?.name || "",
+          welcomeTitle: surveyData.welcome_title || "",
+          welcomeDescription: surveyData.welcome_description || "",
+          endTitle: surveyData.end_title || "",
+          endDescription: surveyData.end_description || "",
         });
 
         // Cập nhật publish settings nếu có
@@ -203,8 +211,10 @@ export default function SurveyForm({ surveyId = null }) {
           const convertedQuestions = surveyData.questions.map((backendQuestion) => {
             // Convert options từ backend format sang frontend format
             const convertedOptions = (backendQuestion.options || []).map((backendOption) => {
+              // Đảm bảo ID luôn là số nguyên từ CSDL
+              const optionId = backendOption.id ? parseInt(backendOption.id, 10) : null;
               const frontendOption = {
-                id: parseInt(backendOption.id) || Date.now() + Math.random(),
+                id: (!isNaN(optionId) && optionId > 0) ? optionId : Date.now() + Math.random(),
                 text: backendOption.option_text || "",
               };
               
@@ -472,8 +482,10 @@ export default function SurveyForm({ surveyId = null }) {
 
               const convertedQuestions = surveyData.questions.map((backendQuestion) => {
                 const convertedOptions = (backendQuestion.options || []).map((backendOption) => {
+                  // Đảm bảo ID luôn là số nguyên từ CSDL
+                  const optionId = backendOption.id ? parseInt(backendOption.id, 10) : null;
                   const frontendOption = {
-                    id: parseInt(backendOption.id) || Date.now() + Math.random(),
+                    id: (!isNaN(optionId) && optionId > 0) ? optionId : Date.now() + Math.random(),
                     text: backendOption.option_text || "",
                   };
 
@@ -575,6 +587,68 @@ export default function SurveyForm({ surveyId = null }) {
     setSavedAt(new Date());
   };
 
+  // ✅ Handlers cho Welcome text
+  const handleWelcomeTitleChange = useCallback((newText) => {
+    setGeneralSettings((prev) => ({ ...prev, welcomeTitle: newText }));
+  }, []);
+
+  const handleWelcomeDescriptionChange = useCallback((newText) => {
+    setGeneralSettings((prev) => ({ ...prev, welcomeDescription: newText }));
+  }, []);
+
+  const handleWelcomeTitleBlur = useCallback(async (newText) => {
+    if (!currentSurveyId) return;
+    try {
+      const { updateSurvey } = await import('../api/surveys');
+      await updateSurvey(currentSurveyId, { welcome_title: newText || "" });
+      setSavedAt(new Date());
+    } catch (error) {
+      console.error('Lỗi khi lưu welcome title:', error);
+    }
+  }, [currentSurveyId]);
+
+  const handleWelcomeDescriptionBlur = useCallback(async (newText) => {
+    if (!currentSurveyId) return;
+    try {
+      const { updateSurvey } = await import('../api/surveys');
+      await updateSurvey(currentSurveyId, { welcome_description: newText || "" });
+      setSavedAt(new Date());
+    } catch (error) {
+      console.error('Lỗi khi lưu welcome description:', error);
+    }
+  }, [currentSurveyId]);
+
+  // ✅ Handlers cho End text
+  const handleEndTitleChange = useCallback((newText) => {
+    setGeneralSettings((prev) => ({ ...prev, endTitle: newText }));
+  }, []);
+
+  const handleEndDescriptionChange = useCallback((newText) => {
+    setGeneralSettings((prev) => ({ ...prev, endDescription: newText }));
+  }, []);
+
+  const handleEndTitleBlur = useCallback(async (newText) => {
+    if (!currentSurveyId) return;
+    try {
+      const { updateSurvey } = await import('../api/surveys');
+      await updateSurvey(currentSurveyId, { end_title: newText || "" });
+      setSavedAt(new Date());
+    } catch (error) {
+      console.error('Lỗi khi lưu end title:', error);
+    }
+  }, [currentSurveyId]);
+
+  const handleEndDescriptionBlur = useCallback(async (newText) => {
+    if (!currentSurveyId) return;
+    try {
+      const { updateSurvey } = await import('../api/surveys');
+      await updateSurvey(currentSurveyId, { end_description: newText || "" });
+      setSavedAt(new Date());
+    } catch (error) {
+      console.error('Lỗi khi lưu end description:', error);
+    }
+  }, [currentSurveyId]);
+
   // ✅ Memoize centerWidth để tránh tính toán lại mỗi lần render
   const centerWidth = useMemo(
     () => openPanel === "settings" ? "900px" : "750px",
@@ -667,28 +741,66 @@ export default function SurveyForm({ surveyId = null }) {
 
   // ✅ Helper function để lưu option vào CSDL và đồng bộ với các tab
   const saveOptionField = useCallback(async (optionId, fieldName, value, skipBroadcast = false) => {
-    if (!optionId) return;
+    if (!optionId) {
+      return;
+    }
+
+    // Kiểm tra xem option có ID từ CSDL không
+    // ID từ CSDL: số nguyên (integer) hoặc string có thể parse thành số nguyên
+    // ID tạm thời: số thập phân (Date.now() + Math.random() tạo ra số thập phân)
+    let isFromDB = false;
+    let optionIdToUpdate = null;
+    
+    if (optionId !== null && optionId !== undefined) {
+      if (typeof optionId === 'number') {
+        // Nếu là số nguyên thì là ID từ CSDL (ID từ CSDL luôn là số nguyên)
+        if (Number.isInteger(optionId) && optionId > 0) {
+          isFromDB = true;
+          optionIdToUpdate = optionId;
+        }
+        // Nếu là số thập phân thì là ID tạm thời, không lưu trong CSDL
+      } else if (typeof optionId === 'string') {
+        // Nếu string có thể parse thành số nguyên thì là ID từ CSDL
+        const parsed = parseInt(optionId, 10);
+        if (!isNaN(parsed) && String(parsed) === optionId && parsed > 0) {
+          isFromDB = true;
+          optionIdToUpdate = parsed;
+        }
+      }
+    }
+
+    // Chỉ lưu vào CSDL nếu option đã có ID từ CSDL
+    if (!isFromDB || !optionIdToUpdate) {
+      // Option tạm thời, chỉ cập nhật UI (không lưu vào CSDL)
+      // Lưu ý: Option mới tạo sẽ có ID tạm thời (số thập phân) cho đến khi được lưu vào CSDL
+      return;
+    }
 
     try {
-      // Cập nhật state ngay lập tức (optimistic update)
-      const updateData = { [fieldName]: value };
-      await updateOption(optionId, updateData);
+      // Chuẩn bị dữ liệu cập nhật
+      // Đảm bảo value không phải undefined hoặc null (nếu là string rỗng thì vẫn lưu)
+      const updateData = { [fieldName]: value ?? "" };
+      
+      // Gọi API để cập nhật vào CSDL
+      await updateOption(optionIdToUpdate, updateData);
 
       // Gửi message qua BroadcastChannel để đồng bộ với các tab khác
       if (!skipBroadcast && broadcastChannelRef.current) {
         broadcastChannelRef.current.postMessage({
           type: 'OPTION_FIELD_UPDATED',
           data: {
-            optionId: String(optionId),
+            optionId: String(optionIdToUpdate),
             fieldName,
-            value,
+            value: value ?? "",
           },
         });
       }
 
       setSavedAt(new Date());
-    } catch {
+    } catch (error) {
+      // Hiển thị lỗi chi tiết hơn để debug
       toast.error(`Không thể lưu ${fieldName}`);
+      throw error; // Re-throw để caller có thể xử lý
     }
   }, []);
 
@@ -750,8 +862,13 @@ export default function SurveyForm({ surveyId = null }) {
 
   // ✅ Lưu văn bản option khi onBlur
   const handleOptionBlur = useCallback((optionId, newText) => {
-    if (!optionId || newText === undefined) return;
-    saveOptionField(optionId, 'option_text', newText);
+    if (!optionId) {
+      return;
+    }
+    // Cho phép lưu cả text rỗng (newText có thể là "" hoặc undefined/null)
+    // Chuyển undefined/null thành chuỗi rỗng
+    const textToSave = newText ?? "";
+    saveOptionField(optionId, 'option_text', textToSave);
   }, [saveOptionField]);
 
   // Thay đổi ảnh cho từng option (lưu ngay khi thay đổi)
@@ -2107,6 +2224,12 @@ export default function SurveyForm({ surveyId = null }) {
                           questionCount={allQuestions.length}
                           showWelcome={welcomeSettings.showWelcome}
                           showXQuestions={welcomeSettings.showXQuestions}
+                          welcomeTitle={generalSettings.welcomeTitle}
+                          welcomeDescription={generalSettings.welcomeDescription}
+                          onWelcomeTitleChange={handleWelcomeTitleChange}
+                          onWelcomeDescriptionChange={handleWelcomeDescriptionChange}
+                          onWelcomeTitleBlur={handleWelcomeTitleBlur}
+                          onWelcomeDescriptionBlur={handleWelcomeDescriptionBlur}
                         />
                       </div>
 
@@ -2171,6 +2294,12 @@ export default function SurveyForm({ surveyId = null }) {
                         <EndSection
                           isActive={activeSection === "end"}
                           onClick={() => handleSetSection("end")}
+                          endTitle={generalSettings.endTitle}
+                          endDescription={generalSettings.endDescription}
+                          onEndTitleChange={handleEndTitleChange}
+                          onEndDescriptionChange={handleEndDescriptionChange}
+                          onEndTitleBlur={handleEndTitleBlur}
+                          onEndDescriptionBlur={handleEndDescriptionBlur}
                         />
                       </div>
                     </>

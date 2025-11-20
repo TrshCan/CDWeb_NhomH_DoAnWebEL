@@ -42,6 +42,10 @@ export const getSurvey = async (surveyId) => {
         id
         title
         description
+        welcome_title
+        welcome_description
+        end_title
+        end_description
         type
         object
         status
@@ -117,4 +121,35 @@ export const createSurvey = async (surveyData) => {
 
   const response = await graphqlRequest(mutation, variables);
   return response.data.createSurvey;
+};
+/**
+
+ * Cập nhật survey (partial update)
+ */
+export const updateSurvey = async (surveyId, updateData) => {
+  const mutation = `
+    mutation UpdateSurvey($id: ID!, $input: UpdateSurveyInput!) {
+      updateSurvey(id: $id, input: $input) {
+        id
+        title
+        description
+        welcome_title
+        welcome_description
+        end_title
+        end_description
+        type
+        object
+        status
+        created_at
+      }
+    }
+  `;
+
+  const variables = {
+    id: surveyId,
+    input: updateData,
+  };
+
+  const response = await graphqlRequest(mutation, variables);
+  return response.data.updateSurvey;
 };
