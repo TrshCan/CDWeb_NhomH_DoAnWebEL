@@ -12,14 +12,17 @@ export default function WidgetSidebar() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const [eventsData, deadlinesData] = await Promise.all([
           getTodayEvents(),
           getUpcomingDeadlines(),
         ]);
-        setEvents(eventsData);
-        setDeadlines(deadlinesData);
+        setEvents(Array.isArray(eventsData) ? eventsData : []);
+        setDeadlines(Array.isArray(deadlinesData) ? deadlinesData : []);
       } catch (err) {
         console.error("Failed fetching widget data:", err);
+        setEvents([]);
+        setDeadlines([]);
       } finally {
         setLoading(false);
       }
@@ -238,7 +241,7 @@ export default function WidgetSidebar() {
                   </p>
                   {d.details && (
                     <p className="text-xs text-gray-500">
-                      {truncateText(d.details, 10)}
+                      {truncateText(d.details, 50)}
                     </p>
                   )}
                 </div>
@@ -526,22 +529,20 @@ export default function WidgetSidebar() {
                     )}
                   </>
                 )}
-              </div>
-
-              {/* Action Button */}
-              <div className="mt-4">
-                <button
-                  onClick={closeModal}
-                  className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-all hover:shadow-lg ${
-                    modalType === "event"
-                      ? "bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-                      : getDeadlineGradient(selectedItem.deadline_date).button
-                  }`}
-                >
-                  Got it!
-                </button>
-              </div>
-            </div>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-600 text-sm mb-1">
+                  ⏰ Due{" "}
+                  {new Date(selectedItem.deadline_date).toLocaleDateString()}
+                </p>
+                {selectedItem.details && (
+                  <p className="text-gray-500 text-sm mt-2">
+                    {selectedItem.details}
+                  </p>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}

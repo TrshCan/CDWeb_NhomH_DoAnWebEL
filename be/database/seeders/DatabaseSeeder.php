@@ -396,7 +396,7 @@ class DatabaseSeeder extends Seeder
 
             $deadlines[] = [
                 'title' => $title,
-                'deadline_date' => $futureDate->format('Y-m-d'),
+                'deadline_date' => $futureDate->format('Y-m-d H:i:s'),
                 'details' => $detail,
                 'created_by' => rand(1, 10), // Use rand(1, 10) for created_by
                 'created_at' => $futureDate,

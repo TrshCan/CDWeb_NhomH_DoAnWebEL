@@ -1,0 +1,7 @@
+# graphql/duplicate.graphql
+
+extend type Mutation {
+
+    duplicateSurvey(id: Int!): Survey
+        @field(resolver: "App\\GraphQL\\Resolvers\\DuplicateResolver@duplicateSurvey")
+}

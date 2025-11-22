@@ -1,0 +1,43 @@
+
+enum SurveyStatus {
+  """Chưa bắt đầu"""
+  pending
+  """Đang diễn ra"""
+  active
+  """Tạm dừng"""
+  paused
+  """Đã kết thúc"""
+  closed
+}
+
+extend type Survey {
+  # Các field đã được định nghĩa trong Survey.graphql, chỉ extend thêm field cho StateManagement
+  allow_review: Boolean!
+}
+
+
+type SurveyStatusResponse {
+  survey: Survey
+  message: String!
+}
+
+extend type Query {
+  # Query stateSurveys cho StateManagement (có sync status)
+  # Khác với surveys từ Survey.graphql (có filter và pagination)
+  stateSurveys: [Survey!]!
+    @field(resolver: "App\\GraphQL\\Resolvers\\StateManagementResolver@listSurveys")
+}
+
+extend type Mutation {
+  changeSurveyStatus(
+    id: ID!
+    status: SurveyStatus!
+  ): SurveyStatusResponse
+    @field(resolver: "App\\GraphQL\\Resolvers\\StateManagementResolver@changeSurveyStatus")
+
+  toggleReviewPermission(
+    id: ID!
+    allowReview: Boolean!
+  ): SurveyStatusResponse
+    @field(resolver: "App\\GraphQL\\Resolvers\\StateManagementResolver@toggleReviewPermission")
+}

@@ -5,10 +5,15 @@ FROM php:8.3-fpm
 RUN apt-get update && apt-get install -y \
     git curl zip unzip libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libxml2-dev libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
     && ln -snf /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime \
     && echo "Asia/Ho_Chi_Minh" > /etc/timezone \
     && echo "date.timezone = Asia/Ho_Chi_Minh" > /usr/local/etc/php/conf.d/timezone.ini
+
+
+
+# --- Copy Xdebug config ---
+COPY ./xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
 # --- Install Composer ---
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer

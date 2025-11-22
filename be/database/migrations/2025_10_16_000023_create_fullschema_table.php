@@ -184,11 +184,8 @@ return new class extends Migration {
             $table->integer('time_limit')->nullable();
             $table->integer('points')->default(0);
             $table->enum('object', ['public', 'students', 'lecturers'])->default('public');
-
-            // THÊM MỚI: trạng thái survey/quiz + cho xem lại hay không
-            $table->enum('status', ['pending', 'active', 'paused', 'closed'])->default('pending');
+            $table->enum('status', ['pending', 'active', 'paused', 'closed'])->default('pending'); // 🆕 Thêm dòng này
             $table->boolean('allow_review')->default(false);
-
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
@@ -348,9 +345,10 @@ return new class extends Migration {
         Schema::create('events', function (Blueprint $table) {
             $table->increments('id'); // int auto-increment
             $table->text('title');
-            $table->datetime('event_date');
+            $table->dateTime('event_date');
             $table->text('location')->nullable();
             $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->softDeletes();
         });
@@ -359,9 +357,10 @@ return new class extends Migration {
         Schema::create('deadlines', function (Blueprint $table) {
             $table->increments('id'); // int auto-increment
             $table->text('title');
-            $table->date('deadline_date');
+            $table->dateTime('deadline_date');
             $table->text('details')->nullable();
             $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->softDeletes();
         });

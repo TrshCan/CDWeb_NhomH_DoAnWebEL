@@ -13,7 +13,7 @@ services:
       TZ: Asia/Ho_Chi_Minh
     command: --default-time-zone='+07:00'
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - dbdata:/var/lib/mysql
 
@@ -28,6 +28,7 @@ services:
       - "9003:9003"   # Xdebug
     volumes:
       - ./be:/var/www
+      - ./be/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
     environment:
       DB_HOST: db
       DB_PORT: 3306
@@ -78,7 +79,7 @@ services:
       PMA_USER: root
       PMA_PASSWORD: rootpassword
     ports:
-      - "8080:80"
+      - "8082:80"
     depends_on:
       - db
 

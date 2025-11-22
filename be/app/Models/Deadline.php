@@ -4,22 +4,26 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\User;
 
 class Deadline extends Model
 {
     use SoftDeletes;
-
     public $timestamps = false;
 
-    protected $fillable = ['title', 'deadline_date', 'details', 'created_at', 'created_by'];
-    protected $casts = [
-        'deadline_date' => 'date',
-        'created_at' => 'datetime',
+    protected $fillable = [
+        'title',
+        'deadline_date',
+        'details',
+        'created_by',
+        'created_at',
+        'updated_at',
     ];
 
-    public function createdBy()
+    protected $dates = ['deadline_date', 'created_at', 'deleted_at'];
+
+    public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-
 }

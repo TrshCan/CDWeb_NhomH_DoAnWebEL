@@ -5,10 +5,11 @@ type Event {
     event_date: DateTime
     location: String
     created_at: DateTime
+    updated_at: DateTime
     created_by: ID!
     deleted_at: DateTime
 
     # Relationships (mirrors Post structure)
-    user: User
+    user: User @field(resolver: "App\\GraphQL\\Resolvers\\EventResolver@user")
     group: Group
 }
