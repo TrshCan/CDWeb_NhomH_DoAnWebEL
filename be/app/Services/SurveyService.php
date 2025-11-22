@@ -2,9 +2,16 @@
 
 namespace App\Services;
 
+use App\Models\Survey;
 use App\Repositories\SurveyRepository;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Exception;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class SurveyService
 {
@@ -281,33 +288,22 @@ class SurveyService
             ];
         });
     }
-}
-
-
-use App\Models\Survey;
-use App\Repositories\SurveyRepository;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Exception;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
-
-class SurveyService
-{
-    protected $repository;
-
-    public function __construct(SurveyRepository $repository)
-    {
-        $this->repository = $repository;
-    }
 
     /**
      * TẠO KHẢO SÁT – CHỈ XỬ LÝ METADATA
      */
     public function createSurvey(array $data): Survey
     {
+        // === KIỂM TRA QUYỀN: CHỈ ADMIN VÀ GIẢNG VIÊN ===
+        $user = Auth::user();
+        if (!$user) {
+            throw new Exception('Bạn chưa đăng nhập. Vui lòng đăng nhập để sử dụng chức năng này.', 401);
+        }
+
+        if (!$user->isAdmin() && !$user->isLecturer()) {
+            throw new Exception('Bạn không có quyền tạo khảo sát. Chỉ admin và giáo viên mới có quyền này.', 403);
+        }
+
         // GÁN MẶC ĐỊNH
         $data = array_merge([
             'type' => 'survey',
@@ -411,7 +407,7 @@ class SurveyService
 
             try {
                 DB::beginTransaction();
-                $survey = $this->repository->create($data);
+                $survey = $this->repo->create($data);
                 
                 // Kiểm tra lại sau khi save để đảm bảo start_at > created_at
                 if ($survey->start_at && $survey->created_at) {
@@ -429,7 +425,7 @@ class SurveyService
                 DB::commit();
 
                 // Load lại survey với creator_name
-                $surveyWithCreator = $this->repository->findWithCreatorNameAfterSave($survey->id);
+                $surveyWithCreator = $this->repo->findWithCreatorNameAfterSave($survey->id);
                 
                 Log::info('Tạo khảo sát thành công', ['id' => $survey->id, 'title' => $survey->title]);
                 return $surveyWithCreator ?: $survey;
@@ -464,16 +460,26 @@ class SurveyService
      */
     public function deleteSurvey(int $id): bool
     {
+        // === KIỂM TRA QUYỀN: CHỈ ADMIN VÀ GIẢNG VIÊN ===
+        $user = Auth::user();
+        if (!$user) {
+            throw new Exception('Bạn chưa đăng nhập. Vui lòng đăng nhập để sử dụng chức năng này.', 401);
+        }
+
+        if (!$user->isAdmin() && !$user->isLecturer()) {
+            throw new Exception('Bạn không có quyền xóa khảo sát. Chỉ admin và giáo viên mới có quyền này.', 403);
+        }
+
         try {
             DB::beginTransaction();
 
             // Kiểm tra xem survey đã bị soft delete chưa
-            $deletedSurvey = $this->repository->findDeletedById($id);
+            $deletedSurvey = $this->repo->findDeletedById($id);
             if ($deletedSurvey) {
                 throw new Exception('Khảo sát đã bị xóa trước đó. Không thể xóa lại.', 422);
             }
 
-            $survey = $this->repository->findById($id);
+            $survey = $this->repo->findById($id);
             if (!$survey) {
                 throw new ModelNotFoundException("Khảo sát ID {$id} không tồn tại.");
             }
@@ -543,7 +549,17 @@ class SurveyService
      */
     public function updateSurvey(int $id, array $data): Survey
     {
-        $survey = $this->repository->findById($id);
+        // === KIỂM TRA QUYỀN: CHỈ ADMIN VÀ GIẢNG VIÊN ===
+        $user = Auth::user();
+        if (!$user) {
+            throw new Exception('Bạn chưa đăng nhập. Vui lòng đăng nhập để sử dụng chức năng này.', 401);
+        }
+
+        if (!$user->isAdmin() && !$user->isLecturer()) {
+            throw new Exception('Bạn không có quyền cập nhật khảo sát. Chỉ admin và giáo viên mới có quyền này.', 403);
+        }
+
+        $survey = $this->repo->findById($id);
         if (!$survey) {
             throw new Exception('Khảo sát không tồn tại hoặc đã bị xóa.', 404);
         }
@@ -636,7 +652,7 @@ class SurveyService
 
         try {
             DB::beginTransaction();
-            $updatedSurvey = $this->repository->update($survey, $data);
+            $updatedSurvey = $this->repo->update($survey, $data);
             
             // Kiểm tra lại sau khi update để đảm bảo start_at > created_at
             if ($updatedSurvey->start_at && $updatedSurvey->created_at) {
@@ -654,7 +670,7 @@ class SurveyService
             DB::commit();
 
             // Load lại survey với creator_name
-            $surveyWithCreator = $this->repository->findWithCreatorNameAfterSave($updatedSurvey->id);
+            $surveyWithCreator = $this->repo->findWithCreatorNameAfterSave($updatedSurvey->id);
             
             Log::info('Cập nhật khảo sát thành công', ['id' => $id, 'title' => $updatedSurvey->title]);
             return $surveyWithCreator ?: $updatedSurvey;
@@ -671,7 +687,7 @@ class SurveyService
     public function getSurveyById(int $id): Survey
     {
         try {
-            $survey = $this->repository->findWithCreatorName($id);
+            $survey = $this->repo->findWithCreatorName($id);
             if (!$survey) {
                 throw new ModelNotFoundException("Khảo sát ID {$id} không tồn tại.");
             }
@@ -691,9 +707,10 @@ class SurveyService
     public function getAllSurveys(int $perPage = 10, array $filters = [])
     {
         try {
-            return $this->repository->getAllPaginated($perPage, $filters);
+            return $this->repo->getAllPaginated($perPage, $filters);
         } catch (\Exception $e) {
             Log::error('Lỗi tải danh sách khảo sát', ['error' => $e->getMessage()]);
             throw new Exception('Không thể tải danh sách khảo sát.', 500);
         }
     }
+}

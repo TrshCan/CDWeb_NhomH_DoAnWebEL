@@ -8,6 +8,7 @@ export default function Sidebar() {
   const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [showSurveysExpanded, setShowSurveysExpanded] = useState(false);
 
   // Check login status based on token and load user role
   const checkLoginStatus = async () => {
@@ -76,7 +77,7 @@ export default function Sidebar() {
       path: "/explore",
     },
     {
-      label: "Surveys",
+      label: "Khảo sát",
       icon: "M9 17v-2h6v2H9zm-4 4h14a1 1 0 001-1V4a1 1 0 00-1-1H5a1 1 0 00-1 1v16a1 1 0 001 1zM7 7h10v2H7V7z",
       path: "/surveys",
       requiresAuth: true,

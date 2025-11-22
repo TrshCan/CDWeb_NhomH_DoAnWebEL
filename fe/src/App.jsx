@@ -20,6 +20,8 @@ import Tab4 from "./pages/admin/Deadline.jsx";
 import Tab5 from "./pages/admin/Tab5.jsx";
 import Tab6 from "./pages/admin/Tab6.jsx";
 import PermissionManagement from "./pages/admin/PermissionManagement.jsx";
+import AdminUserManagement from "./pages/admin/AdminUserManagement.jsx";
+import AdminBadgeManagement from "./pages/admin/AdminBadgeManagement.jsx";
 import SurveysCreated from "./pages/SurveysCreated.jsx";
 import RawDataList from "./pages/RawDataList.jsx";
 import SurveyOverview from "./pages/SurveyOverview.jsx";

@@ -3,10 +3,6 @@
 namespace App\GraphQL\Resolvers;
 
 use App\Services\SurveyService;
-
-class SurveyResolver
-{
-    protected SurveyService $service;
 use App\Models\Survey;
 use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 use Illuminate\Support\Facades\Auth;
@@ -176,8 +172,6 @@ class SurveyResolver
 
         return $this->service->listCompletedByUser($userId);
     }
-}
-
 
     public function list($_, array $args)
     {
@@ -386,8 +380,8 @@ class SurveyResolver
      */
     public function resolveCreatorName($root)
     {
-        // Nếu đã có creator_name từ join query
-        if (isset($root->creator_name)) {
+        // Nếu đã có creator_name từ attributes (đã được set trong repository)
+        if (isset($root->creator_name) && !empty($root->creator_name)) {
             return $root->creator_name;
         }
 
@@ -396,5 +390,13 @@ class SurveyResolver
             $root->load('creator');
         }
 
-        return $root->creator?->name;
+        // Lấy từ relationship và set vào attributes để lần sau không cần load lại
+        if ($root->creator) {
+            $creatorName = $root->creator->name;
+            $root->setAttribute('creator_name', $creatorName);
+            return $creatorName;
+        }
+
+        return null;
     }
+}

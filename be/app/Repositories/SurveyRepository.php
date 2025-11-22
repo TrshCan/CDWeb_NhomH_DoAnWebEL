@@ -229,26 +229,15 @@ class SurveyRepository
             ->orderByDesc(DB::raw('MAX(survey_answers.answered_at)'))
             ->get();
     }
-}
-
-
-
-class SurveyRepository
-{
-    protected $model;
-
-    public function __construct(Survey $survey)
-    {
-        $this->model = $survey;
-    }
 
     public function create(array $data): Survey
     {
         // Validation đã được xử lý ở SurveyService, nên chỉ tạo record
-        return $this->model->create($data);
+        return Survey::create($data);
     }
-        // 🆕 Cập nhật khảo sát
-      public function update(Survey $survey, array $data): Survey
+
+    // 🆕 Cập nhật khảo sát
+    public function update(Survey $survey, array $data): Survey
     {
         $survey->update($data);
         return $survey->fresh(); // đảm bảo return bản ghi mới nhất
@@ -258,10 +247,7 @@ class SurveyRepository
     public function getAllPaginated(int $perPage = 10, array $filters = [])
     {
         $query = Survey::with(['creator'])
-            ->whereNull('surveys.deleted_at')
-            ->leftJoin('users as u', 'u.id', '=', 'surveys.created_by')
-            ->select('surveys.*')
-            ->addSelect(['creator_name' => \DB::raw('u.name')]);
+            ->whereNull('surveys.deleted_at');
 
         // Áp dụng filters
         if (!empty($filters['categories_id'])) {
@@ -295,7 +281,17 @@ class SurveyRepository
             });
         }
 
-        return $query->orderByDesc('created_at')->paginate($perPage);
+        $paginator = $query->orderByDesc('created_at')->paginate($perPage);
+        
+        // Set creator_name cho từng survey trong collection
+        $paginator->getCollection()->transform(function ($survey) {
+            if ($survey->creator) {
+                $survey->setAttribute('creator_name', $survey->creator->name);
+            }
+            return $survey;
+        });
+        
+        return $paginator;
     }
     public function findById(int $id): ?Survey
     {
@@ -315,18 +311,15 @@ class SurveyRepository
      */
     public function findWithCreatorName(int $id): ?Survey
     {
-        $result = Survey::leftJoin('users as u', 'u.id', '=', 'surveys.created_by')
-            ->select('surveys.*')
-            ->addSelect(['creator_name' => \DB::raw('u.name')])
-            ->where('surveys.id', $id)
-            ->first();
+        // Sử dụng relationship thay vì join để đảm bảo đúng
+        $survey = Survey::with('creator')->find($id);
         
-        if ($result) {
-            // Đảm bảo creator_name được set vào attributes
-            $result->setAttribute('creator_name', $result->getAttributeValue('creator_name'));
+        if ($survey && $survey->creator) {
+            // Set creator_name vào attributes để resolver có thể sử dụng
+            $survey->setAttribute('creator_name', $survey->creator->name);
         }
         
-        return $result;
+        return $survey;
     }
 
     /**
@@ -334,12 +327,13 @@ class SurveyRepository
      */
     public function findWithCreatorNameAfterSave(int $id): ?Survey
     {
-        $survey = $this->findWithCreatorName($id);
+        $survey = Survey::with('creator')->find($id);
         
-        // Nếu không tìm thấy từ join, load với relationship
-        if (!$survey) {
-            $survey = Survey::with('creator')->find($id);
+        if ($survey && $survey->creator) {
+            // Set creator_name vào attributes để resolver có thể sử dụng
+            $survey->setAttribute('creator_name', $survey->creator->name);
         }
         
         return $survey;
     }
+}

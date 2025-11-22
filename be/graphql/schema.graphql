@@ -6,6 +6,7 @@
 #import StateManagement.graphql
 type Query {
     _empty: String
+}
 
 # Import all your types
 #import types/post.graphql

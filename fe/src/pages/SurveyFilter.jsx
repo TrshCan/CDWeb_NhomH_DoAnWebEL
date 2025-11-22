@@ -1033,6 +1033,13 @@ const SurveyFilter = () => {
     try {
       setLoading(true);
 
+      // Lấy userId từ localStorage
+      const userId = parseInt(localStorage.getItem("userId"));
+      if (!userId) {
+        pushToast('Bạn chưa đăng nhập. Vui lòng đăng nhập để tạo khảo sát.', 'error');
+        return;
+      }
+
       const result = await graphqlRequest(`
         mutation CreateSurvey($input: SurveyInput!) {
           createSurvey(input: $input) {
@@ -1050,7 +1057,7 @@ const SurveyFilter = () => {
           end_at: toDBDateTime(addForm.endAt),
           points: addForm.points || 0,
           object: addForm.object || 'public',
-          created_by: 1,
+          created_by: userId,
           time_limit: addForm.timeLimit === '' ? null : parseInt(addForm.timeLimit)
         }
       });

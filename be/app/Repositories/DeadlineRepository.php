@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Repositories;
+
+use App\Models\Deadline;
 use Carbon\Carbon;
 
 class DeadlineRepository

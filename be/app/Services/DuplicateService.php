@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Repositories\DuplicateRepository;
-// use Illuminate\Support\Facades\Auth; // Tạm thời comment vì chưa cần check đăng nhập
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -40,10 +40,20 @@ class DuplicateService
      */
     public function duplicate(int $surveyId): \App\Models\Survey
     {
+        // === KIỂM TRA QUYỀN: CHỈ ADMIN VÀ GIẢNG VIÊN ===
+        $user = Auth::user();
+        if (!$user) {
+            throw new Exception('Bạn chưa đăng nhập. Vui lòng đăng nhập để sử dụng chức năng này.', 401);
+        }
+
+        if (!$user->isAdmin() && !$user->isLecturer()) {
+            throw new Exception('Bạn không có quyền sao chép khảo sát. Chỉ admin và giáo viên mới có quyền này.', 403);
+        }
+
         try {
             // Sử dụng database transaction để đảm bảo tính toàn vẹn dữ liệu
             // Nếu có lỗi xảy ra ở bất kỳ bước nào, tất cả thay đổi sẽ được rollback
-            return DB::transaction(function () use ($surveyId) {
+            return DB::transaction(function () use ($surveyId, $user) {
                 // 1. Lấy survey gốc
                 $original = $this->repository->findById($surveyId);
 
@@ -71,7 +81,7 @@ class DuplicateService
                 if (empty($originalTitle)) {
                     $originalTitle = 'Khảo sát không có tiêu đề';
                 }
-                $surveyData['title'] = $this->generateCopyTitle($originalTitle);
+                $surveyData['title'] = $this->generateCopyTitle($originalTitle, $user->id);
                 
                 // Kiểm tra thời gian để xác định status
                 // Sử dụng trực tiếp từ model gốc để lấy Carbon instance (không dùng toArray() vì sẽ convert sang string)
@@ -234,35 +244,108 @@ class DuplicateService
     }
 
     /**
-     * Tạo tiêu đề bản sao: [Bản sao] Tiêu đề cũ...
+     * Tạo tiêu đề bản sao: [Bản sao] hoặc [Bản sao 2], [Bản sao 3]...
      * 
      * @param string $title Tiêu đề gốc
-     * @return string Tiêu đề đã được thêm prefix [Bản sao]
+     * @param int $userId ID của user đang tạo bản sao
+     * @return string Tiêu đề đã được thêm prefix [Bản sao] hoặc [Bản sao N]
      */
-    private function generateCopyTitle(string $title): string
+    private function generateCopyTitle(string $title, int $userId): string
     {
         // Xử lý trường hợp title null hoặc rỗng
         if (empty(trim($title))) {
             $title = 'Khảo sát không có tiêu đề';
         }
 
-        $prefix = '[Bản sao] ';
+        // Lấy title gốc (bỏ prefix [Bản sao] hoặc [Bản sao N] nếu có)
+        $baseTitle = $this->extractBaseTitle($title);
+        
+        // Tìm số lớn nhất đã tồn tại cho title này của cùng user
+        $maxNumber = $this->findMaxCopyNumber($baseTitle, $userId);
+        
+        // Tạo prefix với số tiếp theo
+        if ($maxNumber === 0) {
+            $prefix = '[Bản sao] ';
+        } else {
+            $prefix = '[Bản sao ' . ($maxNumber + 1) . '] ';
+        }
+        
         $maxLength = 255 - strlen($prefix); // Đảm bảo không vượt quá độ dài tối đa của cột title
 
-        // Nếu title đã có prefix [Bản sao], không thêm nữa (tránh [Bản sao] [Bản sao] ...)
-        if (strpos($title, $prefix) === 0) {
-            // Nếu title (đã có prefix) quá dài, cắt bớt
-            if (strlen($title) > 255) {
-                return substr($title, 0, 252) . '...';
-            }
-            return $title;
-        }
-
         // Nếu title quá dài sau khi thêm prefix, cắt bớt và thêm "..."
-        if (strlen($title) > $maxLength) {
-            $title = substr($title, 0, $maxLength - 3) . '...';
+        if (strlen($baseTitle) > $maxLength) {
+            $baseTitle = substr($baseTitle, 0, $maxLength - 3) . '...';
         }
 
-        return $prefix . $title;
+        return $prefix . $baseTitle;
+    }
+
+    /**
+     * Lấy title gốc (bỏ prefix [Bản sao] hoặc [Bản sao N] nếu có)
+     * 
+     * @param string $title Title có thể có prefix
+     * @return string Title gốc không có prefix (đã trim)
+     */
+    private function extractBaseTitle(string $title): string
+    {
+        // Pattern: [Bản sao] hoặc [Bản sao N] ở đầu
+        // Sử dụng flag 'u' để hỗ trợ UTF-8
+        if (preg_match('/^\[Bản sao(?:\s+(\d+))?\]\s+(.+)$/u', trim($title), $matches)) {
+            return trim($matches[2]); // Trả về phần title sau prefix (đã trim)
+        }
+        
+        return trim($title); // Nếu không có prefix, trả về nguyên title (đã trim)
+    }
+
+    /**
+     * Tìm số lớn nhất đã tồn tại cho title này của cùng user
+     * 
+     * @param string $baseTitle Title gốc (không có prefix)
+     * @param int $userId ID của user
+     * @return int Số lớn nhất (0 nếu chưa có bản sao nào, 1 nếu có [Bản sao] không số)
+     */
+    private function findMaxCopyNumber(string $baseTitle, int $userId): int
+    {
+        // Chuẩn hóa baseTitle để so sánh
+        $baseTitle = trim($baseTitle);
+        
+        if (empty($baseTitle)) {
+            return 0;
+        }
+        
+        // Tìm tất cả các survey của user này có title bắt đầu bằng [Bản sao
+        $surveys = \App\Models\Survey::where('created_by', $userId)
+            ->whereNull('deleted_at')
+            ->where('title', 'like', '[Bản sao%')
+            ->pluck('title')
+            ->toArray();
+
+        $maxNumber = 0;
+        
+        foreach ($surveys as $surveyTitle) {
+            // Pattern: [Bản sao] hoặc [Bản sao N]
+            // Sử dụng flag 'u' để hỗ trợ UTF-8
+            if (preg_match('/^\[Bản sao(?:\s+(\d+))?\]\s+(.+)$/u', trim($surveyTitle), $matches)) {
+                $titlePart = trim($matches[2]); // Trim để loại bỏ khoảng trắng thừa
+                
+                // Chuẩn hóa khoảng trắng để so sánh chính xác hơn
+                $normalizedTitlePart = preg_replace('/\s+/', ' ', $titlePart);
+                $normalizedBaseTitle = preg_replace('/\s+/', ' ', $baseTitle);
+                
+                // Chỉ tính nếu title phần sau khớp chính xác với baseTitle
+                if ($normalizedTitlePart === $normalizedBaseTitle) {
+                    // Nếu có số trong matches[1], dùng số đó
+                    if (isset($matches[1]) && $matches[1] !== '') {
+                        $number = (int)$matches[1];
+                        $maxNumber = max($maxNumber, $number);
+                    } else {
+                        // Nếu không có số, đây là [Bản sao] không số, coi như số 1
+                        $maxNumber = max($maxNumber, 1);
+                    }
+                }
+            }
+        }
+
+        return $maxNumber;
     }
 }

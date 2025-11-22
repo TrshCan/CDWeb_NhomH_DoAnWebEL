@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Repositories;
+
+use App\Models\Event;
 use Carbon\Carbon;
 
 class EventRepository
@@ -104,7 +106,7 @@ class EventRepository
 
     public function today()
     {
-        return $this->model->whereBetween('event_date', [
+        return Event::whereBetween('event_date', [
             Carbon::today()->startOfDay(),
             Carbon::today()->endOfDay()
         ])

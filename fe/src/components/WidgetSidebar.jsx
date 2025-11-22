@@ -529,20 +529,8 @@ export default function WidgetSidebar() {
                     )}
                   </>
                 )}
-              </>
-            ) : (
-              <>
-                <p className="text-gray-600 text-sm mb-1">
-                  ⏰ Due{" "}
-                  {new Date(selectedItem.deadline_date).toLocaleDateString()}
-                </p>
-                {selectedItem.details && (
-                  <p className="text-gray-500 text-sm mt-2">
-                    {selectedItem.details}
-                  </p>
-                )}
-              </>
-            )}
+              </div>
+            </div>
           </div>
         </div>
       )}

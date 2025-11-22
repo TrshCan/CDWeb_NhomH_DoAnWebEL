@@ -342,7 +342,7 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity"
       onClick={closeModal}
     >
       <div
@@ -531,7 +531,7 @@ const DeleteModal = ({ modalData, closeModal, confirmDelete }) => {
   };
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="p-8 text-center">
           <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-red-100 to-rose-100 mb-4 shadow-lg ring-4 ring-red-50">
@@ -565,6 +565,67 @@ const DeleteModal = ({ modalData, closeModal, confirmDelete }) => {
                 </svg>
               )}
               {isDeleting ? "Đang xóa..." : "Vâng, xóa"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Restore Modal ---
+const RestoreModal = ({ modalData, closeModal, confirmRestore }) => {
+  const [isRestoring, setIsRestoring] = useState(false);
+  
+  if (modalData.type !== "restore") return null;
+  
+  const handleRestore = async () => {
+    if (isRestoring) return;
+    setIsRestoring(true);
+    try {
+      await confirmRestore();
+    } catch (error) {
+      // Error is handled in confirmRestore
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="p-8 text-center">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 mb-4 shadow-lg ring-4 ring-green-50">
+            <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 4l16 16" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            Bạn có chắc chắn muốn khôi phục?
+          </h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Deadline này sẽ được khôi phục và hiển thị lại trong danh sách.
+          </p>
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={closeModal}
+              disabled={isRestoring}
+              className="px-5 py-2.5 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 font-semibold text-gray-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleRestore}
+              disabled={isRestoring}
+              className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+            >
+              {isRestoring && (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              {isRestoring ? "Đang khôi phục..." : "Vâng, khôi phục"}
             </button>
           </div>
         </div>
@@ -891,12 +952,14 @@ export default function EventManager() {
     }
   };
 
-  const handleRestoreEvent = async (id) => {
+  const handleRestoreEvent = async () => {
     try {
+      const id = modalData.event.id;
       const res = await graphqlRequest(RESTORE_EVENT, { id });
       if (res.data.restoreEvent) {
         setEvents(events.filter((e) => e.id !== id));
-        showToast("Khôi phục sự kiện thành công");
+        showToast("Khôi phục deadline thành công");
+        closeModal();
       } else {
         throw new Error(
           "Khôi phục thất bại: Không nhận được dữ liệu từ server"
@@ -908,9 +971,9 @@ export default function EventManager() {
         errorMessage = "Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.";
       } else if (error.message.includes("Kiểm tra dữ liệu hoặc xung đột")) {
         errorMessage =
-          "Không thể khôi phục sự kiện. Kiểm tra dữ liệu hoặc xung đột với sự kiện khác.";
-      } else if (error.message.includes("Không tìm thấy sự kiện")) {
-        errorMessage = "Không tìm thấy sự kiện. Vui lòng làm mới danh sách.";
+          "Không thể khôi phục deadline. Kiểm tra dữ liệu hoặc xung đột với deadline khác.";
+      } else if (error.message.includes("Không tìm thấy deadline")) {
+        errorMessage = "Không tìm thấy deadline. Vui lòng làm mới danh sách.";
       } else if (error.message.includes("Bạn không có quyền")) {
         errorMessage = error.message;
       } else if (error.message.includes("Phiên đăng nhập")) {
@@ -923,6 +986,7 @@ export default function EventManager() {
         errorMessage = error.message;
       }
       showToast(errorMessage, "error");
+      throw error; // Re-throw để component có thể xử lý
     }
   };
 
@@ -942,6 +1006,11 @@ export default function EventManager() {
           modalData={modalData}
           closeModal={closeModal}
           confirmDelete={handleDeleteEvent}
+        />
+        <RestoreModal
+          modalData={modalData}
+          closeModal={closeModal}
+          confirmRestore={handleRestoreEvent}
         />
 
         <header className="text-center mb-8">
@@ -1033,7 +1102,7 @@ export default function EventManager() {
                       <div className="flex items-center justify-center gap-2">
                         {e.deleted_at ? (
                           <button
-                            onClick={() => handleRestoreEvent(e.id)}
+                            onClick={() => setModalData({ type: "restore", event: e })}
                             className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-all duration-200 transform hover:scale-110"
                             title="Khôi phục"
                           >
