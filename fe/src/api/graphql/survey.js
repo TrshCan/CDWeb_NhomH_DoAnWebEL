@@ -397,3 +397,25 @@ export async function duplicateSurvey(surveyId) {
 
   return response.data.data.duplicateSurvey;
 }
+
+// Delete survey
+export async function deleteSurvey(surveyId) {
+  const mutation = `
+    mutation ($id: Int!) {
+      deleteSurvey(id: $id)
+    }
+  `;
+
+  const response = await graphqlClient.post("", {
+    query: mutation,
+    variables: { id: parseInt(surveyId, 10) },
+  });
+
+  if (response.data.errors) {
+    const error = new Error(response.data.errors[0]?.message || "GraphQL error");
+    error.graphQLErrors = response.data.errors;
+    throw error;
+  }
+
+  return response.data.data.deleteSurvey;
+}

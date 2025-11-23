@@ -195,10 +195,19 @@ class SurveyResolver
             return null;
         }
 
+        // Check if survey exists in database (including soft-deleted)
+        $surveyExists = \Illuminate\Support\Facades\DB::table('surveys')
+            ->where('id', $surveyId)
+            ->exists();
+        
+        if (!$surveyExists) {
+            throw new \Exception('Khảo sát không tồn tại trong cơ sở dữ liệu');
+        }
+
         // Get the survey
         $survey = \App\Models\Survey::find($surveyId);
         if (!$survey) {
-            throw new \Exception('Survey not found');
+            throw new \Exception('Khảo sát không tồn tại hoặc đã bị xóa');
         }
 
         // Verify the user owns this survey

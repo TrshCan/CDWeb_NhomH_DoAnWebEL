@@ -29,7 +29,7 @@ import ResponseDetail from "./pages/ResponseDetail.jsx";
 import SurveysCompleted from "./pages/SurveysCompleted.jsx";
 import SurveyJoin from "./pages/SurveyJoin.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import Search from './components/SearchResult';
+import Search from "./components/SearchResult";
 import Group from "./components/Group";
 import GroupDetail from "./components/GroupDetail";
 
@@ -38,63 +38,76 @@ export default function App() {
     <Routes>
       {/* Layout chính */}
       <Route path="/" element={<MainLayout />}>
-      <Route path="group" element={<Group />} />
+        <Route path="group" element={<Group />} />
         <Route path="group/:groupId" element={<GroupDetail />} />
-      <Route path="explore" element={<Search />} />
-          <Route path="search" element={<Search />} />
+        <Route path="explore" element={<Search />} />
+        <Route path="search" element={<Search />} />
         {/* các route con  */}
         <Route index element={<Feed />} /> {/* mặc định là Feed */}
         <Route path="profile" element={<Profile />} />
-        
         <Route path="edit-profile" element={<UserManagement />} />
         <Route path="post/:id" element={<PostDetail />} />
         {/* sau này sẽ thêm các route như profile expole v.v*/}
       </Route>
 
       {/* Protected survey pages */}
-      <Route path="/surveys/completed" element={
-        <ProtectedRoute>
-          <SurveysCompleted />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/surveys/created" element={
-        <ProtectedRoute>
-          <SurveysCreated />
-        </ProtectedRoute>
-      } />
-        <Route path="/surveys/all" element={
-        <ProtectedRoute>
-        {<Survey />}
-        </ProtectedRoute>
-      } />
+      <Route
+        path="/surveys/completed"
+        element={
+          <ProtectedRoute>
+            <SurveysCompleted />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/surveys/created"
+        element={
+          <ProtectedRoute>
+            <SurveysCreated />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/surveys/all"
+        element={<ProtectedRoute>{<Survey />}</ProtectedRoute>}
+      />
       <Route path="/surveys" element={<Survey />} />
       <Route path="/surveys/:surveyId/join" element={<SurveyJoin />} />
-      
-      <Route path="/surveys/:surveyId/overview" element={
-        <ProtectedRoute>
-          <SurveyOverview />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/surveys/:surveyId/raw-data" element={
-        <ProtectedRoute>
-          <RawDataList />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/surveys/:surveyId/responses/:responseId" element={
-        <ProtectedRoute>
-          <ResponseDetail />
-        </ProtectedRoute>
-      } />
-      
+
+      <Route
+        path="/surveys/:surveyId/overview"
+        element={
+          <ProtectedRoute>
+            <SurveyOverview />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/surveys/:surveyId/raw-data"
+        element={
+          <ProtectedRoute>
+            <RawDataList />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/surveys/:surveyId/responses/:responseId"
+        element={
+          <ProtectedRoute>
+            <ResponseDetail />
+          </ProtectedRoute>
+        }
+      />
+
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/email-verified" element={<EmailVerificationResult />} />
-      
+
       <Route path="/statemanagement" element={<StateManagement />} />
 
       {/* Admin routes */}

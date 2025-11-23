@@ -51,13 +51,26 @@ class DuplicateService
         }
 
         try {
+            // Kiểm tra survey có tồn tại không (bao gồm cả soft-deleted)
+            $surveyExists = DB::table('surveys')
+                ->where('id', $surveyId)
+                ->exists();
+            
+            if (!$surveyExists) {
+                throw new Exception("Khảo sát không tồn tại trong cơ sở dữ liệu.", 404);
+            }
+
             // Sử dụng database transaction để đảm bảo tính toàn vẹn dữ liệu
             // Nếu có lỗi xảy ra ở bất kỳ bước nào, tất cả thay đổi sẽ được rollback
             return DB::transaction(function () use ($surveyId, $user) {
                 // 1. Lấy survey gốc
                 $original = $this->repository->findById($surveyId);
 
-                // 2. Kiểm tra survey có bị soft-deleted không (findOrFail đã xử lý, nhưng kiểm tra thêm để rõ ràng)
+                // 2. Kiểm tra survey có bị soft-deleted không
+                if (!$original) {
+                    throw new Exception("Khảo sát không tồn tại hoặc đã bị xóa.", 404);
+                }
+                
                 if ($original->trashed()) {
                     throw new Exception("Khảo sát đã bị xóa.", 404);
                 }
@@ -112,7 +125,7 @@ class DuplicateService
 
         } catch (ModelNotFoundException $e) {
             // Survey không tồn tại hoặc đã bị soft-delete
-            throw new Exception("Khảo sát không tồn tại.", 404);
+            throw new Exception("Khảo sát không tồn tại trong cơ sở dữ liệu.", 404);
         } catch (Exception $e) {
             // Log lỗi để debug
             \Log::error('Duplicate survey failed', [
@@ -123,7 +136,7 @@ class DuplicateService
             ]);
             
             // Nếu đã là Exception với message rõ ràng, throw lại
-            if ($e->getCode() === 404 || $e->getCode() === 500) {
+            if ($e->getCode() === 404 || $e->getCode() === 403 || $e->getCode() === 401) {
                 throw $e;
             }
             

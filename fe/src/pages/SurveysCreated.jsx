@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import "../assets/css/SurveysMade.css";
 import "../assets/css/BackButton.css";
-import { getSurveysMadeByUser, updateSurvey, duplicateSurvey } from "../api/graphql/survey";
+import { getSurveysMadeByUser, duplicateSurvey, deleteSurvey, getSurveyDetails } from "../api/graphql/survey";
 import EditSurveyModal from "../components/EditSurveyModal";
 import CreateSurveyModal from "../components/CreateSurveyModal";
 
@@ -28,6 +28,7 @@ export default function SurveysCreated() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedSurveyId, setSelectedSurveyId] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const surveysRef = useRef([]);
 
   // Load surveys from API
   useEffect(() => {
@@ -55,6 +56,7 @@ export default function SurveysCreated() {
         }));
         setSurveys(mapped);
         setFilteredSurveys(mapped);
+        surveysRef.current = mapped;
       } catch (err) {
         console.error(err);
         
@@ -73,6 +75,7 @@ export default function SurveysCreated() {
         
         setSurveys([]);
         setFilteredSurveys([]);
+        surveysRef.current = [];
       } finally {
         setLoading(false);
       }
@@ -106,23 +109,11 @@ export default function SurveysCreated() {
     setFilteredSurveys(filtered);
   }, [searchQuery, statusFilter, surveys]);
 
-  // Action handlers
-  const handleCreateSurvey = () => {
-    setIsCreateModalOpen(true);
-  };
-
-  const handleViewResults = (surveyId, surveyTitle) => {
-    navigate(`/surveys/${surveyId}/overview`);
-  };
-
-  const handleEditSurvey = (surveyId) => {
-    setSelectedSurveyId(surveyId);
-    setIsEditModalOpen(true);
-  };
-
-  const refreshSurveysList = async () => {
+  const refreshSurveysList = useCallback(async (silent = false) => {
     const userIdStr = localStorage.getItem("userId");
-    if (userIdStr) {
+    if (!userIdStr) return;
+    
+    try {
       const data = await getSurveysMadeByUser(parseInt(userIdStr));
       const mapped = (data || []).map((s) => ({
         id: s.id,
@@ -133,15 +124,124 @@ export default function SurveysCreated() {
         status: s.status, // Use status directly from backend
         responses: Number(s.responses ?? 0),
       }));
+      
+      // Compare with current list to detect deleted surveys
+      const currentSurveys = surveysRef.current;
+      if (!silent && currentSurveys.length > 0) {
+        const currentIds = new Set(currentSurveys.map(s => s.id));
+        const newIds = new Set(mapped.map(s => s.id));
+        
+        // Find deleted surveys
+        const deletedSurveys = currentSurveys.filter(s => !newIds.has(s.id));
+        
+        if (deletedSurveys.length > 0) {
+          if (deletedSurveys.length === 1) {
+            toast.error(`Khảo sát "${deletedSurveys[0].title}" đã bị xóa. Đang làm mới danh sách...`);
+          } else {
+            toast.error(`${deletedSurveys.length} khảo sát đã bị xóa. Đang làm mới danh sách...`);
+          }
+        }
+      }
+      
       setSurveys(mapped);
       setFilteredSurveys(mapped);
+      surveysRef.current = mapped;
+    } catch (error) {
+      console.error("Error refreshing surveys list:", error);
+      if (!silent) {
+        toast.error("Không thể làm mới danh sách khảo sát");
+      }
     }
+  }, []);
+
+  // Periodic check for deleted surveys (every 30 seconds)
+  useEffect(() => {
+    if (loading || surveys.length === 0) return;
+    
+    const interval = setInterval(() => {
+      refreshSurveysList(false);
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [loading, surveys.length, refreshSurveysList]);
+
+  // Check for deleted surveys when window/tab gains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!loading && surveys.length > 0) {
+        refreshSurveysList(false);
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loading, surveys.length, refreshSurveysList]);
+
+  // Helper function to check if survey exists and is not deleted
+  const checkSurveyExists = async (surveyId, surveyTitle) => {
+    try {
+      await getSurveyDetails(surveyId);
+      return true;
+    } catch (error) {
+      // Extract error message
+      let errorMessage = '';
+      
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        errorMessage = error.graphQLErrors[0].message || '';
+      } else if (error.message && error.message !== "GraphQL error") {
+        errorMessage = error.message;
+      }
+      
+      // Check if survey is deleted or doesn't exist
+      if (errorMessage.includes('đã bị xóa') || 
+          errorMessage.includes('không tồn tại') ||
+          errorMessage.includes('Invalid') ||
+          errorMessage.includes('Khảo sát không tồn tại')) {
+        // Refresh list silently first, then show error
+        await refreshSurveysList(true);
+        toast.error(`Khảo sát "${surveyTitle}" đã bị xóa hoặc không tồn tại.`);
+        return false;
+      }
+      
+      // For other errors, still return false but don't refresh
+      return false;
+    }
+  };
+
+  // Action handlers
+  const handleCreateSurvey = () => {
+    setIsCreateModalOpen(true);
+  };
+
+  const handleViewResults = async (surveyId, surveyTitle) => {
+    // Check if survey exists and is not deleted
+    const exists = await checkSurveyExists(surveyId, surveyTitle);
+    if (!exists) {
+      return;
+    }
+    
+    navigate(`/surveys/${surveyId}/overview`);
+  };
+
+  const handleEditSurvey = async (surveyId) => {
+    // Find survey title from current list
+    const survey = surveys.find(s => s.id === surveyId);
+    const surveyTitle = survey?.title || `ID: ${surveyId}`;
+    
+    // Check if survey exists and is not deleted
+    const exists = await checkSurveyExists(surveyId, surveyTitle);
+    if (!exists) {
+      return;
+    }
+    
+    setSelectedSurveyId(surveyId);
+    setIsEditModalOpen(true);
   };
 
   const handleSaveEdit = async (surveyId, updatedSurvey) => {
     try {
-      // Refresh the surveys list to get the latest data
-      await refreshSurveysList();
+      // Refresh the surveys list to get the latest data (silently)
+      await refreshSurveysList(true);
     } catch (error) {
       console.error("Error updating survey:", error);
       // Don't re-throw since modal already handled the API call
@@ -159,8 +259,8 @@ export default function SurveysCreated() {
 
   const handleSaveCreate = async (newSurvey) => {
     try {
-      // Refresh the surveys list to get the latest data
-      await refreshSurveysList();
+      // Refresh the surveys list to get the latest data (silently)
+      await refreshSurveysList(true);
     } catch (error) {
       console.error("Error refreshing surveys list:", error);
       // Don't show error toast as the modal already handled the creation
@@ -168,6 +268,12 @@ export default function SurveysCreated() {
   };
 
   const handleDuplicateSurvey = async (surveyId, surveyTitle) => {
+    // Check if survey exists and is not deleted
+    const exists = await checkSurveyExists(surveyId, surveyTitle);
+    if (!exists) {
+      return;
+    }
+    
     if (!window.confirm(`Bạn có chắc muốn tạo bản sao của khảo sát: ${surveyTitle}?`)) {
       return;
     }
@@ -175,23 +281,51 @@ export default function SurveysCreated() {
     try {
       const duplicatedSurvey = await duplicateSurvey(surveyId);
       
-      // Refresh the surveys list to get the latest data
-      await refreshSurveysList();
+      // Refresh the surveys list to get the latest data (silently)
+      await refreshSurveysList(true);
       
       toast.success(`Đã tạo bản sao: ${duplicatedSurvey.title || surveyTitle}`);
     } catch (error) {
       console.error("Error duplicating survey:", error);
-      let errorMessage = "Không thể tạo bản sao khảo sát";
       
-      if (error.message) {
+      // Ưu tiên lấy message từ validation errors
+      let errorMessage = '';
+      
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        const firstError = error.graphQLErrors[0];
+        
+        // Kiểm tra validation errors trước
+        if (firstError.extensions?.validation) {
+          const validationErrors = firstError.extensions.validation;
+          // Lấy tất cả messages từ validation errors
+          const validationMessages = Object.values(validationErrors)
+            .flat()
+            .filter(msg => msg && msg.trim() !== '');
+          
+          if (validationMessages.length > 0) {
+            errorMessage = validationMessages.join(', ');
+          }
+        }
+        
+        // Nếu không có validation errors, dùng message từ error
+        if (!errorMessage && firstError.message) {
+          errorMessage = firstError.message;
+        }
+      }
+      
+      // Nếu không có graphQL errors, dùng error.message
+      if (!errorMessage && error.message) {
         errorMessage = error.message;
       }
       
-      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
-        const graphQLError = error.graphQLErrors[0];
-        if (graphQLError.message) {
-          errorMessage = graphQLError.message;
-        }
+      // Fallback nếu vẫn không có message
+      if (!errorMessage) {
+        errorMessage = 'Không thể tạo bản sao khảo sát';
+      }
+      
+      // Handle specific error messages
+      if (errorMessage.includes('Đang xử lý yêu cầu')) {
+        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
       }
       
       toast.error(errorMessage);
@@ -199,14 +333,74 @@ export default function SurveysCreated() {
   };
 
 
-  const handleDeleteSurvey = (surveyId, surveyTitle) => {
+  const handleDeleteSurvey = async (surveyId, surveyTitle) => {
+    // Check if survey exists and is not deleted
+    const exists = await checkSurveyExists(surveyId, surveyTitle);
+    if (!exists) {
+      return;
+    }
+    
     if (
-      window.confirm(
+      !window.confirm(
         `Bạn có chắc chắn muốn XÓA vĩnh viễn khảo sát: ${surveyTitle}?`
       )
     ) {
-      setSurveys(surveys.filter((s) => s.id !== surveyId));
+      return;
+    }
+
+    try {
+      await deleteSurvey(surveyId);
+      
+      // Refresh the surveys list to get the latest data (silently)
+      await refreshSurveysList(true);
+      
       toast.success("Khảo sát đã được xóa");
+    } catch (error) {
+      console.error("Error deleting survey:", error);
+      
+      // Ưu tiên lấy message từ validation errors
+      let errorMessage = '';
+      
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        const firstError = error.graphQLErrors[0];
+        
+        // Kiểm tra validation errors trước
+        if (firstError.extensions?.validation) {
+          const validationErrors = firstError.extensions.validation;
+          // Lấy tất cả messages từ validation errors
+          const validationMessages = Object.values(validationErrors)
+            .flat()
+            .filter(msg => msg && msg.trim() !== '');
+          
+          if (validationMessages.length > 0) {
+            errorMessage = validationMessages.join(', ');
+          }
+        }
+        
+        // Nếu không có validation errors, dùng message từ error
+        if (!errorMessage && firstError.message) {
+          errorMessage = firstError.message;
+        }
+      }
+      
+      // Nếu không có graphQL errors, dùng error.message
+      if (!errorMessage && error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Fallback nếu vẫn không có message
+      if (!errorMessage) {
+        errorMessage = 'Không thể xóa khảo sát';
+      }
+      
+      // Handle specific error messages
+      if (errorMessage.includes('Đang xử lý yêu cầu')) {
+        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+      } else if (errorMessage.includes('Khảo sát đã bị xóa trước đó') || errorMessage.includes('đã bị xóa')) {
+        errorMessage = 'Khảo sát đã bị xóa trước đó. Không thể xóa lại.';
+      }
+      
+      toast.error(errorMessage);
     }
   };
 

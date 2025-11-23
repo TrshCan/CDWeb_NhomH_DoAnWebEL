@@ -15,12 +15,15 @@ const types = ['', 'survey', 'quiz'];
 const statuses = ['', 'pending', 'active', 'paused', 'closed'];
 const objects = ['', 'public', 'students', 'lecturers'];
 
-const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' }) => (
-  isOpen && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity" onClick={onClose}>
+const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-md" onClick={onClose}>
       <div
-        className={`relative ${size} w-full mx-auto rounded-xl bg-white shadow-2xl overflow-hidden max-h-[98vh] overflow-y-auto transform transition-all animate-in fade-in zoom-in-95`}
+        className={`relative ${size} w-full mx-auto rounded-xl bg-white shadow-2xl overflow-hidden max-h-[98vh] overflow-y-auto z-[101]`}
         onClick={(e) => e.stopPropagation()}
+        style={{ position: 'relative' }}
       >
         <div className="flex items-center justify-between px-8 py-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b-2 border-blue-200 sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-3">
@@ -49,8 +52,8 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' })
         )}
       </div>
     </div>
-  )
-);
+  );
+};
 
 const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
   <div className="space-y-4">

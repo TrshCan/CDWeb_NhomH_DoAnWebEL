@@ -178,36 +178,46 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
     } catch (error) {
       console.error("Error updating survey:", error);
       
-      // Extract and display error message
-      let errorMessage = "Không thể cập nhật khảo sát";
+      // Ưu tiên lấy message từ validation errors
+      let errorMessage = '';
       
-      // Check for GraphQL errors with validation details
       if (error.graphQLErrors && error.graphQLErrors.length > 0) {
-        const graphQLError = error.graphQLErrors[0];
+        const firstError = error.graphQLErrors[0];
         
-        // Check for validation errors
-        if (graphQLError.extensions?.validation) {
-          const validationFields = Object.keys(graphQLError.extensions.validation);
-          if (validationFields.length > 0) {
-            const firstField = validationFields[0];
-            const fieldErrors = graphQLError.extensions.validation[firstField];
-            if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
-              errorMessage = fieldErrors[0];
-            }
+        // Kiểm tra validation errors trước
+        if (firstError.extensions?.validation) {
+          const validationErrors = firstError.extensions.validation;
+          // Lấy tất cả messages từ validation errors
+          const validationMessages = Object.values(validationErrors)
+            .flat()
+            .filter(msg => msg && msg.trim() !== '');
+          
+          if (validationMessages.length > 0) {
+            errorMessage = validationMessages.join(', ');
           }
-        } 
-        // Check for category error in extensions
-        else if (graphQLError.extensions?.category) {
-          errorMessage = graphQLError.message || errorMessage;
         }
-        // Use the GraphQL error message
-        else if (graphQLError.message) {
-          errorMessage = graphQLError.message;
+        
+        // Nếu không có validation errors, dùng message từ error
+        if (!errorMessage && firstError.message) {
+          errorMessage = firstError.message;
         }
-      } 
-      // Fallback to error.message
-      else if (error.message && error.message !== "GraphQL error") {
+      }
+      
+      // Nếu không có graphQL errors, dùng error.message
+      if (!errorMessage && error.message && error.message !== "GraphQL error") {
         errorMessage = error.message;
+      }
+      
+      // Fallback nếu vẫn không có message
+      if (!errorMessage) {
+        errorMessage = 'Không thể cập nhật khảo sát';
+      }
+      
+      // Handle specific error messages
+      if (errorMessage.includes('Đang xử lý yêu cầu')) {
+        errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
+      } else if (errorMessage.includes('Dữ liệu đã được cập nhật') || errorMessage.includes('Vui lòng tải lại trang')) {
+        errorMessage = 'Dữ liệu đã được cập nhật bởi người khác. Vui lòng tải lại trang trước khi cập nhật.';
       }
       
       // Display the error toast

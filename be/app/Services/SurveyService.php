@@ -551,6 +551,15 @@ class SurveyService
             throw new Exception('Bạn không có quyền cập nhật khảo sát. Chỉ admin và giáo viên mới có quyền này.', 403);
         }
 
+        // Kiểm tra survey có tồn tại không (bao gồm cả soft-deleted)
+        $surveyExists = DB::table('surveys')
+            ->where('id', $id)
+            ->exists();
+        
+        if (!$surveyExists) {
+            throw new Exception('Khảo sát không tồn tại trong cơ sở dữ liệu.', 404);
+        }
+
         $survey = $this->repo->findById($id);
         if (!$survey) {
             throw new Exception('Khảo sát không tồn tại hoặc đã bị xóa.', 404);
@@ -678,15 +687,28 @@ class SurveyService
     public function getSurveyById(int $id): Survey
     {
         try {
+            // Kiểm tra survey có tồn tại không (bao gồm cả soft-deleted)
+            $surveyExists = DB::table('surveys')
+                ->where('id', $id)
+                ->exists();
+            
+            if (!$surveyExists) {
+                throw new Exception('Khảo sát không tồn tại trong cơ sở dữ liệu.', 404);
+            }
+
             $survey = $this->repo->findWithCreatorName($id);
             if (!$survey) {
-                throw new ModelNotFoundException("Khảo sát ID {$id} không tồn tại.");
+                throw new ModelNotFoundException("Khảo sát ID {$id} không tồn tại hoặc đã bị xóa.");
             }
             return $survey;
         } catch (ModelNotFoundException $e) {
             Log::warning('Không tìm thấy khảo sát', ['id' => $id]);
             throw new Exception('Khảo sát không tồn tại hoặc đã bị xóa.', 404);
         } catch (\Exception $e) {
+            // If it's already a 404 error, re-throw it
+            if ($e->getCode() === 404) {
+                throw $e;
+            }
             Log::error('Lỗi tải chi tiết khảo sát', ['id' => $id, 'error' => $e->getMessage()]);
             throw new Exception('Không thể tải chi tiết.', 500);
         }

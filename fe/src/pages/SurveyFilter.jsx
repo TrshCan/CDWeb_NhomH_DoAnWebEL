@@ -17,7 +17,7 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' })
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/10 backdrop-blur-sm backdrop-saturate-150 transition-opacity" onClick={onClose}>
       <div
         className={`relative ${size} w-full mx-auto rounded-xl bg-white shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto transform transition-all animate-in fade-in zoom-in-95`}
         onClick={(e) => e.stopPropagation()}
