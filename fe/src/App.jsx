@@ -17,7 +17,7 @@ import Tab1 from "./pages/admin/Tab1.jsx";
 import Tab2 from "./pages/admin/Tab2.jsx";
 import Tab3 from "./pages/admin/Event.jsx";
 import Tab4 from "./pages/admin/Deadline.jsx";
-import Tab5 from "./pages/admin/Tab5.jsx";
+import Tab5 from "./pages/admin/SurveysAdmin.jsx";
 import Tab6 from "./pages/admin/Tab6.jsx";
 import PermissionManagement from "./pages/admin/PermissionManagement.jsx";
 import AdminUserManagement from "./pages/admin/AdminUserManagement.jsx";
@@ -56,7 +56,12 @@ export default function App() {
           <SurveysCreated />
         </ProtectedRoute>
       } />
-      
+        <Route path="/surveys/all" element={
+        <ProtectedRoute>
+        {<Survey />}
+        </ProtectedRoute>
+      } />
+      <Route path="/surveys" element={<Survey />} />
       <Route path="/surveys/:surveyId/join" element={<SurveyJoin />} />
       
       <Route path="/surveys/:surveyId/overview" element={
@@ -82,7 +87,7 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/email-verified" element={<EmailVerificationResult />} />
-      <Route path="/surveys" element={<Survey />} />
+      
       <Route path="/statemanagement" element={<StateManagement />} />
 
       {/* Admin routes */}
