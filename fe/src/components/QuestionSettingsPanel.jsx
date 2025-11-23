@@ -68,7 +68,7 @@ export default function QuestionSettingsPanel({
   const typeButtonRef = useRef(null);
 
   const {
-    questionCode = "Q001",
+    questionCode: rawQuestionCode = "",
     type = "Danh sách (nút chọn)",
     required = "soft",
     image = null,
@@ -80,6 +80,11 @@ export default function QuestionSettingsPanel({
     numericOnly = false,
     maxLength,
   } = value;
+
+  // Xử lý questionCode: nếu rỗng thì hiển thị placeholder
+  const questionCode = rawQuestionCode && rawQuestionCode.trim() !== "" 
+    ? rawQuestionCode 
+    : ""; // Hiển thị rỗng nếu chưa có, backend sẽ tự tạo
 
   // Giá trị mặc định cho maxLength dựa trên loại câu hỏi
   const defaultMaxLength = type === "Văn bản dài" ? 2500 : type === "Văn bản ngắn" ? 256 : 256;
@@ -173,6 +178,7 @@ export default function QuestionSettingsPanel({
               onChange={(e) =>
                 onChange?.({ ...value, questionCode: e.target.value })
               }
+              placeholder="Backend sẽ tự động tạo (Q001, Q002...)"
               className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             />
           </div>

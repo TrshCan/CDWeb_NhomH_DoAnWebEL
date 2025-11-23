@@ -27,6 +27,8 @@ export default function QuestionItem({
   onMoveOption,
   onAddOption,
   onOptionImageChange,
+  surveyType,
+  onCorrectAnswerChange,
 }) {
   // Kiểm tra image từ question object
   const imageValue = question?.image;
@@ -599,6 +601,43 @@ export default function QuestionItem({
         <span className="absolute top-2 right-4 z-50 text-red-500 text-[30px] font-bold select-none pointer-events-none">
           *
         </span>
+      )}
+
+      {/* Dropdown chọn đáp án đúng (chỉ hiện khi là quiz) */}
+      {/* Dropdown chọn đáp án đúng (chỉ hiện khi là quiz) */}
+      {surveyType === "quiz" && (
+        <div className="absolute top-12 right-4 z-50 flex flex-col items-end gap-1">
+          {/* Kiểm tra loại câu hỏi để hiển thị input hoặc dropdown */}
+          {(question.type === "Văn bản ngắn" || question.type === "Văn bản dài") ? (
+            <input
+              type="text"
+              className="border border-gray-300 rounded px-1 py-0 text-xs focus:outline-none focus:border-violet-600 bg-white"
+              style={{ width: "130px", height: "20px", fontSize: "11px" }}
+              placeholder="Nhập đáp án đúng"
+              value={question.options?.find((o) => o.is_correct)?.text || ""}
+              onChange={(e) => onCorrectAnswerChange?.(question.id, null, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <select
+              className="border border-gray-300 rounded px-1 py-0 text-xs focus:outline-none focus:border-violet-600 bg-white"
+              style={{ width: "130px", height: "20px", fontSize: "11px" }}
+              value={question.options?.find((o) => o.is_correct)?.id || ""}
+              onChange={(e) => onCorrectAnswerChange?.(question.id, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">Chọn đáp án đúng</option>
+              {question.options?.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.text ? (opt.text.length > 20 ? opt.text.substring(0, 20) + "..." : opt.text) : `Lựa chọn ${opt.position || ""}`}
+                </option>
+              ))}
+            </select>
+          )}
+          <span className="text-[10px] text-gray-500 font-medium">
+            Điểm: {question.points || 0}
+          </span>
+        </div>
       )}
 
       {/* ======================= NÚT MOVE LÊN/XUỐNG - ĐẶT BÊN NGOÀI ======================= */}

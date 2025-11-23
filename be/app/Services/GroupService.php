@@ -174,10 +174,28 @@ class GroupService
 
             $newGroup->save();
 
+            // Tìm question_code lớn nhất hiện có để tạo code mới
+            $maxCode = \App\Models\SurveyQuestion::where('survey_id', $originalGroup->survey_id)
+                ->whereNotNull('question_code')
+                ->where('question_code', 'LIKE', 'Q%')
+                ->orderByRaw('CAST(SUBSTRING(question_code, 2) AS UNSIGNED) DESC')
+                ->value('question_code');
+            
+            $nextNumber = 1;
+            if ($maxCode) {
+                $currentNumber = (int) substr($maxCode, 1);
+                $nextNumber = $currentNumber + 1;
+            }
+            
             // Sao chép tất cả questions và options
-            foreach ($originalGroup->questions as $originalQuestion) {
+            foreach ($originalGroup->questions as $index => $originalQuestion) {
                 $newQuestion = $originalQuestion->replicate();
                 $newQuestion->group_id = $newGroup->id;
+                
+                // Tạo question_code mới theo format Q001, Q002, ...
+                $newQuestion->question_code = 'Q' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+                $nextNumber++; // Tăng cho câu hỏi tiếp theo
+                
                 $newQuestion->save();
 
                 // Sao chép options

@@ -8,6 +8,7 @@ export default function HeaderBar({
   onActivate,
   onShare,
   onAddQuestion,
+  onPreview,
   logoSrc = "/fe/img/logo.jpg",
 }) {
   const fmt = (d) => {
@@ -82,6 +83,29 @@ export default function HeaderBar({
               `Đã lưu ${fmt(savedAt)}`
             )}
           </div>
+
+          {/* Icon mắt để xem trước */}
+          <button
+            type="button"
+            className="w-9 h-9 inline-flex items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition"
+            onClick={onPreview}
+            title="Xem trước khảo sát"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
 
           {/* 113 x 36 */}
           <button

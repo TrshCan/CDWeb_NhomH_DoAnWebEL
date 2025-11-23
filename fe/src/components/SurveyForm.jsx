@@ -102,7 +102,7 @@ export default function SurveyForm({ surveyId = null }) {
   // ✅ Helper function để tạo questionSettings từ backend data (tránh trùng lặp)
   const buildQuestionSettings = useCallback((backendQuestion, frontendQuestion) => {
     const questionSettingsData = {
-      questionCode: backendQuestion.question_code || `Q${String(frontendQuestion.id).padStart(3, "0")}`,
+      questionCode: backendQuestion.question_code || "", // Backend sẽ tự tạo
       type: frontendQuestion.type,
       required: backendQuestion.required || "soft",
       image: backendQuestion.image || null,
@@ -290,9 +290,14 @@ export default function SurveyForm({ surveyId = null }) {
             const firstGroupId = newQuestionGroups[0].id;
             
             // Cập nhật group_id cho orphan questions trong CSDL
-            const updatePromises = orphanQuestions.map((q) =>
-              updateQuestion(q.id, { group_id: String(firstGroupId) }).catch(() => null)
-            );
+            const updatePromises = orphanQuestions
+              .filter((q) => {
+                const numId = Number(q.id);
+                return numId > 0 && numId < 1000000000000 && Number.isInteger(numId);
+              })
+              .map((q) =>
+                updateQuestion(q.id, { group_id: String(firstGroupId) }).catch(() => null)
+              );
             await Promise.all(updatePromises);
 
             // Thêm orphan questions vào group đầu tiên
@@ -314,9 +319,14 @@ export default function SurveyForm({ surveyId = null }) {
             });
             
             // Cập nhật group_id cho tất cả questions
-            const updatePromises = convertedQuestions.map((q) =>
-              updateQuestion(q.id, { group_id: String(defaultGroup.id), position: convertedQuestions.indexOf(q) + 1 })
-            );
+            const updatePromises = convertedQuestions
+              .filter((q) => {
+                const numId = Number(q.id);
+                return numId > 0 && numId < 1000000000000 && Number.isInteger(numId);
+              })
+              .map((q) =>
+                updateQuestion(q.id, { group_id: String(defaultGroup.id), position: convertedQuestions.indexOf(q) + 1 })
+              );
             await Promise.all(updatePromises);
             
             newQuestionGroups = [{
@@ -1000,6 +1010,17 @@ export default function SurveyForm({ surveyId = null }) {
     }
 
     try {
+      // Kiểm tra xem questionId có phải là ID thật từ database không
+      // ID tạm thời: số âm hoặc số rất lớn (timestamp > 1000000000000)
+      // ID thật: số nguyên dương nhỏ hơn 1000000000000
+      const numId = Number(questionId);
+      const isRealId = numId > 0 && numId < 1000000000000 && Number.isInteger(numId);
+      
+      if (!isRealId) {
+        console.warn('Skipping update for temporary question ID:', questionId);
+        return;
+      }
+
       // Cập nhật state ngay lập tức (optimistic update)
       const updateData = { [fieldName]: value };
       await updateQuestion(questionId, updateData);
@@ -1486,7 +1507,7 @@ export default function SurveyForm({ surveyId = null }) {
         );
         const questionType = question?.type || "Danh sách (nút chọn)";
         const baseSettings = {
-          questionCode: `Q${String(questionId).padStart(3, "0")}`,
+          questionCode: "", // Backend sẽ tự tạo
           type: questionType,
           required: "soft",
           image: null,
@@ -1571,9 +1592,12 @@ export default function SurveyForm({ surveyId = null }) {
 
     // 2. Lưu vào CSDL - cập nhật position cho tất cả câu hỏi bị ảnh hưởng
     try {
-      const updatePromises = newQuestions.map((q, idx) => 
-        updateQuestion(q.id, { position: idx + 1 })
-      );
+      const updatePromises = newQuestions
+        .filter((q) => {
+          const numId = Number(q.id);
+          return numId > 0 && numId < 1000000000000 && Number.isInteger(numId);
+        }) // Chỉ update ID thật
+        .map((q, idx) => updateQuestion(q.id, { position: idx + 1 }));
       await Promise.all(updatePromises);
     } catch (error) {
       // Rollback nếu lỗi
@@ -1597,7 +1621,9 @@ export default function SurveyForm({ surveyId = null }) {
     return {
       survey_id: String(surveyIdParam), // Đảm bảo là string
       group_id: groupIdParam ? String(groupIdParam) : null, // ✅ Thêm group_id
-      question_code: questionSettingsData?.questionCode || undefined,
+      question_code: questionSettingsData?.questionCode && questionSettingsData.questionCode.trim() !== "" 
+        ? questionSettingsData.questionCode 
+        : undefined, // Không gửi nếu rỗng, để backend tự tạo
       question_text: questionText, // Backend yêu cầu String! (không null)
       image: questionSettingsData?.image || null,
       question_type: frontendQuestion.type || "Danh sách (nút chọn)",
@@ -1738,7 +1764,7 @@ export default function SurveyForm({ surveyId = null }) {
 
         // Tạo default questionSettings
         const defaultQuestionSettings = {
-          questionCode: `Q${String(newId).padStart(3, "0")}`,
+          questionCode: "", // Backend sẽ tự tạo
           type: questionType,
           required: "soft",
           image: null,
@@ -1813,14 +1839,17 @@ export default function SurveyForm({ surveyId = null }) {
           }))
         );
 
-        // Cập nhật questionSettings với ID mới từ CSDL
+        // Cập nhật questionSettings với ID mới từ CSDL và question_code từ backend
         setQuestionSettings((prev) => {
           const newSettings = { ...prev };
           const oldSettings = newSettings[newId] || questionSettingsData;
           if (newSettings[newId]) {
             delete newSettings[newId];
           }
-          newSettings[savedQuestionId] = { ...oldSettings };
+          newSettings[savedQuestionId] = { 
+            ...oldSettings,
+            questionCode: savedQuestion.question_code || oldSettings.questionCode, // Cập nhật từ backend
+          };
           return newSettings;
         });
 
@@ -1921,7 +1950,7 @@ export default function SurveyForm({ surveyId = null }) {
         ...prevSettings,
         [tempId]: {
           ...srcSettings,
-          questionCode: `Q${String(tempId).padStart(3, "0")}`,
+          questionCode: "", // Backend sẽ tự tạo
         },
       }));
     }
@@ -1979,7 +2008,7 @@ export default function SurveyForm({ surveyId = null }) {
         }
 
         newSettings[realId] = {
-          questionCode: duplicatedQuestion.question_code || `Q${String(realId).padStart(3, "0")}`,
+          questionCode: duplicatedQuestion.question_code || "", // Backend đã tạo
           type: duplicatedQuestion.question_type || "Danh sách (nút chọn)",
           required: duplicatedQuestion.required || "soft",
           image: duplicatedQuestion.image || null,
@@ -2101,7 +2130,7 @@ export default function SurveyForm({ surveyId = null }) {
           ...prevSettings,
           [question.id]: {
             ...srcSettings,
-            questionCode: `Q${String(question.id).padStart(3, "0")}`,
+            questionCode: "", // Backend sẽ tự tạo
           },
         }));
       }
@@ -2165,7 +2194,7 @@ export default function SurveyForm({ surveyId = null }) {
         (duplicatedGroup.questions || []).forEach((backendQuestion) => {
           const realId = parseInt(backendQuestion.id);
           newSettings[realId] = {
-            questionCode: backendQuestion.question_code || `Q${String(realId).padStart(3, "0")}`,
+            questionCode: backendQuestion.question_code || "", // Backend đã tạo
             type: backendQuestion.question_type || "Danh sách (nút chọn)",
             required: backendQuestion.required || "soft",
             image: backendQuestion.image || null,
@@ -2484,6 +2513,84 @@ export default function SurveyForm({ surveyId = null }) {
     return false;
   };
 
+  // ✅ Hàm tính lại điểm cho tất cả câu hỏi
+  const recalculatePoints = useCallback(async (currentGroups = questionGroups) => {
+    if (generalSettings.type !== "quiz") return;
+
+    const allQs = currentGroups.flatMap((g) => g.questions);
+    const totalQuestions = allQs.length;
+    if (totalQuestions === 0) return;
+
+    // Chia đều 10 điểm
+    const basePoints = Math.floor(10 / totalQuestions);
+    let remainder = 10 % totalQuestions;
+
+    // Tạo map điểm mới
+    const newPointsMap = {};
+    allQs.forEach((q) => {
+      let points = basePoints;
+      if (remainder > 0) {
+        points += 1;
+        remainder--;
+      }
+      newPointsMap[q.id] = points;
+    });
+
+    // Cập nhật local state
+    setQuestionGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        questions: g.questions.map((q) => {
+          if (newPointsMap[q.id] !== undefined && q.points !== newPointsMap[q.id]) {
+            return { ...q, points: newPointsMap[q.id] };
+          }
+          return q;
+        }),
+      }))
+    );
+
+    // Cập nhật backend (chạy ngầm)
+    try {
+      const updatePromises = allQs
+        .filter((q) => {
+          // Chỉ update câu hỏi có ID thật từ database
+          const numId = Number(q.id);
+          return numId > 0 && numId < 1000000000000 && Number.isInteger(numId);
+        })
+        .map((q) => {
+          const newPoints = newPointsMap[q.id];
+          if (newPoints !== undefined && q.points !== newPoints) {
+            return updateQuestion(q.id, { points: newPoints });
+          }
+          return Promise.resolve();
+        });
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error("Error recalculating points:", error);
+    }
+  }, [generalSettings.type, questionGroups]);
+
+  // Gọi recalculatePoints chỉ khi type thay đổi (không phải khi thêm/xóa câu hỏi)
+  useEffect(() => {
+    if (generalSettings.type === "quiz" && allQuestions.length > 0) {
+      // Delay để đảm bảo tất cả câu hỏi đã có ID thật
+      const timer = setTimeout(() => {
+        // Kiểm tra lần cuối trước khi recalculate
+        const hasValidIds = allQuestions.every((q) => {
+          const numId = Number(q.id);
+          return numId > 0 && numId < 1000000000000 && Number.isInteger(numId);
+        });
+        
+        if (hasValidIds) {
+          recalculatePoints();
+        }
+      }, 500); // Tăng delay lên 500ms để chắc chắn
+      
+      return () => clearTimeout(timer);
+    }
+  }, [generalSettings.type]); // CHỈ depend on type, KHÔNG depend on length
+
+
   const getQuestionConditionInfo = (questionId) => {
     const settings = questionSettings[questionId];
     if (!settings || !settings.conditions || settings.conditions.length === 0) {
@@ -2621,6 +2728,14 @@ export default function SurveyForm({ surveyId = null }) {
           savedAt={savedAt}
           isSaving={pendingOperations > 0}
           onActivate={() => toast.success("Đã kích hoạt")}
+          onPreview={() => {
+            if (surveyId) {
+              // TODO: Sẽ được merge với trang TakeSurvey sau
+              toast.info("Chức năng xem trước sẽ được cập nhật sau");
+            } else {
+              toast.error("Vui lòng lưu khảo sát trước khi xem trước");
+            }
+          }}
           onShare={() => setOpenPanel(openPanel === "share" ? null : "share")}
           onAddQuestion={() => {
             handleToggleModal();
@@ -3053,6 +3168,91 @@ export default function SurveyForm({ surveyId = null }) {
                               onRemoveOption={handleRemoveOption}
                               onMoveOption={handleMoveOption}
                               onOptionImageChange={handleOptionImageChange}
+                              surveyType={generalSettings.type}
+                              onCorrectAnswerChange={async (questionId, optionId, textAnswer) => {
+                                // 1. Update local state
+                                setQuestionGroups((prev) =>
+                                  prev.map((g) => ({
+                                    ...g,
+                                    questions: g.questions.map((q) => {
+                                      if (String(q.id) !== String(questionId)) return q;
+                                      
+                                      // Nếu là câu hỏi văn bản (textAnswer được truyền vào)
+                                      if (textAnswer !== undefined) {
+                                        return {
+                                          ...q,
+                                          options: q.options.map((opt, idx) => ({
+                                            ...opt,
+                                            is_correct: idx === 0, // Option đầu tiên là đáp án đúng
+                                            option_text: idx === 0 ? textAnswer : opt.option_text,
+                                          })),
+                                        };
+                                      }
+                                      
+                                      // Nếu là câu hỏi trắc nghiệm
+                                      return {
+                                        ...q,
+                                        options: q.options.map((opt) => ({
+                                          ...opt,
+                                          is_correct: String(opt.id) === String(optionId),
+                                        })),
+                                      };
+                                    }),
+                                  }))
+                                );
+
+                                // 2. Call API to update options
+                                try {
+                                  const group = questionGroups.find((g) => g.questions.some((q) => String(q.id) === String(questionId)));
+                                  const question = group?.questions.find((q) => String(q.id) === String(questionId));
+                                  
+                                  if (question) {
+                                    // Nếu là câu hỏi văn bản
+                                    if (textAnswer !== undefined) {
+                                      // Tìm hoặc tạo option đầu tiên để lưu đáp án
+                                      let firstOption = question.options[0];
+                                      
+                                      if (firstOption) {
+                                        // Cập nhật option đầu tiên với đáp án đúng
+                                        await updateOption(firstOption.id, {
+                                          option_text: textAnswer,
+                                          is_correct: true,
+                                        });
+                                      } else {
+                                        // Tạo option mới nếu chưa có
+                                        await addOption({
+                                          question_id: questionId,
+                                          option_text: textAnswer,
+                                          is_correct: true,
+                                          position: 1,
+                                        });
+                                      }
+                                      
+                                      // Đặt các option khác thành không đúng
+                                      const otherOptions = question.options.slice(1);
+                                      await Promise.all(
+                                        otherOptions.map((opt) =>
+                                          updateOption(opt.id, { is_correct: false })
+                                        )
+                                      );
+                                    } else {
+                                      // Nếu là câu hỏi trắc nghiệm
+                                      const updatePromises = question.options.map((opt) => {
+                                        const isCorrect = String(opt.id) === String(optionId);
+                                        // Only update if changed (optimization)
+                                        if (opt.is_correct !== isCorrect) {
+                                          return updateOption(opt.id, { is_correct: isCorrect });
+                                        }
+                                        return Promise.resolve();
+                                      });
+                                      await Promise.all(updatePromises);
+                                    }
+                                  }
+                                } catch (error) {
+                                  console.error("Error updating correct answer:", error);
+                                  toast.error("Không thể lưu đáp án đúng");
+                                }
+                              }}
                               />
                             <AddSection
                               onAddClick={() => {

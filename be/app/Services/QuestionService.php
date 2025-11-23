@@ -22,6 +22,30 @@ class QuestionService
     }
 
     /**
+     * Tạo question_code mới cho survey
+     * Tìm số lớn nhất hiện có và tăng lên 1
+     * Tối ưu: Chỉ lấy 1 field và limit 1
+     */
+    private function generateNextQuestionCode($surveyId)
+    {
+        // Tối ưu: Chỉ lấy question_code, không load toàn bộ model
+        $maxCode = \App\Models\SurveyQuestion::where('survey_id', $surveyId)
+            ->whereNotNull('question_code')
+            ->where('question_code', 'LIKE', 'Q%')
+            ->orderByRaw('CAST(SUBSTRING(question_code, 2) AS UNSIGNED) DESC')
+            ->limit(1)
+            ->value('question_code');
+        
+        $nextNumber = 1;
+        if ($maxCode) {
+            $currentNumber = (int) substr($maxCode, 1);
+            $nextNumber = $currentNumber + 1;
+        }
+        
+        return 'Q' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Lấy câu hỏi theo ID
      */
     public function getQuestionById($id)
@@ -37,11 +61,26 @@ class QuestionService
         try {
             DB::beginTransaction();
 
-            // Tạo question code tự động
-            if (!isset($input['question_code'])) {
-                $survey = Survey::findOrFail($input['survey_id']);
-                $questionCount = $this->questionRepository->countBySurveyId($input['survey_id']);
-                $input['question_code'] = 'Q' . str_pad($questionCount + 1, 3, '0', STR_PAD_LEFT);
+            // Tạo question code tự động (LUÔN LUÔN tạo, không bao giờ để trống)
+            if (!isset($input['question_code']) || $input['question_code'] === null || trim($input['question_code']) === '') {
+                $input['question_code'] = $this->generateNextQuestionCode($input['survey_id']);
+            } else {
+                // Nếu có question_code từ input, validate nó
+                $input['question_code'] = trim($input['question_code']);
+                
+                // Kiểm tra độ dài tối đa 100 ký tự
+                if (strlen($input['question_code']) > 100) {
+                    throw new \Exception('Mã câu hỏi không được vượt quá 100 ký tự. Độ dài hiện tại: ' . strlen($input['question_code']) . ' ký tự.');
+                }
+                
+                // Kiểm tra trùng lặp trong cùng survey
+                $existingQuestion = \App\Models\SurveyQuestion::where('survey_id', $input['survey_id'])
+                    ->where('question_code', $input['question_code'])
+                    ->first();
+                
+                if ($existingQuestion) {
+                    throw new \Exception('Mã câu hỏi "' . $input['question_code'] . '" đã tồn tại trong khảo sát này. Vui lòng sử dụng mã khác.');
+                }
             }
 
             $question = $this->questionRepository->create($input);
@@ -72,6 +111,31 @@ class QuestionService
         try {
             // Lấy thông tin câu hỏi trước khi cập nhật
             $oldQuestion = $this->questionRepository->findById($id);
+            
+            // Nếu cập nhật question_code, validate nó
+            if (isset($input['question_code'])) {
+                $input['question_code'] = trim($input['question_code']);
+                
+                // Không cho phép để trống
+                if (empty($input['question_code'])) {
+                    throw new \Exception('Mã câu hỏi không được để trống.');
+                }
+                
+                // Kiểm tra độ dài tối đa 100 ký tự
+                if (strlen($input['question_code']) > 100) {
+                    throw new \Exception('Mã câu hỏi không được vượt quá 100 ký tự. Độ dài hiện tại: ' . strlen($input['question_code']) . ' ký tự.');
+                }
+                
+                // Kiểm tra trùng lặp (trừ chính nó)
+                $existingQuestion = \App\Models\SurveyQuestion::where('survey_id', $oldQuestion->survey_id)
+                    ->where('question_code', $input['question_code'])
+                    ->where('id', '!=', $id)
+                    ->first();
+                
+                if ($existingQuestion) {
+                    throw new \Exception('Mã câu hỏi "' . $input['question_code'] . '" đã tồn tại trong khảo sát này (Câu hỏi ID: ' . $existingQuestion->id . '). Vui lòng sử dụng mã khác.');
+                }
+            }
             
             // Cập nhật câu hỏi
             $question = $this->questionRepository->update($id, $input);
@@ -179,10 +243,8 @@ class QuestionService
             $newQuestion->survey_id = $originalQuestion->survey_id;
             $newQuestion->group_id = $originalQuestion->group_id;
 
-            // Tạo question code mới
-            $survey = Survey::findOrFail($originalQuestion->survey_id);
-            $questionCount = $this->questionRepository->countBySurveyId($originalQuestion->survey_id);
-            $newQuestion->question_code = 'Q' . str_pad($questionCount + 1, 3, '0', STR_PAD_LEFT);
+            // Tạo question code mới - tìm số lớn nhất và tăng lên
+            $newQuestion->question_code = $this->generateNextQuestionCode($originalQuestion->survey_id);
 
             $newQuestion->save();
 

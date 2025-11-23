@@ -289,6 +289,34 @@ enum ShareStatus {
 }
 
 # --------------------------------------------
+# ----------------Survey Response-------------
+# --------------------------------------------
+type SurveyResponseResult {
+    success: Boolean!
+    total_score: Int!
+    max_score: Int!
+    percentage: Float!
+}
+
+type UserResult {
+    total_score: Int!
+    max_score: Int!
+    percentage: Float!
+    status: String!
+    created_at: DateTime!
+}
+
+input AnswerInput {
+    question_id: ID!
+    selected_option_id: ID
+    selected_option_ids: [ID!]
+    answer_text: String
+    comment_text: String
+    matrix_answer: JSON
+    file_urls: JSON
+}
+
+# --------------------------------------------
 # ----------------Queries---------------------
 # --------------------------------------------
 type Query {
@@ -317,6 +345,10 @@ type Query {
     
     publicShareLink(survey_id: ID!): SurveyShare!
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getPublicShareLink")
+    
+    # Survey Response
+    getUserResult(survey_id: ID!, user_id: ID): UserResult
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResponseResolver@getUserResult")
 }
 
 # --------------------------------------------
@@ -387,4 +419,8 @@ type Mutation {
     
     deleteShare(id: ID!): Boolean!
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@deleteShare")
+    
+    # Survey Response
+    submitSurveyResponse(survey_id: ID!, user_id: ID, answers: [AnswerInput!]!): SurveyResponseResult!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResponseResolver@submitResponse")
 }

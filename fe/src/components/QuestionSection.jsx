@@ -36,6 +36,8 @@ export default function QuestionSection({
   onRemoveOption,
   onMoveOption,
   onOptionImageChange,
+  surveyType,
+  onCorrectAnswerChange,
 }) {
   const [items, setItems] = useState(questionItems);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -403,6 +405,8 @@ export default function QuestionSection({
                   onRemoveOption={onRemoveOption}
                   onMoveOption={onMoveOption}
                   onOptionImageChange={onOptionImageChange}
+                  surveyType={surveyType}
+                  onCorrectAnswerChange={onCorrectAnswerChange}
                 />
               </div>
             );
