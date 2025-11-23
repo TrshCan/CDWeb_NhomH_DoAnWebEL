@@ -257,6 +257,38 @@ type AuditLog {
 }
 
 # --------------------------------------------
+# ----------------Survey Share----------------
+# --------------------------------------------
+type SurveyShare {
+    id: ID!
+    survey_id: ID!
+    survey: Survey
+    share_type: ShareType!
+    share_token: String
+    email: String
+    group_id: ID
+    status: ShareStatus!
+    sent_at: DateTime
+    completed_at: DateTime
+    created_by: ID
+    creator: User
+    created_at: DateTime!
+    updated_at: DateTime!
+    share_url: String
+}
+
+enum ShareType {
+    public
+    email
+    group
+}
+
+enum ShareStatus {
+    pending
+    completed
+}
+
+# --------------------------------------------
 # ----------------Queries---------------------
 # --------------------------------------------
 type Query {
@@ -278,6 +310,13 @@ type Query {
     # Audit Logs
     auditLogs(survey_id: ID!): [AuditLog!]!
         @field(resolver: "App\\GraphQL\\Resolvers\\AuditLogResolver@list")
+    
+    # Survey Shares
+    surveyShares(survey_id: ID!): [SurveyShare!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getShares")
+    
+    publicShareLink(survey_id: ID!): SurveyShare!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getPublicShareLink")
 }
 
 # --------------------------------------------
@@ -338,4 +377,14 @@ type Mutation {
     
     duplicateQuestionGroup(id: ID!): QuestionGroup
         @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@duplicate")
+    
+    # Survey Shares
+    inviteByEmail(survey_id: ID!, email: String!): SurveyShare!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@inviteByEmail")
+    
+    shareToGroup(survey_id: ID!, group_id: ID!): SurveyShare!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@shareToGroup")
+    
+    deleteShare(id: ID!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@deleteShare")
 }

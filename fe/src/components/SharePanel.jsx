@@ -1,18 +1,99 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { getPublicShareLink, getSurveyShares, inviteByEmail, deleteShare } from "../api/shares";
 
-export default function SharePanel({ surveyId, surveyUrl }) {
+export default function SharePanel({ surveyId }) {
   const [showQR, setShowQR] = useState(false);
+  const [shareLink, setShareLink] = useState(null);
+  const [shares, setShares] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [emailInput, setEmailInput] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  // Load share link và danh sách shares
+  useEffect(() => {
+    const loadShares = async () => {
+      if (!surveyId) return;
+      
+      try {
+        setLoading(true);
+        const [linkData, sharesData] = await Promise.all([
+          getPublicShareLink(surveyId),
+          getSurveyShares(surveyId)
+        ]);
+        
+        setShareLink(linkData);
+        setShares(sharesData);
+      } catch (error) {
+        console.error("Error loading shares:", error);
+        toast.error("Không thể tải thông tin chia sẻ");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadShares();
+  }, [surveyId]);
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(surveyUrl);
+    if (!shareLink?.share_url) return;
+    navigator.clipboard.writeText(shareLink.share_url);
     toast.success("Đã sao chép link");
   };
 
   const generateQRCode = () => {
-    // Sử dụng API QR code với kích thước 170x170
-    return `https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${encodeURIComponent(surveyUrl)}`;
+    if (!shareLink?.share_url) return "";
+    return `https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${encodeURIComponent(shareLink.share_url)}`;
   };
+
+  const handleInviteByEmail = async () => {
+    if (!emailInput.trim()) {
+      toast.error("Vui lòng nhập email");
+      return;
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailInput)) {
+      toast.error("Email không hợp lệ");
+      return;
+    }
+
+    try {
+      setSendingEmail(true);
+      const newShare = await inviteByEmail(surveyId, emailInput);
+      setShares([newShare, ...shares]);
+      setEmailInput("");
+      toast.success(`Đã gửi lời mời đến ${emailInput}`);
+    } catch (error) {
+      toast.error(error.message || "Không thể gửi lời mời");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handleDeleteShare = async (shareId) => {
+    if (!confirm("Bạn có chắc muốn xóa chia sẻ này?")) return;
+
+    try {
+      await deleteShare(shareId);
+      setShares(shares.filter(s => s.id !== shareId));
+      toast.success("Đã xóa chia sẻ");
+    } catch (error) {
+      toast.error("Không thể xóa chia sẻ");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full overflow-y-auto p-8 bg-white">
@@ -65,12 +146,13 @@ export default function SharePanel({ surveyId, surveyUrl }) {
                 <input
                   type="text"
                   readOnly
-                  value={surveyUrl}
+                  value={shareLink?.share_url || ""}
                   className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded bg-gray-50 text-gray-700 truncate"
                 />
                 <button
                   onClick={handleCopyLink}
-                  className="px-4 py-2 bg-violet-600 text-white text-xs font-medium rounded hover:bg-violet-700 transition whitespace-nowrap"
+                  disabled={!shareLink}
+                  className="px-4 py-2 bg-violet-600 text-white text-xs font-medium rounded hover:bg-violet-700 transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Sao chép
                 </button>
@@ -121,25 +203,69 @@ export default function SharePanel({ surveyId, surveyUrl }) {
           </div>
         </div>
 
-        {/* Section 3: Danh sách người tham gia - 235x292 */}
+        {/* Section 3: Mời qua email - 400x292 */}
         <div 
           className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col flex-shrink-0" 
-          style={{ width: '235px', height: '292px', minWidth: '235px', minHeight: '292px', maxWidth: '235px', maxHeight: '292px' }}
+          style={{ width: '400px', minWidth: '400px', maxWidth: '400px' }}
         >
           <h2 className="text-base font-semibold text-gray-900 mb-4">
-            Danh sách người tham gia
+            Mời người tham gia
           </h2>
           
-          <p className="text-xs text-gray-600 mb-4 flex-1">
-            Thiết lập danh sách người tham gia và mời qua email.
-          </p>
-          
-          <button
-            onClick={() => toast.info("Chức năng đang được phát triển")}
-            className="w-full px-4 py-2 text-violet-600 border border-violet-600 rounded hover:bg-violet-50 transition text-xs font-medium"
-          >
-            + Tạo danh sách người tham gia
-          </button>
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-gray-700 mb-2">
+              Email
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleInviteByEmail()}
+                placeholder="example@email.com"
+                className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              <button
+                onClick={handleInviteByEmail}
+                disabled={sendingEmail || !emailInput.trim()}
+                className="px-4 py-2 bg-violet-600 text-white text-xs font-medium rounded hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {sendingEmail ? "Đang gửi..." : "Gửi"}
+              </button>
+            </div>
+          </div>
+
+          {/* Danh sách người đã mời */}
+          <div className="flex-1 overflow-y-auto">
+            <h3 className="text-xs font-medium text-gray-700 mb-2">
+              Đã mời ({shares.filter(s => s.share_type === 'email').length})
+            </h3>
+            <div className="space-y-2">
+              {shares.filter(s => s.share_type === 'email').map((share) => (
+                <div key={share.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{share.email}</p>
+                    <p className="text-gray-500">
+                      {share.status === 'completed' ? '✓ Đã hoàn thành' : 'Chờ phản hồi'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteShare(share.id)}
+                    className="ml-2 text-red-600 hover:text-red-800"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+              {shares.filter(s => s.share_type === 'email').length === 0 && (
+                <p className="text-xs text-gray-500 text-center py-4">
+                  Chưa có lời mời nào
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
       </div>
