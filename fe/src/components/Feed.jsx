@@ -181,6 +181,8 @@ export default function Feed() {
     return () => observer.disconnect();
   }, [allPosts.length, loading, loadingMore, visibleCount]);
 
+
+
   // File validation
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files);
@@ -425,11 +427,69 @@ export default function Feed() {
       {/* Post Feed */}
       <div className="space-y-4" id="postFeed">
         {loading ? (
-          <p className="text-gray-500 text-center">Loading posts...</p>
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="post bg-white rounded-lg shadow p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="skeleton skeleton-avatar"></div>
+                  <div className="flex-1">
+                    <div className="skeleton skeleton-text w-1/3"></div>
+                    <div className="skeleton skeleton-text w-1/4"></div>
+                  </div>
+                </div>
+                <div className="skeleton skeleton-text w-full mt-3"></div>
+                <div className="skeleton skeleton-text w-5/6"></div>
+                <div className="skeleton skeleton-text w-4/6"></div>
+                <div className="skeleton skeleton-image"></div>
+              </div>
+            ))}
+          </div>
         ) : allPosts.length === 0 ? (
           <p className="text-gray-500 text-center">No posts yet.</p>
         ) : (
-          allPosts.map((post, i) => <PostCard key={i} post={post} />)
+          <>
+            {allPosts.slice(0, visibleCount).map((post) => (
+              <div key={post.id} className="animate-fade-in">
+                <PostCard
+                  post={post}
+                  followingUserIds={followingUserIds}
+                  onFollowUpdate={(userId, isFollowing) => {
+                    if (isFollowing) {
+                      setFollowingUserIds((prev) => [
+                        ...prev,
+                        parseInt(userId),
+                      ]);
+                    } else {
+                      setFollowingUserIds((prev) =>
+                        prev.filter((id) => id !== parseInt(userId))
+                      );
+                    }
+                  }}
+                />
+              </div>
+            ))}
+            {/* Load more sentinel */}
+            <div ref={loadMoreRef} />
+            {/* Loading more shimmer */}
+            {loadingMore && (
+              <div className="space-y-4 mt-2">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i} className="post bg-white rounded-lg shadow p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="skeleton skeleton-avatar"></div>
+                      <div className="flex-1">
+                        <div className="skeleton skeleton-text w-1/3"></div>
+                        <div className="skeleton skeleton-text w-1/4"></div>
+                      </div>
+                    </div>
+                    <div className="skeleton skeleton-text w-full mt-3"></div>
+                    <div className="skeleton skeleton-text w-5/6"></div>
+                    <div className="skeleton skeleton-image"></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getTodayEvents, getUpcomingDeadlines } from "../api/graphql/widget";
 import "../assets/css/WidgetSidebar.css";
 import { useNavigate } from "react-router-dom";
@@ -10,9 +10,10 @@ export default function WidgetSidebar() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalType, setModalType] = useState(null);
   const [showModal, setShowModal] = useState(false);
-const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -35,8 +36,8 @@ const navigate = useNavigate();
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow = showModal ? "hidden" : "auto";
-  }, [showModal]);
+    document.body.style.overflow = showModal || isSidebarOpen ? "hidden" : "auto";
+  }, [showModal, isSidebarOpen]);
 
   const getDeadlineColor = (deadlineDate) => {
     const today = new Date();
@@ -88,16 +89,58 @@ const navigate = useNavigate();
     setTimeout(() => setSelectedItem(null), 200);
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`); // ✅ redirect
+    setIsSidebarOpen(false); // Close sidebar on mobile after search
   };
 
   // 🧱 Skeleton Loader
   if (loading) {
     return (
-      <aside className="w-full lg:w-1/3 space-y-6 p-4">
+      <>
+        {/* Mobile Toggle Button - Fixed to viewport */}
+        <button
+          onClick={toggleSidebar}
+          className="lg:hidden fixed bottom-6 right-6 z-[60] bg-gradient-to-r from-cyan-600 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-cyan-500/50 hover:scale-110 transition-all duration-300 active:scale-95 animate-pulse-subtle"
+          aria-label="Toggle widgets"
+          style={{ boxShadow: '0 10px 40px rgba(6, 182, 212, 0.4)' }}
+        >
+          {isSidebarOpen ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          )}
+        </button>
+
+        {/* Backdrop for mobile */}
+        {isSidebarOpen && (
+          <div
+            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+            onClick={toggleSidebar}
+          />
+        )}
+
+        <aside className={`
+          fixed lg:static top-0 right-0 h-full lg:h-screen
+          w-80 lg:w-1/3 
+          bg-white lg:bg-transparent
+          transform transition-transform duration-300 ease-in-out
+          ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+          z-[50] lg:z-auto
+          overflow-y-auto custom-scrollbar
+          space-y-6 p-4
+          shadow-2xl lg:shadow-none
+        `}>
         {/* Search Skeleton */}
         <div className="bg-white rounded-xl shadow-md p-5 animate-pulse">
           <div className="h-9 bg-gray-200 rounded-full w-full"></div>
@@ -130,13 +173,74 @@ const navigate = useNavigate();
             </div>
           ))}
         </div>
+
+        {/* Close button for mobile */}
+        <button
+          onClick={toggleSidebar}
+          className="lg:hidden absolute top-4 right-4 text-gray-500 hover:text-gray-700 bg-gray-100 rounded-full p-2 transition-all"
+          aria-label="Close sidebar"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </aside>
+      </>
     );
   }
 
   // ✅ Actual Widget
   return (
-    <aside className="w-full lg:w-1/3 space-y-6 p-4 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
+    <>
+      {/* Mobile Toggle Button - Fixed to viewport */}
+      <button
+        onClick={toggleSidebar}
+        className="lg:hidden fixed bottom-6 right-6 z-[60] bg-gradient-to-r from-cyan-600 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-cyan-500/50 hover:scale-110 transition-all duration-300 active:scale-95 animate-pulse-subtle"
+        aria-label="Toggle widgets"
+        style={{ boxShadow: '0 10px 40px rgba(6, 182, 212, 0.4)' }}
+      >
+        {isSidebarOpen ? (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        )}
+      </button>
+
+      {/* Backdrop for mobile */}
+      {isSidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[45] transition-opacity"
+          onClick={toggleSidebar}
+        />
+      )}
+
+      <aside className={`
+        fixed lg:static top-0 right-0 h-full lg:h-screen
+        w-80 lg:w-1/3 
+        bg-white lg:bg-transparent
+        transform transition-transform duration-300 ease-in-out
+        ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+        z-[50] lg:z-auto
+        overflow-y-auto custom-scrollbar
+        space-y-6 p-4
+        shadow-2xl lg:shadow-none
+        lg:sticky lg:top-0
+      `}>
+      {/* Close button for mobile */}
+      <button
+        onClick={toggleSidebar}
+        className="lg:hidden absolute top-4 right-4 text-gray-500 hover:text-gray-700 bg-gray-100 rounded-full p-2 transition-all"
+        aria-label="Close sidebar"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
       {/* Search Box */}
       <form
         onSubmit={handleSearchSubmit}
@@ -264,9 +368,7 @@ const navigate = useNavigate();
             ))}
           </div>
         ) : (
-          <p className="text-gray-400 text-sm text-center">
-            No deadlines soon
-          </p>
+          <p className="text-gray-400 text-sm text-center">No deadlines soon</p>
         )}
       </div>
 
@@ -342,7 +444,7 @@ const navigate = useNavigate();
                     </h2>
                   </div>
                 </div>
-                
+
                 <button
                   onClick={closeModal}
                   className="text-white hover:bg-white/20 rounded-full p-2 transition-all flex-shrink-0"
@@ -552,5 +654,6 @@ const navigate = useNavigate();
         </div>
       )}
     </aside>
+    </>
   );
 }

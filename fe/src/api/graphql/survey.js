@@ -258,6 +258,7 @@ export async function getSurveyDetails(surveyId) {
         end_at
         object
         status
+        updated_at
       }
     }
   `;
@@ -360,4 +361,39 @@ export async function createSurvey(input) {
   }
 
   return response.data.data.createSurvey;
+}
+
+// Duplicate survey
+export async function duplicateSurvey(surveyId) {
+  const mutation = `
+    mutation ($id: Int!) {
+      duplicateSurvey(id: $id) {
+        id
+        title
+        description
+        categories_id
+        type
+        status
+        start_at
+        end_at
+        time_limit
+        points
+        object
+        created_by
+      }
+    }
+  `;
+
+  const response = await graphqlClient.post("", {
+    query: mutation,
+    variables: { id: parseInt(surveyId, 10) },
+  });
+
+  if (response.data.errors) {
+    const error = new Error(response.data.errors[0]?.message || "GraphQL error");
+    error.graphQLErrors = response.data.errors;
+    throw error;
+  }
+
+  return response.data.data.duplicateSurvey;
 }

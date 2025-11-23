@@ -17,6 +17,7 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [originalUpdatedAt, setOriginalUpdatedAt] = useState(null);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -58,9 +59,20 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
           object: survey.object || "",
           status: survey.status || "draft",
         });
+        // Store the original updated_at for conflict detection
+        setOriginalUpdatedAt(survey.updated_at || null);
       } catch (error) {
         console.error("Error fetching survey details:", error);
-        toast.error("Không thể tải thông tin khảo sát");
+        
+        // Extract error message
+        let errorMessage = "Không thể tải thông tin khảo sát";
+        if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+          errorMessage = error.graphQLErrors[0].message || errorMessage;
+        } else if (error.message && error.message !== "GraphQL error") {
+          errorMessage = error.message;
+        }
+        
+        toast.error(errorMessage);
         onClose();
       } finally {
         setIsLoading(false);
@@ -98,6 +110,32 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
 
     setIsSubmitting(true);
     try {
+      // Check for conflicts: fetch current survey data and compare updated_at
+      if (originalUpdatedAt) {
+        const currentSurvey = await getSurveyDetails(surveyId);
+        const currentUpdatedAt = currentSurvey.updated_at;
+        
+        if (currentUpdatedAt && currentUpdatedAt !== originalUpdatedAt) {
+          toast.error("Khảo sát đã được cập nhật bởi người khác. Vui lòng tải lại trang và thử lại.");
+          setIsSubmitting(false);
+          // Reload the survey data to show the latest version (reuse the already fetched data)
+          const formatDateTimeLocal = (dateStr) => {
+            if (!dateStr) return "";
+            return dateStr.substring(0, 16).replace(' ', 'T');
+          };
+          setFormData({
+            title: currentSurvey.title || "",
+            description: currentSurvey.description || "",
+            categories_id: currentSurvey.categories_id || "",
+            start_at: formatDateTimeLocal(currentSurvey.start_at),
+            end_at: formatDateTimeLocal(currentSurvey.end_at),
+            object: currentSurvey.object || "",
+            status: currentSurvey.status || "draft",
+          });
+          setOriginalUpdatedAt(currentSurvey.updated_at || null);
+          return;
+        }
+      }
       // Prepare data for backend
       const dataToSave = {
         title: formData.title.trim(),
@@ -107,6 +145,11 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
         status: formData.status,
       };
 
+      // Include updated_at for optimistic locking
+      if (originalUpdatedAt) {
+        dataToSave.updated_at = originalUpdatedAt;
+      }
+
       // Convert datetime-local format to backend format (Y-m-d H:i:s)
       if (formData.start_at) {
         dataToSave.start_at = formData.start_at.replace('T', ' ') + ':00';
@@ -115,9 +158,9 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
         dataToSave.end_at = formData.end_at.replace('T', ' ') + ':00';
       }
 
-      // Remove null/empty values to avoid validation errors
+      // Remove null/empty values to avoid validation errors (but preserve updated_at for optimistic locking)
       Object.keys(dataToSave).forEach(key => {
-        if (dataToSave[key] === null || dataToSave[key] === '') {
+        if (key !== 'updated_at' && (dataToSave[key] === null || dataToSave[key] === '')) {
           delete dataToSave[key];
         }
       });
@@ -135,31 +178,39 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
     } catch (error) {
       console.error("Error updating survey:", error);
       
-      // Try to extract validation errors from GraphQL response
+      // Extract and display error message
       let errorMessage = "Không thể cập nhật khảo sát";
       
-      if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      // Check for validation errors in the error object
+      // Check for GraphQL errors with validation details
       if (error.graphQLErrors && error.graphQLErrors.length > 0) {
-        const validationError = error.graphQLErrors[0];
-        if (validationError.extensions?.validation) {
-          // Show first validation error
-          const validationFields = Object.keys(validationError.extensions.validation);
+        const graphQLError = error.graphQLErrors[0];
+        
+        // Check for validation errors
+        if (graphQLError.extensions?.validation) {
+          const validationFields = Object.keys(graphQLError.extensions.validation);
           if (validationFields.length > 0) {
             const firstField = validationFields[0];
-            const fieldErrors = validationError.extensions.validation[firstField];
+            const fieldErrors = graphQLError.extensions.validation[firstField];
             if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
               errorMessage = fieldErrors[0];
             }
           }
-        } else if (validationError.message) {
-          errorMessage = validationError.message;
+        } 
+        // Check for category error in extensions
+        else if (graphQLError.extensions?.category) {
+          errorMessage = graphQLError.message || errorMessage;
         }
+        // Use the GraphQL error message
+        else if (graphQLError.message) {
+          errorMessage = graphQLError.message;
+        }
+      } 
+      // Fallback to error.message
+      else if (error.message && error.message !== "GraphQL error") {
+        errorMessage = error.message;
       }
       
+      // Display the error toast
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);

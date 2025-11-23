@@ -18,12 +18,13 @@ class SurveyRepository
                 'surveys.title',
                 'surveys.created_at',
                 'surveys.end_at',
+                'surveys.status',
                 DB::raw('COALESCE(COUNT(survey_answers.id), 0) as responses'),
             ])
             ->leftJoin('survey_questions', 'survey_questions.survey_id', '=', 'surveys.id')
             ->leftJoin('survey_answers', 'survey_answers.question_id', '=', 'survey_questions.id')
             ->where('surveys.created_by', $createdBy)
-            ->groupBy('surveys.id', 'surveys.title', 'surveys.created_at', 'surveys.end_at')
+            ->groupBy('surveys.id', 'surveys.title', 'surveys.created_at', 'surveys.end_at', 'surveys.status')
             ->orderByDesc('surveys.created_at')
             ->get();
     }

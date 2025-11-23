@@ -137,8 +137,10 @@ export default function SearchResult() {
 
   const filteredResults = (() => {
     switch (filter) {
+      case "Announcement":
+        return results.posts.filter(post => post.type === "announcement");
       case "Post":
-        return results.posts;
+        return results.posts.filter(post => post.type !== "announcement");
       case "User":
         return results.users;
       default:
@@ -299,7 +301,7 @@ export default function SearchResult() {
             </p>
           )}
           <div className="flex space-x-2">
-            {["All", "Post", "User"].map((tab) => (
+            {["All", "Announcement", "Post", "User"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
@@ -337,10 +339,14 @@ export default function SearchResult() {
                 key={item.id}
                 post={{
                   id: item.id,
+                  type: item.type,
                   user: item.user?.name ?? "Anonymous",
+                  userId: item.user?.id,
                   time: new Date(item.created_at).toLocaleString(),
                   content: item.content,
                   media: item.media ?? [],
+                  likes: item.likes ?? [],
+                  children: item.children ?? [],
                 }}
               />
             ) : (

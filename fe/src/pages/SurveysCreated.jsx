@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import "../assets/css/SurveysMade.css";
 import "../assets/css/BackButton.css";
-import { getSurveysMadeByUser, updateSurvey } from "../api/graphql/survey";
+import { getSurveysMadeByUser, updateSurvey, duplicateSurvey } from "../api/graphql/survey";
 import EditSurveyModal from "../components/EditSurveyModal";
 import CreateSurveyModal from "../components/CreateSurveyModal";
 
@@ -48,8 +48,9 @@ export default function SurveysCreated() {
           id: s.id,
           title: s.title,
           createdDate: s.created_at,
+          startDate: s.start_at,
           endDate: s.end_at,
-          status: s.status, // "open" | "closed" | "draft"
+          status: s.status, // Use status directly from backend
           responses: Number(s.responses ?? 0),
         }));
         setSurveys(mapped);
@@ -82,7 +83,7 @@ export default function SurveysCreated() {
   // Calculate metrics
   const metrics = {
     total: surveys.length,
-    open: surveys.filter((s) => s.status === "open").length,
+    open: surveys.filter((s) => s.status === "active" || s.status === "open").length,
     totalResponses: surveys.reduce((sum, s) => sum + s.responses, 0),
   };
 
@@ -119,36 +120,28 @@ export default function SurveysCreated() {
     setIsEditModalOpen(true);
   };
 
+  const refreshSurveysList = async () => {
+    const userIdStr = localStorage.getItem("userId");
+    if (userIdStr) {
+      const data = await getSurveysMadeByUser(parseInt(userIdStr));
+      const mapped = (data || []).map((s) => ({
+        id: s.id,
+        title: s.title,
+        createdDate: s.created_at,
+        startDate: s.start_at,
+        endDate: s.end_at,
+        status: s.status, // Use status directly from backend
+        responses: Number(s.responses ?? 0),
+      }));
+      setSurveys(mapped);
+      setFilteredSurveys(mapped);
+    }
+  };
+
   const handleSaveEdit = async (surveyId, updatedSurvey) => {
     try {
-      // The modal now handles the API call directly and passes the updated survey
-      // Update local state with the response
-      setSurveys(
-        surveys.map((s) =>
-          s.id === surveyId ? { 
-            ...s, 
-            title: updatedSurvey.title || s.title,
-            endDate: updatedSurvey.end_at || s.endDate,
-            status: updatedSurvey.status || s.status,
-          } : s
-        )
-      );
-      
       // Refresh the surveys list to get the latest data
-      const userIdStr = localStorage.getItem("userId");
-      if (userIdStr) {
-        const data = await getSurveysMadeByUser(parseInt(userIdStr));
-        const mapped = (data || []).map((s) => ({
-          id: s.id,
-          title: s.title,
-          createdDate: s.created_at,
-          endDate: s.end_at,
-          status: s.status,
-          responses: Number(s.responses ?? 0),
-        }));
-        setSurveys(mapped);
-        setFilteredSurveys(mapped);
-      }
+      await refreshSurveysList();
     } catch (error) {
       console.error("Error updating survey:", error);
       // Don't re-throw since modal already handled the API call
@@ -167,41 +160,44 @@ export default function SurveysCreated() {
   const handleSaveCreate = async (newSurvey) => {
     try {
       // Refresh the surveys list to get the latest data
-      const userIdStr = localStorage.getItem("userId");
-      if (userIdStr) {
-        const data = await getSurveysMadeByUser(parseInt(userIdStr));
-        const mapped = (data || []).map((s) => ({
-          id: s.id,
-          title: s.title,
-          createdDate: s.created_at,
-          endDate: s.end_at,
-          status: s.status,
-          responses: Number(s.responses ?? 0),
-        }));
-        setSurveys(mapped);
-        setFilteredSurveys(mapped);
-      }
+      await refreshSurveysList();
     } catch (error) {
       console.error("Error refreshing surveys list:", error);
       // Don't show error toast as the modal already handled the creation
     }
   };
 
-  const handleDuplicateSurvey = (surveyId, surveyTitle) => {
-    toast.success(`Tạo bản sao: ${surveyTitle}`);
-    // Duplicate logic here
-  };
+  const handleDuplicateSurvey = async (surveyId, surveyTitle) => {
+    if (!window.confirm(`Bạn có chắc muốn tạo bản sao của khảo sát: ${surveyTitle}?`)) {
+      return;
+    }
 
-  const handleCloseSurvey = (surveyId, surveyTitle) => {
-    if (window.confirm(`Bạn có chắc muốn đóng khảo sát: ${surveyTitle}?`)) {
-      setSurveys(
-        surveys.map((s) =>
-          s.id === surveyId ? { ...s, status: "closed" } : s
-        )
-      );
-      toast.success("Khảo sát đã được đóng");
+    try {
+      const duplicatedSurvey = await duplicateSurvey(surveyId);
+      
+      // Refresh the surveys list to get the latest data
+      await refreshSurveysList();
+      
+      toast.success(`Đã tạo bản sao: ${duplicatedSurvey.title || surveyTitle}`);
+    } catch (error) {
+      console.error("Error duplicating survey:", error);
+      let errorMessage = "Không thể tạo bản sao khảo sát";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        const graphQLError = error.graphQLErrors[0];
+        if (graphQLError.message) {
+          errorMessage = graphQLError.message;
+        }
+      }
+      
+      toast.error(errorMessage);
     }
   };
+
 
   const handleDeleteSurvey = (surveyId, surveyTitle) => {
     if (
@@ -216,16 +212,21 @@ export default function SurveysCreated() {
 
   const getStatusBadge = (status) => {
     const labels = {
-      open: "Đang mở",
+      pending: "Chờ duyệt",
+      active: "Đang hoạt động",
+      paused: "Tạm dừng",
       closed: "Đã đóng",
-      draft: "Nháp",
     };
 
+    const statusClass = status === "pending" ? "status-pending" :
+                       status === "active" ? "status-active" :
+                       status === "paused" ? "status-paused" :
+                       status === "closed" ? "status-closed" :
+                       "status-default";
+
     return (
-      <span
-        className={`status-badge status-${status}`}
-      >
-        {labels[status]}
+      <span className={`status-badge ${statusClass}`}>
+        {labels[status] || status}
       </span>
     );
   };
@@ -393,9 +394,10 @@ export default function SurveysCreated() {
               className="status-select"
             >
               <option value="all">Tất cả Trạng thái</option>
-              <option value="open">Đang mở</option>
+              <option value="pending">Chờ duyệt</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="paused">Tạm dừng</option>
               <option value="closed">Đã đóng</option>
-              <option value="draft">Nháp</option>
             </select>
           </div>
         </div>
@@ -508,30 +510,6 @@ export default function SurveysCreated() {
                               strokeLinejoin="round"
                               strokeWidth="2"
                               d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCloseSurvey(survey.id, survey.title)
-                          }
-                          className={`action-button action-button-close ${
-                            survey.status === "closed" ? "disabled" : ""
-                          }`}
-                          title="Đóng"
-                          disabled={survey.status === "closed"}
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
                             />
                           </svg>
                         </button>

@@ -28,43 +28,44 @@ export default function Groups() {
   const [createError, setCreateError] = useState("");
 
   // Check if user is logged in
-  const getUserFromStorage = () => {
+  const getUserIdFromStorage = () => {
     try {
-      const userData = localStorage.getItem("user");
-
-      if (!userData) {
-        console.log("No user found in localStorage (key: 'user')");
-        return null;
-      }
-
-      // Parse the JSON string into an object
-      const user = JSON.parse(userData);
-
-      // Log the full user object for debugging
-      //console.log("Retrieved user from localStorage:", user);
-
-      return user;
+      const userId = localStorage.getItem("userId");
+      return userId ? parseInt(userId, 10) : null;
     } catch (error) {
-      console.error("Error parsing user from localStorage:", error);
-      console.error("Raw stored value:", localStorage.getItem("user"));
+      console.error("Error getting userId from localStorage:", error);
       return null;
     }
   };
 
-  const user = getUserFromStorage();
-  const isLoggedIn = !!user;
-  const userRole = user?.role || "student"; // Adjust based on your user object structure
+  const getUserRoleFromStorage = () => {
+    try {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        const user = JSON.parse(userData);
+        return user?.role || "student";
+      }
+      return "student";
+    } catch (error) {
+      console.error("Error getting user role from localStorage:", error);
+      return "student";
+    }
+  };
+
+  const userId = getUserIdFromStorage();
+  const isLoggedIn = !!userId;
+  const userRole = getUserRoleFromStorage();
 
   useEffect(() => {
     const fetchPendingRequests = async () => {
-      if (!isLoggedIn || !user?.id) {
+      if (!isLoggedIn || !userId) {
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        const requests = await getPendingJoinRequests(user.id);
+        const requests = await getPendingJoinRequests(userId);
         console.log("Fetched pending requests:", requests);
 
         // Map to match UI structure
@@ -86,11 +87,11 @@ export default function Groups() {
     };
 
     fetchPendingRequests();
-  }, [isLoggedIn, user?.id]);
+  }, [isLoggedIn, userId]);
 
   useEffect(() => {
     const fetchUserGroups = async () => {
-      if (!isLoggedIn || !user?.id) {
+      if (!isLoggedIn || !userId) {
         setUserGroupsLoading(false);
         return;
       }
@@ -102,7 +103,7 @@ export default function Groups() {
 
       try {
         setUserGroupsLoading(true);
-        const groups = await getGroupsByUser(user.id);
+        const groups = await getGroupsByUser(userId);
         console.log("Fetched user groups:", groups);
 
         // Map to match UI structure
@@ -126,7 +127,7 @@ export default function Groups() {
     };
 
     fetchUserGroups();
-  }, [isLoggedIn, user?.id, activeTab]);
+  }, [isLoggedIn, userId, activeTab]);
 
   const handleJoinSubmit = async (e) => {
     e.preventDefault();
@@ -152,7 +153,7 @@ export default function Groups() {
       const result = await sendJoinRequest(
         {
           code: groupCode.trim(),
-          userId: user.id, // Adjust based on your user object structure
+          userId: userId,
         },
         token
       );
@@ -202,7 +203,7 @@ export default function Groups() {
       const result = await createGroup(
         groupName.trim(),
         groupDescription.trim() || null,
-        user.id
+        userId
       );
 
       setCreateMessage("Group created successfully!");
@@ -212,7 +213,7 @@ export default function Groups() {
 
       // Refresh user groups list if we're on that tab
       if (activeTab === "yourGroups") {
-        const groups = await getGroupsByUser(user.id);
+        const groups = await getGroupsByUser(userId);
         const formatted = groups.map((group) => ({
           id: group.id,
           title: group.name,
@@ -402,7 +403,7 @@ export default function Groups() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-gray-800">{group.title}</p>
-                      {group.created_by && String(group.created_by) === String(user?.id) && (
+                      {group.created_by && String(group.created_by) === String(userId) && (
                         <span className="bg-cyan-100 text-cyan-700 text-xs px-2 py-0.5 rounded-full font-medium">
                           Created by you
                         </span>

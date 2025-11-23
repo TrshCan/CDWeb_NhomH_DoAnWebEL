@@ -4,8 +4,61 @@ import toast from "react-hot-toast";
 import { updatePost, deletePost, toggleLike } from "../api/graphql/post";
 import { toggleFollow } from "../api/graphql/user";
 
+// Lazy loading image component
+const LazyImage = ({ src, alt, className, onClick, onError }) => {
+  const [imageSrc, setImageSrc] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const imgRef = React.useRef();
 
-export default function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = false, onReply = null, followingUserIds = [], onFollowUpdate = null }) {
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setImageSrc(src);
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: "50px" }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    return () => {
+      if (imgRef.current) {
+        observer.unobserve(imgRef.current);
+      }
+    };
+  }, [src]);
+
+  return (
+    <div ref={imgRef} className={className}>
+      {isLoading && (
+        <div className="w-full h-full bg-gray-200 animate-pulse flex items-center justify-center">
+          <svg className="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+          </svg>
+        </div>
+      )}
+      {imageSrc && (
+        <img
+          src={imageSrc}
+          alt={alt}
+          className={className}
+          onClick={onClick}
+          onError={onError}
+          onLoad={() => setIsLoading(false)}
+          style={{ display: isLoading ? 'none' : 'block' }}
+        />
+      )}
+    </div>
+  );
+};
+
+function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = false, onReply = null, followingUserIds = [], onFollowUpdate = null }) {
   const navigate = useNavigate();
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -37,8 +90,11 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
       setIsFollowing(false);
     }
   }, [ownerId, followingUserIds]);
+  const isAnnouncement = post.type === "announcement";
+  
   const handleCardClick = () => {
-    if (!disableCommentNavigate) {
+    // Don't navigate if it's an announcement or if navigation is disabled
+    if (!disableCommentNavigate && !isAnnouncement) {
       navigate(`/post/${post.id}`);
     }
   };
@@ -83,7 +139,7 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
   };
 
   // Helper function to render media (image or video)
-  const getMediaElement = (media, index, className, onClick) => {
+  const getMediaElement = (media, index, className, onClick, useLazy = true) => {
     const url = getMediaUrl(media);
     const isVideo = url.endsWith(".mp4");
 
@@ -100,8 +156,22 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
       );
     }
 
+    // Use regular img for modal viewer, LazyImage for thumbnails
+    if (!useLazy) {
+      return (
+        <img
+          key={index}
+          src={url}
+          alt=""
+          className={className}
+          onClick={onClick}
+          onError={(e) => console.error("Failed to load image:", e.target.src)}
+        />
+      );
+    }
+
     return (
-      <img
+      <LazyImage
         key={index}
         src={url}
         alt=""
@@ -152,12 +222,16 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
 
   return (
     <div
-      className="post bg-white rounded-lg shadow p-4 relative cursor-pointer hover:bg-gray-50 transition"
+      className={`post bg-white rounded-lg shadow p-4 relative transition ${
+        isAnnouncement 
+          ? "border-l-4 border-amber-500 cursor-default" 
+          : "cursor-pointer hover:bg-gray-50"
+      }`}
       onClick={handleCardClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if ((e.key === "Enter" || e.key === " ") && !disableCommentNavigate) {
+        if ((e.key === "Enter" || e.key === " ") && !disableCommentNavigate && !isAnnouncement) {
           e.preventDefault();
           handleCardClick();
         }
@@ -168,7 +242,17 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
         <div className="flex items-center space-x-2">
         <div className="w-10 h-10 bg-cyan-600 rounded-full"></div>
         <div>
-          <p className="font-semibold text-cyan-600">{post.user}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-cyan-600">{post.user}</p>
+            {isAnnouncement && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                </svg>
+                Announcement
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1 text-gray-500 text-sm">
             <span>{post.time}</span>
             {post.parent_id && post.parent_user && (
@@ -401,41 +485,8 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
           className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 animate-fadeIn"
           onClick={handleClose}
         >
-          {/* Left button */}
-          {post.media.length > 1 && (
-            <button
-              onClick={handlePrev}
-              className="absolute left-6 text-cyan-400 text-5xl font-bold px-3 py-1 
-                         bg-black/40 rounded-full hover:bg-black/70 hover:scale-110 
-                         transition-transform duration-200"
-            >
-              ‹
-            </button>
-          )}
-
           {/* Media */}
           {getMediaElement(post.media[selectedIndex], selectedIndex, "max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-lg animate-zoomIn", (e) => e.stopPropagation())}
-
-          {/* Right button */}
-          {post.media.length > 1 && (
-            <button
-              onClick={handleNext}
-              className="absolute right-6 text-cyan-400 text-5xl font-bold px-3 py-1 
-                         bg-black/40 rounded-full hover:bg-black/70 hover:scale-110 
-                         transition-transform duration-200"
-            >
-              ›
-            </button>
-          )}
-
-          {/* Close button */}
-          <button
-            onClick={handleClose}
-            className="absolute top-6 right-8 text-cyan-400 text-4xl font-bold 
-                       hover:text-cyan-300 hover:scale-110 transition-transform duration-200"
-          >
-            ×
-          </button>
         </div>
       )}
 
@@ -485,12 +536,19 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
 
         {onReply ? (
           <button 
-            title="Reply" 
+            title={isAnnouncement ? "Comments disabled on announcements" : "Reply"}
             onClick={(e) => {
               e.stopPropagation();
-              onReply(post.id, post.user);
+              if (!isAnnouncement) {
+                onReply(post.id, post.user);
+              }
             }}
-            className="flex items-center gap-1 hover:text-cyan-600 cursor-pointer"
+            disabled={isAnnouncement}
+            className={`flex items-center gap-1 ${
+              isAnnouncement 
+                ? 'cursor-not-allowed opacity-40' 
+                : 'hover:text-cyan-600 cursor-pointer'
+            }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -504,14 +562,19 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
           </button>
         ) : (
           <button 
-            title="Comment" 
+            title={isAnnouncement ? "Comments disabled on announcements" : "Comment"}
             onClick={(e) => {
               e.stopPropagation();
-              if (!disableCommentNavigate) {
+              if (!disableCommentNavigate && !isAnnouncement) {
                 navigate(`/post/${post.id}`);
               }
             }}
-            className={`flex items-center gap-1 hover:text-cyan-600 ${disableCommentNavigate ? 'cursor-default opacity-50' : 'cursor-pointer'}`}
+            disabled={isAnnouncement}
+            className={`flex items-center gap-1 ${
+              isAnnouncement || disableCommentNavigate
+                ? 'cursor-not-allowed opacity-40' 
+                : 'hover:text-cyan-600 cursor-pointer'
+            }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -543,3 +606,15 @@ export default function PostCard({ post, onDeleted, onLikeUpdate, disableComment
     </div>
   );
 }
+
+// Memoize PostCard to prevent unnecessary re-renders
+export default React.memo(PostCard, (prevProps, nextProps) => {
+  // Custom comparison function - only re-render if these props change
+  return (
+    prevProps.post.id === nextProps.post.id &&
+    prevProps.post.content === nextProps.post.content &&
+    prevProps.post.likes?.length === nextProps.post.likes?.length &&
+    prevProps.post.children?.length === nextProps.post.children?.length &&
+    prevProps.followingUserIds?.length === nextProps.followingUserIds?.length
+  );
+});
