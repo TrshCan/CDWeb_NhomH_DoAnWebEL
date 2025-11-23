@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Chart, registerables } from "chart.js";
 import toast from "react-hot-toast";
-import { getSurveyRawData, getSurveyOverview } from "../api/graphql/survey";
+import { getSurveyRawData, getSurveyOverview, getSurveyDetails } from "../api/graphql/survey";
 import "../assets/css/RawDataList.css";
 import "../assets/css/BackButton.css";
 import { exportSurveyOverviewCSV } from "../utils/exports/overview/csv";
@@ -30,6 +30,7 @@ export default function SurveyOverview() {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [accessChecking, setAccessChecking] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [surveyUpdatedAt, setSurveyUpdatedAt] = useState(null);
 
   // Chart refs for question-specific charts
   const chartRefs = useRef({});
@@ -78,6 +79,12 @@ export default function SurveyOverview() {
     const fetchData = async () => {
       setLoading(true);
       try {
+        // Fetch survey details to get updated_at
+        const surveyDetails = await getSurveyDetails(parseInt(surveyId));
+        if (surveyDetails && surveyDetails.updated_at) {
+          setSurveyUpdatedAt(surveyDetails.updated_at);
+        }
+
         // Fetch overview data for charts
         const overview = await getSurveyOverview(parseInt(surveyId));
         
@@ -150,8 +157,75 @@ export default function SurveyOverview() {
     setShowDownloadModal(false);
   };
 
-  const handleDownload = (format) => {
+  const checkDataFreshness = async () => {
+    if (!surveyId || !surveyUpdatedAt) return true; // If no stored timestamp, assume fresh
+    
+    try {
+      const currentSurvey = await getSurveyDetails(parseInt(surveyId));
+      const currentUpdatedAt = currentSurvey?.updated_at;
+      
+      if (currentUpdatedAt && currentUpdatedAt !== surveyUpdatedAt) {
+        // Data is outdated
+        const shouldContinue = window.confirm(
+          "Dữ liệu khảo sát đã được cập nhật. Bạn có muốn tải lại dữ liệu mới nhất trước khi xuất file?\n\n" +
+          "Nhấn OK để tải lại dữ liệu mới nhất\n" +
+          "Nhấn Hủy để tiếp tục xuất file với dữ liệu hiện tại"
+        );
+        
+        if (shouldContinue) {
+          // User chose to reload - reload data
+          setLoading(true);
+          try {
+            const overview = await getSurveyOverview(parseInt(surveyId));
+            const rawDataResponse = await getSurveyRawData(parseInt(surveyId));
+            
+            if (overview) {
+              setOverviewData(overview);
+              setTotalResponses(overview.totalResponses || 0);
+            }
+            
+            if (rawDataResponse && rawDataResponse.responses) {
+              setRawData(rawDataResponse.responses);
+              setFilteredData(rawDataResponse.responses);
+            }
+            
+            if (currentSurvey && currentSurvey.updated_at) {
+              setSurveyUpdatedAt(currentSurvey.updated_at);
+            }
+            
+            toast.success("Đã tải lại dữ liệu mới nhất");
+            return true; // Proceed with download after reload
+          } catch (err) {
+            console.error(err);
+            toast.error("Không thể tải lại dữ liệu");
+            return false; // Cancel download if reload fails
+          } finally {
+            setLoading(false);
+          }
+        } else {
+          // User clicked Cancel (Hủy) - proceed with current data
+          return true;
+        }
+      }
+      
+      return true; // Data is fresh
+    } catch (error) {
+      console.error("Error checking data freshness:", error);
+      // If check fails, allow download to proceed
+      return true;
+    }
+  };
+
+  const handleDownload = async (format) => {
+    // Check if data is fresh before downloading
+    const canProceed = await checkDataFreshness();
+    if (!canProceed) {
+      return; // User chose to reload but it failed
+    }
+    
+    // Close modal after check
     setShowDownloadModal(false);
+    
     setTimeout(() => {
       try {
         if (!overviewData || !overviewData.questions || overviewData.questions.length === 0) {

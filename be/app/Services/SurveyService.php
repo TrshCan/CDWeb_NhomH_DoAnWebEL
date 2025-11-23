@@ -606,17 +606,16 @@ class SurveyService
 
         $validator = Validator::make($data, [
             'title' => 'sometimes|string|max:255',
-            'description' => 'sometimes|required|string',
+            'description' => 'sometimes|string|nullable',
             'categories_id' => 'sometimes|integer|exists:categories,id',
             'type' => 'sometimes|in:survey,quiz',
-            'start_at' => 'sometimes|required|date_format:Y-m-d H:i:s',
-            'end_at' => 'sometimes|required|date_format:Y-m-d H:i:s|after:start_at',
+            'start_at' => 'sometimes|date_format:Y-m-d H:i:s',
+            'end_at' => 'sometimes|date_format:Y-m-d H:i:s|after:start_at',
             'time_limit' => 'nullable|integer|min:1',
             'points' => $pointsRule,
             'object' => 'sometimes|in:public,students,lecturers',
             'status' => 'sometimes|in:pending,active,paused,closed',
         ], [
-            'description.required' => 'Mô tả khảo sát không được để trống.',
             'end_at.after' => 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu.',
             'points.required' => 'Điểm là bắt buộc khi loại là quiz.',
             'points.integer' => 'Điểm phải là số nguyên.',

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import "../assets/css/ResponseDetail.css";
 import "../assets/css/RawDataList.css";
-import { getSurveyResponseDetail } from "../api/graphql/survey";
+import { getSurveyResponseDetail, getSurveyDetails } from "../api/graphql/survey";
 import { exportResponseDetailCSV } from "../utils/exports/responseDetail/csv";
 import { exportResponseDetailExcel } from "../utils/exports/responseDetail/excel";
 import { exportResponseDetailPDF } from "../utils/exports/responseDetail/pdf";
@@ -19,6 +19,7 @@ export default function ResponseDetail() {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [accessChecking, setAccessChecking] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [surveyUpdatedAt, setSurveyUpdatedAt] = useState(null);
   const itemsPerPage = 10;
 
   const participant = responseData?.participant ?? {};
@@ -89,6 +90,12 @@ export default function ResponseDetail() {
     const fetchResponseDetail = async () => {
       setLoading(true);
       try {
+        // Fetch survey details to get updated_at
+        const surveyDetails = await getSurveyDetails(parseInt(surveyId, 10));
+        if (surveyDetails && surveyDetails.updated_at) {
+          setSurveyUpdatedAt(surveyDetails.updated_at);
+        }
+
         const data = await getSurveyResponseDetail(parseInt(surveyId, 10), responseId);
         if (!data) {
           setResponseData(null);
@@ -149,12 +156,73 @@ export default function ResponseDetail() {
     setShowDownloadModal(false);
   };
 
-  const handleDownload = (format) => {
-    setShowDownloadModal(false);
+  const checkDataFreshness = async () => {
+    if (!surveyId || !surveyUpdatedAt) return true; // If no stored timestamp, assume fresh
+    
+    try {
+      const currentSurvey = await getSurveyDetails(parseInt(surveyId, 10));
+      const currentUpdatedAt = currentSurvey?.updated_at;
+      
+      if (currentUpdatedAt && currentUpdatedAt !== surveyUpdatedAt) {
+        // Data is outdated
+        const shouldContinue = window.confirm(
+          "Dữ liệu khảo sát đã được cập nhật. Bạn có muốn tải lại dữ liệu mới nhất trước khi xuất file?\n\n" +
+          "Nhấn OK để tải lại dữ liệu mới nhất\n" +
+          "Nhấn Hủy để tiếp tục xuất file với dữ liệu hiện tại"
+        );
+        
+        if (shouldContinue) {
+          // User chose to reload - reload data
+          setLoading(true);
+          try {
+            const data = await getSurveyResponseDetail(parseInt(surveyId, 10), responseId);
+            
+            if (data) {
+              setResponseData(data);
+            }
+            
+            if (currentSurvey && currentSurvey.updated_at) {
+              setSurveyUpdatedAt(currentSurvey.updated_at);
+            }
+            
+            toast.success("Đã tải lại dữ liệu mới nhất");
+            return true; // Proceed with download after reload
+          } catch (err) {
+            console.error(err);
+            toast.error("Không thể tải lại dữ liệu");
+            return false; // Cancel download if reload fails
+          } finally {
+            setLoading(false);
+          }
+        } else {
+          // User clicked Cancel (Hủy) - proceed with current data
+          return true;
+        }
+      }
+      
+      return true; // Data is fresh
+    } catch (error) {
+      console.error("Error checking data freshness:", error);
+      // If check fails, allow download to proceed
+      return true;
+    }
+  };
+
+  const handleDownload = async (format) => {
     if (!responseData) {
       toast.error("No data to export");
       return;
     }
+    
+    // Check if data is fresh before downloading
+    const canProceed = await checkDataFreshness();
+    if (!canProceed) {
+      return; // User chose to reload but it failed
+    }
+    
+    // Close modal after check
+    setShowDownloadModal(false);
+    
     try {
       if (format === "csv") {
         exportResponseDetailCSV({ responseData });

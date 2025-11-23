@@ -13,11 +13,13 @@ const types = ['', 'survey', 'quiz'];
 const statuses = ['', 'pending', 'active', 'paused', 'closed'];
 const objects = ['', 'public', 'students', 'lecturers'];
 
-const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' }) => (
-  isOpen && (
+const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' }) => {
+  if (!isOpen) return null;
+  
+  return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity" onClick={onClose}>
       <div
-        className={`relative ${size} w-full mx-auto rounded-xl bg-white shadow-2xl overflow-hidden max-h-[98vh] overflow-y-auto transform transition-all animate-in fade-in zoom-in-95`}
+        className={`relative ${size} w-full mx-auto rounded-xl bg-white shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto transform transition-all animate-in fade-in zoom-in-95`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-8 py-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b-2 border-blue-200 sticky top-0 z-10 shadow-sm">
@@ -47,8 +49,8 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' })
         )}
       </div>
     </div>
-  )
-);
+  );
+};
 
 const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
   <div className="space-y-4">
@@ -1510,11 +1512,11 @@ const SurveyFilter = () => {
   return (
     <div className="bg-gray-50 p-8">
       {/* Toasts */}
-      <div className="fixed top-6 right-6 z-[60] space-y-4 flex flex-col items-end">
+      <div className="fixed top-6 right-6 z-[9999] space-y-4 flex flex-col items-end pointer-events-none">
         {toasts.map(t => (
           <div 
             key={t.id} 
-            className={`flex items-start gap-4 rounded-xl px-6 py-4 shadow-2xl max-w-md border-2 backdrop-blur-sm transform transition-all duration-300 animate-in slide-in-from-right-5 fade-in ${
+            className={`flex items-start gap-4 rounded-xl px-6 py-4 shadow-2xl max-w-md border-2 backdrop-blur-sm transform transition-all duration-300 animate-in slide-in-from-right-5 fade-in pointer-events-auto ${
               t.type === 'success' 
                 ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400 text-green-900 shadow-green-200/50' 
                 : t.type === 'error' 
