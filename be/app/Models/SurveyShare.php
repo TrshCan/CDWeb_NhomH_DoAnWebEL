@@ -30,6 +30,8 @@ class SurveyShare extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected $appends = ['share_url'];
+
     // Relationships
     public function survey()
     {
@@ -53,9 +55,13 @@ class SurveyShare extends Model
         return Str::random(32);
     }
 
-    public function getShareUrl()
+    public function getShareUrlAttribute()
     {
-        $baseUrl = config('app.url');
+        if (!$this->share_token) {
+            return null;
+        }
+        // Sử dụng FRONTEND_URL nếu có, nếu không dùng APP_URL
+        $baseUrl = config('app.frontend_url', config('app.url'));
         return "{$baseUrl}/survey/{$this->survey_id}/participate?token={$this->share_token}";
     }
 
