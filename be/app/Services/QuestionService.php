@@ -4,16 +4,21 @@ namespace App\Services;
 
 use App\Repositories\QuestionRepository;
 use App\Models\Survey;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class QuestionService
 {
     protected $questionRepository;
+    protected $auditLogService;
 
-    public function __construct(QuestionRepository $questionRepository)
-    {
+    public function __construct(
+        QuestionRepository $questionRepository,
+        AuditLogService $auditLogService
+    ) {
         $this->questionRepository = $questionRepository;
+        $this->auditLogService = $auditLogService;
     }
 
     /**
@@ -41,6 +46,15 @@ class QuestionService
 
             $question = $this->questionRepository->create($input);
 
+            // Ghi audit log
+            $this->auditLogService->log(
+                $input['survey_id'],
+                'create',
+                'question',
+                $question->id,
+                "Tạo câu hỏi: {$question->question_text}"
+            );
+
             DB::commit();
             return $question->load(['survey', 'options', 'group']);
         } catch (\Exception $e) {
@@ -56,7 +70,18 @@ class QuestionService
     public function updateQuestion($id, array $input)
     {
         try {
-            return $this->questionRepository->update($id, $input);
+            $question = $this->questionRepository->update($id, $input);
+            
+            // Ghi audit log
+            $this->auditLogService->log(
+                $question->survey_id,
+                'update',
+                'question',
+                $id,
+                "Cập nhật câu hỏi: {$question->question_text}"
+            );
+            
+            return $question;
         } catch (\Exception $e) {
             Log::error('Error updating question: ' . $e->getMessage());
             throw new \Exception('Không thể cập nhật câu hỏi: ' . $e->getMessage());
@@ -69,7 +94,22 @@ class QuestionService
     public function deleteQuestion($id)
     {
         try {
+            // Lấy thông tin question trước khi xóa
+            $question = $this->questionRepository->findById($id);
+            $surveyId = $question->survey_id;
+            $questionText = $question->question_text;
+            
             $this->questionRepository->delete($id);
+            
+            // Ghi audit log
+            $this->auditLogService->log(
+                $surveyId,
+                'delete',
+                'question',
+                $id,
+                "Xóa câu hỏi: {$questionText}"
+            );
+            
             return true;
         } catch (\Exception $e) {
             Log::error('Error deleting question: ' . $e->getMessage());
@@ -113,6 +153,15 @@ class QuestionService
             $newQuestion->question_code = 'Q' . str_pad($questionCount + 1, 3, '0', STR_PAD_LEFT);
 
             $newQuestion->save();
+
+            // Ghi audit log
+            $this->auditLogService->log(
+                $originalQuestion->survey_id,
+                'duplicate',
+                'question',
+                $newQuestion->id,
+                "Sao chép câu hỏi: {$newQuestion->question_text}"
+            );
 
             // Sao chép options
             foreach ($originalQuestion->options as $originalOption) {

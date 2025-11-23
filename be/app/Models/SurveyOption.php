@@ -26,6 +26,11 @@ class SurveyOption extends Model
         'is_correct' => 'boolean',
     ];
 
+    protected $attributes = [
+        'is_subquestion' => false,
+        'is_correct' => false,
+    ];
+
     // Relationships
     public function question()
     {

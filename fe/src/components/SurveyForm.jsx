@@ -12,6 +12,7 @@ import ShareSidePanel from "./ShareSidePanel";
 import GeneralSettingsForm from "./GeneralSettingsForm";
 import PublishAccessForm from "./PublishAccessForm";
 import SharePanel from "./SharePanel";
+import LogPanel from "./LogPanel";
 
 import WelcomeSettingsPanel from "./WelcomeSettingsPanel";
 import QuestionSettingsPanel from "./QuestionSettingsPanel";
@@ -35,7 +36,7 @@ export default function SurveyForm({ surveyId = null }) {
     message: "Bạn không thể hoàn tác thao tác này!",
   });
 
-  // panel trái: null | 'structure' | 'settings' | 'share'
+  // panel trái: null | 'structure' | 'settings' | 'share' | 'logs'
   const [openPanel, setOpenPanel] = useState("structure");
   const [settingsTab, setSettingsTab] = useState("general");
 
@@ -931,7 +932,7 @@ export default function SurveyForm({ surveyId = null }) {
   // ✅ Memoize centerWidth để tránh tính toán lại mỗi lần render
   const centerWidth = useMemo(() => {
     if (openPanel === "settings") return "900px";
-    if (openPanel === "share") return "100%";
+    if (openPanel === "share" || openPanel === "logs") return "100%";
     return "750px";
   }, [openPanel]);
 
@@ -1454,12 +1455,13 @@ export default function SurveyForm({ surveyId = null }) {
       setSettingsTab("general");
     }
 
-    if (panel === "share") {
+    if (panel === "share" || panel === "logs") {
       if (rightPanel) setPrevRightPanel(rightPanel);
       setRightPanel(null);
     }
 
-    if ((openPanel === "settings" || openPanel === "share") && panel !== "settings" && panel !== "share") {
+    if ((openPanel === "settings" || openPanel === "share" || openPanel === "logs") && 
+        panel !== "settings" && panel !== "share" && panel !== "logs") {
       if (prevRightPanel) {
         setRightPanel(prevRightPanel);
         setPrevRightPanel(null);
@@ -2549,7 +2551,7 @@ export default function SurveyForm({ surveyId = null }) {
           <div className="px-4 pt-4">
             <div className="h-12 bg-gray-200 flex items-center justify-between px-4">
               <span className="font-semibold text-gray-800">
-                {openPanel === "structure" ? "Kết cấu" : openPanel === "share" ? "Chia sẻ" : "Cài đặt"}
+                {openPanel === "structure" ? "Kết cấu" : openPanel === "share" ? "Chia sẻ" : openPanel === "logs" ? "Log hoạt động" : "Cài đặt"}
               </span>
               <button
                 type="button"
@@ -2613,7 +2615,7 @@ export default function SurveyForm({ surveyId = null }) {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-100 font-sans overflow-visible pt-[60px]">
+      <div className={`min-h-screen font-sans overflow-visible pt-[60px] ${openPanel === 'share' || openPanel === 'logs' ? 'bg-white' : 'bg-gray-100'}`}>
         <HeaderBar
           title={generalSettings?.title || "Survey mới"}
           savedAt={savedAt}
@@ -2873,7 +2875,9 @@ export default function SurveyForm({ surveyId = null }) {
                 style={{ width: centerWidth, boxSizing: "content-box" }}
               >
                 <div className="flex flex-col space-y-6">
-                  {openPanel === "share" ? (
+                  {openPanel === "logs" ? (
+                    <LogPanel surveyId={surveyId} />
+                  ) : openPanel === "share" ? (
                     <SharePanel 
                       surveyId={surveyId}
                       surveyUrl={`${window.location.origin}/survey/${surveyId}`}

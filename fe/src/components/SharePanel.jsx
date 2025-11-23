@@ -16,7 +16,7 @@ export default function SharePanel({ surveyId, surveyUrl }) {
 
   return (
     <div className="w-full h-full overflow-y-auto p-8 bg-white">
-      <div className="flex gap-6 flex-shrink-0">
+      <div className="flex gap-6 flex-shrink-0 pl-4">
         
         {/* Section 1: Select how you want to share your survey - 493x292 */}
         <div 

@@ -223,11 +223,11 @@ type SurveyOption {
     id: ID!
     question_id: ID!
     question: SurveyQuestion
-    option_text: String!
+    option_text: String
     image: String
-    is_subquestion: Boolean!
+    is_subquestion: Boolean
     position: Int
-    is_correct: Boolean!
+    is_correct: Boolean
 }
 
 # --------------------------------------------
@@ -237,6 +237,23 @@ type User {
     id: ID!
     name: String!
     email: String!
+}
+
+# --------------------------------------------
+# ----------------Audit Log-------------------
+# --------------------------------------------
+type AuditLog {
+    id: ID!
+    survey_id: ID!
+    user_id: ID
+    user_name: String
+    action: String!
+    entity_type: String!
+    entity_id: ID
+    details: String
+    ip_address: String
+    user_agent: String
+    created_at: DateTime!
 }
 
 # --------------------------------------------
@@ -257,6 +274,10 @@ type Query {
     # Questions
     question(id: ID!): SurveyQuestion
         @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@find")
+    
+    # Audit Logs
+    auditLogs(survey_id: ID!): [AuditLog!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\AuditLogResolver@list")
 }
 
 # --------------------------------------------

@@ -3,15 +3,20 @@
 namespace App\Services;
 
 use App\Repositories\SurveyRepository;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Log;
 
 class SurveyService
 {
     protected $surveyRepository;
+    protected $auditLogService;
 
-    public function __construct(SurveyRepository $surveyRepository)
-    {
+    public function __construct(
+        SurveyRepository $surveyRepository,
+        AuditLogService $auditLogService
+    ) {
         $this->surveyRepository = $surveyRepository;
+        $this->auditLogService = $auditLogService;
     }
 
     /**
@@ -60,7 +65,18 @@ class SurveyService
     public function updateSurvey($id, array $input)
     {
         try {
-            return $this->surveyRepository->update($id, $input);
+            $survey = $this->surveyRepository->update($id, $input);
+            
+            // Ghi audit log
+            $this->auditLogService->log(
+                $id,
+                'update',
+                'survey',
+                $id,
+                "Cập nhật cài đặt survey: {$survey->title}"
+            );
+            
+            return $survey;
         } catch (\Exception $e) {
             Log::error('Error updating survey: ' . $e->getMessage());
             throw new \Exception('Không thể cập nhật survey: ' . $e->getMessage());

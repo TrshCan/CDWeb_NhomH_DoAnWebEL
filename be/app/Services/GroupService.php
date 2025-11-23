@@ -3,16 +3,21 @@
 namespace App\Services;
 
 use App\Repositories\GroupRepository;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GroupService
 {
     protected $groupRepository;
+    protected $auditLogService;
 
-    public function __construct(GroupRepository $groupRepository)
-    {
+    public function __construct(
+        GroupRepository $groupRepository,
+        AuditLogService $auditLogService
+    ) {
         $this->groupRepository = $groupRepository;
+        $this->auditLogService = $auditLogService;
     }
 
     /**
@@ -39,6 +44,15 @@ class GroupService
 
             $group = $this->groupRepository->create($input);
 
+            // Ghi audit log
+            $this->auditLogService->log(
+                $input['survey_id'],
+                'create',
+                'group',
+                $group->id,
+                "Tạo nhóm câu hỏi: {$group->title}"
+            );
+
             DB::commit();
             return $group->load(['survey', 'questions.options']);
         } catch (\Exception $e) {
@@ -54,7 +68,18 @@ class GroupService
     public function updateGroup($id, array $input)
     {
         try {
-            return $this->groupRepository->update($id, $input);
+            $group = $this->groupRepository->update($id, $input);
+            
+            // Ghi audit log
+            $this->auditLogService->log(
+                $group->survey_id,
+                'update',
+                'group',
+                $id,
+                "Cập nhật nhóm câu hỏi: {$group->title}"
+            );
+            
+            return $group;
         } catch (\Exception $e) {
             Log::error('Error updating group: ' . $e->getMessage());
             throw new \Exception('Không thể cập nhật group: ' . $e->getMessage());
@@ -71,6 +96,8 @@ class GroupService
 
             // Lấy group với questions
             $group = $this->groupRepository->findWithQuestions($id);
+            $surveyId = $group->survey_id;
+            $groupTitle = $group->title;
 
             // Xóa tất cả câu hỏi trong group
             foreach ($group->questions as $question) {
@@ -79,6 +106,15 @@ class GroupService
 
             // Xóa group
             $this->groupRepository->delete($id);
+            
+            // Ghi audit log
+            $this->auditLogService->log(
+                $surveyId,
+                'delete',
+                'group',
+                $id,
+                "Xóa nhóm câu hỏi: {$groupTitle}"
+            );
 
             DB::commit();
             return true;
@@ -125,6 +161,15 @@ class GroupService
                     $newOption->save();
                 }
             }
+
+            // Ghi audit log
+            $this->auditLogService->log(
+                $originalGroup->survey_id,
+                'duplicate',
+                'group',
+                $newGroup->id,
+                "Sao chép nhóm câu hỏi: {$newGroup->title}"
+            );
 
             DB::commit();
             return $newGroup->load(['survey', 'questions.options']);
