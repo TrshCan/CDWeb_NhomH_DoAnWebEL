@@ -8,14 +8,14 @@ function SegmentedControl({ value, onChange, options = ["Bật", "Soft", "Tắt"
   const getActiveIndex = () => {
     // Xử lý cho 2 options (Bật, Tắt)
     if (options.length === 2) {
-      if (value === true || value === "Bật") return 0;
-      if (value === false || value === "Tắt") return 1;
+      if (value === true || value === "hard" || value === "Bật") return 0;
+      if (value === false || value === "none" || value === "Tắt") return 1;
       return 0; // mặc định là Bật
     }
     // Xử lý cho 3 options (Bật, Soft, Tắt)
-    if (value === true || value === "Bật") return 0;
+    if (value === true || value === "hard" || value === "Bật") return 0;
     if (value === "soft" || value === "Soft") return 1;
-    if (value === false || value === "Tắt") return 2;
+    if (value === false || value === "none" || value === "Tắt") return 2;
     return 1; // mặc định là Soft
   };
 
@@ -40,10 +40,10 @@ function SegmentedControl({ value, onChange, options = ["Bật", "Soft", "Tắt"
                 if (index === 0) onChange(true); // Bật
                 else onChange(false); // Tắt
               } else {
-                // Xử lý cho 3 options (Bật, Soft, Tắt)
-                if (index === 0) onChange(true);
-                else if (index === 1) onChange("soft");
-                else onChange(false);
+                // Xử lý cho 3 options (Bật, Soft, Tắt) - Trả về enum string
+                if (index === 0) onChange("hard"); // Bật = hard (bắt buộc)
+                else if (index === 1) onChange("soft"); // Soft = soft (cảnh báo)
+                else onChange("none"); // Tắt = none (không bắt buộc)
               }
             }}
           >

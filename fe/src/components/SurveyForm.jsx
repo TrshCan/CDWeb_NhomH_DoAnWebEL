@@ -2991,9 +2991,14 @@ export default function SurveyForm({ surveyId = null }) {
                             <QuestionSection
                               groupId={group.id}
                               groupTitle={group.title}
-                              questionItems={group.questions.filter((q) =>
-                                shouldShowQuestion(q.id)
-                              )}
+                              questionItems={group.questions
+                                .filter((q) => shouldShowQuestion(q.id))
+                                .map((q) => ({
+                                  ...q,
+                                  // Merge questionSettings vào question object
+                                  required: questionSettings[q.id]?.required || q.required || "soft",
+                                }))
+                              }
                               globalStartIndex={globalStartIndex}
                               moveQuestionItem={(index, direction) =>
                                 moveQuestionItem(group.id, index, direction)

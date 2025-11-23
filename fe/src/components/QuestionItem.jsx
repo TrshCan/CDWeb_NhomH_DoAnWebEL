@@ -594,8 +594,8 @@ export default function QuestionItem({
         marginRight: "45px", // Tạo không gian cho nút di chuyển
       }}
     >
-      {/* Dấu * cho câu hỏi bắt buộc (chỉ hiện khi Bật/true) */}
-      {question?.required === true && (
+      {/* Dấu * cho câu hỏi bắt buộc (chỉ hiện khi Bật/hard) */}
+      {(question?.required === true || question?.required === "hard") && (
         <span className="absolute top-2 right-4 z-50 text-red-500 text-[30px] font-bold select-none pointer-events-none">
           *
         </span>
