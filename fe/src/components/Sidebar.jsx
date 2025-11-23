@@ -253,6 +253,31 @@ export default function Sidebar() {
                         </svg>
                         <span className="text-xs">Surveys I Did</span>
                       </Link>
+                       <Link
+                        to="/surveys/all"
+                        onClick={() => setShowSurveysExpanded(true)}
+                        className={`flex items-center space-x-2 p-1.5 rounded-lg transition-all duration-150 ${
+                          location.pathname === "/surveys/all"
+                            ? "bg-cyan-100 text-cyan-700 font-medium"
+                            : "text-gray-600 hover:bg-cyan-50 hover:text-cyan-600"
+                        }`}
+                      >
+                        <svg
+                          className="w-4 h-4 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                          />
+                        </svg>
+                        <span className="text-xs">Surveys All</span>
+                      </Link>
                     </div>
                   )}
                 </div>
