@@ -2852,6 +2852,71 @@ export default function SurveyForm({ surveyId = null }) {
                   );
 
                   setSavedAt(new Date());
+
+                  // ✅ Lưu settings vào CSDL (bao gồm conditions, required, image, etc.)
+                  if (!isTypeChanged && activeQuestionId && currentSurveyId) {
+                    // Chỉ lưu khi KHÔNG thay đổi type (vì type đã được lưu ở trên)
+                    (async () => {
+                      try {
+                        const updateData = {};
+                        
+                        // Lưu các field settings
+                        if (finalSettings.required !== undefined) {
+                          updateData.required = finalSettings.required;
+                        }
+                        if (finalSettings.image !== undefined) {
+                          updateData.image = finalSettings.image;
+                        }
+                        if (finalSettings.conditions !== undefined) {
+                          updateData.conditions = finalSettings.conditions;
+                        }
+                        if (finalSettings.defaultScenario !== undefined) {
+                          updateData.default_scenario = finalSettings.defaultScenario;
+                        }
+                        if (finalSettings.maxLength !== undefined) {
+                          updateData.max_length = finalSettings.maxLength;
+                        }
+                        if (finalSettings.numericOnly !== undefined) {
+                          updateData.numeric_only = finalSettings.numericOnly;
+                        }
+                        if (finalSettings.maxQuestions !== undefined) {
+                          updateData.max_questions = finalSettings.maxQuestions;
+                        }
+                        if (finalSettings.allowedFileTypes !== undefined) {
+                          updateData.allowed_file_types = finalSettings.allowedFileTypes;
+                        }
+                        if (finalSettings.maxFileSizeKB !== undefined) {
+                          updateData.max_file_size_kb = finalSettings.maxFileSizeKB;
+                        }
+                        if (finalSettings.points !== undefined) {
+                          updateData.points = finalSettings.points;
+                        }
+
+                        // Chỉ gọi API nếu có thay đổi
+                        if (Object.keys(updateData).length > 0) {
+                          await updateQuestion(activeQuestionId, updateData);
+                          
+                          // Broadcast để đồng bộ với các tab khác
+                          if (broadcastChannelRef.current) {
+                            // Broadcast từng field thay đổi
+                            Object.entries(updateData).forEach(([fieldName, value]) => {
+                              broadcastChannelRef.current.postMessage({
+                                type: 'QUESTION_FIELD_UPDATED',
+                                data: {
+                                  questionId: activeQuestionId,
+                                  fieldName,
+                                  value,
+                                },
+                              });
+                            });
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Error saving question settings:', error);
+                        toast.error('Không thể lưu cài đặt câu hỏi');
+                      }
+                    })();
+                  }
                 }}
                 onClose={() => {
                   setRightPanel(null);
