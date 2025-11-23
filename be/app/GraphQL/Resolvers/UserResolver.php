@@ -78,6 +78,11 @@ class UserResolver
     {
         return $this->userService->toggleFollow($args['follower_id'], $args['followed_id']);
     }
+    // Resolver for following
+    public function following(User $user)
+    {
+        return $user->following()->pluck('followed_id')->toArray();
+    }
 }
 
 

@@ -426,10 +426,10 @@ export default function Feed() {
       <div className="space-y-4" id="postFeed">
         {loading ? (
           <p className="text-gray-500 text-center">Loading posts...</p>
-        ) : posts.length === 0 ? (
+        ) : allPosts.length === 0 ? (
           <p className="text-gray-500 text-center">No posts yet.</p>
         ) : (
-          posts.map((post, i) => <PostCard key={i} post={post} />)
+          allPosts.map((post, i) => <PostCard key={i} post={post} />)
         )}
       </div>
     </main>

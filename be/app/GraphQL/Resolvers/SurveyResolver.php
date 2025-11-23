@@ -73,7 +73,7 @@ class SurveyResolver
         }
 
         // Verify the user owns this survey
-        $survey = \App\Models\Survey::find($surveyId);
+        $survey = Survey::find($surveyId);
         if (!$survey || $survey->created_by !== $user->id) {
             throw new \Exception('Unauthorized: You can only view data for your own surveys');
         }
