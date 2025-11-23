@@ -373,7 +373,7 @@ export default function QuestionSection({
               >
                 <QuestionItem
                   question={question}
-                  index={globalStartIndex + index}
+                  index={index}
                   totalQuestions={items.length}
                   isActive={isActive}
                   onClick={() => handleSetSection(sectionId)}

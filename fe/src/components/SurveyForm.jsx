@@ -1540,23 +1540,50 @@ export default function SurveyForm({ surveyId = null }) {
   };
 
   // Di chuyển câu hỏi trong group
-  const moveQuestionItem = (groupId, index, direction) => {
+  const moveQuestionItem = async (groupId, index, direction) => {
+    const group = questionGroups.find((g) => g.id === groupId);
+    if (!group) return;
+
+    const newQuestions = [...group.questions];
+    const [removed] = newQuestions.splice(index, 1);
+    
+    let newIndex = index;
+    if (direction === "up" && index > 0) {
+      newIndex = index - 1;
+      newQuestions.splice(newIndex, 0, removed);
+    } else if (direction === "down" && index < group.questions.length - 1) {
+      newIndex = index + 1;
+      newQuestions.splice(newIndex, 0, removed);
+    } else {
+      return; // Không thể di chuyển
+    }
+
+    // 1. Optimistic update - cập nhật UI ngay lập tức
     setQuestionGroups((prev) =>
-      prev.map((group) => {
-        if (group.id !== groupId) return group;
-        const newQuestions = [...group.questions];
-        const [removed] = newQuestions.splice(index, 1);
-        if (direction === "up" && index > 0) {
-          newQuestions.splice(index - 1, 0, removed);
-        } else if (direction === "down" && index < group.questions.length - 1) {
-          newQuestions.splice(index + 1, 0, removed);
-        } else {
-          return group;
-        }
-        setActiveSection(`question-${removed.id}`);
-        return { ...group, questions: newQuestions };
+      prev.map((g) => {
+        if (g.id !== groupId) return g;
+        return { ...g, questions: newQuestions };
       })
     );
+    setActiveSection(`question-${removed.id}`);
+
+    // 2. Lưu vào CSDL - cập nhật position cho tất cả câu hỏi bị ảnh hưởng
+    try {
+      const updatePromises = newQuestions.map((q, idx) => 
+        updateQuestion(q.id, { position: idx + 1 })
+      );
+      await Promise.all(updatePromises);
+    } catch (error) {
+      // Rollback nếu lỗi
+      setQuestionGroups((prev) =>
+        prev.map((g) => {
+          if (g.id !== groupId) return g;
+          return { ...g, questions: group.questions };
+        })
+      );
+      toast.error("Không thể di chuyển câu hỏi: " + (error.message || "Lỗi không xác định"));
+      console.error("Error moving question:", error);
+    }
   };
 
 
