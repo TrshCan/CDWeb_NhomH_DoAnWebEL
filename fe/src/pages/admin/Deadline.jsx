@@ -100,23 +100,18 @@ const CloseIcon = () => (
 );
 
 // --- GraphQL Queries ---
-const GET_PAGINATED_EVENTS = `
-  query GetPaginatedEvents($perPage: Int, $page: Int, $includeDeleted: Boolean) {
-    getPaginatedEvents(perPage: $perPage, page: $page, includeDeleted: $includeDeleted) {
+const GET_PAGINATED_DEADLINES = `
+  query GetPaginatedDeadlines($perPage: Int, $page: Int, $includeDeleted: Boolean) {
+    getPaginatedDeadlines(perPage: $perPage, page: $page, includeDeleted: $includeDeleted) {
       data {
         id
         title
-        event_date
-        location
+        deadline_date
+        details
         created_by
         created_at
         updated_at
         deleted_at
-        user {
-          id
-          name
-          email
-        }
       }
       current_page
       last_page
@@ -125,23 +120,18 @@ const GET_PAGINATED_EVENTS = `
   }
 `;
 
-const SEARCH_EVENTS = `
-  query SearchEvents($filter: EventFilterInput, $perPage: Int, $page: Int) {
-    searchEvents(filter: $filter, perPage: $perPage, page: $page) {
+const SEARCH_DEADLINES = `
+  query SearchDeadlines($filter: DeadlineFilterInput, $perPage: Int, $page: Int) {
+    searchDeadlines(filter: $filter, perPage: $perPage, page: $page) {
       data {
         id
         title
-        event_date
-        location
+        deadline_date
+        details
         created_by
         created_at
         updated_at
         deleted_at
-        user {
-          id
-          name
-          email
-        }
       }
       current_page
       last_page
@@ -150,55 +140,45 @@ const SEARCH_EVENTS = `
   }
 `;
 
-const CREATE_EVENT = `
-  mutation CreateEvent($input: EventInput!) {
-    createEvent(input: $input) {
+const CREATE_DEADLINE = `
+  mutation CreateDeadline($input: DeadlineInput!) {
+    createDeadline(input: $input) {
       id
       title
-      event_date
-      location
+      deadline_date
+      details
       created_by
       created_at
       updated_at
       deleted_at
-      user {
-        id
-        name
-        email
-      }
     }
   }
 `;
 
-const UPDATE_EVENT = `
-  mutation UpdateEvent($id: ID!, $input: EventInput!) {
-    updateEvent(id: $id, input: $input) {
+const UPDATE_DEADLINE = `
+  mutation UpdateDeadline($id: ID!, $input: DeadlineInput!) {
+    updateDeadline(id: $id, input: $input) {
       id
       title
-      event_date
-      location
+      deadline_date
+      details
       created_by
       created_at
       updated_at
       deleted_at
-      user {
-        id
-        name
-        email
-      }
     }
   }
 `;
 
-const DELETE_EVENT = `
-  mutation DeleteEvent($id: ID!) {
-    deleteEvent(id: $id)
+const DELETE_DEADLINE = `
+  mutation DeleteDeadline($id: ID!) {
+    deleteDeadline(id: $id)
   }
 `;
 
-const RESTORE_EVENT = `
-  mutation RestoreEvent($id: ID!) {
-    restoreEvent(id: $id)
+const RESTORE_DEADLINE = `
+  mutation RestoreDeadline($id: ID!) {
+    restoreDeadline(id: $id)
   }
 `;
 
@@ -244,30 +224,30 @@ const Toast = ({ message, type, visible }) => {
   );
 };
 
-// --- Event Modal ---
-const EventModal = ({ modalData, closeModal, handleSave }) => {
+// --- Deadline Modal ---
+const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
   const [formData, setFormData] = useState({
     title: "",
-    event_date: "",
-    location: "",
+    deadline_date: "",
+    details: "",
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generalError, setGeneralError] = useState('');
 
   useEffect(() => {
-    if (modalData.type === "edit" && modalData.event) {
-      // Convert event_date to datetime-local format (YYYY-MM-DDTHH:mm)
-      const eventDate = modalData.event.event_date
-        ? new Date(modalData.event.event_date).toISOString().slice(0, 16)
+    if (modalData.type === "edit" && modalData.deadline) {
+      // Convert deadline_date to datetime-local format (YYYY-MM-DDTHH:mm)
+      const deadlineDate = modalData.deadline.deadline_date
+        ? new Date(modalData.deadline.deadline_date).toISOString().slice(0, 16)
         : "";
       setFormData({
-        title: modalData.event.title,
-        event_date: eventDate,
-        location: modalData.event.location || "",
+        title: modalData.deadline.title,
+        deadline_date: deadlineDate,
+        details: modalData.deadline.details || "",
       });
     } else {
-      setFormData({ title: "", event_date: "", location: "" });
+      setFormData({ title: "", deadline_date: "", details: "" });
     }
     setErrors({});
     setGeneralError('');
@@ -277,29 +257,27 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
   const validate = () => {
     const newErrors = {};
     if (!formData.title.trim()) {
-      newErrors.title = "Tiêu đề sự kiện không được để trống.";
+      newErrors.title = "Tiêu đề deadline không được để trống.";
     } else if (formData.title.length > 255) {
-      newErrors.title = "Tiêu đề sự kiện không được vượt quá 255 ký tự.";
+      newErrors.title = "Tiêu đề deadline không được vượt quá 255 ký tự.";
     } else if (!/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/.test(formData.title)) {
       newErrors.title = "Tiêu đề chứa ký tự không hợp lệ.";
     }
-    if (!formData.event_date)
-      newErrors.event_date = "Ngày giờ diễn ra không được để trống.";
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(formData.event_date)) {
-      newErrors.event_date =
-        "Ngày giờ diễn ra không hợp lệ. Định dạng hợp lệ: DD/MM/YYYY HH:mm.";
+    if (!formData.deadline_date)
+      newErrors.deadline_date = "Ngày giờ hết hạn không được để trống.";
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(formData.deadline_date)) {
+      newErrors.deadline_date =
+        "Ngày giờ hết hạn không hợp lệ. Định dạng hợp lệ: DD/MM/YYYY HH:mm.";
     } else {
-      // Kiểm tra event_date phải lớn hơn thời điểm hiện tại
-      const eventDate = new Date(formData.event_date);
+      // Kiểm tra deadline_date phải lớn hơn thời điểm hiện tại
+      const deadlineDate = new Date(formData.deadline_date);
       const now = new Date();
-      if (eventDate <= now) {
-        newErrors.event_date = "Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.";
+      if (deadlineDate <= now) {
+        newErrors.deadline_date = "Ngày giờ hết hạn phải lớn hơn thời điểm hiện tại.";
       }
     }
-    if (formData.location && formData.location.length > 255) {
-      newErrors.location = "Địa điểm không được vượt quá 255 ký tự.";
-    } else if (formData.location && !/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/.test(formData.location)) {
-      newErrors.location = "Địa điểm chứa ký tự không hợp lệ.";
+    if (formData.details && formData.details.length > 1000) {
+      newErrors.details = "Chi tiết không được vượt quá 1000 ký tự.";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -320,12 +298,12 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
     if (validate()) {
       setIsSubmitting(true);
       try {
-        // Convert event_date to backend-compatible format (e.g., YYYY-MM-DD HH:mm:ss)
-        const formattedEventDate = new Date(formData.event_date)
+        // Convert deadline_date to backend-compatible format (e.g., YYYY-MM-DD HH:mm:ss)
+        const formattedDeadlineDate = new Date(formData.deadline_date)
           .toISOString()
           .replace("T", " ")
           .slice(0, 19);
-        await handleSave({ ...formData, event_date: formattedEventDate }, setErrors, setGeneralError);
+        await handleSave({ ...formData, deadline_date: formattedDeadlineDate }, setErrors, setGeneralError);
       } catch (error) {
         // Error is handled in handleSave
         // Ensure generalError is set if not already set by handleSave
@@ -426,60 +404,60 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
             </label>
             <input
               type="datetime-local"
-              value={formData.event_date}
+              value={formData.deadline_date}
               onChange={(e) => {
-                setFormData({ ...formData, event_date: e.target.value });
+                setFormData({ ...formData, deadline_date: e.target.value });
                 // Clear error when user changes the date
-                if (errors.event_date) {
-                  setErrors({ ...errors, event_date: "" });
+                if (errors.deadline_date) {
+                  setErrors({ ...errors, deadline_date: "" });
                 }
               }}
               min={new Date().toISOString().slice(0, 16)}
               className={`border-2 ${
-                errors.event_date ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
+                errors.deadline_date ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
               } rounded-xl w-full p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 shadow-sm hover:shadow-md`}
             />
-            {errors.event_date && (
-              <p className="text-red-500 text-xs mt-1">{errors.event_date}</p>
+            {errors.deadline_date && (
+              <p className="text-red-500 text-xs mt-1">{errors.deadline_date}</p>
             )}
           </div>
           <div>
             <label className="block mb-2 text-sm font-semibold text-gray-700 flex items-center gap-2">
               <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
               </svg>
-              Địa điểm
+              Chi tiết
             </label>
-            <input
-              type="text"
-              value={formData.location}
-              maxLength={255}
+            <textarea
+              value={formData.details}
+              maxLength={1000}
+              rows={4}
               onChange={(e) => {
                 const value = e.target.value;
-                setFormData({ ...formData, location: value });
+                setFormData({ ...formData, details: value });
                 // Real-time validation for length
-                if (value.length > 255) {
-                  setErrors({ ...errors, location: "Địa điểm không được vượt quá 255 ký tự." });
-                } else if (errors.location && errors.location.includes("255")) {
+                if (value.length > 1000) {
+                  setErrors({ ...errors, details: "Chi tiết không được vượt quá 1000 ký tự." });
+                } else if (errors.details && errors.details.includes("1000")) {
                   // Clear length error if within limit
                   const newErrors = { ...errors };
-                  delete newErrors.location;
+                  delete newErrors.details;
                   setErrors(newErrors);
-                } else if (errors.location) {
-                  setErrors({ ...errors, location: "" });
+                } else if (errors.details) {
+                  setErrors({ ...errors, details: "" });
                 }
               }}
               className={`border-2 ${
-                errors.location ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
-              } rounded-xl w-full p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 shadow-sm hover:shadow-md`}
+                errors.details ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
+              } rounded-xl w-full p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 shadow-sm hover:shadow-md resize-none`}
+              placeholder="Nhập chi tiết về deadline..."
             />
             <div className="flex justify-between items-center mt-1">
-              {errors.location && (
-                <p className="text-red-500 text-xs">{errors.location}</p>
+              {errors.details && (
+                <p className="text-red-500 text-xs">{errors.details}</p>
               )}
-              <p className={`text-xs ml-auto ${formData.location.length > 255 ? 'text-red-500' : 'text-gray-400'}`}>
-                {formData.location.length}/255
+              <p className={`text-xs ml-auto ${formData.details.length > 1000 ? 'text-red-500' : 'text-gray-400'}`}>
+                {formData.details.length}/1000
               </p>
             </div>
           </div>
@@ -635,14 +613,14 @@ const RestoreModal = ({ modalData, closeModal, confirmRestore }) => {
 };
 
 // --- Main Component ---
-export default function EventManager() {
-  const [events, setEvents] = useState([]);
+export default function DeadlineManager() {
+  const [deadlines, setDeadlines] = useState([]);
   const [showDeleted, setShowDeleted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchError, setSearchError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [modalData, setModalData] = useState({ type: null, event: null });
+  const [modalData, setModalData] = useState({ type: null, deadline: null });
   const [toast, setToast] = useState({
     message: "",
     type: "success",
@@ -658,17 +636,17 @@ export default function EventManager() {
     setCurrentPage(1);
   };
 
-  // Fetch events
+  // Fetch deadlines
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchDeadlines = async () => {
       try {
         const response = await graphqlRequest(
-          searchQuery ? SEARCH_EVENTS : GET_PAGINATED_EVENTS,
+          searchQuery ? SEARCH_DEADLINES : GET_PAGINATED_DEADLINES,
           searchQuery
             ? {
                 filter: {
                   title: searchQuery,
-                  location: searchQuery,
+                  details: searchQuery,
                   include_deleted: showDeleted,
                 },
                 perPage: ITEMS_PER_PAGE,
@@ -681,12 +659,12 @@ export default function EventManager() {
               }
         );
         const paginated =
-          response.data.getPaginatedEvents || response.data.searchEvents;
+          response.data.getPaginatedDeadlines || response.data.searchDeadlines;
         if (!paginated || !Array.isArray(paginated.data)) {
           showToast("Dữ liệu phản hồi không hợp lệ.", "error");
           return;
         }
-        setEvents(paginated.data);
+        setDeadlines(paginated.data);
         setCurrentPage(paginated.current_page);
         setTotalPages(paginated.last_page);
       } catch (error) {
@@ -695,9 +673,9 @@ export default function EventManager() {
             "Kết nối máy chủ bị gián đoạn. Vui lòng kiểm tra đường truyền.",
             "error"
           );
-        } else if (error.message.includes("Không tìm thấy sự kiện")) {
+        } else if (error.message.includes("Không tìm thấy deadline")) {
           showToast(
-            "Không tìm thấy sự kiện. Vui lòng làm mới danh sách.",
+            "Không tìm thấy deadline. Vui lòng làm mới danh sách.",
             "error"
           );
         } else {
@@ -708,7 +686,7 @@ export default function EventManager() {
         }
       }
     };
-    fetchEvents();
+    fetchDeadlines();
   }, [searchQuery, showDeleted, currentPage]);
 
   useEffect(() => {
@@ -716,26 +694,26 @@ export default function EventManager() {
       setTimeout(() => setToast((t) => ({ ...t, visible: false })), 3000);
   }, [toast]);
 
-  const handleSaveEvent = async (formData, setFieldErrors, setGeneralError) => {
+  const handleSaveDeadline = async (formData, setFieldErrors, setGeneralError) => {
     try {
       if (modalData.type === "edit") {
-        // Gửi updated_at từ event hiện tại để optimistic locking
+        // Gửi updated_at từ deadline hiện tại để optimistic locking
         const inputData = {
           ...formData,
-          updated_at: modalData.event.updated_at || modalData.event.created_at
+          updated_at: modalData.deadline.updated_at || modalData.deadline.created_at
         };
         
-        const res = await graphqlRequest(UPDATE_EVENT, {
-          id: modalData.event.id,
+        const res = await graphqlRequest(UPDATE_DEADLINE, {
+          id: modalData.deadline.id,
           input: inputData,
         });
-        if (res.data.updateEvent) {
-          setEvents(
-            events.map((e) =>
-              e.id === modalData.event.id ? res.data.updateEvent : e
+        if (res.data.updateDeadline) {
+          setDeadlines(
+            deadlines.map((d) =>
+              d.id === modalData.deadline.id ? res.data.updateDeadline : d
             )
           );
-          showToast("Cập nhật thông tin sự kiện thành công");
+          showToast("Cập nhật thông tin deadline thành công");
           closeModal();
         } else {
           throw new Error(
@@ -743,10 +721,10 @@ export default function EventManager() {
           );
         }
       } else {
-        const res = await graphqlRequest(CREATE_EVENT, { input: formData });
-        if (res.data.createEvent) {
-          setEvents([res.data.createEvent, ...events]);
-          showToast("Tạo sự kiện thành công");
+        const res = await graphqlRequest(CREATE_DEADLINE, { input: formData });
+        if (res.data.createDeadline) {
+          setDeadlines([res.data.createDeadline, ...deadlines]);
+          showToast("Tạo deadline thành công");
           closeModal();
         } else {
           throw new Error("Tạo thất bại: Không nhận được dữ liệu từ server");
@@ -840,18 +818,18 @@ export default function EventManager() {
         showToast(errorMessage, "error");
         // Don't return early - let the error continue to be processed
         // The generalError state will be set and displayed in the modal
-      } else if (errorMessage.includes("Ngày giờ diễn ra sự kiện phải lớn hơn") || errorMessage.includes("after:now")) {
-        errorMessage = "Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.";
-        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, event_date: errorMessage }));
+      } else if (errorMessage.includes("Ngày giờ hết hạn phải lớn hơn") || errorMessage.includes("after:now")) {
+        errorMessage = "Ngày giờ hết hạn phải lớn hơn thời điểm hiện tại.";
+        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, deadline_date: errorMessage }));
         if (setGeneralError) setGeneralError('');
         return;
-      } else if (errorMessage.includes("Xung đột với sự kiện") || errorMessage.includes("Đã tồn tại sự kiện")) {
-        errorMessage = "Xung đột với sự kiện khác. Vui lòng chọn giờ hoặc tiêu đề khác.";
+      } else if (errorMessage.includes("Xung đột với deadline") || errorMessage.includes("Đã tồn tại deadline")) {
+        errorMessage = "Xung đột với deadline khác. Vui lòng chọn giờ hoặc tiêu đề khác.";
         if (setGeneralError) setGeneralError(errorMessage);
         showToast(errorMessage, "error");
         return; // Return early để không xử lý tiếp
-      } else if (errorMessage.includes("Không tìm thấy sự kiện")) {
-        errorMessage = "Không tìm thấy sự kiện. Vui lòng làm mới danh sách.";
+      } else if (errorMessage.includes("Không tìm thấy deadline")) {
+        errorMessage = "Không tìm thấy deadline. Vui lòng làm mới danh sách.";
       } else if (errorMessage.includes("Phiên đăng nhập") || errorMessage.includes("session")) {
         errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
         setTimeout(() => (window.location.href = "/login"), 5000);
@@ -859,22 +837,22 @@ export default function EventManager() {
         errorMessage = "Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.";
       } else if (errorMessage.includes("Lỗi cấu trúc dữ liệu") || errorMessage.includes("Unknown column")) {
         errorMessage = "Lỗi cấu trúc dữ liệu. Vui lòng liên hệ quản trị viên.";
-      } else if (errorMessage.includes("Sự kiện này đã tồn tại") || errorMessage.includes("Duplicate entry")) {
-        errorMessage = "Sự kiện này đã tồn tại. Vui lòng kiểm tra lại tiêu đề hoặc ngày giờ.";
+      } else if (errorMessage.includes("Deadline này đã tồn tại") || errorMessage.includes("Duplicate entry")) {
+        errorMessage = "Deadline này đã tồn tại. Vui lòng kiểm tra lại tiêu đề hoặc ngày giờ.";
         if (setGeneralError) setGeneralError(errorMessage);
         showToast(errorMessage, "error");
         return; // Return early để không xử lý tiếp
       } else if (errorMessage.includes("Định dạng ngày tháng không hợp lệ") || errorMessage.includes("date_format")) {
         errorMessage = "Định dạng ngày tháng không hợp lệ. Vui lòng kiểm tra lại.";
-        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, event_date: errorMessage }));
+        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, deadline_date: errorMessage }));
         if (setGeneralError) setGeneralError('');
         return;
-      } else if (errorMessage.includes("Tên sự kiện không được để trống") || errorMessage.includes("title.required")) {
-        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, title: "Tiêu đề sự kiện không được để trống." }));
+      } else if (errorMessage.includes("Tên deadline không được để trống") || errorMessage.includes("title.required")) {
+        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, title: "Tiêu đề deadline không được để trống." }));
         if (setGeneralError) setGeneralError('');
         return;
-      } else if (errorMessage.includes("Ngày giờ diễn ra không được để trống") || errorMessage.includes("event_date.required")) {
-        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, event_date: "Ngày giờ diễn ra không được để trống." }));
+      } else if (errorMessage.includes("Ngày giờ hết hạn không được để trống") || errorMessage.includes("deadline_date.required")) {
+        if (setFieldErrors) setFieldErrors(prev => ({ ...prev, deadline_date: "Ngày giờ hết hạn không được để trống." }));
         if (setGeneralError) setGeneralError('');
         return;
       } else if (errorMessage === "Internal server error" || errorMessage === "Có lỗi xảy ra") {
@@ -887,9 +865,9 @@ export default function EventManager() {
       
       // Hiển thị lỗi chung nếu không phải lỗi field cụ thể
       // Nếu đã set generalError ở trên (như "Dữ liệu đã được cập nhật"), không set lại
-      if (!errorMessage.includes("Ngày giờ diễn ra") && !errorMessage.includes("Tên sự kiện")) {
+      if (!errorMessage.includes("Ngày giờ hết hạn") && !errorMessage.includes("Tên deadline")) {
         // Only set if not already set for specific errors like "Dữ liệu đã được cập nhật"
-        if (!errorMessage.includes("Dữ liệu đã được cập nhật") && !errorMessage.includes("Xung đột với sự kiện") && !errorMessage.includes("Sự kiện này đã tồn tại")) {
+        if (!errorMessage.includes("Dữ liệu đã được cập nhật") && !errorMessage.includes("Xung đột với deadline") && !errorMessage.includes("Deadline này đã tồn tại")) {
           if (setGeneralError) setGeneralError(errorMessage);
         }
         showToast(errorMessage, "error");
@@ -901,48 +879,48 @@ export default function EventManager() {
     }
   };
 
-  const handleDeleteEvent = async () => {
+  const handleDeleteDeadline = async () => {
     try {
-      const res = await graphqlRequest(DELETE_EVENT, {
-        id: modalData.event.id,
+      const res = await graphqlRequest(DELETE_DEADLINE, {
+        id: modalData.deadline.id,
       });
-      if (res.data.deleteEvent) {
-        setEvents(
-          events.map((e) =>
-            e.id === modalData.event.id
-              ? { ...e, deleted_at: new Date().toISOString() }
-              : e
+      if (res.data.deleteDeadline) {
+        setDeadlines(
+          deadlines.map((d) =>
+            d.id === modalData.deadline.id
+              ? { ...d, deleted_at: new Date().toISOString() }
+              : d
           )
         );
-        showToast("Xóa sự kiện thành công");
+        showToast("Xóa deadline thành công");
         closeModal();
       } else {
         throw new Error("Xóa thất bại: Không nhận được dữ liệu từ server");
       }
     } catch (error) {
-      console.error("Delete event error:", error);
+      console.error("Delete deadline error:", error);
       let errorMessage = error.message || "Đã xảy ra lỗi không xác định. Vui lòng liên hệ quản trị viên.";
       
       if (error.message.includes("Đang xử lý yêu cầu xóa")) {
         errorMessage = "Đang xử lý yêu cầu xóa. Vui lòng đợi và thử lại sau vài giây.";
-      } else if (error.message.includes("Sự kiện đã bị xóa trước đó")) {
-        errorMessage = "Sự kiện đã bị xóa trước đó. Không thể xóa lại.";
-      } else if (error.message.includes("Không tìm thấy sự kiện. Sự kiện không tồn tại")) {
-        errorMessage = "Không tìm thấy sự kiện. Sự kiện không tồn tại.";
-      } else if (error.message.includes("Không tìm thấy sự kiện")) {
-        errorMessage = "Không tìm thấy sự kiện. Vui lòng làm mới danh sách.";
+      } else if (error.message.includes("Deadline đã bị xóa trước đó")) {
+        errorMessage = "Deadline đã bị xóa trước đó. Không thể xóa lại.";
+      } else if (error.message.includes("Không tìm thấy deadline. Deadline không tồn tại")) {
+        errorMessage = "Không tìm thấy deadline. Deadline không tồn tại.";
+      } else if (error.message.includes("Không tìm thấy deadline")) {
+        errorMessage = "Không tìm thấy deadline. Vui lòng làm mới danh sách.";
       } else if (error.message.includes("Bạn chưa đăng nhập") || error.message.includes("auth")) {
         errorMessage = "Bạn chưa đăng nhập. Vui lòng đăng nhập lại.";
         setTimeout(() => (window.location.href = "/login"), 2000);
       } else if (error.message.includes("Bạn không có quyền") || error.message.includes("permission")) {
-        errorMessage = error.message || "Bạn không có quyền xóa sự kiện.";
+        errorMessage = error.message || "Bạn không có quyền xóa deadline.";
       } else if (error.message.includes("Phiên đăng nhập")) {
         errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
         setTimeout(() => (window.location.href = "/login"), 5000);
       } else if (error.message.includes("Không thể kết nối đến cơ sở dữ liệu")) {
         errorMessage = "Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.";
       } else if (error.message.includes("đang được sử dụng")) {
-        errorMessage = "Không thể xóa sự kiện vì đang được sử dụng ở nơi khác.";
+        errorMessage = "Không thể xóa deadline vì đang được sử dụng ở nơi khác.";
       } else if (error.message && error.message !== "Internal server error" && error.message !== "Có lỗi xảy ra") {
         // Sử dụng message từ backend nếu có
         errorMessage = error.message;
@@ -952,12 +930,12 @@ export default function EventManager() {
     }
   };
 
-  const handleRestoreEvent = async () => {
+  const handleRestoreDeadline = async () => {
     try {
-      const id = modalData.event.id;
-      const res = await graphqlRequest(RESTORE_EVENT, { id });
-      if (res.data.restoreEvent) {
-        setEvents(events.filter((e) => e.id !== id));
+      const id = modalData.deadline.id;
+      const res = await graphqlRequest(RESTORE_DEADLINE, { id });
+      if (res.data.restoreDeadline) {
+        setDeadlines(deadlines.filter((d) => d.id !== id));
         showToast("Khôi phục deadline thành công");
         closeModal();
       } else {
@@ -990,27 +968,27 @@ export default function EventManager() {
     }
   };
 
-  const closeModal = () => setModalData({ type: null, event: null });
+  const closeModal = () => setModalData({ type: null, deadline: null });
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-800 flex">
       <AdminSidebar /> {/* Sidebar bên trái */}
       <div className="flex-1 p-4 max-w-7xl mx-auto">
         <Toast {...toast} />
-        <EventModal
+        <DeadlineModal
           modalData={modalData}
           closeModal={closeModal}
-          handleSave={handleSaveEvent}
+          handleSave={handleSaveDeadline}
         />
         <DeleteModal
           modalData={modalData}
           closeModal={closeModal}
-          confirmDelete={handleDeleteEvent}
+          confirmDelete={handleDeleteDeadline}
         />
         <RestoreModal
           modalData={modalData}
           closeModal={closeModal}
-          confirmRestore={handleRestoreEvent}
+          confirmRestore={handleRestoreDeadline}
         />
 
         <header className="text-center mb-8">
@@ -1029,7 +1007,7 @@ export default function EventManager() {
 
         <div className="bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl shadow-xl border-2 border-gray-100 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <button
-            onClick={() => setModalData({ type: "add", event: null })}
+            onClick={() => setModalData({ type: "add", deadline: null })}
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-xl hover:from-orange-700 hover:to-amber-700 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <PlusIcon /> Thêm mới
@@ -1078,31 +1056,29 @@ export default function EventManager() {
               <tr>
                 <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Tiêu đề</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Ngày giờ hết hạn</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Địa điểm</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Người tạo</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Chi tiết</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Ngày tạo</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wider text-center">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {events.length > 0 ? (
-                events.map((e) => (
+              {deadlines.length > 0 ? (
+                deadlines.map((d) => (
                   <tr
-                    key={e.id}
+                    key={d.id}
                     className={`hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group ${
-                      e.deleted_at ? "bg-gray-100 opacity-75" : ""
+                      d.deleted_at ? "bg-gray-100 opacity-75" : ""
                     }`}
                   >
-                    <td className="px-6 py-4 font-semibold text-gray-900">{e.title}</td>
-                    <td className="px-6 py-4 text-gray-600">{formatDate(e.event_date)}</td>
-                    <td className="px-6 py-4 text-gray-600">{e.location || "N/A"}</td>
-                    <td className="px-6 py-4 text-gray-600">{e.user?.name || "N/A"}</td>
-                    <td className="px-6 py-4 text-gray-600">{formatDate(e.created_at)}</td>
+                    <td className="px-6 py-4 font-semibold text-gray-900">{d.title}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatDate(d.deadline_date)}</td>
+                    <td className="px-6 py-4 text-gray-600 max-w-xs truncate">{d.details || "N/A"}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatDate(d.created_at)}</td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        {e.deleted_at ? (
+                        {d.deleted_at ? (
                           <button
-                            onClick={() => setModalData({ type: "restore", event: e })}
+                            onClick={() => setModalData({ type: "restore", deadline: d })}
                             className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-all duration-200 transform hover:scale-110"
                             title="Khôi phục"
                           >
@@ -1112,7 +1088,7 @@ export default function EventManager() {
                           <>
                             <button
                               onClick={() =>
-                                setModalData({ type: "edit", event: e })
+                                setModalData({ type: "edit", deadline: d })
                               }
                               className="p-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-all duration-200 transform hover:scale-110"
                               title="Chỉnh sửa"
@@ -1121,7 +1097,7 @@ export default function EventManager() {
                             </button>
                             <button
                               onClick={() =>
-                                setModalData({ type: "delete", event: e })
+                                setModalData({ type: "delete", deadline: d })
                               }
                               className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200 transform hover:scale-110"
                               title="Xóa"
