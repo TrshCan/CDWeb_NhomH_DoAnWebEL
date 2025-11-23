@@ -68,7 +68,34 @@ class GroupService
     public function updateGroup($id, array $input)
     {
         try {
+            // Lấy thông tin group trước khi cập nhật
+            $oldGroup = $this->groupRepository->findById($id);
+            
+            // Cập nhật group
             $group = $this->groupRepository->update($id, $input);
+            
+            // Tạo log chi tiết về những gì đã thay đổi
+            $changes = [];
+            
+            // Kiểm tra các field quan trọng
+            $fieldLabels = [
+                'title' => 'Tiêu đề',
+                'position' => 'Vị trí',
+            ];
+            
+            foreach ($fieldLabels as $field => $label) {
+                if (isset($input[$field]) && $oldGroup->$field != $input[$field]) {
+                    $oldValue = $oldGroup->$field ?: '(trống)';
+                    $newValue = $input[$field] ?: '(trống)';
+                    $changes[] = "{$label}: \"{$oldValue}\" → \"{$newValue}\"";
+                }
+            }
+            
+            // Tạo message log
+            $logMessage = "Cập nhật nhóm câu hỏi: {$group->title}";
+            if (!empty($changes)) {
+                $logMessage .= " | Thay đổi: " . implode(', ', $changes);
+            }
             
             // Ghi audit log
             $this->auditLogService->log(
@@ -76,7 +103,7 @@ class GroupService
                 'update',
                 'group',
                 $id,
-                "Cập nhật nhóm câu hỏi: {$group->title}"
+                $logMessage
             );
             
             return $group;

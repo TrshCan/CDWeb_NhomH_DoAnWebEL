@@ -57,17 +57,57 @@ class OptionService
     public function updateOption($id, array $input)
     {
         try {
+            // Lấy thông tin option trước khi cập nhật
+            $oldOption = $this->optionRepository->findById($id);
+            
+            // Cập nhật option
             $option = $this->optionRepository->update($id, $input);
             
-            // Ghi audit log
+            // Tạo log chi tiết về những gì đã thay đổi
+            $changes = [];
+            
+            // Kiểm tra các field quan trọng
+            $fieldLabels = [
+                'option_text' => 'Nội dung',
+                'is_subquestion' => 'Câu hỏi phụ',
+                'is_correct' => 'Đáp án đúng',
+                'position' => 'Vị trí',
+            ];
+            
+            foreach ($fieldLabels as $field => $label) {
+                if (isset($input[$field]) && $oldOption->$field != $input[$field]) {
+                    $oldValue = $oldOption->$field;
+                    $newValue = $input[$field];
+                    
+                    // Format giá trị boolean
+                    if (is_bool($oldValue) || is_bool($newValue)) {
+                        $oldValue = $oldValue ? 'Có' : 'Không';
+                        $newValue = $newValue ? 'Có' : 'Không';
+                    }
+                    
+                    // Format giá trị rỗng
+                    $oldValue = $oldValue ?: '(trống)';
+                    $newValue = $newValue ?: '(trống)';
+                    
+                    $changes[] = "{$label}: \"{$oldValue}\" → \"{$newValue}\"";
+                }
+            }
+            
+            // Tạo message log
             $question = $option->question;
             $optionText = $option->option_text ?: '(trống)';
+            $logMessage = "Cập nhật lựa chọn: {$optionText}";
+            if (!empty($changes)) {
+                $logMessage .= " | Thay đổi: " . implode(', ', $changes);
+            }
+            
+            // Ghi audit log
             $this->auditLogService->log(
                 $question->survey_id,
                 'update',
                 'option',
                 $id,
-                "Cập nhật lựa chọn: {$optionText}"
+                $logMessage
             );
             
             return $option;

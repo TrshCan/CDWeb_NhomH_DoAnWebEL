@@ -65,7 +65,53 @@ class SurveyService
     public function updateSurvey($id, array $input)
     {
         try {
+            // Lấy thông tin survey trước khi cập nhật
+            $oldSurvey = $this->surveyRepository->findById($id);
+            
+            // Cập nhật survey
             $survey = $this->surveyRepository->update($id, $input);
+            
+            // Tạo log chi tiết về những gì đã thay đổi
+            $changes = [];
+            
+            // Kiểm tra các field quan trọng
+            $fieldLabels = [
+                'title' => 'Tiêu đề',
+                'description' => 'Mô tả',
+                'type' => 'Loại',
+                'object' => 'Đối tượng',
+                'status' => 'Trạng thái',
+                'start_at' => 'Thời gian bắt đầu',
+                'end_at' => 'Thời gian kết thúc',
+                'time_limit' => 'Giới hạn thời gian',
+                'points' => 'Điểm',
+                'allow_review' => 'Cho phép xem lại',
+            ];
+            
+            foreach ($fieldLabels as $field => $label) {
+                if (isset($input[$field]) && $oldSurvey->$field != $input[$field]) {
+                    $oldValue = $oldSurvey->$field;
+                    $newValue = $input[$field];
+                    
+                    // Format giá trị boolean
+                    if (is_bool($oldValue) || is_bool($newValue)) {
+                        $oldValue = $oldValue ? 'Có' : 'Không';
+                        $newValue = $newValue ? 'Có' : 'Không';
+                    }
+                    
+                    // Format giá trị rỗng
+                    $oldValue = $oldValue ?: '(trống)';
+                    $newValue = $newValue ?: '(trống)';
+                    
+                    $changes[] = "{$label}: \"{$oldValue}\" → \"{$newValue}\"";
+                }
+            }
+            
+            // Tạo message log
+            $logMessage = "Cập nhật cài đặt survey: {$survey->title}";
+            if (!empty($changes)) {
+                $logMessage .= " | Thay đổi: " . implode(', ', $changes);
+            }
             
             // Ghi audit log
             $this->auditLogService->log(
@@ -73,7 +119,7 @@ class SurveyService
                 'update',
                 'survey',
                 $id,
-                "Cập nhật cài đặt survey: {$survey->title}"
+                $logMessage
             );
             
             return $survey;

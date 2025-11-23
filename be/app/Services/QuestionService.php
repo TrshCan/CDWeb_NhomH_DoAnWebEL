@@ -70,7 +70,39 @@ class QuestionService
     public function updateQuestion($id, array $input)
     {
         try {
+            // Lấy thông tin câu hỏi trước khi cập nhật
+            $oldQuestion = $this->questionRepository->findById($id);
+            
+            // Cập nhật câu hỏi
             $question = $this->questionRepository->update($id, $input);
+            
+            // Tạo log chi tiết về những gì đã thay đổi
+            $changes = [];
+            
+            // Kiểm tra các field quan trọng
+            $fieldLabels = [
+                'question_text' => 'Nội dung câu hỏi',
+                'question_type' => 'Loại câu hỏi',
+                'required' => 'Bắt buộc',
+                'help_text' => 'Văn bản trợ giúp',
+                'max_length' => 'Độ dài tối đa',
+                'points' => 'Điểm',
+                'question_code' => 'Mã câu hỏi',
+            ];
+            
+            foreach ($fieldLabels as $field => $label) {
+                if (isset($input[$field]) && $oldQuestion->$field != $input[$field]) {
+                    $oldValue = $oldQuestion->$field ?: '(trống)';
+                    $newValue = $input[$field] ?: '(trống)';
+                    $changes[] = "{$label}: \"{$oldValue}\" → \"{$newValue}\"";
+                }
+            }
+            
+            // Tạo message log
+            $logMessage = "Cập nhật câu hỏi: {$question->question_text}";
+            if (!empty($changes)) {
+                $logMessage .= " | Thay đổi: " . implode(', ', $changes);
+            }
             
             // Ghi audit log
             $this->auditLogService->log(
@@ -78,7 +110,7 @@ class QuestionService
                 'update',
                 'question',
                 $id,
-                "Cập nhật câu hỏi: {$question->question_text}"
+                $logMessage
             );
             
             return $question;
