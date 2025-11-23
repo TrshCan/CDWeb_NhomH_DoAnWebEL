@@ -13,15 +13,6 @@ class SurveyQuestion extends Model
     protected $fillable = ['survey_id', 'question_text', 'question_type', 'points'];
     use HasFactory;
 
-    protected $table = 'survey_questions';
-
-    protected $fillable = [
-        'survey_id',
-        'question_text',
-        'question_type',
-        'points',
-    ];
-
     protected $casts = [
         'points' => 'integer',
     ];
