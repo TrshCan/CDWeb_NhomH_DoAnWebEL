@@ -4,6 +4,7 @@ import { Chart, registerables } from "chart.js";
 import toast from "react-hot-toast";
 import { getSurveyRawData, getSurveyOverview } from "../api/graphql/survey";
 import "../assets/css/RawDataList.css";
+import "../assets/css/BackButton.css";
 import { exportSurveyOverviewCSV } from "../utils/exports/overview/csv";
 import { exportSurveyOverviewExcel } from "../utils/exports/overview/excel";
 import { exportSurveyOverviewPDF } from "../utils/exports/overview/pdf";
@@ -362,9 +363,8 @@ export default function SurveyOverview() {
     <div className="raw-data-list-page">
       <div className="raw-data-container">
         {/* Back Button */}
-        <button onClick={handleGoBack} className="back-button">
+        <button onClick={handleGoBack} className="enhanced-back-button">
           <svg
-            className="w-5 h-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

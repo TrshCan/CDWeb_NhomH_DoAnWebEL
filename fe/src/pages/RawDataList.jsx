@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Chart, registerables } from "chart.js";
 import toast from "react-hot-toast";
 import "../assets/css/RawDataList.css";
+import "../assets/css/BackButton.css";
 import { getSurveyRawData } from "../api/graphql/survey";
 import { exportSurveyRawCSV as exportCSV, sanitizeFileName } from "../utils/exports/surveyRaw/csv";
 import { exportSurveyRawExcel as exportExcel } from "../utils/exports/surveyRaw/excel";
@@ -460,9 +461,8 @@ export default function RawDataList() {
     <div className="raw-data-list-page">
       <div className="raw-data-container">
         {/* Back Button */}
-        <button onClick={handleGoBack} className="back-button">
+        <button onClick={handleGoBack} className="enhanced-back-button">
           <svg
-            className="w-5 h-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

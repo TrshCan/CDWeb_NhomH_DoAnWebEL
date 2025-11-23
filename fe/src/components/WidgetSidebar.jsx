@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getTodayEvents, getUpcomingDeadlines } from "../api/graphql/widget";
+import "../assets/css/WidgetSidebar.css";
 
 export default function WidgetSidebar() {
   const [events, setEvents] = useState([]);
@@ -258,7 +259,7 @@ export default function WidgetSidebar() {
       {/* Modal */}
       {selectedItem && (
         <div
-          className={`fixed inset-0 flex items-center justify-center z-50 px-4 transition-all duration-300 ${
+          className={`widget-modal-overlay fixed inset-0 flex items-center justify-center z-50 px-4 transition-all duration-300 ${
             showModal ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         >
@@ -272,7 +273,7 @@ export default function WidgetSidebar() {
 
           {/* Modal Content */}
           <div
-            className={`bg-white rounded-2xl shadow-2xl max-w-lg w-full relative transform transition-all duration-300 overflow-hidden ${
+            className={`widget-modal-content bg-white rounded-2xl shadow-2xl max-w-lg w-full relative transform transition-all duration-300 overflow-hidden ${
               showModal ? "scale-100 opacity-100" : "scale-95 opacity-0"
             }`}
             onClick={(e) => e.stopPropagation()}
@@ -285,66 +286,68 @@ export default function WidgetSidebar() {
                   : getDeadlineGradient(selectedItem.deadline_date).header
               } p-6 pb-20 relative`}
             >
-              <button
-                onClick={closeModal}
-                className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-2 transition-all"
-                aria-label="Close modal"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <div className="flex items-center justify-between text-white mb-4">
+                <div className="flex items-center space-x-3 flex-1">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
+                    {modalType === "event" ? (
+                      <svg
+                        className="w-8 h-8"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="w-8 h-8"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-white/80 uppercase tracking-wide">
+                      {modalType === "event" ? "Campus Event" : "Deadline"}
+                    </p>
+                    <h2 className="text-xl font-bold mt-1">
+                      {selectedItem.title}
+                    </h2>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={closeModal}
+                  className="text-white hover:bg-white/20 rounded-full p-2 transition-all flex-shrink-0"
+                  aria-label="Close modal"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-
-              <div className="flex items-center space-x-3 text-white">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
-                  {modalType === "event" ? (
-                    <svg
-                      className="w-8 h-8"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-8 h-8"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">
-                    {modalType === "event" ? "Campus Event" : "Deadline"}
-                  </p>
-                  <h2 className="text-xl font-bold mt-1">
-                    {selectedItem.title}
-                  </h2>
-                </div>
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
               </div>
             </div>
 

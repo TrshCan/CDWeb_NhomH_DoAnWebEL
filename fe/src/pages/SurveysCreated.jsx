@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import "../assets/css/SurveysMade.css";
+import "../assets/css/BackButton.css";
 import { getSurveysMadeByUser, updateSurvey } from "../api/graphql/survey";
 import EditSurveyModal from "../components/EditSurveyModal";
+import CreateSurveyModal from "../components/CreateSurveyModal";
 
 
 const formatDate = (dateString) => {
@@ -25,6 +27,7 @@ export default function SurveysCreated() {
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedSurveyId, setSelectedSurveyId] = useState(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Load surveys from API
   useEffect(() => {
@@ -104,8 +107,7 @@ export default function SurveysCreated() {
 
   // Action handlers
   const handleCreateSurvey = () => {
-    toast.success("Chuyển hướng đến trang Tạo Khảo sát Mới...");
-    // navigate("/surveys/create");
+    setIsCreateModalOpen(true);
   };
 
   const handleViewResults = (surveyId, surveyTitle) => {
@@ -156,6 +158,33 @@ export default function SurveysCreated() {
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedSurveyId(null);
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+  };
+
+  const handleSaveCreate = async (newSurvey) => {
+    try {
+      // Refresh the surveys list to get the latest data
+      const userIdStr = localStorage.getItem("userId");
+      if (userIdStr) {
+        const data = await getSurveysMadeByUser(parseInt(userIdStr));
+        const mapped = (data || []).map((s) => ({
+          id: s.id,
+          title: s.title,
+          createdDate: s.created_at,
+          endDate: s.end_at,
+          status: s.status,
+          responses: Number(s.responses ?? 0),
+        }));
+        setSurveys(mapped);
+        setFilteredSurveys(mapped);
+      }
+    } catch (error) {
+      console.error("Error refreshing surveys list:", error);
+      // Don't show error toast as the modal already handled the creation
+    }
   };
 
   const handleDuplicateSurvey = (surveyId, surveyTitle) => {
@@ -213,11 +242,15 @@ export default function SurveysCreated() {
         surveyId={selectedSurveyId}
         onSave={handleSaveEdit}
       />
+      <CreateSurveyModal
+        isOpen={isCreateModalOpen}
+        onClose={handleCloseCreateModal}
+        onSave={handleSaveCreate}
+      />
       <div className="surveys-made-container">
         {/* Back Button */}
-        <button onClick={handleGoBack} className="back-button">
+        <button onClick={handleGoBack} className="enhanced-back-button">
           <svg
-            className="w-5 h-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
