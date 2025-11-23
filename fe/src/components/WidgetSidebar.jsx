@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getTodayEvents, getUpcomingDeadlines } from "../api/graphql/widget";
 import "../assets/css/WidgetSidebar.css";
+import { useNavigate } from "react-router-dom";
 
 export default function WidgetSidebar() {
   const [events, setEvents] = useState([]);
@@ -9,7 +10,9 @@ export default function WidgetSidebar() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalType, setModalType] = useState(null);
   const [showModal, setShowModal] = useState(false);
-
+const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -85,6 +88,12 @@ export default function WidgetSidebar() {
     setTimeout(() => setSelectedItem(null), 200);
   };
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`); // ✅ redirect
+  };
+
   // 🧱 Skeleton Loader
   if (loading) {
     return (
@@ -129,13 +138,18 @@ export default function WidgetSidebar() {
   return (
     <aside className="w-full lg:w-1/3 space-y-6 p-4 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
       {/* Search Box */}
-      <div className="bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-all">
+      <form
+        onSubmit={handleSearchSubmit}
+        className="bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-all"
+      >
         <input
           type="text"
           placeholder="Search events, clubs, people..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-gray-100 border border-gray-200 rounded-full px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:bg-white transition-all"
         />
-      </div>
+      </form>
 
       {/* Events */}
       <div className="bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-all">
@@ -242,7 +256,7 @@ export default function WidgetSidebar() {
                   </p>
                   {d.details && (
                     <p className="text-xs text-gray-500">
-                      {truncateText(d.details, 50)}
+                      {truncateText(d.details, 10)}
                     </p>
                   )}
                 </div>

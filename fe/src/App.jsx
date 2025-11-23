@@ -29,12 +29,14 @@ import ResponseDetail from "./pages/ResponseDetail.jsx";
 import SurveysCompleted from "./pages/SurveysCompleted.jsx";
 import SurveyJoin from "./pages/SurveyJoin.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-
+import Search from './components/SearchResult';
 export default function App() {
   return (
     <Routes>
       {/* Layout chính */}
       <Route path="/" element={<MainLayout />}>
+      <Route path="explore" element={<Search />} />
+          <Route path="search" element={<Search />} />
         {/* các route con  */}
         <Route index element={<Feed />} /> {/* mặc định là Feed */}
         <Route path="profile" element={<Profile />} />

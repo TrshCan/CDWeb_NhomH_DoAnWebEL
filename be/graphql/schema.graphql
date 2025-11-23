@@ -17,6 +17,7 @@ type Query {
 #import types/event.graphql
 #import types/survey.graphql
 #import types/surveyJoin.graphql
+#import types/searchResult.graphql
 
 # Import inputs
 #import inputs/postCreateInput.graphql
@@ -31,6 +32,7 @@ type Query {
 #import queries/adminUserQueries.graphql
 #import queries/adminBadgeQueries.graphql
 #import queries/surveyJoinQueries.graphql
+#import queries/searchQueries.graphql
 
 # Import mutations
 #import mutations/postMutations.graphql
