@@ -3,6 +3,8 @@ type Survey {
     title: String!
     description: String
     categories_id: Int!
+    category: Category
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@resolveCategory")
     type: String
     start_at: String
     end_at: String
@@ -12,7 +14,7 @@ type Survey {
     created_by: Int!
     creator_name: String
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@resolveCreatorName")
-    status: String! # ✅ thêm trạng thái
+    status: String!
     created_at: String
     updated_at: String
 }

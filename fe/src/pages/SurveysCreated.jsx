@@ -24,7 +24,7 @@ export default function SurveysCreated() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedSurvey, setSelectedSurvey] = useState(null);
+  const [selectedSurveyId, setSelectedSurveyId] = useState(null);
 
   // Load surveys from API
   useEffect(() => {
@@ -112,12 +112,9 @@ export default function SurveysCreated() {
     navigate(`/surveys/${surveyId}/overview`);
   };
 
-  const handleEditSurvey = (surveyId, surveyTitle) => {
-    const survey = surveys.find((s) => s.id === surveyId);
-    if (survey) {
-      setSelectedSurvey(survey);
-      setIsEditModalOpen(true);
-    }
+  const handleEditSurvey = (surveyId) => {
+    setSelectedSurveyId(surveyId);
+    setIsEditModalOpen(true);
   };
 
   const handleSaveEdit = async (surveyId, updatedData) => {
@@ -139,7 +136,7 @@ export default function SurveysCreated() {
 
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
-    setSelectedSurvey(null);
+    setSelectedSurveyId(null);
   };
 
   const handleDuplicateSurvey = (surveyId, surveyTitle) => {
@@ -194,7 +191,7 @@ export default function SurveysCreated() {
       <EditSurveyModal
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
-        survey={selectedSurvey}
+        surveyId={selectedSurveyId}
         onSave={handleSaveEdit}
       />
       <div className="surveys-made-container">
@@ -423,7 +420,7 @@ export default function SurveysCreated() {
                           </svg>
                         </button>
                         <button
-                          onClick={() => handleEditSurvey(survey.id, survey.title)}
+                          onClick={() => handleEditSurvey(survey.id)}
                           className="action-button action-button-edit"
                           title="Chỉnh sửa"
                         >

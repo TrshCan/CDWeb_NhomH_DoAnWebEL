@@ -173,6 +173,42 @@ class SurveyResolver
         return $this->service->listCompletedByUser($userId);
     }
 
+    /**
+     * @param  mixed  $_
+     * @param  array<string, mixed>  $args
+     */
+    public function surveyDetails($_, array $args)
+    {
+        // Verify authentication
+        $token = request()->bearerToken();
+        if (!$token) {
+            throw new \Exception('Authentication required');
+        }
+
+        $user = \App\Models\User::where('remember_token', $token)->first();
+        if (!$user) {
+            throw new \Exception('Invalid or expired token');
+        }
+
+        $surveyId = (int) ($args['surveyId'] ?? 0);
+        if ($surveyId <= 0) {
+            return null;
+        }
+
+        // Get the survey
+        $survey = \App\Models\Survey::find($surveyId);
+        if (!$survey) {
+            throw new \Exception('Survey not found');
+        }
+
+        // Verify the user owns this survey
+        if ($survey->created_by !== $user->id) {
+            throw new \Exception('Unauthorized: You can only view details for your own surveys');
+        }
+
+        return $survey;
+    }
+
     public function list($_, array $args)
     {
         $perPage = $args['per_page'] ?? 100;
@@ -398,5 +434,19 @@ class SurveyResolver
         }
 
         return null;
+    }
+
+    /**
+     * Field resolver để resolve category
+     * Tự động load từ relationship nếu chưa có
+     */
+    public function resolveCategory($root)
+    {
+        // Load từ relationship nếu chưa được load
+        if (!$root->relationLoaded('category')) {
+            $root->load('category');
+        }
+
+        return $root->category;
     }
 }

@@ -1,36 +1,66 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { getSurveyDetails, getCategories } from "../api/graphql/survey";
 import "../assets/css/EditSurveyModal.css";
 
-export default function EditSurveyModal({ isOpen, onClose, survey, onSave }) {
+export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    category: "",
+    categories_id: "",
     start_at: "",
     end_at: "",
     object: "",
     status: "draft",
-    allow_review: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
 
-  // Populate form when survey changes
+  // Fetch categories on mount
   useEffect(() => {
-    if (survey) {
-      setFormData({
-        title: survey.title || "",
-        description: survey.description || "",
-        category: survey.category || "",
-        start_at: survey.start_at || "",
-        end_at: survey.end_at || "",
-        object: survey.object || "",
-        status: survey.status || "draft",
-        allow_review: survey.allow_review || false,
-      });
-    }
-  }, [survey]);
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        toast.error("Không thể tải danh mục");
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Fetch survey details when modal opens
+  useEffect(() => {
+    const fetchSurveyDetails = async () => {
+      if (!isOpen || !surveyId) return;
+      
+      setIsLoading(true);
+      try {
+        const survey = await getSurveyDetails(surveyId);
+        setFormData({
+          title: survey.title || "",
+          description: survey.description || "",
+          categories_id: survey.categories_id || "",
+          start_at: survey.start_at || "",
+          end_at: survey.end_at || "",
+          object: survey.object || "",
+          status: survey.status || "draft",
+        });
+      } catch (error) {
+        console.error("Error fetching survey details:", error);
+        toast.error("Không thể tải thông tin khảo sát");
+        onClose();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSurveyDetails();
+  }, [isOpen, surveyId, onClose]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -60,7 +90,12 @@ export default function EditSurveyModal({ isOpen, onClose, survey, onSave }) {
 
     setIsSubmitting(true);
     try {
-      await onSave(survey.id, formData);
+      // Convert categories_id to integer before sending
+      const dataToSave = {
+        ...formData,
+        categories_id: formData.categories_id ? parseInt(formData.categories_id, 10) : null,
+      };
+      await onSave(surveyId, dataToSave);
       toast.success("Cập nhật khảo sát thành công");
       onClose();
     } catch (error) {
@@ -82,7 +117,7 @@ export default function EditSurveyModal({ isOpen, onClose, survey, onSave }) {
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isLoading}
           >
             <svg
               className="w-6 h-6"
@@ -100,8 +135,34 @@ export default function EditSurveyModal({ isOpen, onClose, survey, onSave }) {
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="p-12 flex flex-col items-center justify-center">
+            <svg
+              className="animate-spin h-12 w-12 text-indigo-600 mb-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            <p className="text-gray-600">Đang tải thông tin khảo sát...</p>
+          </div>
+        ) : (
+          /* Form */
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Title */}
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
@@ -140,23 +201,23 @@ export default function EditSurveyModal({ isOpen, onClose, survey, onSave }) {
           {/* Category and Object */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="categories_id" className="block text-sm font-medium text-gray-700 mb-1">
                 Danh mục
               </label>
               <select
-                id="category"
-                name="category"
-                value={formData.category}
+                id="categories_id"
+                name="categories_id"
+                value={formData.categories_id}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 disabled={isSubmitting}
               >
                 <option value="">Chọn danh mục</option>
-                <option value="education">Giáo dục</option>
-                <option value="health">Sức khỏe</option>
-                <option value="technology">Công nghệ</option>
-                <option value="business">Kinh doanh</option>
-                <option value="other">Khác</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -173,11 +234,9 @@ export default function EditSurveyModal({ isOpen, onClose, survey, onSave }) {
                 disabled={isSubmitting}
               >
                 <option value="">Chọn đối tượng</option>
-                <option value="students">Sinh viên</option>
-                <option value="teachers">Giảng viên</option>
-                <option value="staff">Nhân viên</option>
                 <option value="public">Công chúng</option>
-                <option value="other">Khác</option>
+                <option value="students">Sinh viên</option>
+                <option value="lecturers">Giảng viên</option>
               </select>
             </div>
           </div>
@@ -228,26 +287,11 @@ export default function EditSurveyModal({ isOpen, onClose, survey, onSave }) {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               disabled={isSubmitting}
             >
-              <option value="draft">Nháp</option>
-              <option value="open">Đang mở</option>
+              <option value="pending">Chờ duyệt</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="paused">Tạm dừng</option>
               <option value="closed">Đã đóng</option>
             </select>
-          </div>
-
-          {/* Allow Review */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="allow_review"
-              name="allow_review"
-              checked={formData.allow_review}
-              onChange={handleChange}
-              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-              disabled={isSubmitting}
-            />
-            <label htmlFor="allow_review" className="ml-2 text-sm text-gray-700">
-              Cho phép người tham gia xem lại câu trả lời
-            </label>
           </div>
 
           {/* Actions */}
@@ -295,6 +339,7 @@ export default function EditSurveyModal({ isOpen, onClose, survey, onSave }) {
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

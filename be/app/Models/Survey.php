@@ -22,19 +22,21 @@ class Survey extends Model
         'object',
         'created_by',
         'status',
-        'allow_review', // ✅ thêm dòng này
     ];
-
 
     protected $casts = [
         'start_at' => 'datetime',
         'end_at' => 'datetime',
-        'allow_review' => 'boolean',
     ];
 
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'categories_id');
     }
 
     public function questions()

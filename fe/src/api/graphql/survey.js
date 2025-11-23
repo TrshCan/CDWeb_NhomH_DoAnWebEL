@@ -245,6 +245,35 @@ export async function submitSurveyAnswers(surveyId, answers) {
   return response.data.data.submitSurveyAnswers;
 }
 
+// Get survey details for editing
+export async function getSurveyDetails(surveyId) {
+  const query = `
+    query ($surveyId: Int!) {
+      surveyDetails(surveyId: $surveyId) {
+        id
+        title
+        description
+        categories_id
+        start_at
+        end_at
+        object
+        status
+      }
+    }
+  `;
+
+  const response = await graphqlClient.post("", {
+    query,
+    variables: { surveyId: parseInt(surveyId, 10) },
+  });
+
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+
+  return response.data.data.surveyDetails;
+}
+
 // Update survey
 export async function updateSurvey(surveyId, input) {
   const mutation = `
@@ -253,12 +282,11 @@ export async function updateSurvey(surveyId, input) {
         id
         title
         description
-        category
+        categories_id
         start_at
         end_at
         object
         status
-        allow_review
       }
     }
   `;
@@ -276,4 +304,24 @@ export async function updateSurvey(surveyId, input) {
   }
 
   return response.data.data.updateSurvey;
+}
+
+// Get all categories
+export async function getCategories() {
+  const query = `
+    query {
+      categories {
+        id
+        name
+      }
+    }
+  `;
+
+  const response = await graphqlClient.post("", { query });
+
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+
+  return response.data.data.categories;
 }
