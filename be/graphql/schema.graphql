@@ -128,6 +128,9 @@ extend type Mutation {
 
     deleteCategory(id: Int!, allowIfReferenced: Boolean): Boolean!
         @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@delete")
+
+    restoreCategory(id: Int!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@restore")
 }
 
 
