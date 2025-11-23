@@ -2,35 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import "../assets/css/SurveysMade.css";
-import { getSurveysMadeByUser } from "../api/graphql/survey";
+import { getSurveysMadeByUser, updateSurvey } from "../api/graphql/survey";
+import EditSurveyModal from "../components/EditSurveyModal";
 
-// Mock data - replace with actual API calls later
-const mockSurveys = [
-  {
-    id: 1,
-    title: "Khảo sát Mức độ Hài lòng với Trang Social",
-    createdDate: "2025-09-01",
-    endDate: "2025-09-25",
-    status: "closed",
-    responses: 150,
-  },
-  {
-    id: 2,
-    title: "Đánh giá Đề cương môn học - Cấu trúc Dữ liệu",
-    createdDate: "2025-10-15",
-    endDate: "2025-11-30",
-    status: "open",
-    responses: 85,
-  },
-  {
-    id: 3,
-    title: "Định hướng Đồ án Tốt nghiệp - Khóa 2021",
-    createdDate: "2025-11-01",
-    endDate: null,
-    status: "draft",
-    responses: 0,
-  },
-];
 
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -49,6 +23,8 @@ export default function SurveysCreated() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedSurvey, setSelectedSurvey] = useState(null);
 
   // Load surveys from API
   useEffect(() => {
@@ -137,8 +113,33 @@ export default function SurveysCreated() {
   };
 
   const handleEditSurvey = (surveyId, surveyTitle) => {
-    toast.success(`Chỉnh sửa: ${surveyTitle}`);
-    // navigate(`/surveys/${surveyId}/edit`);
+    const survey = surveys.find((s) => s.id === surveyId);
+    if (survey) {
+      setSelectedSurvey(survey);
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleSaveEdit = async (surveyId, updatedData) => {
+    try {
+      // Call API to update survey
+      const updated = await updateSurvey(surveyId, updatedData);
+      
+      // Update local state with the response
+      setSurveys(
+        surveys.map((s) =>
+          s.id === surveyId ? { ...s, ...updated } : s
+        )
+      );
+    } catch (error) {
+      console.error("Error updating survey:", error);
+      throw error; // Re-throw to let modal handle the error
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedSurvey(null);
   };
 
   const handleDuplicateSurvey = (surveyId, surveyTitle) => {
@@ -190,6 +191,12 @@ export default function SurveysCreated() {
 
   return (
     <div className="surveys-made-page">
+      <EditSurveyModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        survey={selectedSurvey}
+        onSave={handleSaveEdit}
+      />
       <div className="surveys-made-container">
         {/* Back Button */}
         <button onClick={handleGoBack} className="back-button">

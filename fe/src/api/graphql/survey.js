@@ -244,3 +244,36 @@ export async function submitSurveyAnswers(surveyId, answers) {
 
   return response.data.data.submitSurveyAnswers;
 }
+
+// Update survey
+export async function updateSurvey(surveyId, input) {
+  const mutation = `
+    mutation ($id: Int!, $input: UpdateSurveyInput!) {
+      updateSurvey(id: $id, input: $input) {
+        id
+        title
+        description
+        category
+        start_at
+        end_at
+        object
+        status
+        allow_review
+      }
+    }
+  `;
+
+  const response = await graphqlClient.post("", {
+    query: mutation,
+    variables: {
+      id: parseInt(surveyId, 10),
+      input,
+    },
+  });
+
+  if (response.data.errors) {
+    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+  }
+
+  return response.data.data.updateSurvey;
+}
