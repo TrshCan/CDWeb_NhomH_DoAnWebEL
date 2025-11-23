@@ -5,7 +5,7 @@
 #import duplicate.graphql
 #import StateManagement.graphql
 type Query {
-    _empty: String
+    _empty: String @field(resolver: "App\\GraphQL\\Queries\\EmptyResolver")
 }
 
 # Import all your types
@@ -18,6 +18,8 @@ type Query {
 #import types/survey.graphql
 #import types/surveyJoin.graphql
 #import types/searchResult.graphql
+#import types/group.graphql
+#import types/joinRequest.graphql
 
 # Import inputs
 #import inputs/postCreateInput.graphql
@@ -33,12 +35,14 @@ type Query {
 #import queries/adminBadgeQueries.graphql
 #import queries/surveyJoinQueries.graphql
 #import queries/searchQueries.graphql
+#import queries/joinRequestQueries.graphql
 
 # Import mutations
 #import mutations/postMutations.graphql
 #import mutations/userMutations.graphql
 #import mutations/adminUserMutations.graphql
 #import mutations/adminBadgeMutations.graphql
+#import mutations/groupMutations.graphql
 
 # Your custom root mutations (login, register) – move them to a file or use extend
 extend type Mutation {

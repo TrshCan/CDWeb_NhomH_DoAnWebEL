@@ -30,11 +30,16 @@ import SurveysCompleted from "./pages/SurveysCompleted.jsx";
 import SurveyJoin from "./pages/SurveyJoin.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Search from './components/SearchResult';
+import Group from "./components/Group";
+import GroupDetail from "./components/GroupDetail";
+
 export default function App() {
   return (
     <Routes>
       {/* Layout chính */}
       <Route path="/" element={<MainLayout />}>
+      <Route path="group" element={<Group />} />
+        <Route path="group/:groupId" element={<GroupDetail />} />
       <Route path="explore" element={<Search />} />
           <Route path="search" element={<Search />} />
         {/* các route con  */}

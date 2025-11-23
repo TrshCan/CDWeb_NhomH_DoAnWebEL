@@ -57,6 +57,7 @@ function LoginForm() {
             id
             name
             email
+            role
           }
         }
       }

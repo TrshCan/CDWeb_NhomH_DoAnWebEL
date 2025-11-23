@@ -101,6 +101,14 @@ class User extends Authenticatable implements MustVerifyEmail
             ->withPivot(['granted_at', 'granted_by']);
     }
 
+    // User belongs to many groups through group_members
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class, 'group_members', 'user_id', 'group_id')
+            ->withPivot(['role', 'joined_at'])
+            ->wherePivotNull('deleted_at');
+    }
+
     // ============================
     // 🔹 BOOT METHOD - Auto-generate student_code
     // ============================

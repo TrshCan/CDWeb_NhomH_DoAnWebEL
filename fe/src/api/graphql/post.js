@@ -171,6 +171,44 @@ export const getPostsByType = async (type) => {
   return response.data.data.postsByType;
 };
 
+export const getPostsByGroup = async (groupId) => {
+  const query = `
+    query ($group_id: ID!) {
+      postsByGroup(group_id: $group_id) {
+        id
+        type
+        content
+        created_at
+        user {
+          id
+          name
+        }
+        media {
+          id
+          url
+        }
+      }
+    }
+  `;
+  
+  try {
+    const response = await graphqlClient.post("", { 
+      query, 
+      variables: { group_id: groupId.toString() } 
+    });
+    
+    if (response.data.errors) {
+      console.error("GraphQL errors:", response.data.errors);
+      throw new Error(response.data.errors[0]?.message || "GraphQL error");
+    }
+    
+    return response.data.data.postsByGroup;
+  } catch (error) {
+    console.error("getPostsByGroup failed:", error);
+    throw error;
+  }
+};
+
 export const createPost = async (input, files = []) => {
   console.log('createPost input:', input);
   console.log('createPost files:', files.length, files.map(f => f.name));

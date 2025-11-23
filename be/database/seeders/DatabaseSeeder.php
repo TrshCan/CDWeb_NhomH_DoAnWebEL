@@ -235,6 +235,7 @@ class DatabaseSeeder extends Seeder
             DB::table('groups')->insert([
                 'name' => "Group $i",
                 'description' => "Group description $i",
+                'code' => strtoupper(Str::random(6)),
                 'created_by' => rand(1, 10),
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -800,5 +801,19 @@ class DatabaseSeeder extends Seeder
         // End of Survey Seeder
         // ================================================================
 // ================================================================
+
+// ===== Join Requests =====
+        $statuses = ['pending', 'approved', 'rejected'];
+
+        for ($i = 0; $i < 20; $i++) {
+            DB::table('join_requests')->insert([
+                'user_id' => rand(1, 10),
+                'group_id' => rand(1, 10),
+                'status' => $statuses[array_rand($statuses)],
+                'created_by' => rand(1, 10),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 }

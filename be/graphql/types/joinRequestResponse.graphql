@@ -1,0 +1,5 @@
+type JoinRequestResponse {
+  success: Boolean!
+  message: String
+  joinRequest: JoinRequest
+}

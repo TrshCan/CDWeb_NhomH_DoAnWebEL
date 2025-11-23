@@ -1,6 +1,5 @@
 import {
   require_react_dom
-<<<<<<< HEAD
 } from "./chunk-JF7IVAG4.js";
 import {
   require_react
@@ -9,14 +8,6 @@ import {
   __commonJS,
   __toESM
 } from "./chunk-G3PMV62Z.js";
-=======
-} from "./chunk-QS7ZE27V.js";
-import {
-  __commonJS,
-  __toESM,
-  require_react
-} from "./chunk-OBOR3357.js";
->>>>>>> Kiet/MainPage
 
 // node_modules/cookie/dist/index.js
 var require_dist = __commonJS({
