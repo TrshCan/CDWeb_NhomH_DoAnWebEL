@@ -10,11 +10,9 @@ export default function Sidebar() {
   const [userRole, setUserRole] = useState(null);
   const [showSurveysExpanded, setShowSurveysExpanded] = useState(false);
 
-  // Check login status based on token and load user role
+  // Check login status based on token
   const checkLoginStatus = async () => {
     const token = localStorage.getItem("token");
-    const userId = localStorage.getItem("userId");
-    
     setIsLoggedIn(!!token);
 
     // Fetch user role if logged in
@@ -77,18 +75,10 @@ export default function Sidebar() {
       path: "/explore",
     },
     {
-      label: "Khảo sát",
+      label: "Surveys",
       icon: "M9 17v-2h6v2H9zm-4 4h14a1 1 0 001-1V4a1 1 0 00-1-1H5a1 1 0 00-1 1v16a1 1 0 001 1zM7 7h10v2H7V7z",
       path: "/surveys",
       requiresAuth: true,
-      hideForStudent: true, // Ẩn menu này nếu user là student
-    },
-     {
-      label: "Quản lý trạng thái",
-      icon: "M9 17v-2h6v2H9zm-4 4h14a1 1 0 001-1V4a1 1 0 00-1-1H5a1 1 0 00-1 1v16a1 1 0 001 1zM7 7h10v2H7V7z",
-      path: "/statemanagement",
-      requiresAuth: true,
-      hideForStudent: true, // Ẩn menu này nếu user là student
     },
     {
       label: "Profile",
@@ -98,20 +88,10 @@ export default function Sidebar() {
     },
   ];
 
-  // Filter links based on auth and role
-  const visibleLinks = allLinks.filter((link) => {
-    // Kiểm tra yêu cầu đăng nhập
-    if (link.requiresAuth && !isLoggedIn) {
-      return false;
-    }
-    
-    // Ẩn Surveys nếu user là student
-    if (link.hideForStudent && userRole === 'student') {
-      return false;
-    }
-    
-    return true;
-  });
+  // Filter links based on auth
+  const visibleLinks = allLinks.filter(
+    (link) => !link.requiresAuth || isLoggedIn
+  );
 
   // Handle navigation with auth check
   const handleLinkClick = (e, path, requiresAuth, isSurveys = false) => {
@@ -163,7 +143,7 @@ export default function Sidebar() {
     <>
       <Toaster position="top-center" reverseOrder={false} />
 
-      <aside className="w-16 lg:w-1/4 bg-white rounded-r-lg shadow p-4 flex flex-col space-y-2 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
+      <aside className="w-16 md:w-20 lg:w-64 bg-white rounded-r-lg shadow p-3 lg:p-4 flex flex-col space-y-2 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
         <nav className="flex flex-col space-y-2 flex-grow">
           {visibleLinks.map((item, index) => {
             // Special handling for Surveys expandable section
@@ -185,7 +165,7 @@ export default function Sidebar() {
                     }`}
                   >
                     <svg
-                      className="w-5 h-5"
+                      className="w-5 h-5 flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -198,11 +178,11 @@ export default function Sidebar() {
                         d={item.icon}
                       />
                     </svg>
-                    <span className="hidden lg:inline flex-1 text-left">
+                    <span className="hidden lg:inline flex-1 text-left text-sm">
                       {item.label}
                     </span>
                     <svg
-                      className={`w-4 h-4 hidden lg:block transition-transform duration-200 ${
+                      className={`w-4 h-4 hidden lg:block transition-transform duration-200 flex-shrink-0 ${
                         showSurveysExpanded ? "rotate-180" : ""
                       }`}
                       fill="none"
@@ -220,19 +200,19 @@ export default function Sidebar() {
 
                   {/* Expanded Sub-items */}
                   {showSurveysExpanded && (
-                    <div className="flex flex-col space-y-1 mt-1 ml-2 lg:ml-4 border-l-2 border-cyan-200 pl-2">
+                    <div className="hidden lg:flex flex-col space-y-1 mt-1 ml-4 border-l-2 border-cyan-200 pl-2">
                       {isLecturerOrAdmin && (
                         <Link
                           to="/surveys/created"
                           onClick={() => setShowSurveysExpanded(true)}
-                          className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-150 ${
+                          className={`flex items-center space-x-2 p-1.5 rounded-lg transition-all duration-150 ${
                             location.pathname === "/surveys/created"
                               ? "bg-cyan-100 text-cyan-700 font-medium"
                               : "text-gray-600 hover:bg-cyan-50 hover:text-cyan-600"
                           }`}
                         >
                           <svg
-                            className="w-4 h-4"
+                            className="w-4 h-4 flex-shrink-0"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -245,22 +225,20 @@ export default function Sidebar() {
                               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                             />
                           </svg>
-                          <span className="hidden lg:inline text-sm">
-                            Surveys I Made
-                          </span>
+                          <span className="text-xs">Surveys I Made</span>
                         </Link>
                       )}
                       <Link
                         to="/surveys/completed"
                         onClick={() => setShowSurveysExpanded(true)}
-                        className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-150 ${
+                        className={`flex items-center space-x-2 p-1.5 rounded-lg transition-all duration-150 ${
                           location.pathname === "/surveys/did"
                             ? "bg-cyan-100 text-cyan-700 font-medium"
                             : "text-gray-600 hover:bg-cyan-50 hover:text-cyan-600"
                         }`}
                       >
                         <svg
-                          className="w-4 h-4"
+                          className="w-4 h-4 flex-shrink-0"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -273,9 +251,7 @@ export default function Sidebar() {
                             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
                           />
                         </svg>
-                        <span className="hidden lg:inline text-sm">
-                          Surveys I Did
-                        </span>
+                        <span className="text-xs">Surveys I Did</span>
                       </Link>
                     </div>
                   )}
@@ -284,6 +260,7 @@ export default function Sidebar() {
             }
 
             // Regular link
+            const isActive = location.pathname === item.path;
             return (
               <Link
                 key={index}
@@ -291,10 +268,14 @@ export default function Sidebar() {
                 onClick={(e) =>
                   handleLinkClick(e, item.path, item.requiresAuth)
                 }
-                className="flex items-center space-x-2 text-cyan-600 hover:bg-cyan-50 p-2 rounded-lg cursor-pointer transition-all duration-150"
+                className={`flex items-center space-x-2 p-2 rounded-lg cursor-pointer transition-all duration-150 ${
+                  isActive
+                    ? "bg-cyan-100 text-cyan-700"
+                    : "text-cyan-600 hover:bg-cyan-50"
+                }`}
               >
                 <svg
-                  className="w-5 h-5"
+                  className="w-5 h-5 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -307,22 +288,21 @@ export default function Sidebar() {
                     d={item.icon}
                   />
                 </svg>
-                <span className="hidden lg:inline">{item.label}</span>
+                <span className="hidden lg:inline text-sm">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
         {/* Auth Section */}
-        <div className="mt-auto pt-4 border-t border-gray-200">
+        <div className="mt-auto pt-3 border-t border-gray-200">
           {!isLoggedIn ? (
             <Link
               to="/login"
-              className="w-full flex items-center justify-center text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg p-2 transition-all duration-150"
+              className="w-full flex items-center justify-center lg:justify-start lg:space-x-2 text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg p-2 transition-all duration-150"
             >
-              <span className="hidden lg:inline font-medium">Login</span>
               <svg
-                className="w-5 h-5 lg:ml-2"
+                className="w-5 h-5 flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -334,15 +314,15 @@ export default function Sidebar() {
                   d="M15 12H3m12 0l-4 4m4-4l-4-4m6 8V4a1 1 0 011-1h3a1 1 0 011 1v16a1 1 0 01-1 1h-3a1 1 0 01-1-1z"
                 />
               </svg>
+              <span className="hidden lg:inline font-medium text-sm">Login</span>
             </Link>
           ) : (
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center text-white bg-rose-600 hover:bg-rose-700 rounded-lg p-2 transition-all duration-150"
+              className="w-full flex items-center justify-center lg:justify-start lg:space-x-2 text-white bg-rose-600 hover:bg-rose-700 rounded-lg p-2 transition-all duration-150"
             >
-              <span className="hidden lg:inline font-medium">Logout</span>
               <svg
-                className="w-5 h-5 lg:ml-2"
+                className="w-5 h-5 flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -354,6 +334,7 @@ export default function Sidebar() {
                   d="M9 12h12m0 0l-4-4m4 4l-4 4M5 20h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
+              <span className="hidden lg:inline font-medium text-sm">Logout</span>
             </button>
           )}
         </div>

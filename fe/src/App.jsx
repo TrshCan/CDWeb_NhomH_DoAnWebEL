@@ -82,8 +82,8 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/email-verified" element={<EmailVerificationResult />} />
-      <Route path="surveys" element={<Survey />} />
-      <Route path="statemanagement" element={<StateManagement />} />
+      <Route path="/surveys" element={<Survey />} />
+      <Route path="/statemanagement" element={<StateManagement />} />
 
       {/* Admin routes */}
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
