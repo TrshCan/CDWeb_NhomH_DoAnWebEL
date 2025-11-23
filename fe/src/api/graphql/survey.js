@@ -300,7 +300,9 @@ export async function updateSurvey(surveyId, input) {
   });
 
   if (response.data.errors) {
-    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+    const error = new Error(response.data.errors[0]?.message || "GraphQL error");
+    error.graphQLErrors = response.data.errors;
+    throw error;
   }
 
   return response.data.data.updateSurvey;

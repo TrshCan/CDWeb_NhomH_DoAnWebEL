@@ -117,20 +117,39 @@ export default function SurveysCreated() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEdit = async (surveyId, updatedData) => {
+  const handleSaveEdit = async (surveyId, updatedSurvey) => {
     try {
-      // Call API to update survey
-      const updated = await updateSurvey(surveyId, updatedData);
-      
+      // The modal now handles the API call directly and passes the updated survey
       // Update local state with the response
       setSurveys(
         surveys.map((s) =>
-          s.id === surveyId ? { ...s, ...updated } : s
+          s.id === surveyId ? { 
+            ...s, 
+            title: updatedSurvey.title || s.title,
+            endDate: updatedSurvey.end_at || s.endDate,
+            status: updatedSurvey.status || s.status,
+          } : s
         )
       );
+      
+      // Refresh the surveys list to get the latest data
+      const userIdStr = localStorage.getItem("userId");
+      if (userIdStr) {
+        const data = await getSurveysMadeByUser(parseInt(userIdStr));
+        const mapped = (data || []).map((s) => ({
+          id: s.id,
+          title: s.title,
+          createdDate: s.created_at,
+          endDate: s.end_at,
+          status: s.status,
+          responses: Number(s.responses ?? 0),
+        }));
+        setSurveys(mapped);
+        setFilteredSurveys(mapped);
+      }
     } catch (error) {
       console.error("Error updating survey:", error);
-      throw error; // Re-throw to let modal handle the error
+      // Don't re-throw since modal already handled the API call
     }
   };
 

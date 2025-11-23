@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { getSurveyDetails, getCategories } from "../api/graphql/survey";
+import { getSurveyDetails, getCategories, updateSurvey } from "../api/graphql/survey";
 import "../assets/css/EditSurveyModal.css";
 
 export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
@@ -41,12 +41,20 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
       setIsLoading(true);
       try {
         const survey = await getSurveyDetails(surveyId);
+        
+        // Convert backend datetime format (Y-m-d H:i:s) to datetime-local format (Y-m-d\TH:i)
+        const formatDateTimeLocal = (dateStr) => {
+          if (!dateStr) return "";
+          // Remove seconds and replace space with T
+          return dateStr.substring(0, 16).replace(' ', 'T');
+        };
+        
         setFormData({
           title: survey.title || "",
           description: survey.description || "",
           categories_id: survey.categories_id || "",
-          start_at: survey.start_at || "",
-          end_at: survey.end_at || "",
+          start_at: formatDateTimeLocal(survey.start_at),
+          end_at: formatDateTimeLocal(survey.end_at),
           object: survey.object || "",
           status: survey.status || "draft",
         });
@@ -90,17 +98,69 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
 
     setIsSubmitting(true);
     try {
-      // Convert categories_id to integer before sending
+      // Prepare data for backend
       const dataToSave = {
-        ...formData,
+        title: formData.title.trim(),
+        description: formData.description.trim() || null,
         categories_id: formData.categories_id ? parseInt(formData.categories_id, 10) : null,
+        object: formData.object || null,
+        status: formData.status,
       };
-      await onSave(surveyId, dataToSave);
+
+      // Convert datetime-local format to backend format (Y-m-d H:i:s)
+      if (formData.start_at) {
+        dataToSave.start_at = formData.start_at.replace('T', ' ') + ':00';
+      }
+      if (formData.end_at) {
+        dataToSave.end_at = formData.end_at.replace('T', ' ') + ':00';
+      }
+
+      // Remove null/empty values to avoid validation errors
+      Object.keys(dataToSave).forEach(key => {
+        if (dataToSave[key] === null || dataToSave[key] === '') {
+          delete dataToSave[key];
+        }
+      });
+
+      // Call the API directly to save to database
+      const updatedSurvey = await updateSurvey(surveyId, dataToSave);
+      
+      // Call the parent callback to refresh the list
+      if (onSave) {
+        await onSave(surveyId, updatedSurvey);
+      }
+      
       toast.success("Cập nhật khảo sát thành công");
       onClose();
     } catch (error) {
       console.error("Error updating survey:", error);
-      toast.error(error.message || "Không thể cập nhật khảo sát");
+      
+      // Try to extract validation errors from GraphQL response
+      let errorMessage = "Không thể cập nhật khảo sát";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Check for validation errors in the error object
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        const validationError = error.graphQLErrors[0];
+        if (validationError.extensions?.validation) {
+          // Show first validation error
+          const validationFields = Object.keys(validationError.extensions.validation);
+          if (validationFields.length > 0) {
+            const firstField = validationFields[0];
+            const fieldErrors = validationError.extensions.validation[firstField];
+            if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+              errorMessage = fieldErrors[0];
+            }
+          }
+        } else if (validationError.message) {
+          errorMessage = validationError.message;
+        }
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
