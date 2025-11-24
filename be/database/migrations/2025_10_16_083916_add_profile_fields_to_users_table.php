@@ -44,9 +44,17 @@ return new class extends Migration {
 
             // Xoá các cột đã thêm
             $table->dropColumn([
-                'phone','address','role','class_id','faculty_id',
-                'status_id','ban_reason','point','deleted_at'
+                'phone',
+                'address',
+                'role',
+                'class_id',
+                'faculty_id',
+                'status_id',
+                'ban_reason',
+                'point',
+                'deleted_at'
             ]);
         });
     }
 };
+

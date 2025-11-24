@@ -20,11 +20,6 @@ type SurveyRawData {
   responses: [SurveyRawDataResponse!]!
 }
 
-type SurveyOption {
-  id: ID!
-  option_text: String!
-}
-
 type QuestionAnswerStat {
   option_text: String
   count: Int

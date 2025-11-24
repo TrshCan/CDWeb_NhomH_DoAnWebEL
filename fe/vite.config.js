@@ -10,4 +10,16 @@ export default defineConfig({
       "lucide-react": "lucide-react/dist/esm/lucide-react.js",
     },
   },
+  server: {
+    proxy: {
+      '/graphql': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      }
+    }
+  }
 })

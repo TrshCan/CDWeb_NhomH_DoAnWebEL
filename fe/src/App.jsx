@@ -32,6 +32,7 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Search from "./components/SearchResult";
 import Group from "./components/Group";
 import GroupDetail from "./components/GroupDetail";
+import SurveyForm from "./components/SurveyForm";
 
 export default function App() {
   return (
@@ -98,6 +99,15 @@ export default function App() {
         element={
           <ProtectedRoute>
             <ResponseDetail />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/surveys/:surveyId/edit"
+        element={
+          <ProtectedRoute>
+            <SurveyForm />
           </ProtectedRoute>
         }
       />

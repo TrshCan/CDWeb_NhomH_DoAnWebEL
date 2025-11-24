@@ -1,0 +1,540 @@
+import React, { useState, useRef } from "react";
+import { ChevronDownIcon, PlusIcon } from "../icons";
+import QuestionTypeSelectModal from "./QuestionTypeSelectModal";
+import ConditionDesigner from "./ConditionDesigner";
+
+// Component cho segmented control 3 nút (Bật, Soft, Tắt) hoặc 2 nút (Bật, Tắt)
+function SegmentedControl({ value, onChange, options = ["Bật", "Soft", "Tắt"] }) {
+  const getActiveIndex = () => {
+    // Xử lý cho 2 options (Bật, Tắt)
+    if (options.length === 2) {
+      if (value === true || value === "hard" || value === "Bật") return 0;
+      if (value === false || value === "none" || value === "Tắt") return 1;
+      return 0; // mặc định là Bật
+    }
+    // Xử lý cho 3 options (Bật, Soft, Tắt)
+    if (value === true || value === "hard" || value === "Bật") return 0;
+    if (value === "soft" || value === "Soft") return 1;
+    if (value === false || value === "none" || value === "Tắt") return 2;
+    return 1; // mặc định là Soft
+  };
+
+  const activeIndex = getActiveIndex();
+
+  return (
+    <div className="flex w-full h-10 rounded-sm overflow-hidden bg-gray-500 p-1">
+      {options.map((option, index) => {
+        const isActive = index === activeIndex;
+        return (
+          <button
+            key={option}
+            type="button"
+            className={`flex-1 text-sm font-semibold ${
+              isActive
+                ? "bg-white text-gray-900"
+                : "bg-gray-500 text-white hover:bg-gray-600"
+            }`}
+            onClick={() => {
+              // Xử lý cho 2 options (Bật, Tắt)
+              if (options.length === 2) {
+                if (index === 0) onChange(true); // Bật
+                else onChange(false); // Tắt
+              } else {
+                // Xử lý cho 3 options (Bật, Soft, Tắt) - Trả về enum string
+                if (index === 0) onChange("hard"); // Bật = hard (bắt buộc)
+                else if (index === 1) onChange("soft"); // Soft = soft (cảnh báo)
+                else onChange("none"); // Tắt = none (không bắt buộc)
+              }
+            }}
+          >
+            {option}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function QuestionSettingsPanel({
+  value = {},
+  onChange,
+  onClose,
+  questionItems = [],
+  currentQuestionId = null,
+}) {
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [showConditionDesigner, setShowConditionDesigner] = useState(false);
+  const [maxLengthError, setMaxLengthError] = useState("");
+  const typeButtonRef = useRef(null);
+
+  const {
+    questionCode: rawQuestionCode = "",
+    type = "Danh sách (nút chọn)",
+    required = "soft",
+    image = null,
+    conditions = [],
+    defaultScenario = 1,
+    maxQuestions = 1,
+    allowedFileTypes = "png, gif, doc, odt, jpg, jpeg, pdf",
+    maxFileSizeKB = 10241,
+    numericOnly = false,
+    maxLength,
+  } = value;
+
+  // Xử lý questionCode: nếu rỗng thì hiển thị placeholder
+  const questionCode = rawQuestionCode && rawQuestionCode.trim() !== "" 
+    ? rawQuestionCode 
+    : ""; // Hiển thị rỗng nếu chưa có, backend sẽ tự tạo
+
+  // Giá trị mặc định cho maxLength dựa trên loại câu hỏi
+  const defaultMaxLength = type === "Văn bản dài" ? 2500 : type === "Văn bản ngắn" ? 256 : 256;
+  const currentMaxLength = maxLength !== undefined ? maxLength : defaultMaxLength;
+
+
+  const handleImageDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer?.files[0] || e.target?.files[0];
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        onChange?.({ ...value, image: event.target.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageClick = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = handleImageDrop;
+    input.click();
+  };
+
+  // Nếu đang hiển thị Condition Designer, render nó thay vì settings
+  if (showConditionDesigner) {
+    return (
+      <ConditionDesigner
+        value={{
+          conditions,
+          defaultScenario,
+        }}
+        onChange={(conditionData) => {
+          onChange?.({
+            ...value,
+            conditions: conditionData.conditions,
+            defaultScenario: conditionData.defaultScenario,
+          });
+        }}
+        onClose={() => setShowConditionDesigner(false)}
+        isEmbedded={true}
+        questionItems={questionItems}
+        currentQuestionId={currentQuestionId}
+      />
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-white">
+      {/* Header */}
+      <div className="px-4 pt-4">
+        <div className="h-12 bg-gray-200 flex items-center justify-between px-4">
+          <span className="font-semibold text-gray-800">Cài đặt câu hỏi</span>
+          <button
+            type="button"
+            className="p-1 rounded hover:bg-gray-200"
+            onClick={onClose}
+            aria-label="Đóng"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 mt-4">
+        <div className="space-y-6">
+          {/* Question Code */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-900">
+              Question code
+            </label>
+            <input
+              type="text"
+              value={questionCode}
+              onChange={(e) =>
+                onChange?.({ ...value, questionCode: e.target.value })
+              }
+              placeholder="Backend sẽ tự động tạo (Q001, Q002...)"
+              className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Type (Loại) */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-900">
+              Loại
+            </label>
+            <button
+              ref={typeButtonRef}
+              type="button"
+              onClick={() => setIsTypeModalOpen(true)}
+              className="w-full flex items-center justify-between px-3 py-2 border-[2px] border-gray-600 rounded-sm bg-white text-sm hover:bg-gray-50 text-left"
+            >
+              <span className={type ? "text-gray-800" : "text-gray-400"}>
+                {type || "Chọn loại câu hỏi"}
+              </span>
+              <ChevronDownIcon />
+            </button>
+          </div>
+
+          {/* Required Status (Tính bắt buộc) */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-900">
+              Tính bắt buộc
+            </label>
+            <SegmentedControl
+              value={required}
+              onChange={(newRequired) =>
+                onChange?.({ ...value, required: newRequired })
+              }
+            />
+          </div>
+
+          {/* Số ký tự tối đa - chỉ hiển thị cho Văn bản ngắn, Văn bản dài, Nhiều văn bản ngắn */}
+          {(type === "Văn bản ngắn" || type === "Văn bản dài" || type === "Nhiều văn bản ngắn") && (
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-900">
+                Số ký tự tối đa
+              </label>
+              <input
+                type="number"
+                value={currentMaxLength || ""}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  // Nếu input rỗng, cho phép xóa
+                  if (inputValue === "") {
+                    setMaxLengthError("");
+                    onChange?.({
+                      ...value,
+                      maxLength: "",
+                    });
+                    return;
+                  }
+                  const numValue = parseInt(inputValue);
+                  // Kiểm tra nếu không phải số hợp lệ
+                  if (isNaN(numValue) || numValue < 1) {
+                    setMaxLengthError("Vui lòng nhập số lớn hơn 0");
+                    // Không cập nhật giá trị nếu không hợp lệ
+                    return;
+                  }
+                  // Kiểm tra nếu vượt quá 2500 - KHÔNG cho phép nhập
+                  if (numValue > 2500) {
+                    setMaxLengthError("Số ký tự tối đa không được vượt quá 2500");
+                    // Không cập nhật giá trị, giữ nguyên giá trị cũ
+                    return;
+                  }
+                  // Nếu hợp lệ, cập nhật và xóa lỗi
+                  setMaxLengthError("");
+                  onChange?.({
+                    ...value,
+                    maxLength: numValue,
+                  });
+                }}
+                onKeyDown={(e) => {
+                  // Ngăn chặn nhập nếu giá trị hiện tại đã là 2500 và đang cố nhập thêm
+                  const currentValue = parseInt(e.target.value) || 0;
+                  // Nếu đã đạt 2500 và đang nhập số hoặc các phím tăng giá trị
+                  if (currentValue >= 2500) {
+                    // Cho phép xóa, backspace, delete, arrow keys, tab
+                    const allowedKeys = [
+                      "Backspace",
+                      "Delete",
+                      "ArrowLeft",
+                      "ArrowRight",
+                      "ArrowUp",
+                      "ArrowDown",
+                      "Tab",
+                      "Home",
+                      "End",
+                    ];
+                    // Nếu là số và giá trị hiện tại >= 2500, không cho nhập
+                    if (
+                      !allowedKeys.includes(e.key) &&
+                      !e.ctrlKey &&
+                      !e.metaKey &&
+                      /[0-9]/.test(e.key)
+                    ) {
+                      // Kiểm tra nếu nhập số mới sẽ vượt quá 2500
+                      const newValue = parseInt(
+                        e.target.value + e.key
+                      );
+                      if (newValue > 2500) {
+                        e.preventDefault();
+                        setMaxLengthError(
+                          "Số ký tự tối đa không được vượt quá 2500"
+                        );
+                      }
+                    }
+                  }
+                }}
+                onBlur={(e) => {
+                  // Khi blur, nếu có lỗi hoặc giá trị không hợp lệ thì reset về giá trị hợp lệ
+                  const currentValue = parseInt(e.target.value);
+                  if (isNaN(currentValue) || currentValue < 1) {
+                    onChange?.({
+                      ...value,
+                      maxLength: defaultMaxLength,
+                    });
+                    setMaxLengthError("");
+                  } else if (currentValue > 2500) {
+                    onChange?.({
+                      ...value,
+                      maxLength: 2500,
+                    });
+                    setMaxLengthError("");
+                  } else if (maxLengthError) {
+                    // Nếu có lỗi nhưng giá trị hợp lệ, xóa lỗi
+                    setMaxLengthError("");
+                  }
+                }}
+                min="1"
+                max="2500"
+                className={`w-full px-3 py-2 border-[2px] rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
+                  maxLengthError
+                    ? "border-red-500"
+                    : "border-gray-600"
+                }`}
+              />
+              {maxLengthError && (
+                <div className="mt-1 text-sm text-red-600">{maxLengthError}</div>
+              )}
+            </div>
+          )}
+
+          {/* File Upload Settings - chỉ hiển thị cho loại "Tải lên tệp" */}
+          {type === "Tải lên tệp" && (
+            <>
+              {/* Số lượng tệp cho phép */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-900">
+                  Số lượng tệp cho phép
+                </label>
+                <input
+                  type="number"
+                  value={maxQuestions}
+                  onChange={(e) =>
+                    onChange?.({
+                      ...value,
+                      maxQuestions: parseInt(e.target.value) || 1,
+                    })
+                  }
+                  min="1"
+                  className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Loại tập tin được cho phép */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-900">
+                  Loại tập tin được cho phép
+                </label>
+                <input
+                  type="text"
+                  value={allowedFileTypes}
+                  onChange={(e) =>
+                    onChange?.({
+                      ...value,
+                      allowedFileTypes: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="png, gif, doc, odt, jpg, jpeg, pdf"
+                />
+              </div>
+
+              {/* Kích thước tệp tối đa (kB) */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-900">
+                  Kích thước tệp tối đa (kB)
+                </label>
+                <input
+                  type="number"
+                  value={maxFileSizeKB}
+                  onChange={(e) =>
+                    onChange?.({
+                      ...value,
+                      maxFileSizeKB: parseInt(e.target.value) || 10241,
+                    })
+                  }
+                  min="1"
+                  className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Short Text Settings - chỉ hiển thị cho loại "Văn bản ngắn" */}
+          {type === "Văn bản ngắn" && (
+            <>
+              {/* Chỉ số */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-900">
+                  Chỉ số
+                </label>
+                <SegmentedControl
+                  value={numericOnly}
+                  onChange={(newValue) =>
+                    onChange?.({
+                      ...value,
+                      numericOnly: newValue === true,
+                    })
+                  }
+                  options={["Bật", "Tắt"]}
+                />
+              </div>
+
+              {/* số ký tự tối đa */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-900">
+                  số ký tự tối đa
+                </label>
+                <input
+                  type="number"
+                  value={maxLength}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value) || 256;
+                    // Giới hạn tối đa là 256
+                    const limitedValue = Math.min(newValue, 256);
+                    onChange?.({
+                      ...value,
+                      maxLength: limitedValue,
+                    });
+                  }}
+                  min="1"
+                  max="256"
+                  className="w-full px-3 py-2 border-[2px] border-gray-600 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Add Image */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-900">
+              Add image
+            </label>
+            <div
+              onClick={handleImageClick}
+              onDrop={handleImageDrop}
+              onDragOver={(e) => e.preventDefault()}
+              className="w-full border-2 border-dashed border-gray-300 rounded-sm p-8 text-center cursor-pointer hover:border-violet-500 transition-colors"
+            >
+              {image ? (
+                <div className="relative w-full">
+                  <img
+                    src={image}
+                    alt="Question"
+                    className="w-full h-auto"
+                    style={{
+                      display: "block",
+                      objectFit: "contain",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onChange?.({ ...value, image: null });
+                    }}
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="1.5"
+                      strokeLinecap="square"
+                      strokeLinejoin="miter"
+                    >
+                      <path d="M15.5355339 15.5355339L8.46446609 8.46446609M15.5355339 8.46446609L8.46446609 15.5355339" />
+                      <path d="M4.92893219,19.0710678 C1.02368927,15.1658249 1.02368927,8.83417511 4.92893219,4.92893219 C8.83417511,1.02368927 15.1658249,1.02368927 19.0710678,4.92893219 C22.9763107,8.83417511 22.9763107,15.1658249 19.0710678,19.0710678 C15.1658249,22.9763107 8.83417511,22.9763107 4.92893219,19.0710678 Z" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-12 w-12 mx-auto text-gray-400 mb-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                  <p className="text-sm text-gray-600">Thả hình ảnh tại đây</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Conditional Designer */}
+          <div className="border-t border-gray-200 pt-6">
+            <label className="block text-sm font-medium mb-3 text-gray-700">
+              Trình thiết kế điều kiện
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowConditionDesigner(true)}
+              className="flex items-center text-gray-800 font-semibold hover:text-gray-900 transition-colors"
+            >
+              <div className="w-8 h-8 bg-gray-600 rounded-sm flex items-center justify-center mr-2">
+                <PlusIcon className="h-5 w-5 text-white" />
+              </div>
+              <span>Logic mới</span>
+            </button>
+            {conditions && conditions.length > 0 && (
+              <div className="mt-3 text-sm text-gray-600">
+                Đã có {conditions.length} điều kiện
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Question Type Select Modal - chỉ để thay đổi loại câu hỏi */}
+      <QuestionTypeSelectModal
+        isOpen={isTypeModalOpen}
+        onClose={() => setIsTypeModalOpen(false)}
+        onSelectQuestionType={(selectedType) => {
+          onChange?.({ ...value, type: selectedType });
+          setIsTypeModalOpen(false);
+        }}
+        triggerElement={typeButtonRef.current}
+      />
+    </div>
+  );
+}
+

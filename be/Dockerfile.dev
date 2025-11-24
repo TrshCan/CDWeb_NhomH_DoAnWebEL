@@ -3,7 +3,7 @@ FROM php:8.3-fpm
 
 # --- Install system dependencies ---
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libxml2-dev libzip-dev \
+    git curl zip unzip libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libxml2-dev libzip-dev tzdata \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
     && ln -snf /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime \

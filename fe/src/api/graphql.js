@@ -4,6 +4,7 @@ import axios from "axios";
 const GRAPHQL_URL = "http://127.0.0.1:8000/graphql";
 
 // --------------------------------------------------------
+//const GRAPHQL_URL = import.meta.env.VITE_GRAPHQL_URL || "/graphql";
 
 export const graphqlRequest = async (query, variables = {}) => {
   try {

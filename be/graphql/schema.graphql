@@ -4,6 +4,7 @@
 #import Survey.graphql
 #import duplicate.graphql
 #import StateManagement.graphql
+#import schema2.graphql
 type Query {
     _empty: String @field(resolver: "App\\GraphQL\\Queries\\EmptyResolver")
 }
@@ -20,6 +21,7 @@ type Query {
 #import types/searchResult.graphql
 #import types/group.graphql
 #import types/joinRequest.graphql
+#import types/joinRequestResponse.graphql
 #import types/permission.graphql
 
 # Import inputs
@@ -38,6 +40,7 @@ type Query {
 #import queries/searchQueries.graphql
 #import queries/joinRequestQueries.graphql
 #import queries/permissionQueries.graphql
+#import queries/groupQueries.graphql
 
 # Import mutations
 #import mutations/postMutations.graphql
@@ -46,6 +49,7 @@ type Query {
 #import mutations/adminBadgeMutations.graphql
 #import mutations/groupMutations.graphql
 #import mutations/permissionMutations.graphql
+#import mutations/joinRequestMutations.graphql
 
 # Your custom root mutations (login, register) – move them to a file or use extend
 extend type Mutation {
@@ -101,42 +105,4 @@ type UserBadge {
   created_at: DateTime
   assigned_at: DateTime
 }
-
-
-# --------------------------------------------
-# ----------------Category--------------------
-# --------------------------------------------
-type Category {
-    id: Int!
-    name: String
-    created_at: DateTime
-    updated_at: DateTime
-    deleted_at: DateTime
-}
-
-input CreateCategoryInput {
-    id: Int! # BẮT BUỘC vì PK smallint không auto-increment
-    name: String
-}
-
-input UpdateCategoryInput {
-    name: String
-}
-
-extend type Query {
-    categories: [Category!]!
-        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@list")
-}
-
-extend type Mutation {
-    createCategory(input: CreateCategoryInput!): Category
-        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@create")
-
-    updateCategory(id: Int!, input: UpdateCategoryInput!): Category
-        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@update")
-
-    deleteCategory(id: Int!, allowIfReferenced: Boolean): Boolean!
-        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@delete")
-}
-
 

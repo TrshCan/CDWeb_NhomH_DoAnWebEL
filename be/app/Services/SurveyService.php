@@ -11,17 +11,22 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Exception;
 use Illuminate\Support\Facades\Validator;
+use App\Services\AuditLogService;
 use Illuminate\Support\Facades\Log;
 
 class SurveyService
 {
     protected SurveyRepository $repo;
+    protected $surveyRepository;
+    protected $auditLogService;
 
-    public function __construct(SurveyRepository $repo)
+    public function __construct(SurveyRepository $repo, SurveyRepository $surveyRepository,
+        AuditLogService $auditLogService)
     {
         $this->repo = $repo;
+        $this->surveyRepository = $surveyRepository;
+        $this->auditLogService = $auditLogService;
     }
-
     public function listByCreatorWithStatus(int $createdBy)
     {
         $items = $this->repo->getByCreatorWithResponseCounts($createdBy);
@@ -539,7 +544,7 @@ class SurveyService
     /**
      * CẬP NHẬT KHẢO SÁT
      */
-    public function updateSurvey(int $id, array $data): Survey
+    public function updateSurvey2(int $id, array $data): Survey
     {
         // === KIỂM TRA QUYỀN: CHỈ ADMIN VÀ GIẢNG VIÊN ===
         $user = Auth::user();
@@ -684,7 +689,7 @@ class SurveyService
     /**
      * LẤY CHI TIẾT
      */
-    public function getSurveyById(int $id): Survey
+    public function getSurveyById2(int $id): Survey
     {
         try {
             // Kiểm tra survey có tồn tại không (bao gồm cả soft-deleted)
@@ -710,20 +715,150 @@ class SurveyService
                 throw $e;
             }
             Log::error('Lỗi tải chi tiết khảo sát', ['id' => $id, 'error' => $e->getMessage()]);
-            throw new Exception('Không thể tải chi tiết.', 500);
         }
     }
 
     /**
      * LẤY DANH SÁCH (có filter)
      */
-    public function getAllSurveys(int $perPage = 10, array $filters = [])
+    public function getAllSurveys2(int $perPage = 10, array $filters = [])
     {
         try {
             return $this->repo->getAllPaginated($perPage, $filters);
         } catch (\Exception $e) {
             Log::error('Lỗi tải danh sách khảo sát', ['error' => $e->getMessage()]);
             throw new Exception('Không thể tải danh sách khảo sát.', 500);
+        }
+    }
+
+     /**
+     * Lấy tất cả surveys
+     */
+    public function getAllSurveys(array $filters = [])
+    {
+        try {
+            return $this->surveyRepository->getAll($filters);
+        } catch (\Exception $e) {
+            Log::error('Error getting surveys: ' . $e->getMessage());
+            throw new \Exception('Không thể lấy danh sách surveys: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Lấy survey theo ID
+     */
+    public function getSurveyById($id)
+    {
+        try {
+            return $this->surveyRepository->findById($id);
+        } catch (\Exception $e) {
+            Log::error('Error getting survey: ' . $e->getMessage());
+            throw new \Exception('Không thể lấy thông tin survey: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Tạo survey mới
+     */
+    public function createSurvey2(array $input)
+    {
+        try {
+            $survey = $this->surveyRepository->create($input);
+            return $survey->load(['category', 'creator', 'questions', 'questionGroups']);
+        } catch (\Exception $e) {
+            Log::error('Error creating survey: ' . $e->getMessage());
+            throw new \Exception('Không thể tạo survey: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cập nhật survey
+     */
+    public function updateSurvey($id, array $input)
+    {
+        try {
+            // Lấy thông tin survey trước khi cập nhật
+            $oldSurvey = $this->surveyRepository->findById($id);
+            
+            // Cập nhật survey
+            $survey = $this->surveyRepository->update($id, $input);
+            
+            // Tạo log chi tiết về những gì đã thay đổi
+            $changes = [];
+            
+            // Kiểm tra các field quan trọng
+            $fieldLabels = [
+                'title' => 'Tiêu đề',
+                'description' => 'Mô tả',
+                'type' => 'Loại',
+                'object' => 'Đối tượng',
+                'status' => 'Trạng thái',
+                'start_at' => 'Thời gian bắt đầu',
+                'end_at' => 'Thời gian kết thúc',
+                'time_limit' => 'Giới hạn thời gian',
+                'points' => 'Điểm',
+                'allow_review' => 'Cho phép xem lại',
+            ];
+            
+            foreach ($fieldLabels as $field => $label) {
+                if (isset($input[$field]) && $oldSurvey->$field != $input[$field]) {
+                    $oldValue = $oldSurvey->$field;
+                    $newValue = $input[$field];
+                    
+                    // Format giá trị DateTime
+                    if ($oldValue instanceof \DateTime || $oldValue instanceof \DateTimeInterface) {
+                        $oldValue = $oldValue->format('Y-m-d H:i:s');
+                    }
+                    if ($newValue instanceof \DateTime || $newValue instanceof \DateTimeInterface) {
+                        $newValue = $newValue->format('Y-m-d H:i:s');
+                    }
+                    
+                    // Format giá trị boolean
+                    if (is_bool($oldValue) || is_bool($newValue)) {
+                        $oldValue = $oldValue ? 'Có' : 'Không';
+                        $newValue = $newValue ? 'Có' : 'Không';
+                    }
+                    
+                    // Format giá trị rỗng
+                    $oldValue = $oldValue ?: '(trống)';
+                    $newValue = $newValue ?: '(trống)';
+                    
+                    $changes[] = "{$label}: \"{$oldValue}\" → \"{$newValue}\"";
+                }
+            }
+            
+            // Tạo message log
+            $logMessage = "Cập nhật cài đặt survey: {$survey->title}";
+            if (!empty($changes)) {
+                $logMessage .= " | Thay đổi: " . implode(', ', $changes);
+            }
+            
+            // Ghi audit log
+            $this->auditLogService->log(
+                $id,
+                'update',
+                'survey',
+                $id,
+                $logMessage
+            );
+            
+            return $survey;
+        } catch (\Exception $e) {
+            Log::error('Error updating survey: ' . $e->getMessage());
+            throw new \Exception('Không thể cập nhật survey: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Lấy survey cho participant
+     */
+    public function getSurveyForParticipant($id)
+    {
+        try {
+            return $this->surveyRepository->findForParticipant($id);
+        } catch (\Exception $e) {
+            Log::error('Error getting survey for participant: ' . $e->getMessage());
+            throw new \Exception('Survey không tồn tại hoặc chưa được kích hoạt');
         }
     }
 }

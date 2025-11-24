@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'paths' => ['api/*', 'graphql', '*'], // Include your GraphQL endpoint
+    'paths' => ['api/*', 'graphql', '*', 'sanctum/csrf-cookie'], // Include your GraphQL endpoint
     'allowed_methods' => ['*'], // Allow all HTTP methods (GET, POST, OPTIONS, etc.)
     'allowed_origins' => ['*'], // Your Vite frontend URL
     'allowed_origins_patterns' => [],
