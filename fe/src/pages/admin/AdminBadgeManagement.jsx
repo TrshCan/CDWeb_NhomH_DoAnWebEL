@@ -16,7 +16,7 @@ export default function AdminBadgeManagement() {
     const [badges, setBadges] = useState([]);
     const [pagination, setPagination] = useState({
         currentPage: 1,
-        perPage: 10,
+        perPage: 5,
         total: 0,
         totalPages: 0,
         hasNextPage: false,
@@ -80,7 +80,7 @@ export default function AdminBadgeManagement() {
     useEffect(() => {
         fetchBadges();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pagination.currentPage, sortBy, sortOrder]);
+    }, [pagination.currentPage, pagination.perPage, sortBy, sortOrder]);
 
     // Fetch users chỉ một lần khi component mount
     useEffect(() => {
@@ -91,6 +91,16 @@ export default function AdminBadgeManagement() {
     // Handle pagination
     const handlePageChange = (newPage) => {
         setPagination((prev) => ({ ...prev, currentPage: newPage }));
+    };
+
+    // Handle per page change
+    const handlePerPageChange = (event) => {
+        const newPerPage = Number(event.target.value);
+        setPagination((prev) => ({
+            ...prev,
+            perPage: newPerPage,
+            currentPage: 1,
+        }));
     };
 
     // Handle sorting
@@ -610,7 +620,22 @@ export default function AdminBadgeManagement() {
                                 trong tổng số <span className="font-medium">{pagination.total}</span>{" "}
                                 badge
                             </div>
-                            <div className="flex space-x-2">
+                            <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-2 text-sm text-gray-700">
+                                    <span>Hiển thị</span>
+                                    <select
+                                        value={pagination.perPage}
+                                        onChange={handlePerPageChange}
+                                        className="border border-gray-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                    >
+                                        {[5, 10, 20, 50].map((size) => (
+                                            <option key={size} value={size}>
+                                                {size} / trang
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex space-x-2">
                                 <button
                                     onClick={() => handlePageChange(pagination.currentPage - 1)}
                                     disabled={!pagination.hasPrevPage}
@@ -670,17 +695,18 @@ export default function AdminBadgeManagement() {
                                             </button>
                                         );
                                     })}
-                                <button
-                                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                                    disabled={!pagination.hasNextPage}
-                                    className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                                        pagination.hasNextPage
-                                            ? "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-                                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                    }`}
-                                >
-                                    Trang sau »
-                                </button>
+                                    <button
+                                        onClick={() => handlePageChange(pagination.currentPage + 1)}
+                                        disabled={!pagination.hasNextPage}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                                            pagination.hasNextPage
+                                                ? "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+                                                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                        }`}
+                                    >
+                                        Trang sau »
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}

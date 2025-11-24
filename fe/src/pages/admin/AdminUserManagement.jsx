@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import AdminSidebar from "../../components/AdminSidebar";
 import {
     getAdminUsers,
@@ -43,34 +43,73 @@ export default function AdminUserManagement() {
         delete: null,
         toggle: null,
     });
+    const requestIdRef = useRef(0);
 
     // Fetch users
-    const fetchUsers = async () => {
-        setLoading(true);
-        try {
-            const result = await getAdminUsers(
-                pagination.currentPage,
-                pagination.perPage,
-                sortBy,
-                sortOrder
-            );
-            setUsers(result.data);
-            setPagination(result.pagination);
-        } catch (error) {
-            toast.error(error.message || "Không thể tải danh sách người dùng");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const fetchUsers = useCallback(
+        async (override = {}) => {
+            const page = override.page ?? pagination.currentPage;
+            const perPage = override.perPage ?? pagination.perPage;
+            const sortField = override.sortBy ?? sortBy;
+            const sortDirection = override.sortOrder ?? sortOrder;
+
+            const requestId = ++requestIdRef.current;
+            setLoading(true);
+
+            try {
+                const result = await getAdminUsers(
+                    page,
+                    perPage,
+                    sortField,
+                    sortDirection
+                );
+
+                if (requestId !== requestIdRef.current) return;
+
+                setUsers(result.data);
+                setPagination((prev) => {
+                    const next = {
+                        ...prev,
+                        ...result.pagination,
+                    };
+                    const isSame =
+                        prev.currentPage === next.currentPage &&
+                        prev.perPage === next.perPage &&
+                        prev.total === next.total &&
+                        prev.totalPages === next.totalPages &&
+                        prev.hasNextPage === next.hasNextPage &&
+                        prev.hasPrevPage === next.hasPrevPage;
+                    return isSame ? prev : next;
+                });
+            } catch (error) {
+                if (requestId === requestIdRef.current) {
+                    toast.error(error.message || "Không thể tải danh sách người dùng");
+                }
+            } finally {
+                if (requestId === requestIdRef.current) {
+                    setLoading(false);
+                }
+            }
+        },
+        [pagination.currentPage, pagination.perPage, sortBy, sortOrder]
+    );
 
     useEffect(() => {
         fetchUsers();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pagination.currentPage, sortBy, sortOrder]);
+    }, [fetchUsers]);
 
     // Handle pagination
     const handlePageChange = (newPage) => {
-        setPagination((prev) => ({ ...prev, currentPage: newPage }));
+        setPagination((prev) => {
+            if (
+                newPage === prev.currentPage ||
+                newPage < 1 ||
+                (prev.totalPages && newPage > prev.totalPages)
+            ) {
+                return prev;
+            }
+            return { ...prev, currentPage: newPage };
+        });
     };
 
     // Handle sorting
