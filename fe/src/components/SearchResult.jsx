@@ -23,6 +23,7 @@ export default function SearchResult() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [error, setError] = useState(null);
   const inputRef = useRef(null);
 
   // Whenever URL changes, update searchQuery
@@ -114,18 +115,47 @@ export default function SearchResult() {
     if (!searchQuery.trim()) {
       setResults({ posts: [], users: [] });
       setVisibleCount(10);
+      setError(null);
       return;
     }
 
     const timeout = setTimeout(async () => {
       setLoading(true);
       setFadeIn(false);
+      setError(null);
       try {
         const data = await searchAll(searchQuery);
         setResults(data);
         setVisibleCount(10);
       } catch (err) {
         console.error("Search failed:", err);
+        
+        // Extract error message
+        let errorMessage = "Tìm kiếm thất bại";
+        
+        if (err.graphQLErrors && err.graphQLErrors.length > 0) {
+          const firstError = err.graphQLErrors[0];
+          
+          if (firstError.extensions?.validation) {
+            const validationErrors = firstError.extensions.validation;
+            const validationMessages = Object.values(validationErrors)
+              .flat()
+              .filter(msg => msg && msg.trim() !== '');
+            
+            if (validationMessages.length > 0) {
+              errorMessage = validationMessages.join(', ');
+            }
+          }
+          
+          if (errorMessage === 'Tìm kiếm thất bại' && firstError.message) {
+            errorMessage = firstError.message;
+          }
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
+        setResults({ posts: [], users: [] });
       } finally {
         setLoading(false);
         setTimeout(() => setFadeIn(true), 100);
@@ -136,6 +166,11 @@ export default function SearchResult() {
   }, [searchQuery]);
 
   const filteredResults = (() => {
+    // Safety check to prevent null/undefined errors
+    if (!results || !results.posts || !results.users) {
+      return [];
+    }
+    
     switch (filter) {
       case "Announcement":
         return results.posts.filter(post => post.type === "announcement");
@@ -324,6 +359,29 @@ export default function SearchResult() {
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} type={filter === "User" ? "user" : "post"} />
           ))}
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <svg
+            className="w-12 h-12 text-red-400 mx-auto mb-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <p className="text-red-800 font-semibold mb-1">Lỗi tìm kiếm</p>
+          <p className="text-red-600 text-sm">{error}</p>
+          {searchQuery.length > 100 && (
+            <p className="text-red-500 text-xs mt-2">
+              Gợi ý: Vui lòng rút ngắn từ khóa tìm kiếm (tối đa 100 ký tự)
+            </p>
+          )}
         </div>
       ) : !searchQuery ? (
         <p className="text-gray-400 text-center italic">

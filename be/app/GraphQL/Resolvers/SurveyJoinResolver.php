@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class SurveyJoinResolver
 {
@@ -45,6 +46,9 @@ class SurveyJoinResolver
                 'success' => true,
                 'message' => 'Survey submitted successfully'
             ], $result);
+        } catch (ValidationException $e) {
+            $firstError = $e->validator->errors()->first() ?? 'Invalid answers payload';
+            return $this->buildErrorResponse($firstError);
         } catch (\Exception $e) {
             return $this->buildErrorResponse($e->getMessage());
         }

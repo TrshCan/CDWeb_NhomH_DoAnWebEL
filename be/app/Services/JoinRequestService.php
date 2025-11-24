@@ -8,6 +8,7 @@ use App\Repositories\GroupRepository;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Validator;
 use Exception;
 
 class JoinRequestService
@@ -29,6 +30,22 @@ class JoinRequestService
      */
     public function sendJoinRequest(User $user, string $code): array
     {
+        $code = strtoupper(trim($code));
+
+        $validator = Validator::make(
+            ['code' => $code],
+            ['code' => 'required|string|size:6|alpha_num'],
+            [],
+            ['code' => 'Group code']
+        );
+
+        if ($validator->fails()) {
+            return [
+                'success' => false,
+                'message' => $validator->errors()->first('code'),
+            ];
+        }
+
         // 1. Find the group
         $group = $this->groupRepo->findByCode($code);
 

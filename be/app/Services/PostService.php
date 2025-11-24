@@ -6,6 +6,7 @@ use App\Repositories\PostRepository;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
+
 class PostService
 {
     protected $repository;
@@ -56,17 +57,25 @@ class PostService
         \Log::debug('PostService create input:', $input);
         \Log::debug('PostService create media:', $media);
 
+        $input['content'] = isset($input['content']) ? trim($input['content']) : null;
+
         $validator = Validator::make($input, [
             'user_id' => 'required|exists:users,id',
             'group_id' => 'nullable|exists:groups,id',
             'parent_id' => 'nullable|exists:posts,id',
             'type' => 'nullable|string|max:50',
-            'content' => 'nullable|string',
+            'content' => 'nullable|string|max:2000',
         ]);
 
         if ($validator->fails()) {
             \Log::error('PostService validation failed:', $validator->errors()->toArray());
             throw new ValidationException($validator);
+        }
+
+        if (empty($input['content']) && empty($media)) {
+            throw ValidationException::withMessages([
+                'content' => 'Please provide text content or at least one media file.',
+            ]);
         }
 
         // ✅ Filter out null/empty files first
@@ -132,15 +141,33 @@ class PostService
 
     public function update(array $data)
     {
+        $data['content'] = isset($data['content']) ? trim($data['content']) : null;
+
         $validator = Validator::make($data, [
             'id' => 'required|exists:posts,id',
             'type' => 'nullable|string|max:50',
-            'content' => 'nullable|string',
+            'content' => 'nullable|string|max:2000',
             'media_url' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
             throw new ValidationException($validator);
+        }
+
+        if (
+            !array_key_exists('content', $data)
+            && !array_key_exists('media_url', $data)
+            && !array_key_exists('type', $data)
+        ) {
+            throw ValidationException::withMessages([
+                'content' => 'No changes detected. Please provide a new value to update.',
+            ]);
+        }
+
+        if (array_key_exists('content', $data) && $data['content'] === null && empty($data['media_url'])) {
+            throw ValidationException::withMessages([
+                'content' => 'Content cannot be empty unless you provide media.',
+            ]);
         }
 
         return $this->repository->update($data['id'], $data);

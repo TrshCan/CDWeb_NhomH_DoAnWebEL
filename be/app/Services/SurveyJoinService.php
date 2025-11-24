@@ -8,6 +8,8 @@ use App\Repositories\SurveyJoinRepository;
 use App\Repositories\SurveyShareRepository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class SurveyJoinService
 {
@@ -68,6 +70,8 @@ class SurveyJoinService
 
     public function submitAnswers(int $surveyId, array $answersInput, User $user): array
     {
+        $answersInput = $this->validateAndNormalizeSubmissionPayload($surveyId, $answersInput);
+
         return DB::transaction(function () use ($surveyId, $answersInput, $user) {
             $survey = $this->repository->getSurveyWithQuestionsAndOptions($surveyId);
             if (!$survey) {
@@ -169,5 +173,60 @@ class SurveyJoinService
             'created_at' => $now,
             'updated_at' => $now
         ])->toArray();
+    }
+
+    protected function validateAndNormalizeSubmissionPayload(int $surveyId, array $answersInput): array
+    {
+        $normalized = array_map(function ($answer) {
+            if (isset($answer['answer_text'])) {
+                $answer['answer_text'] = trim((string) $answer['answer_text']);
+                if ($answer['answer_text'] === '') {
+                    $answer['answer_text'] = null;
+                }
+            }
+
+            if (array_key_exists('selected_option_id', $answer) && $answer['selected_option_id'] !== null && $answer['selected_option_id'] !== '') {
+                $answer['selected_option_id'] = (int) $answer['selected_option_id'];
+            }
+
+            return $answer;
+        }, $answersInput);
+
+        $validator = Validator::make(
+            [
+                'survey_id' => $surveyId,
+                'answers' => $normalized,
+            ],
+            [
+                'survey_id' => 'required|integer|min:1',
+                'answers' => 'required|array|min:1',
+                'answers.*.question_id' => 'required|integer|min:1',
+                'answers.*.selected_option_id' => 'nullable|integer|min:1',
+                'answers.*.answer_text' => 'nullable|string|max:2000',
+            ],
+            [],
+            [
+                'answers.*.question_id' => 'question_id',
+                'answers.*.selected_option_id' => 'selected_option_id',
+                'answers.*.answer_text' => 'answer_text',
+            ]
+        );
+
+        $validator->after(function ($validator) use ($normalized) {
+            foreach ($normalized as $index => $answer) {
+                $hasOption = array_key_exists('selected_option_id', $answer) && $answer['selected_option_id'];
+                $hasText = isset($answer['answer_text']) && $answer['answer_text'] !== null;
+
+                if (!$hasOption && !$hasText) {
+                    $validator->errors()->add("answers.$index", 'Each answer must include either selected_option_id or answer_text.');
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return $normalized;
     }
 }

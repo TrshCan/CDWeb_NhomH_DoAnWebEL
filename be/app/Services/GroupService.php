@@ -6,6 +6,8 @@ use App\Repositories\GroupRepository;
 use App\Models\Group;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\Collection;
 
 class GroupService
@@ -45,7 +47,7 @@ class GroupService
     {
         $authenticatedUserId = Auth::id();
         $userId = $userId ?? $authenticatedUserId;
-        
+
         if (!$userId) {
             throw new \Exception('User must be authenticated to create a group');
         }
@@ -72,6 +74,7 @@ class GroupService
             }
         }
 
+        $data = $this->validateGroupPayload($data, false);
         $data['created_by'] = $data['created_by'] ?? $userId;
         $data['code'] = strtoupper(Str::random(6));
 
@@ -101,6 +104,8 @@ class GroupService
             return null;
         }
 
+        $data = $this->validateGroupPayload($data, true);
+
         return $this->groupRepo->update($group, $data);
     }
 
@@ -123,6 +128,17 @@ class GroupService
      */
     public function searchGroups(string $keyword): Collection
     {
+        $keyword = trim($keyword);
+
+        $validator = Validator::make(
+            ['keyword' => $keyword],
+            ['keyword' => 'required|string|min:2|max:100']
+        );
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
         return $this->groupRepo->search($keyword);
     }
 
@@ -202,5 +218,33 @@ class GroupService
 
         $role = optional($pivot->pivot)->role;
         return in_array($role, ['admin', 'moderator'], true);
+    }
+
+    protected function validateGroupPayload(array $data, bool $isUpdate = false): array
+    {
+        $rules = [
+            'name' => ($isUpdate ? 'sometimes' : 'required') . '|string|min:3|max:150',
+            'description' => 'nullable|string|max:1000',
+        ];
+
+        $validator = Validator::make($data, $rules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $validated = $validator->validated();
+
+        if (array_key_exists('name', $validated)) {
+            $data['name'] = trim($validated['name']);
+        }
+
+        if (array_key_exists('description', $validated)) {
+            $data['description'] = $validated['description'] !== null
+                ? trim($validated['description'])
+                : null;
+        }
+
+        return $data;
     }
 }
