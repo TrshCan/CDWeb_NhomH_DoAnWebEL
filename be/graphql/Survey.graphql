@@ -1,0 +1,73 @@
+type Survey {
+    id: ID!
+    title: String!
+    description: String
+    categories_id: Int!
+    category: Category
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@resolveCategory")
+    type: String
+    start_at: String
+    end_at: String
+    time_limit: Int
+    points: Int
+    object: String
+    created_by: Int!
+    creator_name: String
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@resolveCreatorName")
+    status: String!
+    created_at: String
+    updated_at: String
+}
+
+input SurveyInput {
+    title: String!
+    description: String
+    categories_id: Int!
+    type: String
+    start_at: String
+    end_at: String
+    time_limit: Int
+    points: Int
+    object: String
+    created_by: Int!
+    status: String # ✅ không bắt buộc
+}
+
+input UpdateSurveyInput {
+    title: String
+    description: String
+    categories_id: Int
+    type: String
+    start_at: String
+    end_at: String
+    time_limit: Int
+    points: Int
+    object: String
+    status: String # ✅ cho phép cập nhật trạng thái
+    updated_at: String # ✅ cho optimistic locking
+}
+
+input SurveyFilterInput {
+    categories_id: Int
+    type: String
+    status: String
+    keyword: String
+    created_by: Int
+    creator_name: String
+}
+
+extend type Query {
+    surveys(per_page: Int, filter: SurveyFilterInput): [Survey!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@list")
+    getSurveyById(id: Int!): Survey
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@getSurveyById")
+}
+
+extend type Mutation {
+    deleteSurvey(id: Int!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@deleteSurvey")
+    createSurvey(input: SurveyInput!): Survey!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@createSurvey")
+    updateSurvey(id: Int!, input: UpdateSurveyInput!): Survey
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@updateSurvey")
+}

@@ -1,0 +1,11 @@
+type Group {
+  id: ID!
+  name: String!
+  description: String
+  code: String!
+  created_by: Int
+  created_at: DateTime
+  updated_at: DateTime
+  creator: User
+  members: [User!] @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@members")
+}

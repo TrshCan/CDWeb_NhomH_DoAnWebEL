@@ -1,0 +1,19 @@
+extend type Mutation {
+    updateProfile(
+        user_id: Int!
+        name: String!
+        email: String!
+        address: String
+        password: String
+        password_confirmation: String
+        current_password: String
+        avatar: Upload
+    ): User
+    @field(resolver: "App\\GraphQL\\Resolvers\\UserManagementResolvers@updateProfile")
+    
+    toggleFollow(
+        follower_id: Int!
+        followed_id: Int!
+    ): Boolean
+    @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@toggleFollow")
+}

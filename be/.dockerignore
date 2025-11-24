@@ -1,0 +1,6 @@
+public/storage
+storage/*
+bootstrap/cache/*
+vendor/*
+node_modules/*
+.env

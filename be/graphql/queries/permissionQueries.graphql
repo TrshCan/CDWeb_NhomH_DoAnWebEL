@@ -1,0 +1,22 @@
+extend type Query {
+  # Lấy tất cả permissions theo nhóm
+  permissions: [PermissionGroup!]!
+    @field(resolver: "App\\GraphQL\\Resolvers\\PermissionResolver@getPermissions")
+    @guard
+
+  # Lấy quyền của một role
+  rolePermissions(role: String!): RolePermission
+    @field(resolver: "App\\GraphQL\\Resolvers\\PermissionResolver@getRolePermissions")
+    @guard
+
+  # Lấy quyền của một user
+  userPermissions(user_id: Int!): UserPermission
+    @field(resolver: "App\\GraphQL\\Resolvers\\PermissionResolver@getUserPermissions")
+    @guard
+
+  # Lấy danh sách users để chọn
+  usersForPermission: [UserOption!]!
+    @field(resolver: "App\\GraphQL\\Resolvers\\PermissionResolver@getUsersForPermission")
+    @guard
+}
+

@@ -1,0 +1,4 @@
+extend type Query {
+    upcomingDeadlines: [Deadline!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@upcoming")
+}

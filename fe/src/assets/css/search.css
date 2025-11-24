@@ -1,0 +1,80 @@
+/* ✨ SHIMMER ANIMATION ✨ */
+@keyframes shimmer {
+  0% {
+    background-position: -450px 0;
+  }
+  100% {
+    background-position: 450px 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    to right,
+    #e5e7eb 8%,
+    #f3f4f6 18%,
+    #e5e7eb 33%
+  );
+  background-size: 800px 104px;
+  animation: shimmer 1.3s infinite linear;
+}
+
+/* Skeleton Card Styles */
+.skeleton-card {
+  background: white;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.skeleton-title {
+  height: 1rem;
+  width: 25%;
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-line {
+  height: 0.75rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.skeleton-line.short {
+  width: 40%;
+}
+
+.skeleton-img {
+  height: 10rem;
+  border-radius: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Skeleton User */
+.skeleton-user {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.skeleton-avatar {
+  height: 3rem;
+  width: 3rem;
+  border-radius: 9999px;
+  margin-right: 1rem;
+}
+
+/* ✨ FADE-IN TRANSITION FOR RESULTS ✨ */
+.fade-in {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}

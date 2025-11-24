@@ -1,0 +1,142 @@
+#import scalars.graphql
+#import event.graphql
+#import Deadline.graphql
+#import Survey.graphql
+#import duplicate.graphql
+#import StateManagement.graphql
+type Query {
+    _empty: String @field(resolver: "App\\GraphQL\\Queries\\EmptyResolver")
+}
+
+# Import all your types
+#import types/post.graphql
+#import types/user.graphql
+#import types/postMedia.graphql
+#import types/postLike.graphql
+#import types/deadline.graphql
+#import types/event.graphql
+#import types/survey.graphql
+#import types/surveyJoin.graphql
+#import types/searchResult.graphql
+#import types/group.graphql
+#import types/joinRequest.graphql
+#import types/permission.graphql
+
+# Import inputs
+#import inputs/postCreateInput.graphql
+#import inputs/postUpdateInput.graphql
+
+# Import queries (this is where extend type Query lives!)
+#import queries/postQueries.graphql
+#import queries/eventQueries.graphql
+#import queries/deadlineQueries.graphql
+#import queries/surveyQueries.graphql
+#import queries/getProfileQueries.graphql
+#import queries/adminUserQueries.graphql
+#import queries/adminBadgeQueries.graphql
+#import queries/surveyJoinQueries.graphql
+#import queries/searchQueries.graphql
+#import queries/joinRequestQueries.graphql
+#import queries/permissionQueries.graphql
+
+# Import mutations
+#import mutations/postMutations.graphql
+#import mutations/userMutations.graphql
+#import mutations/adminUserMutations.graphql
+#import mutations/adminBadgeMutations.graphql
+#import mutations/groupMutations.graphql
+#import mutations/permissionMutations.graphql
+
+# Your custom root mutations (login, register) – move them to a file or use extend
+extend type Mutation {
+  loginUser(
+    email: String!
+    password: String!
+  ): AuthPayload
+    @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@loginUser")
+
+  registerUser(
+      name: String!
+      email: String!
+      password: String!
+      phone: String
+      address: String
+    ): User
+      @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@registerUser")
+
+  forgotPassword(
+    email: String!
+  ): String @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@forgotPassword")
+
+  resetPassword(
+    token: String!
+    email: String!
+    password: String!
+    passwordConfirmation: String!
+  ): String @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@resetPassword")
+  resendVerificationEmail(
+      email: String!
+    ): Boolean!
+      @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@resendVerificationEmail")
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+
+
+type UserStats {
+  posts: Int!
+  followers: Int!
+  following: Int!
+}
+
+type UserBadge {
+  id: ID!
+  badge_id: ID!
+  name: String!
+  description: String
+  created_at: DateTime
+  assigned_at: DateTime
+}
+
+
+# --------------------------------------------
+# ----------------Category--------------------
+# --------------------------------------------
+type Category {
+    id: Int!
+    name: String
+    created_at: DateTime
+    updated_at: DateTime
+    deleted_at: DateTime
+}
+
+input CreateCategoryInput {
+    id: Int! # BẮT BUỘC vì PK smallint không auto-increment
+    name: String
+}
+
+input UpdateCategoryInput {
+    name: String
+}
+
+extend type Query {
+    categories: [Category!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@list")
+}
+
+extend type Mutation {
+    createCategory(input: CreateCategoryInput!): Category
+        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@create")
+
+    updateCategory(id: Int!, input: UpdateCategoryInput!): Category
+        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@update")
+
+    deleteCategory(id: Int!, allowIfReferenced: Boolean): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@delete")
+}
+
+

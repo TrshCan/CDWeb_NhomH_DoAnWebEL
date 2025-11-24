@@ -1,0 +1,3 @@
+extend type Query {
+  search(query: String!): SearchResult @field(resolver: "App\\GraphQL\\Resolvers\\SearchResolver")
+}
