@@ -1,7 +1,23 @@
-import React from "react";
+import React, { useState } from "react";
 import AdminSidebar from "../../components/AdminSidebar";
+import CreateAnnouncementModal from "../../components/CreateAnnouncementModal";
 
 export default function AdminDashboard() {
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+
+  const handleOpenAnnouncementModal = () => {
+    setIsAnnouncementModalOpen(true);
+  };
+
+  const handleCloseAnnouncementModal = () => {
+    setIsAnnouncementModalOpen(false);
+  };
+
+  const handleAnnouncementSuccess = () => {
+    // You can add any additional logic here, like refreshing data
+    console.log("Announcement created successfully");
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-100">
       <AdminSidebar />
@@ -155,7 +171,10 @@ export default function AdminDashboard() {
                 </svg>
                 <span>Add New User</span>
               </button>
-              <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors">
+              <button 
+                onClick={handleOpenAnnouncementModal}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
@@ -177,6 +196,13 @@ export default function AdminDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Create Announcement Modal */}
+      <CreateAnnouncementModal
+        isOpen={isAnnouncementModalOpen}
+        onClose={handleCloseAnnouncementModal}
+        onSuccess={handleAnnouncementSuccess}
+      />
     </div>
   );
 }

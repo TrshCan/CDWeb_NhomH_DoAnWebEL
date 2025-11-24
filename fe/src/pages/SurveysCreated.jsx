@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import "../assets/css/SurveysMade.css";
 import "../assets/css/BackButton.css";
-import { getSurveysMadeByUser, duplicateSurvey, deleteSurvey, getSurveyDetails } from "../api/graphql/survey";
+import { getSurveysMadeByUser, duplicateSurvey, deleteSurvey, getSurveyDetails, getCurrentUserProfile } from "../api/graphql/survey";
 import EditSurveyModal from "../components/EditSurveyModal";
 import CreateSurveyModal from "../components/CreateSurveyModal";
 
@@ -30,19 +30,44 @@ export default function SurveysCreated() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const surveysRef = useRef([]);
 
-  // Load surveys from API
+  // Check authentication and role on component mount
   useEffect(() => {
-    const fetchData = async () => {
+    const checkAccessAndFetchData = async () => {
       setLoading(true);
+      
+      const token = localStorage.getItem("token");
+      const userIdStr = localStorage.getItem("userId");
+      
+      // Check if user is logged in
+      if (!token || !userIdStr) {
+        toast.error("Vui lòng đăng nhập để truy cập trang này");
+        navigate("/login", { replace: true });
+        setLoading(false);
+        return;
+      }
+      
       try {
-        const userIdStr = localStorage.getItem("userId");
-        const token = localStorage.getItem("token");
+        // Fetch user profile to check role
+        const userProfile = await getCurrentUserProfile(parseInt(userIdStr));
         
-        if (!userIdStr || !token) {
-          toast.error("Vui lòng đăng nhập để xem khảo sát đã tạo");
-          navigate("/login");
+        if (!userProfile) {
+          toast.error("Không thể xác thực người dùng");
+          navigate("/login", { replace: true });
+          setLoading(false);
           return;
         }
+        
+        const userRole = userProfile.role?.toLowerCase();
+        
+        // Check if user has lecturer or admin role
+        if (userRole !== "lecturer" && userRole !== "admin") {
+          toast.error("Bạn không có quyền truy cập trang này. Chỉ giảng viên và quản trị viên mới có thể tạo khảo sát.");
+          navigate("/", { replace: true });
+          setLoading(false);
+          return;
+        }
+        
+        // If access is granted, fetch surveys
         
         const data = await getSurveysMadeByUser(parseInt(userIdStr));
         const mapped = (data || []).map((s) => ({
@@ -60,17 +85,40 @@ export default function SurveysCreated() {
       } catch (err) {
         console.error(err);
         
+        // Extract error message from backend
+        let errorMessage = 'Không tải được danh sách khảo sát';
+        
+        if (err.graphQLErrors && err.graphQLErrors.length > 0) {
+          const firstError = err.graphQLErrors[0];
+          
+          if (firstError.extensions?.validation) {
+            const validationErrors = firstError.extensions.validation;
+            const validationMessages = Object.values(validationErrors)
+              .flat()
+              .filter(msg => msg && msg.trim() !== '');
+            
+            if (validationMessages.length > 0) {
+              errorMessage = validationMessages.join(', ');
+            }
+          }
+          
+          if (errorMessage === 'Không tải được danh sách khảo sát' && firstError.message) {
+            errorMessage = firstError.message;
+          }
+        } else if (err.message && err.message !== 'GraphQL error') {
+          errorMessage = err.message;
+        }
+        
         // Check if it's an authentication error
-        if (err.message?.includes("Authentication") || 
-            err.message?.includes("Unauthorized") ||
-            err.message?.includes("Invalid or expired token")) {
+        if (errorMessage.includes("Authentication") || 
+            errorMessage.includes("Unauthorized") ||
+            errorMessage.includes("Invalid or expired token")) {
           toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại");
           localStorage.removeItem("token");
           localStorage.removeItem("userId");
-          localStorage.removeItem("user");
           navigate("/login");
         } else {
-          toast.error("Không tải được danh sách khảo sát");
+          toast.error(errorMessage);
         }
         
         setSurveys([]);
@@ -80,7 +128,8 @@ export default function SurveysCreated() {
         setLoading(false);
       }
     };
-    fetchData();
+    
+    checkAccessAndFetchData();
   }, [navigate]);
 
   // Calculate metrics
@@ -394,7 +443,7 @@ export default function SurveysCreated() {
   };
 
   const handleGoBack = () => {
-    navigate(-1);
+    navigate("/");
   };
 
   return (

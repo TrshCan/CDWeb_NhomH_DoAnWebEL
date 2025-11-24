@@ -1,6 +1,31 @@
 // src/api/graphql/survey.js
 import graphqlClient from "./client";
 
+// Query to get current user's profile (including role)
+export async function getCurrentUserProfile(userId) {
+  const query = `
+    query ($userId: Int!) {
+      publicProfile(id: $userId) {
+        id
+        name
+        email
+        role
+      }
+    }
+  `;
+
+  const response = await graphqlClient.post("", {
+    query,
+    variables: { id: parseInt(userId) },
+  });
+
+  if (response.data.errors) {
+    throw response.data.errors[0];
+  }
+
+  return response.data.data.publicProfile;
+}
+
 // Query surveys created by a specific user
 export async function getSurveysMadeByUser(createdBy) {
   const query = `
