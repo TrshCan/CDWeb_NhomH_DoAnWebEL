@@ -31,12 +31,12 @@ function SurveyJoin() {
           return;
         }
 
-        // Prevent direct URL access
-        if (!data.is_accessible_directly) {
-          toast.error("Please access surveys through the main page");
-          setTimeout(() => navigate("/"), 1000);
-          return;
-        }
+        // Prevent direct URL access (TEMPORARILY DISABLED FOR TESTING)
+        // if (!data.is_accessible_directly) {
+        //   toast.error("Please access surveys through the main page");
+        //   setTimeout(() => navigate("/"), 1000);
+        //   return;
+        // }
 
         // Check if survey is closed
         if (data.status === 'closed') {
