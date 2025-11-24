@@ -13,7 +13,7 @@ import EmailVerificationResult from "./pages/EmailVerificationResult.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import Survey from "./pages/SurveyFilter.jsx";
 import StateManagement from "./pages/StatusManagement.jsx";
-import Tab1 from "./pages/admin/Tab1.jsx";
+import Tab1 from "./pages/admin/StatusManagementAdmin.jsx";
 import Tab2 from "./pages/admin/Tab2.jsx";
 import Tab3 from "./pages/admin/Event.jsx";
 import Tab4 from "./pages/admin/Deadline.jsx";
