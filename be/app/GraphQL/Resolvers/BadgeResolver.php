@@ -18,7 +18,7 @@ class BadgeResolver
     {
         try {
             $page = $args['page'] ?? 1;
-            $perPage = $args['perPage'] ?? 10;
+            $perPage = $args['perPage'] ?? 5;
             $sortBy = $args['sortBy'] ?? 'id';
             $sortOrder = $args['sortOrder'] ?? 'asc';
 

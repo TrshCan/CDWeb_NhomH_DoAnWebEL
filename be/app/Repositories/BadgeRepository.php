@@ -13,7 +13,7 @@ class BadgeRepository
     /**
      * Lấy danh sách badge với phân trang và sắp xếp
      */
-    public function getBadges(int $page = 1, int $perPage = 10, string $sortBy = 'id', string $sortOrder = 'asc')
+    public function getBadges(int $page = 1, int $perPage = 5, string $sortBy = 'id', string $sortOrder = 'asc')
     {
         // Sắp xếp
         $allowedSortFields = ['id', 'name', 'created_at'];
