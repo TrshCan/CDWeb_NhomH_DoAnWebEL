@@ -110,13 +110,17 @@ function LoginForm() {
         // Lưu token và user ID vào localStorage để dùng cho request sau này
         localStorage.setItem("token", token);
         localStorage.setItem("userId", user.id.toString());
+        localStorage.setItem("userRole", user.role || "");
 
         // Dispatch event để cập nhật sidebar
         window.dispatchEvent(new Event("tokenChanged"));
 
-        // Chuyển hướng về trang chính sau 1 giây
+        // Phân quyền redirect: Nếu là admin thì vào trang admin, không thì về trang chính
+        const redirectPath = user.role === "admin" ? "/admin/dashboard" : "/";
+        
+        // Chuyển hướng sau 1 giây
         setTimeout(() => {
-          navigate("/");
+          navigate(redirectPath);
         }, 1000);
       } else if (response.errors) {
         // Mutation bị lỗi

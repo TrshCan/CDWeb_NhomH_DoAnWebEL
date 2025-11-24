@@ -20,6 +20,7 @@ type Query {
 #import types/searchResult.graphql
 #import types/group.graphql
 #import types/joinRequest.graphql
+#import types/permission.graphql
 
 # Import inputs
 #import inputs/postCreateInput.graphql
@@ -36,6 +37,7 @@ type Query {
 #import queries/surveyJoinQueries.graphql
 #import queries/searchQueries.graphql
 #import queries/joinRequestQueries.graphql
+#import queries/permissionQueries.graphql
 
 # Import mutations
 #import mutations/postMutations.graphql
@@ -43,6 +45,7 @@ type Query {
 #import mutations/adminUserMutations.graphql
 #import mutations/adminBadgeMutations.graphql
 #import mutations/groupMutations.graphql
+#import mutations/permissionMutations.graphql
 
 # Your custom root mutations (login, register) – move them to a file or use extend
 extend type Mutation {
