@@ -29,7 +29,7 @@ const StatusManagement = () => {
   const [surveysState, setSurveysState] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date()); // Thời gian thực
-  const [currentUserRole, setCurrentUserRole] = useState('admin');
+  const [currentUserRole, setCurrentUserRole] = useState(localStorage.getItem('userRole') || 'user');
   const [activeAction, setActiveAction] = useState({ surveyId: null, action: null });
   const [currentView, setCurrentView] = useState('survey-list');
   const [viewAction, setViewAction] = useState(null);
@@ -87,6 +87,13 @@ const StatusManagement = () => {
         setLoading(true);
       }
       
+      // Lấy thông tin user từ localStorage
+      const userRole = localStorage.getItem('userRole') || 'user';
+      const userId = parseInt(localStorage.getItem('userId'));
+      
+      // Cập nhật currentUserRole
+      setCurrentUserRole(userRole);
+      
       const result = await graphqlRequest(`
         query {
           stateSurveys {
@@ -113,8 +120,17 @@ const StatusManagement = () => {
       }
 
       const surveysData = result.data?.stateSurveys || [];
+      
+      // Lọc surveys theo quyền
+      let filteredSurveys = surveysData;
+      if (userRole !== 'admin' && userId) {
+        // User (không phải admin) chỉ thấy khảo sát của mình
+        filteredSurveys = surveysData.filter(s => Number(s.created_by) === userId);
+      }
+      // Admin thấy tất cả (không filter)
+      
       // Map dữ liệu từ API sang format của component
-      const mappedSurveys = surveysData.map(s => ({
+      const mappedSurveys = filteredSurveys.map(s => ({
         id: Number(s.id),
         name: s.title,
         status: s.status,
@@ -259,10 +275,16 @@ const StatusManagement = () => {
     const effectiveStatusKey = getEffectiveStatus(survey);
     const statusInfo = statusConfig[effectiveStatusKey];
     let actions = [];
-    if (currentUserRole === 'admin') {
+    
+    const userId = parseInt(localStorage.getItem('userId'));
+    const isOwner = Number(survey.created_by) === userId;
+    
+    // Admin hoặc chủ sở hữu có quyền quản lý
+    if (currentUserRole === 'admin' || isOwner) {
       actions = [...statusInfo.actions];
       if (effectiveStatusKey !== 'pending') actions.push('view_results');
     } else {
+      // User khác chỉ được xem lại nếu được phép
       if (effectiveStatusKey === 'closed' && survey.allowReview) actions.push('review_results');
     }
     return actions;
@@ -285,19 +307,19 @@ const StatusManagement = () => {
   const Pagination = () => {
     if (totalPages <= 1) return null;
     return (
-      <div className="bg-gradient-to-r from-gray-50 to-white border-t border-gray-200 px-6 py-4 flex-shrink-0">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <span className="text-sm text-gray-600 font-medium">
-            Trang <span className="text-blue-600 font-semibold">{currentPage}</span> trên <span className="text-blue-600 font-semibold">{totalPages}</span> 
+      <div className="bg-gray-50 border-t border-gray-200 px-4 py-3 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+          <span className="text-xs text-gray-600">
+            Trang <span className="text-blue-600 font-semibold">{currentPage}</span> / <span className="text-blue-600 font-semibold">{totalPages}</span> 
             <span className="text-gray-500 ml-1">({surveysState.length} khảo sát)</span>
           </span>
-          <div className="inline-flex rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
             <button
               onClick={() => handlePageChange(-1)}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-5 py-2.5 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 transition-all duration-200 border-r border-gray-200"
+              className="inline-flex items-center px-3 py-1.5 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150 border-r border-gray-200"
             >
-              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               Trước
@@ -305,10 +327,10 @@ const StatusManagement = () => {
             <button
               onClick={() => handlePageChange(1)}
               disabled={currentPage === totalPages}
-              className="relative inline-flex items-center px-5 py-2.5 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 transition-all duration-200"
+              className="inline-flex items-center px-3 py-1.5 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
             >
               Sau
-              <svg className="w-4 h-4 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -577,17 +599,21 @@ const StatusManagement = () => {
   };
 
   const renderSurveyList = () => {
+    const userId = parseInt(localStorage.getItem('userId'));
+    
     return paginatedSurveys().map((survey) => {
       const effectiveStatusKey = getEffectiveStatus(survey);
       const statusInfo = statusConfig[effectiveStatusKey];
       const availableActions = getAvailableActions(survey);
+      const isOwner = Number(survey.created_by) === userId;
+      const canManage = currentUserRole === 'admin' || isOwner;
       let reviewPermissionHtml = null;
 
-      if (currentUserRole === 'admin') {
+      if (canManage) {
         const isToggleProcessing = isProcessing(`toggle-review-${survey.id}`);
         reviewPermissionHtml = (
-          <td className="px-6 py-5">
-            <label className={`relative inline-flex items-center ${isToggleProcessing ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} group`}>
+          <td className="px-3 py-2">
+            <label className={`relative inline-flex items-center ${isToggleProcessing ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
               <input
                 type="checkbox"
                 className="sr-only peer review-toggle"
@@ -595,13 +621,13 @@ const StatusManagement = () => {
                 disabled={isToggleProcessing}
                 onChange={(e) => handleToggleReview(survey.id, e.target.checked)}
               />
-              <div className="w-12 h-6 bg-gray-300 peer-checked:bg-blue-600 rounded-full shadow-inner transition-colors duration-200 peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-2"></div>
-              <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-200 peer-checked:translate-x-6"></div>
+              <div className="w-8 h-4 bg-gray-300 peer-checked:bg-blue-600 rounded-full transition-colors duration-200"></div>
+              <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-white rounded-full shadow transform transition-transform duration-200 peer-checked:translate-x-4"></div>
             </label>
           </td>
         );
       } else {
-        reviewPermissionHtml = <td className={currentUserRole === 'admin' ? 'px-6 py-5' : 'hidden'}></td>;
+        reviewPermissionHtml = <td className={canManage ? 'px-3 py-2' : 'hidden'}></td>;
       }
 
       const isDropdownOpen = openDropdownId === survey.id;
@@ -610,23 +636,23 @@ const StatusManagement = () => {
         availableActions.length > 0 ? (
           <div className="relative inline-block text-left dropdown">
             <button
-              ref={(el) => (buttonRefs.current[survey.id] = el)} // 🔹 ref riêng từng nút
+              ref={(el) => (buttonRefs.current[survey.id] = el)}
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggleDropdown(survey.id);
               }}
-              className={`inline-flex justify-center items-center gap-2 rounded-lg border shadow-sm px-4 py-2 text-sm font-medium transition-all duration-200 ${
+              className={`inline-flex justify-center items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
                 isDropdownOpen
-                  ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-md'
-                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:shadow-md'
+                  ? 'bg-blue-50 border-blue-300 text-blue-700'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
               </svg>
               Tùy chọn
               <svg
-                className={`h-4 w-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                className={`h-3 w-3 transition-transform duration-150 ${isDropdownOpen ? 'rotate-180' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -636,9 +662,9 @@ const StatusManagement = () => {
             </button>
             {isDropdownOpen && (
               <div
-                className={`absolute right-0 w-56 rounded-lg shadow-xl bg-white border border-gray-200 z-50 transition-all duration-200 ease-out opacity-100 transform translate-y-0 ${positionClasses}`}
+                className={`absolute right-0 w-48 rounded-lg shadow-lg bg-white border border-gray-200 z-50 ${positionClasses}`}
               >
-                <div className="py-1.5 max-h-64 overflow-y-auto">
+                <div className="py-1 max-h-60 overflow-y-auto">
                   {availableActions.map((action) => {
                     const isActionProcessing = isProcessing(`change-status-${survey.id}-${action}`);
                     return (
@@ -646,7 +672,7 @@ const StatusManagement = () => {
                         key={action}
                         type="button"
                         disabled={isActionProcessing}
-                        className={`block w-full text-left px-4 py-2.5 text-sm transition-colors duration-150 ${
+                        className={`block w-full text-left px-3 py-2 text-xs transition-colors duration-100 ${
                           isActionProcessing
                             ? 'text-gray-400 cursor-not-allowed opacity-50'
                             : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
@@ -662,7 +688,7 @@ const StatusManagement = () => {
                       >
                         <span className="flex items-center gap-2">
                           {isActionProcessing && (
-                            <svg className="animate-spin h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -685,33 +711,32 @@ const StatusManagement = () => {
         );
 
       return (
-        <tr key={survey.id} className="bg-white hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/30 border-b border-gray-100 transition-all duration-300 group cursor-pointer">
-          <td className="px-6 py-5">
-            <div className="flex items-center gap-4">
+        <tr key={survey.id} className="bg-white hover:bg-blue-50/30 border-b border-gray-100 transition-colors duration-150 group">
+          <td className="px-3 py-2">
+            <div className="flex items-center gap-2">
               <div className="flex-shrink-0 relative">
-                <div className="w-3 h-3 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 group-hover:from-blue-400 group-hover:to-blue-600 transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:scale-125"></div>
-                <div className="absolute inset-0 w-3 h-3 rounded-full bg-blue-400 opacity-0 group-hover:opacity-30 group-hover:animate-ping"></div>
+                <div className="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-blue-500 transition-colors duration-200"></div>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-gray-900 truncate group-hover:text-blue-700 transition-colors duration-200" title={survey.name}>
+                <div className="font-semibold text-xs text-gray-900 truncate group-hover:text-blue-700 transition-colors duration-200" title={survey.name}>
                   {survey.name}
                 </div>
                 {survey.description && (
-                  <div className="text-xs text-gray-500 truncate mt-1 group-hover:text-gray-600 transition-colors duration-200" title={survey.description}>
+                  <div className="text-xs text-gray-500 truncate mt-0.5" title={survey.description}>
                     {survey.description}
                   </div>
                 )}
               </div>
             </div>
           </td>
-          <td className="px-6 py-5">
-            <span className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold ${colorMap[statusInfo.color]} transition-all duration-200 hover:scale-105 hover:shadow-md`}>
-              <span className="text-sm">{statusInfo.icon}</span>
+          <td className="px-3 py-2">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${colorMap[statusInfo.color]}`}>
+              <span className="text-xs">{statusInfo.icon}</span>
               <span>{statusInfo.text}</span>
             </span>
           </td>
           {reviewPermissionHtml}
-          <td className="px-6 py-5 text-center relative">{actions}</td>
+          <td className="px-3 py-2 text-center relative">{actions}</td>
         </tr>
       );
     });
@@ -719,44 +744,44 @@ const StatusManagement = () => {
 
   return (
     <div className="w-full h-screen antialiased text-slate-700 bg-gradient-to-br from-gray-50 via-white to-gray-50 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-md border-b border-gray-200 px-6 py-5 flex-shrink-0">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <div className="flex items-center gap-4 flex-1">
+        <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex-shrink-0 flex justify-center">
+          <div className="w-full max-w-7xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+            <div className="flex items-center gap-3 flex-1">
               <button 
                 onClick={() => navigate('/')} 
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600 transition-all duration-200 shadow-sm hover:shadow-md"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600 transition-all duration-200"
                 title="Trở về trang chủ"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
                 Trang chủ
               </button>
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1.5">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center gap-2">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
                   </div>
-                  <h1 className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-slate-800 via-blue-700 to-slate-800 bg-clip-text text-transparent">
-                    Quản Lý Trạng Thái Khảo Sát
-                  </h1>
+                  <div>
+                    <h1 className="text-lg md:text-xl font-bold text-gray-800">
+                      Quản Lý Trạng Thái Khảo Sát
+                    </h1>
+                    <p className="text-xs text-gray-500 hidden md:block">Thay đổi trạng thái và quyền xem lại khảo sát</p>
+                  </div>
                 </div>
-                <p className="text-sm md:text-base text-slate-500 ml-[52px]">Thay đổi trạng thái hoạt động và quyền xem lại của các khảo sát.</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 w-full lg:w-auto">
-              <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-5 rounded-2xl shadow-lg border-2 border-blue-100/50 flex-1 lg:flex-none relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200/20 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-200/20 rounded-full -ml-12 -mb-12 blur-xl"></div>
-                <div className="relative flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full lg:w-auto">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 px-3 py-2 rounded-lg border border-blue-100 flex-1 lg:flex-none">
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-lg shadow-green-500/50"></div>
-                      <div className="text-xs font-bold text-blue-700 uppercase tracking-wider">Thời gian hiện tại</div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                      <div className="text-xs font-semibold text-blue-700">Thời gian</div>
                     </div>
-                    <div className="text-base md:text-lg font-mono font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
+                    <div className="text-sm font-mono font-bold text-blue-600">
                       {currentTime.toLocaleString('vi-VN', {
                         year: 'numeric',
                         month: '2-digit',
@@ -770,10 +795,10 @@ const StatusManagement = () => {
                   <button
                     onClick={() => loadSurveys()}
                     disabled={loading || isRefreshing.current}
-                    className="flex-shrink-0 px-4 py-2.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 transform hover:rotate-180 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-indigo-600 disabled:hover:rotate-0 disabled:active:scale-100"
+                    className="flex-shrink-0 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Làm mới danh sách"
                   >
-                    <svg className={`w-5 h-5 ${loading || isRefreshing.current ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-4 h-4 ${loading || isRefreshing.current ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                   </button>
@@ -785,7 +810,8 @@ const StatusManagement = () => {
 
         {/* 🔹 Bỏ overflow-hidden để dropdown không bị clip */}
         <div className="flex-1 overflow-auto bg-gradient-to-b from-gray-50 to-white">
-          <div className="h-full flex flex-col">
+          <div className="h-full flex flex-col items-center">
+            <div className="w-full max-w-7xl flex flex-col h-full">
             {loading ? (
               <div className="flex-1 flex items-center justify-center p-12">
                 <div className="text-center">
@@ -812,42 +838,42 @@ const StatusManagement = () => {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-auto px-6 py-6">
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <table className="w-full text-sm text-left text-gray-700 min-w-full">
-                      <thead className="bg-gradient-to-r from-slate-50 via-gray-50 to-slate-50 text-gray-700 text-xs uppercase font-extrabold sticky top-0 z-10 border-b-2 border-gray-300 shadow-sm">
+              <div className="flex-1 flex flex-col overflow-hidden mx-4">
+                <div className="flex-1 overflow-auto py-4">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <table className="w-full text-xs text-left text-gray-700">
+                      <thead className="bg-gray-50 text-gray-700 text-xs uppercase font-bold sticky top-0 z-10 border-b border-gray-200">
                         <tr>
-                          <th className="px-6 py-5 text-gray-700 tracking-wider">
-                            <div className="flex items-center gap-2">
-                              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <th className="px-3 py-2 text-gray-700">
+                            <div className="flex items-center gap-1">
+                              <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
                               Tên khảo sát
                             </div>
                           </th>
-                          <th className="px-6 py-5 text-gray-700 tracking-wider">
-                            <div className="flex items-center gap-2">
-                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <th className="px-3 py-2 text-gray-700">
+                            <div className="flex items-center gap-1">
+                              <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                               Trạng thái
                             </div>
                           </th>
-                          {currentUserRole === 'admin' && (
-                            <th className="px-6 py-5 text-gray-700 tracking-wider">
-                              <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {(currentUserRole === 'admin' || surveysState.some(s => Number(s.created_by) === parseInt(localStorage.getItem('userId')))) && (
+                            <th className="px-3 py-2 text-gray-700">
+                              <div className="flex items-center gap-1">
+                                <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                 </svg>
-                                Cho phép xem lại
+                                Xem lại
                               </div>
                             </th>
                           )}
-                          <th className="px-6 py-5 text-center text-gray-700 tracking-wider">
-                            <div className="flex items-center justify-center gap-2">
-                              <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <th className="px-3 py-2 text-center text-gray-700">
+                            <div className="flex items-center justify-center gap-1">
+                              <svg className="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                               </svg>
                               Hành động
@@ -862,6 +888,7 @@ const StatusManagement = () => {
                 <Pagination />
               </div>
             )}
+            </div>
           </div>
         </div>
 

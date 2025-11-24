@@ -81,6 +81,12 @@ export default function Sidebar() {
       requiresAuth: true,
     },
     {
+      label: "Trạng thái khảo sát",
+      icon: "M9 17v-2h6v2H9zm-4 4h14a1 1 0 001-1V4a1 1 0 00-1-1H5a1 1 0 00-1 1v16a1 1 0 001 1zM7 7h10v2H7V7z",
+      path: "/statemanagement",
+      requiresAuth: true,
+    },
+    {
       label: "Profile",
       icon: "M12 12a5 5 0 100-10 5 5 0 000 10zm-7 8a7 7 0 0114 0H5z",
       path: "/profile",

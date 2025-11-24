@@ -31,7 +31,7 @@ const StatusManagementAdmin = () => {
   const [surveysState, setSurveysState] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date()); // Thời gian thực
-  const [currentUserRole, setCurrentUserRole] = useState('admin');
+  const [currentUserRole, setCurrentUserRole] = useState(localStorage.getItem('userRole') || 'admin');
   const [activeAction, setActiveAction] = useState({ surveyId: null, action: null });
   const [currentView, setCurrentView] = useState('survey-list');
   const [viewAction, setViewAction] = useState(null);
@@ -89,6 +89,13 @@ const StatusManagementAdmin = () => {
         setLoading(true);
       }
       
+      // Lấy thông tin user từ localStorage
+      const userRole = localStorage.getItem('userRole') || 'admin';
+      const userId = parseInt(localStorage.getItem('userId'));
+      
+      // Cập nhật currentUserRole
+      setCurrentUserRole(userRole);
+      
       const result = await graphqlRequest(`
         query {
           stateSurveys {
@@ -115,8 +122,17 @@ const StatusManagementAdmin = () => {
       }
 
       const surveysData = result.data?.stateSurveys || [];
+      
+      // Lọc surveys theo quyền
+      let filteredSurveys = surveysData;
+      if (userRole === 'lecturer' && userId) {
+        // Giảng viên chỉ thấy khảo sát của mình
+        filteredSurveys = surveysData.filter(s => Number(s.created_by) === userId);
+      }
+      // Admin thấy tất cả (không filter)
+      
       // Map dữ liệu từ API sang format của component
-      const mappedSurveys = surveysData.map(s => ({
+      const mappedSurveys = filteredSurveys.map(s => ({
         id: Number(s.id),
         name: s.title,
         status: s.status,
