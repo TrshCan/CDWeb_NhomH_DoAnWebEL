@@ -372,10 +372,12 @@ export default function WidgetSidebar() {
         )}
       </div>
 
-      {/* Modal */}
+    </aside>
+
+      {/* Modal - Rendered outside aside for fullscreen coverage */}
       {selectedItem && (
         <div
-          className={`widget-modal-overlay fixed inset-0 flex items-center justify-center z-50 px-4 transition-all duration-300 ${
+          className={`widget-modal-overlay fixed inset-0 flex items-center justify-center z-[100] px-4 transition-all duration-300 ${
             showModal ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         >
@@ -653,7 +655,6 @@ export default function WidgetSidebar() {
           </div>
         </div>
       )}
-    </aside>
     </>
   );
 }
