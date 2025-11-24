@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\SurveyShareRepository;
 use App\Services\AuditLogService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -34,6 +35,18 @@ class SurveyShareService
     public function getSharesBySurveyId($surveyId)
     {
         return $this->shareRepository->getBySurveyId($surveyId);
+    }
+
+    /**
+     * Lấy thông tin share dựa trên token
+     */
+    public function getShareByToken(string $token)
+    {
+        try {
+            return $this->shareRepository->findByToken($token);
+        } catch (ModelNotFoundException $e) {
+            throw new \Exception('Token không hợp lệ hoặc đã hết hạn');
+        }
     }
 
     /**

@@ -15,8 +15,11 @@ type SurveyJoinDetail {
   id: ID!
   title: String!
   description: String
+  status: String
+  object: String
   time_limit: Int
   total_points: Float
+  is_accessible_directly: Boolean
   questions: [SurveyJoinQuestion!]!
 }
 

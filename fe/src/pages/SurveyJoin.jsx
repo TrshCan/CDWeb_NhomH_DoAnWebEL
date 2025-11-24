@@ -1,15 +1,21 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   getSurveyJoinDetail,
   submitSurveyAnswers,
 } from "../api/graphql/survey";
 import "../assets/css/SurveyJoin.css";
+import {
+  clearSurveyJoinTicket,
+  isTicketValidForSurvey,
+} from "../utils/surveyJoinTicket";
 
 function SurveyJoin() {
   const { surveyId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const joinToken = searchParams.get("token");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [surveyData, setSurveyData] = useState(null);
@@ -18,25 +24,36 @@ function SurveyJoin() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
+  const joinTicketRef = useRef(isTicketValidForSurvey(surveyId, joinToken));
   const questionRefs = useRef([]);
+
+  useEffect(() => {
+    joinTicketRef.current = isTicketValidForSurvey(surveyId, joinToken);
+  }, [surveyId, joinToken]);
 
   useEffect(() => {
     const fetchSurvey = async () => {
       setLoading(true);
       try {
-        const data = await getSurveyJoinDetail(parseInt(surveyId, 10));
+        const data = await getSurveyJoinDetail(parseInt(surveyId, 10), joinToken);
         if (!data) {
           toast.error("Survey not found");
           setTimeout(() => navigate("/"), 1000);
           return;
         }
 
-        // Prevent direct URL access (TEMPORARILY DISABLED FOR TESTING)
-        // if (!data.is_accessible_directly) {
-        //   toast.error("Please access surveys through the main page");
-        //   setTimeout(() => navigate("/"), 1000);
-        //   return;
-        // }
+       
+        const accessedViaModal = !!joinTicketRef.current;
+        if (!data.is_accessible_directly && !accessedViaModal) {
+          toast.error("Please start this survey via the Join Survey modal");
+          setTimeout(() => navigate("/"), 1000);
+          return;
+        }
+
+        if (accessedViaModal) {
+          clearSurveyJoinTicket();
+          joinTicketRef.current = null;
+        }
 
         // Check if survey is closed
         if (data.status === 'closed') {
@@ -76,17 +93,24 @@ function SurveyJoin() {
         }
       } catch (err) {
         console.error("Failed to load survey:", err);
-        toast.error("Failed to load survey");
+        toast.error(err.message || "Failed to load survey");
         setTimeout(() => navigate("/"), 1000);
       } finally {
         setLoading(false);
       }
     };
 
+    if (!joinToken) {
+      setLoading(false);
+      toast.error("Missing survey access token");
+      setTimeout(() => navigate("/"), 1000);
+      return;
+    }
+
     if (surveyId) {
       fetchSurvey();
     }
-  }, [surveyId, navigate]);
+  }, [surveyId, navigate, joinToken]);
 
   useEffect(() => {
     if (timeRemaining === null || timeRemaining <= 0) return;

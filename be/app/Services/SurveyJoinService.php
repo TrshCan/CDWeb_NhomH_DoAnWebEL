@@ -5,19 +5,39 @@ namespace App\Services;
 use App\Models\Survey;
 use App\Models\User;
 use App\Repositories\SurveyJoinRepository;
+use App\Repositories\SurveyShareRepository;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 
 class SurveyJoinService
 {
     protected $repository;
+    protected $shareRepository;
 
-    public function __construct(SurveyJoinRepository $repository)
-    {
+    public function __construct(
+        SurveyJoinRepository $repository,
+        SurveyShareRepository $shareRepository
+    ) {
         $this->repository = $repository;
+        $this->shareRepository = $shareRepository;
     }
 
-    public function getSurveyDetail(int $surveyId): ?array
+    public function getSurveyDetail(int $surveyId, ?string $token = null): ?array
     {
+        if (empty($token)) {
+            throw new \Exception('Join token is required');
+        }
+
+        try {
+            $share = $this->shareRepository->findByToken($token);
+        } catch (ModelNotFoundException $e) {
+            throw new \Exception('Invalid or expired join token');
+        }
+
+        if ((int) $share->survey_id !== $surveyId) {
+            throw new \Exception('Join token does not match this survey');
+        }
+
         $survey = $this->repository->getSurveyWithQuestionsAndOptions($surveyId);
 
         if (!$survey) return null;
@@ -26,8 +46,11 @@ class SurveyJoinService
             'id' => $survey->id,
             'title' => $survey->title,
             'description' => $survey->description,
+            'status' => $survey->status,
+            'object' => $survey->object,
             'time_limit' => $survey->time_limit,
             'total_points' => $survey->questions->sum('points'),
+            'is_accessible_directly' => true,
             'questions' => $survey->questions->map(function ($question) {
                 return [
                     'id' => $question->id,
@@ -104,7 +127,7 @@ class SurveyJoinService
         });
     }
 
-    private function processQuestionAnswer(Survey $question, $answers): array
+    private function processQuestionAnswer($question, $answers): array
     {
         $score = 0;
         $selectedOptionId = null;

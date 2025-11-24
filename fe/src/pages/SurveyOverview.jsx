@@ -111,7 +111,34 @@ export default function SurveyOverview() {
         }
       } catch (err) {
         console.error(err);
-        toast.error("Không tải được dữ liệu");
+        
+        // Extract error message from backend
+        let errorMessage = 'Không tải được dữ liệu';
+        
+        if (err.graphQLErrors && err.graphQLErrors.length > 0) {
+          const firstError = err.graphQLErrors[0];
+          
+          // Check for validation errors
+          if (firstError.extensions?.validation) {
+            const validationErrors = firstError.extensions.validation;
+            const validationMessages = Object.values(validationErrors)
+              .flat()
+              .filter(msg => msg && msg.trim() !== '');
+            
+            if (validationMessages.length > 0) {
+              errorMessage = validationMessages.join(', ');
+            }
+          }
+          
+          // Use the main error message if no validation errors
+          if (errorMessage === 'Không tải được dữ liệu' && firstError.message) {
+            errorMessage = firstError.message;
+          }
+        } else if (err.message && err.message !== 'GraphQL error') {
+          errorMessage = err.message;
+        }
+        
+        toast.error(errorMessage);
         setRawData([]);
         setFilteredData([]);
         setTotalResponses(0);
@@ -197,7 +224,32 @@ export default function SurveyOverview() {
             return true; // Proceed with download after reload
           } catch (err) {
             console.error(err);
-            toast.error("Không thể tải lại dữ liệu");
+            
+            // Extract error message from backend
+            let errorMessage = 'Không thể tải lại dữ liệu';
+            
+            if (err.graphQLErrors && err.graphQLErrors.length > 0) {
+              const firstError = err.graphQLErrors[0];
+              
+              if (firstError.extensions?.validation) {
+                const validationErrors = firstError.extensions.validation;
+                const validationMessages = Object.values(validationErrors)
+                  .flat()
+                  .filter(msg => msg && msg.trim() !== '');
+                
+                if (validationMessages.length > 0) {
+                  errorMessage = validationMessages.join(', ');
+                }
+              }
+              
+              if (errorMessage === 'Không thể tải lại dữ liệu' && firstError.message) {
+                errorMessage = firstError.message;
+              }
+            } else if (err.message && err.message !== 'GraphQL error') {
+              errorMessage = err.message;
+            }
+            
+            toast.error(errorMessage);
             return false; // Cancel download if reload fails
           } finally {
             setLoading(false);
@@ -245,7 +297,32 @@ export default function SurveyOverview() {
         }
       } catch (e) {
         console.error(e);
-        toast.error(e.message || 'Không thể xuất dữ liệu');
+        
+        // Extract error message from backend
+        let errorMessage = 'Không thể xuất dữ liệu';
+        
+        if (e.graphQLErrors && e.graphQLErrors.length > 0) {
+          const firstError = e.graphQLErrors[0];
+          
+          if (firstError.extensions?.validation) {
+            const validationErrors = firstError.extensions.validation;
+            const validationMessages = Object.values(validationErrors)
+              .flat()
+              .filter(msg => msg && msg.trim() !== '');
+            
+            if (validationMessages.length > 0) {
+              errorMessage = validationMessages.join(', ');
+            }
+          }
+          
+          if (errorMessage === 'Không thể xuất dữ liệu' && firstError.message) {
+            errorMessage = firstError.message;
+          }
+        } else if (e.message) {
+          errorMessage = e.message;
+        }
+        
+        toast.error(errorMessage);
       }
     }, 100);
   };

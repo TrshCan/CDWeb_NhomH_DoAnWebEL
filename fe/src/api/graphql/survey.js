@@ -172,15 +172,18 @@ export async function getSurveysCompletedByUser(userId) {
 }
   
 // Query survey details for joining/taking the survey
-export async function getSurveyJoinDetail(surveyId) {
+export async function getSurveyJoinDetail(surveyId, token) {
   const query = `
-    query ($surveyId: Int!) {
-      surveyJoinDetail(surveyId: $surveyId) {
+    query ($surveyId: Int!, $token: String!) {
+      surveyJoinDetail(surveyId: $surveyId, token: $token) {
         id
         title
         description
+        status
+        object
         time_limit
         total_points
+        is_accessible_directly
         questions {
           id
           question_text
@@ -197,7 +200,7 @@ export async function getSurveyJoinDetail(surveyId) {
 
   const response = await graphqlClient.post("", {
     query,
-    variables: { surveyId: parseInt(surveyId, 10) },
+    variables: { surveyId: parseInt(surveyId, 10), token },
   });
 
   if (response.data.errors) {

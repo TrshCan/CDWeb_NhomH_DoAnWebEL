@@ -297,6 +297,11 @@ extend type Query {
             resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getPublicShareLink"
         )
 
+    surveyShareByToken(token: String!): SurveyShare
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getShareByToken"
+        )
+
     # Survey Response
     getUserResult(survey_id: ID!, user_id: ID): UserResult
         @field(

@@ -1,5 +1,5 @@
 extend type Query {
-  surveyJoinDetail(surveyId: Int!): SurveyJoinDetail
+  surveyJoinDetail(surveyId: Int!, token: String!): SurveyJoinDetail
     @field(resolver: "App\\GraphQL\\Resolvers\\SurveyJoinResolver@surveyJoinDetail")
 }
 

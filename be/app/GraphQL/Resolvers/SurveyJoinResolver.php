@@ -20,7 +20,8 @@ class SurveyJoinResolver
     public function surveyJoinDetail($rootValue, array $args)
     {
         $surveyId = $args['surveyId'];
-        return $this->service->getSurveyDetail($surveyId);
+        $token = $args['token'] ?? null;
+        return $this->service->getSurveyDetail($surveyId, $token);
     }
 
     public function submitSurveyAnswers($rootValue, array $args)

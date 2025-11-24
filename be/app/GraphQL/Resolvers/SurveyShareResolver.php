@@ -23,6 +23,14 @@ class SurveyShareResolver
     }
 
     /**
+     * Lấy share dựa trên token
+     */
+    public function getShareByToken($rootValue, array $args)
+    {
+        return $this->shareService->getShareByToken($args['token']);
+    }
+
+    /**
      * Lấy hoặc tạo link chia sẻ công khai
      */
     public function getPublicShareLink($rootValue, array $args)

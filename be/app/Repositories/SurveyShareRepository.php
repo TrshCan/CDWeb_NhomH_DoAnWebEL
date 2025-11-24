@@ -19,7 +19,7 @@ class SurveyShareRepository
      */
     public function findByToken($token)
     {
-        return SurveyShare::where('share_token', $token)->firstOrFail();
+        return SurveyShare::with(['survey'])->where('share_token', $token)->firstOrFail();
     }
 
     /**

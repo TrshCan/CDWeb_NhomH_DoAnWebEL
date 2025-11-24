@@ -114,3 +114,29 @@ export const deleteShare = async (shareId) => {
   const response = await graphqlRequest(mutation, variables);
   return response.data.deleteShare;
 };
+
+/**
+ * Tra cứu thông tin chia sẻ bằng token
+ */
+export const getSurveyShareByToken = async (token) => {
+  const query = `
+    query SurveyShareByToken($token: String!) {
+      surveyShareByToken(token: $token) {
+        id
+        survey_id
+        share_type
+        status
+        survey {
+          id
+          title
+          object
+          status
+        }
+      }
+    }
+  `;
+
+  const variables = { token };
+  const response = await graphqlRequest(query, variables);
+  return response.data.surveyShareByToken;
+};

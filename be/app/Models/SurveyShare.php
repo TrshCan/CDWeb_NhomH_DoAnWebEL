@@ -62,7 +62,7 @@ class SurveyShare extends Model
         }
         // Sử dụng FRONTEND_URL nếu có, nếu không dùng APP_URL
         $baseUrl = config('app.frontend_url', config('app.url'));
-        return "{$baseUrl}/survey/{$this->survey_id}/participate?token={$this->share_token}";
+        return "{$baseUrl}/surveys/{$this->survey_id}/join?token={$this->share_token}";
     }
 
     // Scopes

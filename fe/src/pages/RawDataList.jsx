@@ -99,7 +99,34 @@ export default function RawDataList() {
         }
       } catch (err) {
         console.error(err);
-        toast.error("Không tải được dữ liệu");
+        
+        // Extract error message from backend
+        let errorMessage = 'Không tải được dữ liệu';
+        
+        if (err.graphQLErrors && err.graphQLErrors.length > 0) {
+          const firstError = err.graphQLErrors[0];
+          
+          // Check for validation errors
+          if (firstError.extensions?.validation) {
+            const validationErrors = firstError.extensions.validation;
+            const validationMessages = Object.values(validationErrors)
+              .flat()
+              .filter(msg => msg && msg.trim() !== '');
+            
+            if (validationMessages.length > 0) {
+              errorMessage = validationMessages.join(', ');
+            }
+          }
+          
+          // Use the main error message if no validation errors
+          if (errorMessage === 'Không tải được dữ liệu' && firstError.message) {
+            errorMessage = firstError.message;
+          }
+        } else if (err.message && err.message !== 'GraphQL error') {
+          errorMessage = err.message;
+        }
+        
+        toast.error(errorMessage);
         setRawData([]);
         setFilteredData([]);
         setTotalResponses(0);
@@ -172,7 +199,32 @@ export default function RawDataList() {
       toast.success("Đã tải xuống file CSV thành công!");
     } catch (error) {
       console.error("Error downloading CSV:", error);
-      toast.error(error.message || "Có lỗi xảy ra khi tải xuống CSV");
+      
+      // Extract error message from backend
+      let errorMessage = 'Có lỗi xảy ra khi tải xuống CSV';
+      
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        const firstError = error.graphQLErrors[0];
+        
+        if (firstError.extensions?.validation) {
+          const validationErrors = firstError.extensions.validation;
+          const validationMessages = Object.values(validationErrors)
+            .flat()
+            .filter(msg => msg && msg.trim() !== '');
+          
+          if (validationMessages.length > 0) {
+            errorMessage = validationMessages.join(', ');
+          }
+        }
+        
+        if (errorMessage === 'Có lỗi xảy ra khi tải xuống CSV' && firstError.message) {
+          errorMessage = firstError.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -184,7 +236,32 @@ export default function RawDataList() {
       toast.success("Đã tải xuống file Excel thành công!");
     } catch (error) {
       console.error("Error downloading Excel:", error);
-      toast.error(error.message || "Có lỗi xảy ra khi tải xuống Excel");
+      
+      // Extract error message from backend
+      let errorMessage = 'Có lỗi xảy ra khi tải xuống Excel';
+      
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        const firstError = error.graphQLErrors[0];
+        
+        if (firstError.extensions?.validation) {
+          const validationErrors = firstError.extensions.validation;
+          const validationMessages = Object.values(validationErrors)
+            .flat()
+            .filter(msg => msg && msg.trim() !== '');
+          
+          if (validationMessages.length > 0) {
+            errorMessage = validationMessages.join(', ');
+          }
+        }
+        
+        if (errorMessage === 'Có lỗi xảy ra khi tải xuống Excel' && firstError.message) {
+          errorMessage = firstError.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -196,7 +273,32 @@ export default function RawDataList() {
       toast.success("Đã tải xuống file PDF thành công!");
     } catch (error) {
       console.error("Error downloading PDF:", error);
-      toast.error(error.message || "Có lỗi xảy ra khi tải xuống PDF");
+      
+      // Extract error message from backend
+      let errorMessage = 'Có lỗi xảy ra khi tải xuống PDF';
+      
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        const firstError = error.graphQLErrors[0];
+        
+        if (firstError.extensions?.validation) {
+          const validationErrors = firstError.extensions.validation;
+          const validationMessages = Object.values(validationErrors)
+            .flat()
+            .filter(msg => msg && msg.trim() !== '');
+          
+          if (validationMessages.length > 0) {
+            errorMessage = validationMessages.join(', ');
+          }
+        }
+        
+        if (errorMessage === 'Có lỗi xảy ra khi tải xuống PDF' && firstError.message) {
+          errorMessage = firstError.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -235,7 +337,32 @@ export default function RawDataList() {
             return true; // Proceed with download after reload
           } catch (err) {
             console.error(err);
-            toast.error("Không thể tải lại dữ liệu");
+            
+            // Extract error message from backend
+            let errorMessage = 'Không thể tải lại dữ liệu';
+            
+            if (err.graphQLErrors && err.graphQLErrors.length > 0) {
+              const firstError = err.graphQLErrors[0];
+              
+              if (firstError.extensions?.validation) {
+                const validationErrors = firstError.extensions.validation;
+                const validationMessages = Object.values(validationErrors)
+                  .flat()
+                  .filter(msg => msg && msg.trim() !== '');
+                
+                if (validationMessages.length > 0) {
+                  errorMessage = validationMessages.join(', ');
+                }
+              }
+              
+              if (errorMessage === 'Không thể tải lại dữ liệu' && firstError.message) {
+                errorMessage = firstError.message;
+              }
+            } else if (err.message && err.message !== 'GraphQL error') {
+              errorMessage = err.message;
+            }
+            
+            toast.error(errorMessage);
             return false; // Cancel download if reload fails
           } finally {
             setLoading(false);
