@@ -596,17 +596,9 @@ export default function QuestionItem({
         marginRight: "45px", // Tạo không gian cho nút di chuyển
       }}
     >
-      {/* Dấu * cho câu hỏi bắt buộc (chỉ hiện khi Bật/hard) */}
-      {(question?.required === true || question?.required === "hard") && (
-        <span className="absolute top-2 right-4 z-50 text-red-500 text-[30px] font-bold select-none pointer-events-none">
-          *
-        </span>
-      )}
-
-      {/* Dropdown chọn đáp án đúng (chỉ hiện khi là quiz) */}
-      {/* Dropdown chọn đáp án đúng (chỉ hiện khi là quiz) */}
+      {/* Dropdown chọn đáp án đúng (chỉ hiện khi là quiz) - Bên trái dấu * */}
       {surveyType === "quiz" && (
-        <div className="absolute top-12 right-4 z-50 flex flex-col items-end gap-1">
+        <div className="absolute top-6 right-[50px] z-50 flex flex-col items-end gap-1">
           {/* Kiểm tra loại câu hỏi để hiển thị input hoặc dropdown */}
           {(question.type === "Văn bản ngắn" || question.type === "Văn bản dài") ? (
             <input
@@ -638,6 +630,13 @@ export default function QuestionItem({
             Điểm: {question.points || 0}
           </span>
         </div>
+      )}
+
+      {/* Dấu * cho câu hỏi bắt buộc (chỉ hiện khi Bật/hard) - Bên phải dropdown */}
+      {(question?.required === true || question?.required === "hard") && (
+        <span className="absolute top-2 right-4 z-50 text-red-500 text-[30px] font-bold select-none pointer-events-none">
+          *
+        </span>
       )}
 
       {/* ======================= NÚT MOVE LÊN/XUỐNG - ĐẶT BÊN NGOÀI ======================= */}
