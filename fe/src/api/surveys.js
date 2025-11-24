@@ -61,37 +61,6 @@ export const getSurvey = async (surveyId) => {
           name
           email
         }
-        questionGroups {
-          id
-          title
-          position
-          questions {
-            id
-            question_code
-            question_text
-            question_type
-            required
-            image
-            conditions
-            max_length
-            numeric_only
-            max_questions
-            allowed_file_types
-            max_file_size_kb
-            help_text
-            points
-            group_id
-            position
-            options {
-              id
-              option_text
-              image
-              is_subquestion
-              position
-              is_correct
-            }
-          }
-        }
         questions {
           id
           question_code

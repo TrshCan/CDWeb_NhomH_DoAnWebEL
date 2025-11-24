@@ -371,7 +371,7 @@ class SurveyRepository
     /**
      * Tìm survey theo ID
      */
-    public function findById($id)
+    public function findById2($id)
     {
         return Survey::with([
             'category', 

@@ -4,6 +4,7 @@
 #import Survey.graphql
 #import duplicate.graphql
 #import StateManagement.graphql
+#import schema2.graphql
 type Query {
     _empty: String @field(resolver: "App\\GraphQL\\Queries\\EmptyResolver")
 }
@@ -105,45 +106,3 @@ type UserBadge {
   assigned_at: DateTime
 }
 
-
-# --------------------------------------------
-# ----------------Category--------------------
-# --------------------------------------------
-type Category {
-    id: Int!
-    name: String
-    created_at: DateTime
-    updated_at: DateTime
-    deleted_at: DateTime
-}
-
-input CreateCategoryInput {
-    id: Int! # BẮT BUỘC vì PK smallint không auto-increment
-    name: String
-}
-
-input UpdateCategoryInput {
-    name: String
-}
-
-extend type Query {
-    categories: [Category!]!
-        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@list")
-}
-
-extend type Mutation {
-    createCategory(input: CreateCategoryInput!): Category
-        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@create")
-
-    updateCategory(id: Int!, input: UpdateCategoryInput!): Category
-        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@update")
-
-    deleteCategory(id: Int!, allowIfReferenced: Boolean): Boolean!
-        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@delete")
-}
-
-# --------------------------------------------
-# ----------------Scalars---------------------
-# --------------------------------------------
-scalar DateTime
-scalar JSON

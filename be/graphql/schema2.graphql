@@ -1,0 +1,366 @@
+# --------------------------------------------
+# ----------------Scalars---------------------
+# --------------------------------------------
+scalar DateTime
+scalar JSON
+
+# --------------------------------------------
+# ----------------Category--------------------
+# --------------------------------------------
+ type Category {
+    id: Int!
+    name: String
+    created_at: DateTime
+    updated_at: DateTime
+    deleted_at: DateTime
+}
+
+input CreateCategoryInput {
+    id: Int!
+    name: String
+} 
+
+input UpdateCategoryInput {
+    name: String
+}
+
+# --------------------------------------------
+# ----------------Survey----------------------
+# --------------------------------------------
+
+input CreateSurveyInput {
+    title: String!
+    description: String
+    welcome_title: String
+    welcome_description: String
+    end_title: String
+    end_description: String
+    categories_id: Int!
+    type: SurveyType
+    object: SurveyObject
+    status: SurveyStatus
+    start_at: DateTime
+    end_at: DateTime
+}
+
+input UpdateSurveyInput {
+    title: String
+    description: String
+    welcome_title: String
+    welcome_description: String
+    end_title: String
+    end_description: String
+    categories_id: Int
+    type: SurveyType
+    object: SurveyObject
+    status: SurveyStatus
+    start_at: DateTime
+    end_at: DateTime
+}
+
+# --------------------------------------------
+# ----------------QuestionGroup---------------
+# --------------------------------------------
+type QuestionGroup {
+    id: ID!
+    survey_id: ID!
+    survey: Survey
+    title: String!
+    position: Int!
+    questions: [SurveyQuestion!]
+    created_at: DateTime
+    updated_at: DateTime
+}
+
+input CreateQuestionGroupInput {
+    survey_id: ID!
+    title: String!
+    position: Int
+}
+
+input UpdateQuestionGroupInput {
+    title: String
+    position: Int
+}
+
+# --------------------------------------------
+# ----------------SurveyQuestion--------------
+# --------------------------------------------
+type SurveyQuestion {
+    id: ID!
+    survey_id: ID!
+    survey: Survey
+    group_id: ID
+    group: QuestionGroup
+    position: Int!
+    question_code: String
+    question_text: String!
+    image: String
+    question_type: String!
+    required: QuestionRequired!
+    conditions: JSON
+    default_scenario: Int
+    max_length: Int
+    numeric_only: Boolean
+    max_questions: Int
+    allowed_file_types: String
+    max_file_size_kb: Int
+    help_text: String
+    points: Int!
+    options: [SurveyOption!]
+}
+
+enum QuestionRequired {
+    none
+    soft
+    hard
+}
+
+input CreateQuestionInput {
+    survey_id: ID!
+    group_id: ID
+    position: Int
+    question_code: String
+    question_text: String!
+    image: String
+    question_type: String!
+    required: QuestionRequired
+    conditions: JSON
+    default_scenario: Int
+    max_length: Int
+    numeric_only: Boolean
+    max_questions: Int
+    allowed_file_types: String
+    max_file_size_kb: Int
+    help_text: String
+    points: Int
+}
+
+input UpdateQuestionInput {
+    group_id: ID
+    position: Int
+    question_code: String
+    question_text: String
+    image: String
+    question_type: String
+    required: QuestionRequired
+    conditions: JSON
+    default_scenario: Int
+    max_length: Int
+    numeric_only: Boolean
+    max_questions: Int
+    allowed_file_types: String
+    max_file_size_kb: Int
+    help_text: String
+    points: Int
+}
+
+input CreateOptionInput {
+    question_id: ID!
+    option_text: String
+    image: String
+    is_subquestion: Boolean
+    position: Int
+    is_correct: Boolean
+}
+
+input UpdateOptionInput {
+    option_text: String
+    image: String
+    is_subquestion: Boolean
+    position: Int
+    is_correct: Boolean
+}
+
+# --------------------------------------------
+# ----------------SurveyOption----------------
+# --------------------------------------------
+type SurveyOption {
+    id: ID!
+    question_id: ID!
+    question: SurveyQuestion
+    option_text: String
+    image: String
+    is_subquestion: Boolean
+    position: Int
+    is_correct: Boolean
+}
+
+# --------------------------------------------
+# ----------------User (Basic)----------------
+# --------------------------------------------
+# User type is already defined in types/user.graphql
+# No need to extend it here
+
+# --------------------------------------------
+# ----------------Audit Log-------------------
+# --------------------------------------------
+type AuditLog {
+    id: ID!
+    survey_id: ID!
+    user_id: ID
+    user_name: String
+    action: String!
+    entity_type: String!
+    entity_id: ID
+    details: String
+    ip_address: String
+    user_agent: String
+    created_at: DateTime!
+}
+
+# --------------------------------------------
+# ----------------Survey Share----------------
+# --------------------------------------------
+type SurveyShare {
+    id: ID!
+    survey_id: ID!
+    survey: Survey
+    share_type: ShareType!
+    share_token: String
+    email: String
+    group_id: ID
+    status: ShareStatus!
+    sent_at: DateTime
+    completed_at: DateTime
+    created_by: ID
+    creator: User
+    created_at: DateTime!
+    updated_at: DateTime!
+    share_url: String
+}
+
+enum ShareType {
+    public
+    email
+    group
+}
+
+enum ShareStatus {
+    pending
+    completed
+}
+
+# --------------------------------------------
+# ----------------Survey Response-------------
+# --------------------------------------------
+type SurveyResponseResult {
+    success: Boolean!
+    total_score: Int!
+    max_score: Int!
+    percentage: Float!
+}
+
+type UserResult {
+    total_score: Int!
+    max_score: Int!
+    percentage: Float!
+    status: String!
+    created_at: DateTime!
+}
+
+input AnswerInput {
+    question_id: ID!
+    selected_option_id: ID
+    selected_option_ids: [ID!]
+    answer_text: String
+    comment_text: String
+    matrix_answer: JSON
+    file_urls: JSON
+}
+
+# --------------------------------------------
+# ----------------Queries---------------------
+# --------------------------------------------
+extend type Query {
+
+    survey(id: ID!): Survey
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@find")
+
+    # Questions
+    question(id: ID!): SurveyQuestion
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@find")
+    
+    # Audit Logs
+    auditLogs(survey_id: ID!): [AuditLog!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\AuditLogResolver@list")
+    
+    # Survey Shares
+    surveyShares(survey_id: ID!): [SurveyShare!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getShares")
+    
+    publicShareLink(survey_id: ID!): SurveyShare!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getPublicShareLink")
+    
+    # Survey Response
+    getUserResult(survey_id: ID!, user_id: ID): UserResult
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResponseResolver@getUserResult")
+}
+
+# --------------------------------------------
+# ----------------Mutations-------------------
+# --------------------------------------------
+extend type Mutation {
+    # Categories
+    createCategory(input: CreateCategoryInput!): Category
+        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@create")
+
+    updateCategory(id: Int!, input: UpdateCategoryInput!): Category
+        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@update")
+
+    deleteCategory(id: Int!, allowIfReferenced: Boolean): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@delete")
+
+
+    # Questions
+    addQuestion(input: CreateQuestionInput!): SurveyQuestion
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@create")
+    
+    updateQuestion(id: ID!, input: UpdateQuestionInput!): SurveyQuestion
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@update")
+    
+    addOption(input: CreateOptionInput!): SurveyOption
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@createOption")
+    
+    updateOption(id: ID!, input: UpdateOptionInput!): SurveyOption
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@updateOption")
+    
+    deleteOption(id: ID!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@deleteOption")
+    
+    deleteQuestion(id: ID!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@delete")
+    
+    deleteQuestions(ids: [ID!]!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@deleteBatch")
+    
+    duplicateQuestion(id: ID!): SurveyQuestion
+        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@duplicate")
+    
+    # Question Groups
+    createQuestionGroup(input: CreateQuestionGroupInput!): QuestionGroup
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@create")
+    
+    updateQuestionGroup(id: ID!, input: UpdateQuestionGroupInput!): QuestionGroup
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@update")
+    
+    deleteQuestionGroup(id: ID!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@delete")
+    
+    duplicateQuestionGroup(id: ID!): QuestionGroup
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@duplicate")
+    
+    # Survey Shares
+    inviteByEmail(survey_id: ID!, email: String!): SurveyShare!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@inviteByEmail")
+    
+    shareToGroup(survey_id: ID!, group_id: ID!): SurveyShare!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@shareToGroup")
+    
+    deleteShare(id: ID!): Boolean!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@deleteShare")
+    
+    # Survey Response
+    submitSurveyResponse(survey_id: ID!, user_id: ID, answers: [AnswerInput!]!): SurveyResponseResult!
+        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResponseResolver@submitResponse")
+}

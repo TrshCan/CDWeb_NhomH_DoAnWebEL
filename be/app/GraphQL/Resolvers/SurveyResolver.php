@@ -458,4 +458,12 @@ class SurveyResolver
 
         return $root->category;
     }
+
+    /**
+     * Lấy chi tiết survey
+     */
+    public function find($rootValue, array $args)
+    {
+        return $this->service->getSurveyById($args['id']);
+    }
 }

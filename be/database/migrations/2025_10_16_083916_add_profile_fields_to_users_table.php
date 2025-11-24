@@ -10,15 +10,10 @@ return new class extends Migration {
         Schema::table('users', function (Blueprint $table) {
             // Mở rộng thông tin
             $table->string('phone', 255)->nullable()->after('email');
-<<<<<<< HEAD
             $table->unique('phone');
             $table->string('address', 255)->nullable()->after('phone');
             $table->string('avatar', 255)->nullable()->default('default.png')->after('address');
             $table->enum('role', ['student','lecturer','admin'])->default('student')->after('address');
-=======
-            $table->string('address', 255)->nullable()->after('phone');
-            $table->enum('role', ['student', 'lecturer', 'admin'])->default('student')->after('address');
->>>>>>> Tom/AnswerManagement
 
             // FK (các bảng đích phải tồn tại trước)
             $table->foreignId('class_id')->nullable()->after('role')
@@ -49,14 +44,6 @@ return new class extends Migration {
 
             // Xoá các cột đã thêm
             $table->dropColumn([
-<<<<<<< HEAD
-                'phone','address','role','class_id','faculty_id',
-                'status_id','ban_reason','point','deleted_at'
-            ]);
-        });
-    }
-};
-=======
                 'phone',
                 'address',
                 'role',
@@ -70,4 +57,4 @@ return new class extends Migration {
         });
     }
 };
->>>>>>> Tom/AnswerManagement
+

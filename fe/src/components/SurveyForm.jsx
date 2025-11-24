@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, startTransition } from "react";
+import { useParams } from "react-router-dom";
 import WelcomeSection from "./WelcomeSection";
 import QuestionSection from "./QuestionSection";
 import AddSection from "./AddSection";
@@ -23,7 +24,10 @@ import { Toaster, toast } from "react-hot-toast";
 import { addQuestion, deleteQuestion, deleteQuestions, updateQuestion, updateOption, addOption, deleteOption, duplicateQuestion } from "../api/questions";
 import { createQuestionGroup, updateQuestionGroup, deleteQuestionGroup, duplicateQuestionGroup } from "../api/groups";
 
-export default function SurveyForm({ surveyId = null }) {
+export default function SurveyForm({ surveyId: propSurveyId = null }) {
+  const { surveyId: urlSurveyId } = useParams();
+  const surveyId = urlSurveyId || propSurveyId;
+  
   const [activeSection, setActiveSection] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);

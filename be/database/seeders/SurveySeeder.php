@@ -96,3 +96,4 @@ class SurveySeeder extends Seeder
             ],
         ]);
     }
+}

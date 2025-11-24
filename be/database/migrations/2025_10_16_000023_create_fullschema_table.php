@@ -439,8 +439,5 @@ return new class extends Migration {
         Schema::dropIfExists('statuses');
         Schema::dropIfExists('faculties');
     }
-<<<<<<< HEAD
 };
-=======
-};
->>>>>>> Tom/AnswerManagement
+

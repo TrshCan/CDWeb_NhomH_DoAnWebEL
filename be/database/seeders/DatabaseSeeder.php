@@ -711,15 +711,18 @@ class DatabaseSeeder extends Seeder
 
             // ----- Questions -----
             $questionIds = [];
+            $questionNumber = 1;
             foreach ($tmpl['questions'] as $qData) {
                 $questionId = DB::table('survey_questions')->insertGetId([
                     'survey_id' => $surveyId,
+                    'question_code' => 'Q' . str_pad((string) $questionNumber, 3, '0', STR_PAD_LEFT),
                     'question_text' => $qData['text'],
                     'question_type' => $qData['type'],
                     'points' => $qData['points'],
                 ]);
 
                 $questionIds[] = ['id' => $questionId, 'data' => $qData];
+                $questionNumber++;
 
                 // ----- Options (only for choice questions) -----
                 if (in_array($qData['type'], ['single_choice', 'multiple_choice'])) {
