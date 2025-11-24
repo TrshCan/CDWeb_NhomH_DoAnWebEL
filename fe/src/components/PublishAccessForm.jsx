@@ -6,7 +6,10 @@ function toLocalInputValue(v) {
   const d = new Date(v);
   if (isNaN(d.getTime())) return "";
   const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+  const year = d.getFullYear();
+  // Đảm bảo năm có 4 chữ số
+  if (year < 1000 || year > 9999) return "";
+  return `${year}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
     d.getHours()
   )}:${pad(d.getMinutes())}`;
 }
@@ -14,6 +17,7 @@ function toLocalInputValue(v) {
 export default function PublishAccessForm({ value, onChange }) {
   const [form, setForm] = useState({ start_at: "", end_at: "" });
   const [error, setError] = useState("");
+  const [localInputs, setLocalInputs] = useState({ start_at: "", end_at: "" });
 
   const startRef = useRef(null);
   const endRef = useRef(null);
@@ -24,6 +28,11 @@ export default function PublishAccessForm({ value, onChange }) {
     if (value) {
       setForm((f) => ({ ...f, ...value }));
       committedRef.current = { ...value };
+      // Cập nhật local inputs khi có giá trị mới từ props
+      setLocalInputs({
+        start_at: toLocalInputValue(value.start_at),
+        end_at: toLocalInputValue(value.end_at),
+      });
     }
   }, [value]);
 
@@ -31,12 +40,6 @@ export default function PublishAccessForm({ value, onChange }) {
     "w-full border border-gray-300 rounded-sm px-4 py-2 pr-12 text-gray-800 " +
     "focus:border-violet-600 focus:shadow-md " +
     "hover:bg-violet-50 hover:border-violet-500 transition-colors input-no-indicator";
-
-  const startInput = useMemo(
-    () => toLocalInputValue(form.start_at),
-    [form.start_at]
-  );
-  const endInput = useMemo(() => toLocalInputValue(form.end_at), [form.end_at]);
 
   const validate = (startISO, endISO) => {
     if (!startISO && !endISO) return "";
@@ -49,10 +52,6 @@ export default function PublishAccessForm({ value, onChange }) {
     if (end < start) return "Ngày/giờ kết thúc phải sau ngày/giờ bắt đầu.";
     return "";
   };
-
-  useEffect(() => {
-    setError(validate(form.start_at, form.end_at));
-  }, [form.start_at, form.end_at]);
 
   const commitIfValidAndChanged = (key, nextISO) => {
     const prevISO = committedRef.current[key];
@@ -87,7 +86,28 @@ export default function PublishAccessForm({ value, onChange }) {
   };
 
   const handleDateChange = (key, rawValue) => {
-    const iso = rawValue ? new Date(rawValue).toISOString() : "";
+    // Cập nhật local input state ngay lập tức
+    setLocalInputs((prev) => ({ ...prev, [key]: rawValue }));
+
+    // Xóa error khi đang nhập
+    setError("");
+    toast.dismiss("pubdate-error");
+
+    // Kiểm tra format datetime-local hợp lệ (yyyy-MM-ddThh:mm)
+    if (!rawValue) {
+      const iso = "";
+      const nextForm = { ...form, [key]: iso };
+      setForm(nextForm);
+      commitIfValidAndChanged(key, iso);
+      return;
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawValue)) {
+      // Format chưa đúng, chỉ cập nhật local input, không xử lý tiếp
+      return;
+    }
+
+    const iso = new Date(rawValue).toISOString();
     const nextForm = { ...form, [key]: iso };
     setForm(nextForm);
 
@@ -158,7 +178,7 @@ export default function PublishAccessForm({ value, onChange }) {
                 ref={startRef}
                 type="datetime-local"
                 className={baseFieldCls}
-                value={startInput}
+                value={localInputs.start_at}
                 onChange={(e) => handleDateChange("start_at", e.target.value)}
               />
               <button
@@ -182,7 +202,7 @@ export default function PublishAccessForm({ value, onChange }) {
                 ref={endRef}
                 type="datetime-local"
                 className={baseFieldCls}
-                value={endInput}
+                value={localInputs.end_at}
                 onChange={(e) => handleDateChange("end_at", e.target.value)}
               />
               <button

@@ -93,6 +93,14 @@ class SurveyService
                     $oldValue = $oldSurvey->$field;
                     $newValue = $input[$field];
                     
+                    // Format giá trị DateTime
+                    if ($oldValue instanceof \DateTime || $oldValue instanceof \DateTimeInterface) {
+                        $oldValue = $oldValue->format('Y-m-d H:i:s');
+                    }
+                    if ($newValue instanceof \DateTime || $newValue instanceof \DateTimeInterface) {
+                        $newValue = $newValue->format('Y-m-d H:i:s');
+                    }
+                    
                     // Format giá trị boolean
                     if (is_bool($oldValue) || is_bool($newValue)) {
                         $oldValue = $oldValue ? 'Có' : 'Không';
