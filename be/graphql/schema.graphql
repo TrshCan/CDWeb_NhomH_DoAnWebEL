@@ -142,4 +142,8 @@ extend type Mutation {
         @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@delete")
 }
 
-
+# --------------------------------------------
+# ----------------Scalars---------------------
+# --------------------------------------------
+scalar DateTime
+scalar JSON

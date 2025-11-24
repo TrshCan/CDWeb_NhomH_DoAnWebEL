@@ -2,15 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Category extends Model
 {
-    use SoftDeletes;
-
-    protected $table = 'categories';
-
+    use HasFactory, SoftDeletes;
+protected $table = 'categories';
     protected $fillable = [
         'id',
         'name',
@@ -22,6 +21,10 @@ class Category extends Model
         'deleted_at' => 'datetime',
     ];
 
+    public $incrementing = false;
+    protected $keyType = 'integer';
+
+    // Relationships
     public function surveys()
     {
         return $this->hasMany(Survey::class, 'categories_id');
