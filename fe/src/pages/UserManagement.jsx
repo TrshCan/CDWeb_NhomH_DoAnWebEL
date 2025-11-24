@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { updateProfile, getUserProfile } from "../api/graphql/user";
 
 const InputField = React.memo(({ id, label, type = "text", value, onChange, placeholder, error }) => {
@@ -26,6 +26,7 @@ const InputField = React.memo(({ id, label, type = "text", value, onChange, plac
 function UserManagement({ onCancel, onUpdateSuccess }) {
     const twitterBlue = "#1DA1F2";
     const { state } = useLocation();
+    const navigate = useNavigate();
     const user = state?.user;
 
     const [formData, setFormData] = useState(() => {
@@ -355,6 +356,14 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
         }
     }, [formData, isPasswordChange, onUpdateSuccess]); // Dependencies
 
+    const handleCancelClick = useCallback(() => {
+        if (onCancel) {
+            onCancel();
+            return;
+        }
+        navigate("/profile", { replace: true });
+    }, [navigate, onCancel]);
+
     // Xử lý logic hiển thị Avatar
     const avatarDisplay = useMemo(() => {
         // Kiểm tra nếu có avatar URL (data URL, http URL, hoặc path từ server)
@@ -377,7 +386,7 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
 
 
     return (
-        <div className="w-full h-full p-0">
+        <div className="w-150 h-full p-0">
             <div className="flex-1 p-8 w-full bg-gray-800 rounded-xl">
                 <h2 className="text-3xl font-extrabold text-white mb-6 border-b border-gray-700 pb-3">
                     Quản lý Hồ Sơ Cá Nhân
@@ -527,7 +536,7 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                     <div className="flex justify-end space-x-4 mt-8">
                         <button
                             type="button"
-                            onClick={onCancel}
+                            onClick={handleCancelClick}
                             className="px-6 py-2 font-bold rounded-lg text-white border border-gray-600 hover:bg-gray-700 transition duration-200"
                             disabled={isLoading}
                         >

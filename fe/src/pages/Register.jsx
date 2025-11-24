@@ -73,7 +73,7 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
       password: '',
       remember: true,
   });
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Xử lý thay đổi Input
@@ -89,11 +89,11 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage('');
+    setMessage(null);
   
     // Validation front-end
     if (!formData.name || !formData.email || !formData.password) {
-      setMessage("Vui lòng điền đầy đủ tên, email và mật khẩu");
+      setMessage({ type: "error", text: "Vui lòng điền đầy đủ tên, email và mật khẩu" });
       return;
     }
   
@@ -114,16 +114,18 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
         // Mutation thành công
         let second = 3;
         setCountdown(second);
-        setMessage(
-          `Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`
-        );
+        setMessage({
+          type: "success",
+          text: `Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`,
+        });
   
         const interval = setInterval(() => {
           second -= 1;
           setCountdown(second);
-          setMessage(
-            `Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`
-          );
+          setMessage({
+            type: "success",
+            text: `Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản. Bạn sẽ được chuyển sang trang đăng nhập trong vòng ${second} giây...`,
+          });
   
           if (second === 0) {
             clearInterval(interval);
@@ -133,14 +135,20 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
   
         // Reset form
         setFormData({ name: "", email: "", phone: "", address: "", password: "", remember: false });
-      } else if (response.errors) {
-        setMessage(response.errors[0].message);
+      } else if (response.errors?.length) {
+        const firstMessage = response.errors[0]?.message || "Có lỗi xảy ra, vui lòng thử lại";
+        setMessage({ type: "error", text: firstMessage });
       } else {
-        setMessage("Có lỗi xảy ra, vui lòng thử lại");
+        setMessage({ type: "error", text: "Có lỗi xảy ra, vui lòng thử lại" });
       }
     } catch (err) {
       console.error(err);
-      setMessage(err.message || "Có lỗi xảy ra, vui lòng thử lại");
+      const serverMessage =
+        err.response?.data?.errors?.[0]?.message ||
+        err.response?.data?.message ||
+        err.message ||
+        "Có lỗi xảy ra, vui lòng thử lại";
+      setMessage({ type: "error", text: serverMessage });
     } finally {
       setIsLoading(false);
     }
@@ -153,8 +161,14 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
     </h2>
   
     {message && (
-      <div className="p-3 mb-4 text-sm font-medium text-green-800 bg-green-100 rounded-lg">
-        {message}
+      <div
+        className={`p-3 mb-4 text-sm font-medium rounded-lg ${
+          message.type === "success"
+            ? "text-green-800 bg-green-100"
+            : "text-red-200 bg-red-600/60"
+        }`}
+      >
+        {message.text}
       </div>
     )}
   
@@ -225,7 +239,7 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
       <input
         id="password"
         type={showPassword ? "text" : "password"}
-        placeholder="••••••••"
+        placeholder="•••••••••••••••••••••••••••••••••••••••••••••••••••••"
         value={formData.password}
         onChange={handleChange}
         disabled={isLoading}
@@ -234,7 +248,7 @@ mutation($name: String!, $email: String!, $password: String!,$phone: String,$add
       <button
         type="button"
         onClick={() => setShowPassword(!showPassword)}
-        className="absolute right-3 top-10 text-gray-500"
+        className="absolute top-[-35px] left-90 text-gray-500"
       >
         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
       </button>

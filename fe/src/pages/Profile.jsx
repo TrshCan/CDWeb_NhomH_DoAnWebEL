@@ -376,7 +376,7 @@ function ProfilePage() {
     return (
         <>
             {/* PROFILE CONTENT */}
-            <div className="w-full bg-gray-900 rounded-xl shadow-2xl overflow-hidden flex flex-col h-full">
+            <div className="w-150 bg-gray-900 rounded-xl shadow-2xl overflow-hidden flex flex-col h-full">
                 {/* HEADER */}
                 <div className="relative p-6" style={{ backgroundColor: '#15202B' }}>
                     <div className="h-40 bg-gray-700 rounded-lg mb-20 flex items-center justify-center text-gray-400"></div>
@@ -397,7 +397,7 @@ function ProfilePage() {
                     </div>
 
                     {user.isOwner && (
-                        <button onClick={() => navigate('/edit-profile', { state: { user } })}  className="absolute right-6 top-52 mt-2 px-4 py-2 text-sm font-bold text-white border border-white rounded-full hover:bg-white hover:text-gray-800 transition duration-200 flex items-center">
+                        <button onClick={() => navigate('/edit-profile', { state: { user } })}  className="absolute  mt-2 px-4 py-2 text-sm font-bold text-white border border-white rounded-full hover:bg-white hover:text-gray-800 transition duration-200 flex items-center">
                             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                             </svg>

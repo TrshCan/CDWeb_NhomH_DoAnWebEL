@@ -24,6 +24,9 @@ type Query {
 #import types/joinRequestResponse.graphql
 #import types/permission.graphql
 
+#import types/badge.graphql
+
+
 # Import inputs
 #import inputs/postCreateInput.graphql
 #import inputs/postUpdateInput.graphql
