@@ -107,16 +107,20 @@ function LoginForm() {
           remember: false,
         });
 
-        // Lưu token và user ID vào localStorage để dùng cho request sau này
+        // Lưu token, user ID và thông tin role vào localStorage để dùng cho request sau này
         localStorage.setItem("token", token);
         localStorage.setItem("userId", user.id.toString());
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("userRole", user.role || "");
 
         // Dispatch event để cập nhật sidebar
         window.dispatchEvent(new Event("tokenChanged"));
 
-        // Chuyển hướng về trang chính sau 1 giây
+        // Chuyển hướng dựa trên role (admin -> trang admin, user -> trang chính) sau 1 giây
         setTimeout(() => {
-          navigate("/");
+          const isAdmin =
+            typeof user.role === "string" && user.role.toLowerCase() === "admin";
+          navigate(isAdmin ? "/admin/dashboard" : "/");
         }, 1000);
       } else if (response.errors) {
         // Mutation bị lỗi
