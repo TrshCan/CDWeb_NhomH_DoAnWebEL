@@ -42,19 +42,31 @@ export default function GroupDetail() {
   const announcementTimerRef = React.useRef(null);
   const postsTopRef = React.useRef(null);
 
-  // Get user info
-  const getUserFromStorage = () => {
+  // Get user info from localStorage
+  const getUserIdFromStorage = () => {
     try {
-      const userData = localStorage.getItem("user");
-      if (!userData) return null;
-      return JSON.parse(userData);
+      const userId = localStorage.getItem("userId");
+      return userId ? parseInt(userId) : null;
     } catch (error) {
-      console.error("Error parsing user from localStorage:", error);
+      console.error("Error getting userId from localStorage:", error);
       return null;
     }
   };
 
-  const user = getUserFromStorage();
+  const getUserNameFromStorage = () => {
+    try {
+      const userData = localStorage.getItem("user");
+      if (!userData) return "Anonymous";
+      const user = JSON.parse(userData);
+      return user?.name || "Anonymous";
+    } catch (error) {
+      console.error("Error parsing user from localStorage:", error);
+      return "Anonymous";
+    }
+  };
+
+  const userId = getUserIdFromStorage();
+  const userName = getUserNameFromStorage();
 
   useEffect(() => {
     const fetchGroupData = async () => {
@@ -77,7 +89,7 @@ export default function GroupDetail() {
         setLoading(true);
         
         // Check if user is logged in
-        if (!user?.id) {
+        if (!userId) {
           toast.error("Please log in to view this group");
           setAccessDenied(true);
           setLoading(false);
@@ -86,7 +98,7 @@ export default function GroupDetail() {
         }
 
         // Check if user is a member of this group
-        const isMember = await isUserMemberOfGroup(user.id, groupId);
+        const isMember = await isUserMemberOfGroup(userId, groupId);
         
         if (!isMember) {
           toast.error("You don't have access to this group");
@@ -99,7 +111,7 @@ export default function GroupDetail() {
         setIsAuthorized(true);
         
         // Fetch group info from user's groups
-        const userGroups = await getGroupsByUser(user.id);
+        const userGroups = await getGroupsByUser(userId);
         const group = userGroups.find((g) => String(g.id) === String(groupId));
         
         if (group) {
@@ -122,13 +134,15 @@ export default function GroupDetail() {
         }
 
         // Determine management permission (admin/moderator or creator)
-        const canManageRes = await isUserGroupAdminOrModerator(user.id, groupId);
-        const isCreator = group?.created_by && String(group.created_by) === String(user.id);
+        const canManageRes = await isUserGroupAdminOrModerator(userId, groupId);
+        const isCreator = group?.created_by && String(group.created_by) === String(userId);
         setCanManage(canManageRes || isCreator);
 
         // Fetch posts for this group
         const groupPosts = await getPostsByGroup(groupId);
-        const mapped = groupPosts.map((p) => ({
+        // Filter to only show group_post type
+        const filteredPosts = groupPosts.filter((p) => p.type === "group_post");
+        const mapped = filteredPosts.map((p) => ({
             id: p.id,
             type: p.type,
             user: p.user?.name || "Anonymous",
@@ -161,7 +175,7 @@ export default function GroupDetail() {
     };
 
     fetchGroupData();
-  }, [groupId, user?.id, navigate]);
+  }, [groupId, userId, navigate]);
 
   // Poll for new posts to show announcement
   useEffect(() => {
@@ -171,10 +185,13 @@ export default function GroupDetail() {
       try {
         const groupPosts = await getPostsByGroup(groupId);
         if (!groupPosts || groupPosts.length === 0) return;
-        const newestServerTime = groupPosts[0]?.created_at ? new Date(groupPosts[0].created_at).getTime() : null;
+        // Filter to only check group_post type
+        const filteredPosts = groupPosts.filter((p) => p.type === "group_post");
+        if (filteredPosts.length === 0) return;
+        const newestServerTime = filteredPosts[0]?.created_at ? new Date(filteredPosts[0].created_at).getTime() : null;
         if (latestPostTime && newestServerTime && newestServerTime > latestPostTime) {
           // Count how many new posts newer than latestPostTime and not by current user
-          const newOnes = groupPosts.filter((p) => new Date(p.created_at).getTime() > latestPostTime && String(p.user?.id) !== String(user?.id));
+          const newOnes = filteredPosts.filter((p) => new Date(p.created_at).getTime() > latestPostTime && String(p.user?.id) !== String(userId));
           if (newOnes.length > 0) {
             const firstName = newOnes[0]?.user?.name || "Someone";
             const more = newOnes.length - 1;
@@ -194,12 +211,14 @@ export default function GroupDetail() {
     }, 10000); // poll every 10s
 
     return () => clearInterval(interval);
-  }, [isAuthorized, groupId, latestPostTime, user?.id]);
+  }, [isAuthorized, groupId, latestPostTime, userId]);
 
   const handleReloadForAnnouncement = async () => {
     try {
       const groupPosts = await getPostsByGroup(groupId);
-      const mapped = groupPosts.map((p) => ({
+      // Filter to only show group_post type
+      const filteredPosts = groupPosts.filter((p) => p.type === "group_post");
+      const mapped = filteredPosts.map((p) => ({
         id: p.id,
         type: p.type,
         user: p.user?.name || "Anonymous",
@@ -265,15 +284,15 @@ export default function GroupDetail() {
     const text = document.getElementById("groupPostInput")?.value.trim();
     if (!text && files.length === 0) return;
 
-    if (!user?.id) {
+    if (!userId) {
       toast.error("Please log in to create a post");
       return;
     }
 
     try {
       const input = {
-        user_id: user.id,
-        type: "normal_post",
+        user_id: userId,
+        type: "group_post",
         content: text,
         group_id: parseInt(groupId),
       };
@@ -447,7 +466,7 @@ export default function GroupDetail() {
         <div className="flex items-center space-x-2 mb-2">
           <div className="w-10 h-10 bg-cyan-600 rounded-full"></div>
           <p className="font-semibold text-cyan-600">
-            {user?.name || "Anonymous"}
+            {userName}
           </p>
         </div>
 
