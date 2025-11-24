@@ -1,13 +1,4 @@
 extend type Query {
-    deadlines: [Deadline!]!
-        @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@all")
-
-    deadline(id: ID!): Deadline
-        @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@find")
-
-    deadlinesByUser(user_id: ID!): [Deadline!]!
-        @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@byUser")
-
     upcomingDeadlines: [Deadline!]!
         @field(resolver: "App\\GraphQL\\Resolvers\\DeadlineResolver@upcoming")
 }
