@@ -177,35 +177,28 @@ export default function SurveysCreated() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [loading, surveys.length, refreshSurveysList]);
 
-  // Helper function to check if survey exists and is not deleted
-  const checkSurveyExists = async (surveyId, surveyTitle) => {
-    try {
-      await getSurveyDetails(surveyId);
-      return true;
-    } catch (error) {
-      // Extract error message
-      let errorMessage = '';
-      
-      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
-        errorMessage = error.graphQLErrors[0].message || '';
-      } else if (error.message && error.message !== "GraphQL error") {
-        errorMessage = error.message;
-      }
-      
-      // Check if survey is deleted or doesn't exist
-      if (errorMessage.includes('đã bị xóa') || 
-          errorMessage.includes('không tồn tại') ||
-          errorMessage.includes('Invalid') ||
-          errorMessage.includes('Khảo sát không tồn tại')) {
-        // Refresh list silently first, then show error
-        await refreshSurveysList(true);
-        toast.error(`Khảo sát "${surveyTitle}" đã bị xóa hoặc không tồn tại.`);
-        return false;
-      }
-      
-      // For other errors, still return false but don't refresh
-      return false;
+  // Helper function to handle survey not found errors
+  const handleSurveyNotFoundError = async (error, surveyTitle) => {
+    let errorMessage = '';
+    
+    if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+      errorMessage = error.graphQLErrors[0].message || '';
+    } else if (error.message && error.message !== "GraphQL error") {
+      errorMessage = error.message;
     }
+    
+    // Check if survey is deleted or doesn't exist
+    if (errorMessage.includes('đã bị xóa') || 
+        errorMessage.includes('không tồn tại') ||
+        errorMessage.includes('Invalid') ||
+        errorMessage.includes('Khảo sát không tồn tại')) {
+      // Refresh list silently to update UI
+      await refreshSurveysList(true);
+      toast.error(`Khảo sát "${surveyTitle}" đã bị xóa hoặc không tồn tại.`);
+      return true; // Indicates it was a "not found" error
+    }
+    
+    return false; // Not a "not found" error
   };
 
   // Action handlers
@@ -213,27 +206,13 @@ export default function SurveysCreated() {
     setIsCreateModalOpen(true);
   };
 
-  const handleViewResults = async (surveyId, surveyTitle) => {
-    // Check if survey exists and is not deleted
-    const exists = await checkSurveyExists(surveyId, surveyTitle);
-    if (!exists) {
-      return;
-    }
-    
+  const handleViewResults = (surveyId) => {
+    // Navigate directly - let the overview page handle any errors
     navigate(`/surveys/${surveyId}/overview`);
   };
 
-  const handleEditSurvey = async (surveyId) => {
-    // Find survey title from current list
-    const survey = surveys.find(s => s.id === surveyId);
-    const surveyTitle = survey?.title || `ID: ${surveyId}`;
-    
-    // Check if survey exists and is not deleted
-    const exists = await checkSurveyExists(surveyId, surveyTitle);
-    if (!exists) {
-      return;
-    }
-    
+  const handleEditSurvey = (surveyId) => {
+    // Open modal directly - let the modal handle loading and errors
     setSelectedSurveyId(surveyId);
     setIsEditModalOpen(true);
   };
@@ -268,12 +247,6 @@ export default function SurveysCreated() {
   };
 
   const handleDuplicateSurvey = async (surveyId, surveyTitle) => {
-    // Check if survey exists and is not deleted
-    const exists = await checkSurveyExists(surveyId, surveyTitle);
-    if (!exists) {
-      return;
-    }
-    
     if (!window.confirm(`Bạn có chắc muốn tạo bản sao của khảo sát: ${surveyTitle}?`)) {
       return;
     }
@@ -288,7 +261,13 @@ export default function SurveysCreated() {
     } catch (error) {
       console.error("Error duplicating survey:", error);
       
-      // Ưu tiên lấy message từ validation errors
+      // Check if it's a "not found" error and handle it
+      const wasNotFound = await handleSurveyNotFoundError(error, surveyTitle);
+      if (wasNotFound) {
+        return; // Error already handled
+      }
+      
+      // Handle other errors
       let errorMessage = '';
       
       if (error.graphQLErrors && error.graphQLErrors.length > 0) {
@@ -297,7 +276,6 @@ export default function SurveysCreated() {
         // Kiểm tra validation errors trước
         if (firstError.extensions?.validation) {
           const validationErrors = firstError.extensions.validation;
-          // Lấy tất cả messages từ validation errors
           const validationMessages = Object.values(validationErrors)
             .flat()
             .filter(msg => msg && msg.trim() !== '');
@@ -307,23 +285,19 @@ export default function SurveysCreated() {
           }
         }
         
-        // Nếu không có validation errors, dùng message từ error
         if (!errorMessage && firstError.message) {
           errorMessage = firstError.message;
         }
       }
       
-      // Nếu không có graphQL errors, dùng error.message
       if (!errorMessage && error.message) {
         errorMessage = error.message;
       }
       
-      // Fallback nếu vẫn không có message
       if (!errorMessage) {
         errorMessage = 'Không thể tạo bản sao khảo sát';
       }
       
-      // Handle specific error messages
       if (errorMessage.includes('Đang xử lý yêu cầu')) {
         errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
       }
@@ -334,12 +308,6 @@ export default function SurveysCreated() {
 
 
   const handleDeleteSurvey = async (surveyId, surveyTitle) => {
-    // Check if survey exists and is not deleted
-    const exists = await checkSurveyExists(surveyId, surveyTitle);
-    if (!exists) {
-      return;
-    }
-    
     if (
       !window.confirm(
         `Bạn có chắc chắn muốn XÓA vĩnh viễn khảo sát: ${surveyTitle}?`
@@ -358,16 +326,20 @@ export default function SurveysCreated() {
     } catch (error) {
       console.error("Error deleting survey:", error);
       
-      // Ưu tiên lấy message từ validation errors
+      // Check if it's a "not found" error and handle it
+      const wasNotFound = await handleSurveyNotFoundError(error, surveyTitle);
+      if (wasNotFound) {
+        return; // Error already handled
+      }
+      
+      // Handle other errors
       let errorMessage = '';
       
       if (error.graphQLErrors && error.graphQLErrors.length > 0) {
         const firstError = error.graphQLErrors[0];
         
-        // Kiểm tra validation errors trước
         if (firstError.extensions?.validation) {
           const validationErrors = firstError.extensions.validation;
-          // Lấy tất cả messages từ validation errors
           const validationMessages = Object.values(validationErrors)
             .flat()
             .filter(msg => msg && msg.trim() !== '');
@@ -377,23 +349,19 @@ export default function SurveysCreated() {
           }
         }
         
-        // Nếu không có validation errors, dùng message từ error
         if (!errorMessage && firstError.message) {
           errorMessage = firstError.message;
         }
       }
       
-      // Nếu không có graphQL errors, dùng error.message
       if (!errorMessage && error.message) {
         errorMessage = error.message;
       }
       
-      // Fallback nếu vẫn không có message
       if (!errorMessage) {
         errorMessage = 'Không thể xóa khảo sát';
       }
       
-      // Handle specific error messages
       if (errorMessage.includes('Đang xử lý yêu cầu')) {
         errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
       } else if (errorMessage.includes('Khảo sát đã bị xóa trước đó') || errorMessage.includes('đã bị xóa')) {
@@ -647,9 +615,7 @@ export default function SurveysCreated() {
                     <td>
                       <div className="action-buttons">
                         <button
-                          onClick={() =>
-                            handleViewResults(survey.id, survey.title)
-                          }
+                          onClick={() => handleViewResults(survey.id)}
                           className="action-button action-button-view"
                           title="Xem Kết quả"
                         >
