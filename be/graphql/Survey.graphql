@@ -27,6 +27,7 @@ type Survey {
     created_at: String
     updated_at: String
     questions: [SurveyQuestion!]
+    questionGroups: [QuestionGroup!]
 }
 enum SurveyType {
     survey

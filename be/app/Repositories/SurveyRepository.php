@@ -296,7 +296,12 @@ class SurveyRepository
     }
     public function findById(int $id): ?Survey
     {
-        return Survey::find($id);
+        return Survey::with([
+            'category',
+            'creator',
+            'questions.options',
+            'questionGroups.questions.options'
+        ])->find($id);
     }
 
     /**
