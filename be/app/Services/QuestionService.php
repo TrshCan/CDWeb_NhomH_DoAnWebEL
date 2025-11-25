@@ -23,24 +23,20 @@ class QuestionService
 
     /**
      * Tạo question_code mới cho survey
-     * Tìm số lớn nhất hiện có và tăng lên 1
-     * Tối ưu: Chỉ lấy 1 field và limit 1
+     * Tối ưu: Sử dụng raw SQL để tìm max number nhanh nhất
      */
     private function generateNextQuestionCode($surveyId)
     {
-        // Tối ưu: Chỉ lấy question_code, không load toàn bộ model
-        $maxCode = \App\Models\SurveyQuestion::where('survey_id', $surveyId)
+        // Sử dụng raw SQL để tìm số lớn nhất trong question_code
+        // Chỉ lấy các code có format Q + số
+        $maxNumber = \DB::table('survey_questions')
+            ->where('survey_id', $surveyId)
             ->whereNotNull('question_code')
-            ->where('question_code', 'LIKE', 'Q%')
-            ->orderByRaw('CAST(SUBSTRING(question_code, 2) AS UNSIGNED) DESC')
-            ->limit(1)
-            ->value('question_code');
+            ->where('question_code', 'REGEXP', '^Q[0-9]+$')
+            ->selectRaw('MAX(CAST(SUBSTRING(question_code, 2) AS UNSIGNED)) as max_num')
+            ->value('max_num');
         
-        $nextNumber = 1;
-        if ($maxCode) {
-            $currentNumber = (int) substr($maxCode, 1);
-            $nextNumber = $currentNumber + 1;
-        }
+        $nextNumber = $maxNumber ? ($maxNumber + 1) : 1;
         
         return 'Q' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
     }

@@ -137,7 +137,7 @@ export const createSurvey = async (surveyData) => {
  */
 export const updateSurvey = async (surveyId, updateData) => {
   const mutation = `
-    mutation UpdateSurvey($id: ID!, $input: UpdateSurveyInput!) {
+    mutation UpdateSurvey($id: Int!, $input: UpdateSurveyInput!) {
       updateSurvey(id: $id, input: $input) {
         id
         title
@@ -155,7 +155,7 @@ export const updateSurvey = async (surveyId, updateData) => {
   `;
 
   const variables = {
-    id: surveyId,
+    id: parseInt(surveyId),
     input: updateData,
   };
 
