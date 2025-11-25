@@ -358,19 +358,19 @@ extend type Mutation {
 
     # Question Groups
     createQuestionGroup(input: CreateQuestionGroupInput!): QuestionGroup
-        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@create")
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupQuestionResolver@create")
 
     updateQuestionGroup(
         id: ID!
         input: UpdateQuestionGroupInput!
     ): QuestionGroup
-        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@update")
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupQuestionResolver@update")
 
     deleteQuestionGroup(id: ID!): Boolean!
-        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@delete")
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupQuestionResolver@delete")
 
     duplicateQuestionGroup(id: ID!): QuestionGroup
-        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@duplicate")
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupQuestionResolver@duplicate")
 
     # Survey Shares
     inviteByEmail(survey_id: ID!, email: String!): SurveyShare!
