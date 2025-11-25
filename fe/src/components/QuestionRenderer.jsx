@@ -41,9 +41,9 @@ function QuestionRenderer({ question, answer, onAnswerChange }) {
     handleChange({ selected_option_id: newAnswers });
   };
 
-  const renderOptions = (type) => {
+  const renderOptions = (type, isImageType = false) => {
     if (!question.options || question.options.length === 0) {
-      return <p className="no-options">No options available for this question.</p>;
+      return <p className="no-options">Không có lựa chọn cho câu hỏi này.</p>;
     }
 
     return question.options.map((option, optIndex) => {
@@ -53,6 +53,49 @@ function QuestionRenderer({ question, answer, onAnswerChange }) {
             localAnswer.selected_option_id.includes(option.id)
           : localAnswer.selected_option_id === option.id;
 
+      // Nếu là loại hình ảnh - luôn render dạng card
+      if (isImageType) {
+        return (
+          <label
+            key={option.id}
+            className={`image-option ${isChecked ? "selected" : ""}`}
+            style={{ animationDelay: `${optIndex * 50}ms` }}
+          >
+            <input
+              type={type === "multiple" ? "checkbox" : "radio"}
+              name={type === "multiple" ? undefined : `question-${question.id}`}
+              value={option.id}
+              checked={isChecked}
+              onChange={() =>
+                type === "multiple"
+                  ? handleMultipleChoice(option.id)
+                  : handleSingleChoice(option.id)
+              }
+            />
+            <div className="image-option-content">
+              {option.image ? (
+                <img src={option.image} alt={option.option_text || "Option"} className="option-image-large" />
+              ) : (
+                <div className="option-image-placeholder">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </div>
+              )}
+              <span className="option-text-below">{option.option_text || `Lựa chọn ${optIndex + 1}`}</span>
+              <span className="image-check-overlay">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </span>
+            </div>
+          </label>
+        );
+      }
+
+      // Render option thông thường (có thể có hình ảnh nhỏ)
       return (
         <label
           key={option.id}
@@ -76,15 +119,7 @@ function QuestionRenderer({ question, answer, onAnswerChange }) {
           )}
           <span className="option-text">{option.option_text}</span>
           <span className="option-check">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </span>
@@ -194,8 +229,8 @@ function QuestionRenderer({ question, answer, onAnswerChange }) {
     // 4. Chọn hình ảnh từ danh sách (Radio) - Single Image Choice
     if (matchType(type, QUESTION_TYPES.SINGLE_IMAGE)) {
       return (
-        <div className="answer-options image-options">
-          {renderOptions("single")}
+        <div className="answer-options image-options-grid">
+          {renderOptions("single", true)}
         </div>
       );
     }
@@ -213,9 +248,9 @@ function QuestionRenderer({ question, answer, onAnswerChange }) {
     // 6. Chọn nhiều hình ảnh - Multiple Image Choice
     if (matchType(type, QUESTION_TYPES.MULTIPLE_IMAGE)) {
       return (
-        <div className="answer-options image-options">
+        <div className="answer-options image-options-grid">
           <p className="multiple-hint">Chọn tất cả hình ảnh phù hợp</p>
-          {renderOptions("multiple")}
+          {renderOptions("multiple", true)}
         </div>
       );
     }

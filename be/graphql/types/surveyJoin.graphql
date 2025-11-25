@@ -2,13 +2,17 @@ type SurveyJoinQuestion {
   id: ID!
   question_text: String!
   question_type: String!
+  image: String
   points: Float
+  help_text: String
+  max_length: Int
   options: [SurveyJoinOption!]
 }
 
 type SurveyJoinOption {
   id: ID!
   option_text: String!
+  image: String
 }
 
 type SurveyJoinDetail {

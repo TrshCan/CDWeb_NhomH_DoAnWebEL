@@ -213,10 +213,14 @@ export async function getSurveyJoinDetail(surveyId, token) {
           id
           question_text
           question_type
+          image
           points
+          help_text
+          max_length
           options {
             id
             option_text
+            image
           }
         }
       }
