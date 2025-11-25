@@ -922,8 +922,8 @@ const SurveyFilter = () => {
       }
 
       const duplicated = result.data.duplicateSurvey;
-      closeDuplicateModal();
       pushToast('Sao chép khảo sát thành công', 'success');
+      closeDuplicateModal();
       // Reload với filters hiện tại
       loadSurveys(filters);
     } catch (error) {
@@ -1042,6 +1042,8 @@ const SurveyFilter = () => {
       const userId = parseInt(localStorage.getItem("userId"));
       if (!userId) {
         pushToast('Bạn chưa đăng nhập. Vui lòng đăng nhập để tạo khảo sát.', 'error');
+        setLoading(false);
+        setIsSubmitting(prev => ({ ...prev, add: false }));
         return;
       }
 
@@ -1128,8 +1130,8 @@ const SurveyFilter = () => {
         creatorName: created.creator_name || (created.created_by ? `Người dùng #${created.created_by}` : 'Không xác định')
       };
 
-      closeAddModal();
       pushToast('Tạo khảo sát thành công', 'success');
+      closeAddModal();
       // Reload với filters hiện tại
       loadSurveys(filters);
     } catch (error) {
@@ -1304,8 +1306,8 @@ const SurveyFilter = () => {
         updatedAt: updated.updated_at || null
       };
 
-      closeEditModal();
       pushToast('Cập nhật thành công', 'success');
+      closeEditModal();
       // Reload với filters hiện tại
       loadSurveys(filters);
     } catch (error) {
@@ -1358,8 +1360,8 @@ const SurveyFilter = () => {
 
       // Kiểm tra kết quả
       if (result.data?.deleteSurvey === true || result.data?.deleteSurvey === false) {
-        closeDeleteModal();
         pushToast('Đã xóa khảo sát thành công', 'success');
+        closeDeleteModal();
         // Reload với filters hiện tại
         loadSurveys(filters);
       } else {
@@ -1512,19 +1514,17 @@ const SurveyFilter = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-800 flex">
-      <AdminSidebar />
-      <div className="flex-1 bg-gray-50 p-8">
-        {/* Toasts */}
-        <div className="fixed top-6 right-6 z-[60] space-y-4 flex flex-col items-end">
+      {/* Toasts - đặt ở cấp cao nhất với z-index cao hơn modal */}
+      <div className="fixed top-6 right-6 z-[9999] space-y-4 flex flex-col items-end">
         {toasts.map(t => (
           <div 
             key={t.id} 
-            className={`flex items-start gap-4 rounded-xl px-6 py-4 shadow-2xl max-w-md border-2 backdrop-blur-sm transform transition-all duration-300 animate-in slide-in-from-right-5 fade-in ${
+            className={`flex items-start gap-4 rounded-xl px-6 py-4 shadow-2xl max-w-md border-2 ${
               t.type === 'success' 
-                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400 text-green-900 shadow-green-200/50' 
+                ? 'bg-green-50 border-green-400 text-green-900' 
                 : t.type === 'error' 
-                ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-400 text-red-900 shadow-red-200/50'
-                : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400 text-blue-900 shadow-blue-200/50'
+                ? 'bg-red-50 border-red-400 text-red-900'
+                : 'bg-blue-50 border-blue-400 text-blue-900'
             }`}
           >
             <div className={`flex-shrink-0 mt-0.5 ${
@@ -1565,7 +1565,9 @@ const SurveyFilter = () => {
           </div>
         ))}
       </div>
-      <div className="max-w-7xl mx-auto">
+      <AdminSidebar />
+      <div className="flex-1 bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
             <button 
