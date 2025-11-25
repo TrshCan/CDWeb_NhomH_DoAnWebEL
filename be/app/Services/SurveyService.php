@@ -616,17 +616,19 @@ class SurveyService
             }
         }
 
-        // Xử lý logic points
-        if (isset($data['type']) && $data['type'] === 'quiz') {
-            $pointsRule = 'required|integer|min:0|max:100';
-        } elseif (!isset($data['type']) && $survey->type === 'quiz') {
-            $pointsRule = 'sometimes|integer|min:0|max:100';
+        // Xử lý logic points dựa trên loại khảo sát cuối cùng (sau khi cập nhật)
+        $targetType = $data['type'] ?? $survey->type;
+        $isSwitchingToQuiz = isset($data['type']) && $data['type'] === 'quiz';
+
+        if ($targetType === 'quiz') {
+            // Nếu đang chuyển sang quiz thì bắt buộc nhập points
+            $pointsRule = $isSwitchingToQuiz
+                ? 'required|integer|min:0|max:100'
+                : 'sometimes|integer|min:0|max:100';
         } else {
-            // Nếu là survey thì không cho phép gửi/truyền trường points
-            if (array_key_exists('points', $data)) {
-                unset($data['points']);
-            }
-            $pointsRule = 'prohibited'; // Cấm gửi points
+            // Loại survey luôn đặt điểm về 0 để tránh lỗi invalid data khi FE vẫn gửi điểm
+            $data['points'] = 0;
+            $pointsRule = 'nullable|integer|min:0|max:100';
         }
 
         $validator = Validator::make($data, [
@@ -646,7 +648,6 @@ class SurveyService
             'points.integer' => 'Điểm phải là số nguyên.',
             'points.min' => 'Điểm không được nhỏ hơn 0.',
             'points.max' => 'Điểm không được lớn hơn 100.',
-            'points.prohibited' => 'Khảo sát thường không có điểm. Vui lòng bỏ trường điểm.',
         ]);
 
         if ($validator->fails()) {
