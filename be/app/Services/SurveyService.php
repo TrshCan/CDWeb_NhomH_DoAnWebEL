@@ -781,7 +781,7 @@ class SurveyService
             $oldSurvey = $this->surveyRepository->findById($id);
             
             // Cập nhật survey
-            $survey = $this->surveyRepository->update($id, $input);
+            $survey = $this->surveyRepository->update($oldSurvey, $input);
             
             // Tạo log chi tiết về những gì đã thay đổi
             $changes = [];

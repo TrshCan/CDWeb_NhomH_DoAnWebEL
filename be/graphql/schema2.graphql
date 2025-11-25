@@ -7,7 +7,7 @@ scalar JSON
 # --------------------------------------------
 # ----------------Category--------------------
 # --------------------------------------------
- type Category {
+type Category {
     id: Int!
     name: String
     created_at: DateTime
@@ -18,7 +18,7 @@ scalar JSON
 input CreateCategoryInput {
     id: Int!
     name: String
-} 
+}
 
 input UpdateCategoryInput {
     name: String
@@ -273,6 +273,9 @@ input AnswerInput {
 # ----------------Queries---------------------
 # --------------------------------------------
 extend type Query {
+    # Categories
+    categories: [Category!]!
+        @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@list")
 
     survey(id: ID!): Survey
         @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResolver@find")
@@ -280,21 +283,27 @@ extend type Query {
     # Questions
     question(id: ID!): SurveyQuestion
         @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@find")
-    
+
     # Audit Logs
     auditLogs(survey_id: ID!): [AuditLog!]!
         @field(resolver: "App\\GraphQL\\Resolvers\\AuditLogResolver@list")
-    
+
     # Survey Shares
     surveyShares(survey_id: ID!): [SurveyShare!]!
-        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getShares")
-    
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getShares"
+        )
+
     publicShareLink(survey_id: ID!): SurveyShare!
-        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getPublicShareLink")
-    
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@getPublicShareLink"
+        )
+
     # Survey Response
     getUserResult(survey_id: ID!, user_id: ID): UserResult
-        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResponseResolver@getUserResult")
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\SurveyResponseResolver@getUserResult"
+        )
 }
 
 # --------------------------------------------
@@ -311,56 +320,78 @@ extend type Mutation {
     deleteCategory(id: Int!, allowIfReferenced: Boolean): Boolean!
         @field(resolver: "App\\GraphQL\\Resolvers\\CategoryResolver@delete")
 
-
     # Questions
     addQuestion(input: CreateQuestionInput!): SurveyQuestion
         @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@create")
-    
+
     updateQuestion(id: ID!, input: UpdateQuestionInput!): SurveyQuestion
         @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@update")
-    
+
     addOption(input: CreateOptionInput!): SurveyOption
-        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@createOption")
-    
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@createOption"
+        )
+
     updateOption(id: ID!, input: UpdateOptionInput!): SurveyOption
-        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@updateOption")
-    
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@updateOption"
+        )
+
     deleteOption(id: ID!): Boolean!
-        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@deleteOption")
-    
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@deleteOption"
+        )
+
     deleteQuestion(id: ID!): Boolean!
         @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@delete")
-    
+
     deleteQuestions(ids: [ID!]!): Boolean!
-        @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@deleteBatch")
-    
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@deleteBatch"
+        )
+
     duplicateQuestion(id: ID!): SurveyQuestion
         @field(resolver: "App\\GraphQL\\Resolvers\\QuestionResolver@duplicate")
-    
+
     # Question Groups
     createQuestionGroup(input: CreateQuestionGroupInput!): QuestionGroup
-        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@create")
-    
-    updateQuestionGroup(id: ID!, input: UpdateQuestionGroupInput!): QuestionGroup
-        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@update")
-    
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupQuestionResolver@create")
+
+    updateQuestionGroup(
+        id: ID!
+        input: UpdateQuestionGroupInput!
+    ): QuestionGroup
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupQuestionResolver@update")
+
     deleteQuestionGroup(id: ID!): Boolean!
-        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@delete")
-    
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupQuestionResolver@delete")
+
     duplicateQuestionGroup(id: ID!): QuestionGroup
-        @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@duplicate")
-    
+        @field(resolver: "App\\GraphQL\\Resolvers\\GroupQuestionResolver@duplicate")
+
     # Survey Shares
     inviteByEmail(survey_id: ID!, email: String!): SurveyShare!
-        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@inviteByEmail")
-    
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@inviteByEmail"
+        )
+
     shareToGroup(survey_id: ID!, group_id: ID!): SurveyShare!
-        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@shareToGroup")
-    
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@shareToGroup"
+        )
+
     deleteShare(id: ID!): Boolean!
-        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@deleteShare")
-    
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\SurveyShareResolver@deleteShare"
+        )
+
     # Survey Response
-    submitSurveyResponse(survey_id: ID!, user_id: ID, answers: [AnswerInput!]!): SurveyResponseResult!
-        @field(resolver: "App\\GraphQL\\Resolvers\\SurveyResponseResolver@submitResponse")
+    submitSurveyResponse(
+        survey_id: ID!
+        user_id: ID
+        answers: [AnswerInput!]!
+    ): SurveyResponseResult!
+        @field(
+            resolver: "App\\GraphQL\\Resolvers\\SurveyResponseResolver@submitResponse"
+        )
 }

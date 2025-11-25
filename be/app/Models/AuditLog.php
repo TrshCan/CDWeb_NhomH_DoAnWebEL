@@ -6,8 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class AuditLog extends Model
 {
-    public $timestamps = false;
-
     protected $fillable = [
         'survey_id',
         'user_id',
@@ -18,7 +16,6 @@ class AuditLog extends Model
         'details',
         'ip_address',
         'user_agent',
-        'created_at',
     ];
 
     protected $casts = [
@@ -49,7 +46,6 @@ class AuditLog extends Model
             'details' => is_array($details) ? json_encode($details) : $details,
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
-            'created_at' => now(),
         ]);
     }
 }
