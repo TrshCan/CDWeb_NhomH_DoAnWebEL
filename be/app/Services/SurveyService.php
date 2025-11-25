@@ -305,7 +305,7 @@ class SurveyService
         $data = array_merge([
             'type' => 'survey',
             'object' => 'public',
-            'points' => 0,
+            'points' => null,
             'status' => 'pending',
             'description' => '',
             'time_limit' => null,
@@ -354,8 +354,8 @@ class SurveyService
         if (isset($data['type']) && $data['type'] === 'quiz') {
             $rules['points'] = 'required|integer|min:0|max:100';
         } else {
-            // Nếu là survey → ép points = 0
-            $data['points'] = 0;
+            // Nếu là survey → ép points = null
+            $data['points'] = null;
         }
 
         $messages = [
@@ -626,8 +626,8 @@ class SurveyService
                 ? 'required|integer|min:0|max:100'
                 : 'sometimes|integer|min:0|max:100';
         } else {
-            // Loại survey luôn đặt điểm về 0 để tránh lỗi invalid data khi FE vẫn gửi điểm
-            $data['points'] = 0;
+            // Loại survey luôn đặt điểm null để phân biệt với quiz
+            $data['points'] = null;
             $pointsRule = 'nullable|integer|min:0|max:100';
         }
 

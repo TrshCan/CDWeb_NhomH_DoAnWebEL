@@ -140,7 +140,10 @@ const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
   </div>
 );
 
-const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig, formErrors = {}, setFormErrors }) => (
+const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig, formErrors = {}, setFormErrors }) => {
+  const isQuiz = editForm.type === 'quiz';
+
+  return (
   <form id="editForm" onSubmit={onSubmit} className="space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
@@ -256,15 +259,23 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
         />
       </div>
       <div>
-        <label className="block text-left text-sm font-semibold mb-1.5">Điểm thưởng</label>
+        <label className="block text-left text-sm font-semibold mb-1.5 flex justify-between items-center">
+          <span>Điểm thưởng</span>
+          {!isQuiz && <span className="text-xs text-gray-500 italic">(chỉ áp dụng cho quiz)</span>}
+        </label>
         <input
           type="number"
           min="0"
-          value={editForm.points}
+          value={isQuiz ? editForm.points : ''}
           onChange={(e) => onChange.points(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-          required
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${!isQuiz ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'border-gray-300'}`}
+          required={isQuiz}
+          disabled={!isQuiz}
+          placeholder={isQuiz ? 'Nhập điểm thưởng' : 'Không áp dụng'}
         />
+        {!isQuiz && (
+          <p className="text-xs text-gray-500 mt-1">Điểm thưởng chỉ dành cho khảo sát loại quiz.</p>
+        )}
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Giới hạn thời gian (phút)</label>
@@ -325,9 +336,13 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
       </div>
     </div>
   </form>
-);
+  );
+};
 
-const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig, formErrors = {}, setFormErrors }) => (
+const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig, formErrors = {}, setFormErrors }) => {
+  const isQuiz = addForm.type === 'quiz';
+
+  return (
   <form id="addForm" onSubmit={onSubmit} className="space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
@@ -443,15 +458,23 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
         />
       </div>
       <div>
-        <label className="block text-left text-sm font-semibold mb-1.5">Điểm thưởng</label>
+        <label className="block text-left text-sm font-semibold mb-1.5 flex justify-between items-center">
+          <span>Điểm thưởng</span>
+          {!isQuiz && <span className="text-xs text-gray-500 italic">(chỉ áp dụng cho quiz)</span>}
+        </label>
         <input
           type="number"
           min="0"
-          value={addForm.points}
+          value={isQuiz ? addForm.points : ''}
           onChange={(e) => onChange.points(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-          required
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${!isQuiz ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'border-gray-300'}`}
+          required={isQuiz}
+          disabled={!isQuiz}
+          placeholder={isQuiz ? 'Nhập điểm thưởng' : 'Không áp dụng'}
         />
+        {!isQuiz && (
+          <p className="text-xs text-gray-500 mt-1">Điểm thưởng chỉ dành cho khảo sát loại quiz.</p>
+        )}
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Giới hạn thời gian (phút)</label>
@@ -512,7 +535,8 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
       </div>
     </div>
   </form>
-);
+  );
+};
 
 const SurveyFilter = () => {
   const navigate = useNavigate();
@@ -541,7 +565,7 @@ const SurveyFilter = () => {
     status: 'pending',
     startAt: '',
     endAt: '',
-    points: 0,
+    points: '',
     object: 'public',
     timeLimit: ''
   });
@@ -554,7 +578,7 @@ const SurveyFilter = () => {
     status: '',
     startAt: '',
     endAt: '',
-    points: 0,
+    points: '',
     object: 'public',
     timeLimit: ''
   });
@@ -565,22 +589,36 @@ const SurveyFilter = () => {
   const handleEditTitleChange = useCallback((value) => setEditForm(prev => ({ ...prev, title: value })), []);
   const handleEditDescriptionChange = useCallback((value) => setEditForm(prev => ({ ...prev, description: value })), []);
   const handleEditCategoryChange = useCallback((value) => setEditForm(prev => ({ ...prev, category: value })), []);
-  const handleEditTypeChange = useCallback((value) => setEditForm(prev => ({ ...prev, type: value })), []);
+  const handleEditTypeChange = useCallback((value) => setEditForm(prev => ({
+    ...prev,
+    type: value,
+    points: value === 'quiz' ? (prev.points === '' ? 0 : prev.points) : ''
+  })), []);
   const handleEditStatusChange = useCallback((value) => setEditForm(prev => ({ ...prev, status: value })), []);
   const handleEditStartAtChange = useCallback((value) => setEditForm(prev => ({ ...prev, startAt: value })), []);
   const handleEditEndAtChange = useCallback((value) => setEditForm(prev => ({ ...prev, endAt: value })), []);
-  const handleEditPointsChange = useCallback((value) => setEditForm(prev => ({ ...prev, points: parseInt(value) || 0 })), []);
+  const handleEditPointsChange = useCallback((value) => setEditForm(prev => ({
+    ...prev,
+    points: value === '' ? '' : Math.max(0, parseInt(value, 10) || 0)
+  })), []);
   const handleEditObjectChange = useCallback((value) => setEditForm(prev => ({ ...prev, object: value })), []);
   const handleEditTimeLimitChange = useCallback((value) => setEditForm(prev => ({ ...prev, timeLimit: value === '' ? '' : Math.max(1, parseInt(value) || 1) })), []);
 
   const handleAddTitleChange = useCallback((value) => setAddForm(prev => ({ ...prev, title: value })), []);
   const handleAddDescriptionChange = useCallback((value) => setAddForm(prev => ({ ...prev, description: value })), []);
   const handleAddCategoryChange = useCallback((value) => setAddForm(prev => ({ ...prev, category: value })), []);
-  const handleAddTypeChange = useCallback((value) => setAddForm(prev => ({ ...prev, type: value })), []);
+  const handleAddTypeChange = useCallback((value) => setAddForm(prev => ({
+    ...prev,
+    type: value,
+    points: value === 'quiz' ? (prev.points === '' ? 0 : prev.points) : ''
+  })), []);
   const handleAddStatusChange = useCallback((value) => setAddForm(prev => ({ ...prev, status: value })), []);
   const handleAddStartAtChange = useCallback((value) => setAddForm(prev => ({ ...prev, startAt: value })), []);
   const handleAddEndAtChange = useCallback((value) => setAddForm(prev => ({ ...prev, endAt: value })), []);
-  const handleAddPointsChange = useCallback((value) => setAddForm(prev => ({ ...prev, points: parseInt(value) || 0 })), []);
+  const handleAddPointsChange = useCallback((value) => setAddForm(prev => ({
+    ...prev,
+    points: value === '' ? '' : Math.max(0, parseInt(value, 10) || 0)
+  })), []);
   const handleAddObjectChange = useCallback((value) => setAddForm(prev => ({ ...prev, object: value })), []);
   const handleAddTimeLimitChange = useCallback((value) => setAddForm(prev => ({ ...prev, timeLimit: value === '' ? '' : Math.max(1, parseInt(value) || 1) })), []);
 
@@ -756,7 +794,7 @@ const SurveyFilter = () => {
         status: s.status,
         startAt: toDateTimeLocal(s.start_at),
         endAt: toDateTimeLocal(s.end_at),
-        points: s.points,
+        points: s.points ?? null,
         object: s.object,
         timeLimit: s.time_limit ?? '',
         creatorName: s.creator_name || (s.created_by ? `Người dùng #${s.created_by}` : 'Không xác định'),
@@ -846,7 +884,7 @@ const SurveyFilter = () => {
       status: survey.status,
       startAt: survey.startAt,
       endAt: survey.endAt,
-      points: survey.points || 0,
+      points: survey.type === 'quiz' ? (survey.points ?? 0) : '',
       object: survey.object || 'public',
       timeLimit: survey.timeLimit ?? ''
     });
@@ -948,7 +986,7 @@ const SurveyFilter = () => {
       status: 'pending',
       startAt: '',
       endAt: '',
-      points: 0,
+      points: '',
       object: 'public',
       timeLimit: ''
     });
@@ -1062,7 +1100,9 @@ const SurveyFilter = () => {
           status: addForm.status || 'pending',
           start_at: toDBDateTime(addForm.startAt),
           end_at: toDBDateTime(addForm.endAt),
-          points: addForm.points || 0,
+          points: addForm.type === 'quiz'
+            ? (addForm.points === '' ? 0 : Number(addForm.points))
+            : null,
           object: addForm.object || 'public',
           created_by: userId,
           time_limit: addForm.timeLimit === '' ? null : parseInt(addForm.timeLimit)
@@ -1124,7 +1164,7 @@ const SurveyFilter = () => {
         status: created.status,
         startAt: toDateTimeLocal(created.start_at),
         endAt: toDateTimeLocal(created.end_at),
-        points: created.points,
+        points: created.points ?? null,
         object: created.object,
         timeLimit: created.time_limit ?? '',
         creatorName: created.creator_name || (created.created_by ? `Người dùng #${created.created_by}` : 'Không xác định')
@@ -1228,7 +1268,9 @@ const SurveyFilter = () => {
 
       // points: chỉ gửi nếu là quiz, tránh rule `prohibited` khi type = survey
       if ((editForm.type || 'survey') === 'quiz') {
-        input.points = editForm.points || 0;
+        input.points = editForm.points === '' ? 0 : Number(editForm.points);
+      } else {
+        input.points = null;
       }
 
       // Note: updated_at is not sent to backend as it's not in UpdateSurveyInput schema
@@ -1299,7 +1341,7 @@ const SurveyFilter = () => {
         status: updated.status,
         startAt: toDateTimeLocal(updated.start_at),
         endAt: toDateTimeLocal(updated.end_at),
-        points: updated.points,
+        points: updated.points ?? null,
         object: updated.object,
         timeLimit: updated.time_limit ?? '',
         creatorName: updated.creator_name || (updated.created_by ? `Người dùng #${updated.created_by}` : 'Không xác định'),
@@ -1826,7 +1868,9 @@ const SurveyFilter = () => {
                     <td className="px-6 py-4 text-sm text-gray-600">{survey.category}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{survey.type === 'survey' ? 'Survey' : 'Quiz'}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{survey.creatorName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 font-medium">{survey.points}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 font-medium">
+                      {survey.type === 'quiz' ? (survey.points ?? 0) : '—'}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm ${statusConfig[survey.status]?.class} transform group-hover:scale-105 transition-transform duration-200`}>
