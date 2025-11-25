@@ -10,6 +10,7 @@ import {
   clearSurveyJoinTicket,
   isTicketValidForSurvey,
 } from "../utils/surveyJoinTicket";
+import QuestionRenderer from "../components/QuestionRenderer";
 
 function SurveyJoin() {
   const { surveyId } = useParams();
@@ -162,43 +163,10 @@ function SurveyJoin() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleAnswerChange = (questionId, value, questionType) => {
+  const handleAnswerChange = (questionId, answerData) => {
     setAnswers((prev) => ({
       ...prev,
-      [questionId]: {
-        question_id: questionId,
-        ...(questionType === "text"
-          ? { answer_text: value }
-          : { selected_option_id: value }),
-      },
-    }));
-  };
-
-  const handleMultipleChoice = (questionId, optionId) => {
-    const currentAnswers = answers[questionId]?.selected_option_id || [];
-    const isArray = Array.isArray(currentAnswers);
-
-    if (!isArray) {
-      setAnswers((prev) => ({
-        ...prev,
-        [questionId]: {
-          question_id: questionId,
-          selected_option_id: [optionId],
-        },
-      }));
-      return;
-    }
-
-    const newAnswers = currentAnswers.includes(optionId)
-      ? currentAnswers.filter((id) => id !== optionId)
-      : [...currentAnswers, optionId];
-
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: {
-        question_id: questionId,
-        selected_option_id: newAnswers,
-      },
+      [questionId]: answerData,
     }));
   };
 
@@ -217,7 +185,9 @@ function SurveyJoin() {
 
     try {
       const answerArray = Object.values(answers).flatMap((ans) => {
-        // MULTIPLE CHOICE
+        if (!ans || !ans.question_id) return [];
+
+        // MULTIPLE CHOICE - array of option IDs
         if (Array.isArray(ans.selected_option_id)) {
           return ans.selected_option_id.map((optionId) => ({
             question_id: Number(ans.question_id),
@@ -225,23 +195,30 @@ function SurveyJoin() {
           }));
         }
 
-        // TEXT QUESTIONS
-        if (ans.answer_text !== undefined) {
+        // TEXT-BASED QUESTIONS (text, number, email, phone, url, date, time, etc.)
+        if (ans.answer_text !== undefined && ans.answer_text !== null) {
+          const trimmedText = String(ans.answer_text).trim();
+          if (trimmedText === "") return [];
+          
           return [
             {
               question_id: Number(ans.question_id),
-              answer_text: ans.answer_text.trim(),
+              answer_text: trimmedText,
             },
           ];
         }
 
-        // SINGLE CHOICE
-        return [
-          {
-            question_id: Number(ans.question_id),
-            selected_option_id: Number(ans.selected_option_id),
-          },
-        ];
+        // SINGLE CHOICE - single option ID
+        if (ans.selected_option_id !== undefined && ans.selected_option_id !== null) {
+          return [
+            {
+              question_id: Number(ans.question_id),
+              selected_option_id: Number(ans.selected_option_id),
+            },
+          ];
+        }
+
+        return [];
       });
 
       const result = await submitSurveyAnswers(
@@ -557,125 +534,11 @@ function SurveyJoin() {
                 </div>
                 <h3 className="question-text">{question.question_text}</h3>
 
-                {question.question_type === "text" ? (
-                  <div className="answer-input-wrapper">
-                    <textarea
-                      className="answer-textarea"
-                      placeholder="Type your answer here..."
-                      value={answers[question.id]?.answer_text || ""}
-                      onChange={(e) =>
-                        handleAnswerChange(question.id, e.target.value, "text")
-                      }
-                      rows={5}
-                    />
-                  </div>
-                ) : question.question_type === "single_choice" ? (
-                  <div className="answer-options">
-                    {question.options && question.options.length > 0 ? (
-                      question.options.map((option, optIndex) => (
-                        <label
-                          key={option.id}
-                          className="answer-option"
-                          style={{ animationDelay: `${optIndex * 50}ms` }}
-                        >
-                          <input
-                            type="radio"
-                            name={`question-${question.id}`}
-                            value={option.id}
-                            checked={
-                              answers[question.id]?.selected_option_id ===
-                              option.id
-                            }
-                            onChange={() =>
-                              handleAnswerChange(
-                                question.id,
-                                option.id,
-                                "single"
-                              )
-                            }
-                          />
-                          <span className="option-indicator"></span>
-                          <span className="option-text">
-                            {option.option_text}
-                          </span>
-                          <span className="option-check">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="18"
-                              height="18"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="3"
-                            >
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          </span>
-                        </label>
-                      ))
-                    ) : (
-                      <p className="no-options">
-                        No options available for this question.
-                      </p>
-                    )}
-                  </div>
-                ) : question.question_type === "multiple_choice" ? (
-                  <div className="answer-options">
-                    <p className="multiple-hint">Select all that apply</p>
-                    {question.options && question.options.length > 0 ? (
-                      question.options.map((option, optIndex) => {
-                        const selectedOptions =
-                          answers[question.id]?.selected_option_id || [];
-                        const isChecked =
-                          Array.isArray(selectedOptions) &&
-                          selectedOptions.includes(option.id);
-
-                        return (
-                          <label
-                            key={option.id}
-                            className="answer-option"
-                            style={{ animationDelay: `${optIndex * 50}ms` }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() =>
-                                handleMultipleChoice(question.id, option.id)
-                              }
-                            />
-                            <span className="option-indicator checkbox"></span>
-                            <span className="option-text">
-                              {option.option_text}
-                            </span>
-                            <span className="option-check">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                              >
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                            </span>
-                          </label>
-                        );
-                      })
-                    ) : (
-                      <p className="no-options">
-                        No options available for this question.
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="answer-options">
-                    <p className="no-options">
-                      Unknown question type: {question.question_type}
-                    </p>
-                  </div>
-                )}
+                <QuestionRenderer
+                  question={question}
+                  answer={answers[question.id]}
+                  onAnswerChange={handleAnswerChange}
+                />
               </div>
             ))}
           </div>

@@ -616,6 +616,18 @@ class SurveyService
             }
         }
 
+        // Xử lý logic points
+        // Determine the current or new type
+        $effectiveType = $data['type'] ?? $survey->type;
+        
+        if ($effectiveType === 'quiz') {
+            // If it's a quiz, points are allowed
+            if (isset($data['type']) && $data['type'] === 'quiz') {
+                $pointsRule = 'required|integer|min:0|max:100';
+            } else {
+                $pointsRule = 'sometimes|integer|min:0|max:100';
+            }
+        } else {
         // Xử lý logic points dựa trên loại khảo sát cuối cùng (sau khi cập nhật)
         $targetType = $data['type'] ?? $survey->type;
         $isSwitchingToQuiz = isset($data['type']) && $data['type'] === 'quiz';
@@ -691,10 +703,20 @@ class SurveyService
             
             Log::info('Cập nhật khảo sát thành công', ['id' => $id, 'title' => $updatedSurvey->title]);
             return $surveyWithCreator ?: $updatedSurvey;
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            // Re-throw validation exceptions so they can be properly displayed to the user
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Lỗi cập nhật khảo sát', ['id' => $id, 'data' => $data, 'error' => $e->getMessage()]);
-            throw new Exception('Không thể cập nhật khảo sát.', 500);
+            Log::error('Lỗi cập nhật khảo sát', [
+                'id' => $id, 
+                'data' => $data, 
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            // Include the actual error message for debugging
+            throw new Exception('Không thể cập nhật khảo sát: ' . $e->getMessage(), 500);
         }
     }
 
