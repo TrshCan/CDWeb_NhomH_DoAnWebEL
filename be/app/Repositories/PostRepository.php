@@ -102,7 +102,17 @@ class PostRepository
 
     public function delete($id)
     {
-        $post = $this->model->findOrFail($id);
+        // Include soft-deleted posts in the search
+        $post = $this->model->withTrashed()->find($id);
+        
+        if (!$post) {
+            throw new \Exception('Post not found');
+        }
+        
+        if ($post->trashed()) {
+            throw new \Exception('Post has already been deleted');
+        }
+        
         return $post->delete();
     }
 

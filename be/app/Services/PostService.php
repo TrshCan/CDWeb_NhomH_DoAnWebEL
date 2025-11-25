@@ -175,7 +175,13 @@ class PostService
 
     public function delete($id)
     {
-        return $this->repository->delete($id);
+        try {
+            return $this->repository->delete($id);
+        } catch (\Exception $e) {
+            throw ValidationException::withMessages([
+                'post' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function getPostsOfFollowing(array $followingIds)
