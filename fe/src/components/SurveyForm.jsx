@@ -340,12 +340,9 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
             }];
           } catch (error) {
             console.error('Không thể tạo group mặc định:', error);
-            // Fallback: tạo group với ID tạm
-            newQuestionGroups = [{
-              id: 1,
-              title: "Nhóm câu hỏi",
-              questions: convertedQuestions,
-            }];
+            // Nếu không tạo được group, để rỗng và hiển thị lỗi
+            toast.error('Không thể tạo nhóm câu hỏi mặc định');
+            newQuestionGroups = [];
           }
         } else {
           // Không có gì → khởi tạo rỗng
@@ -383,6 +380,7 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
     // Lắng nghe message từ các tab khác
     channel.onmessage = (event) => {
       const { type, data } = event.data;
+      console.log('[BroadcastChannel] Received:', type, data);
 
       // Xử lý khi có câu hỏi bị xóa từ tab khác
       if (type === 'QUESTION_DELETED') {
@@ -593,6 +591,7 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
         // Reload survey để lấy dữ liệu mới nhất
         const reloadSurvey = async () => {
           try {
+            console.log('[BroadcastChannel] Reloading survey...');
             const { getSurvey } = await import('../api/surveys');
             const surveyData = await getSurvey(surveyId);
 
@@ -653,6 +652,7 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
               // Có groups → map từng group
               newQuestionGroups = surveyData.questionGroups.map((backendGroup) => {
                 const groupQuestions = (backendGroup.questions || []).map(convertBackendQuestion);
+                console.log(`[BroadcastChannel] Group ${backendGroup.id} has ${groupQuestions.length} questions`);
                 return {
                   id: parseInt(backendGroup.id),
                   title: backendGroup.title || "Nhóm câu hỏi",
@@ -669,11 +669,13 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
               }];
             }
 
-            setQuestionGroups(newQuestionGroups);
+            // Force update bằng cách tạo array mới hoàn toàn
+            setQuestionGroups([...newQuestionGroups]);
             setQuestionSettings((prev) => ({ ...prev, ...newQuestionSettings }));
             setSelectedAnswers((prev) => ({ ...prev, ...newSelectedAnswers }));
-          } catch {
-            // Lỗi đã được xử lý
+            console.log('[BroadcastChannel] Survey reloaded successfully, groups:', newQuestionGroups.length);
+          } catch (error) {
+            console.error('[BroadcastChannel] Error reloading survey:', error);
           }
         };
 
@@ -1878,6 +1880,14 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
         setActiveSection(`question-${savedQuestionId}`);
         setActiveQuestionId(String(savedQuestionId));
 
+        // ✅ Broadcast để đồng bộ với các tab khác
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.postMessage({
+            type: 'QUESTION_ADDED',
+            data: { questionId: savedQuestionId },
+          });
+        }
+
       } catch {
         // Lỗi đã được xử lý, không cần hiển thị toast
       }
@@ -1892,20 +1902,69 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
   };
 
   // Thêm nhóm câu hỏi mới (không có câu hỏi)
-  const addQuestionGroup = () => {
-    setQuestionGroups((prev) => {
-      const maxGroupId =
-        prev.length > 0 ? Math.max(...prev.map((g) => g.id || 0)) : 0;
-      const newGroupId = maxGroupId + 1;
+  const addQuestionGroup = async () => {
+    if (!currentSurveyId) {
+      toast.error('Không thể tạo nhóm: Survey chưa được lưu');
+      return;
+    }
 
-      const newGroup = {
-        id: newGroupId,
+    // Tạo ID tạm để optimistic update
+    const tempGroupId = -(Date.now());
+
+    // 1. CẬP NHẬT UI NGAY LẬP TỨC (Optimistic Update)
+    const tempGroup = {
+      id: tempGroupId,
+      title: "Tiêu đề nhóm",
+      questions: [],
+    };
+
+    setQuestionGroups((prev) => [...prev, tempGroup]);
+
+    // 2. GỌI API ĐỂ TẠO GROUP TRONG CSDL
+    setPendingOperations(prev => prev + 1);
+    try {
+      const newGroup = await createQuestionGroup({
+        survey_id: String(currentSurveyId),
         title: "Tiêu đề nhóm",
-        questions: [],
-      };
+        position: questionGroups.length + 1,
+      });
 
-      return [...prev, newGroup];
-    });
+      const realGroupId = parseInt(newGroup.id);
+
+      // 3. THAY THẾ GROUP TẠM BẰNG GROUP THẬT
+      startTransition(() => {
+        setQuestionGroups((prev) => {
+          return prev.map((g) => {
+            if (g.id !== tempGroupId) return g;
+            
+            return {
+              id: realGroupId,
+              title: newGroup.title,
+              questions: [],
+            };
+          });
+        });
+      });
+
+      setSavedAt(new Date());
+
+      // Broadcast để đồng bộ với các tab khác
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: 'GROUP_ADDED',
+          data: { groupId: realGroupId },
+        });
+      }
+    } catch (error) {
+      // Rollback: Xóa group tạm
+      startTransition(() => {
+        setQuestionGroups((prev) => prev.filter((g) => g.id !== tempGroupId));
+      });
+
+      toast.error('Không thể tạo nhóm câu hỏi: ' + error.message);
+    } finally {
+      setPendingOperations(prev => prev - 1);
+    }
   };
 
   // ===================== Duplicate & Delete =====================
@@ -3146,6 +3205,13 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
                                   )
                                 );
                                 
+                                // Kiểm tra xem group ID có hợp lệ không (phải là ID thật từ database)
+                                const numId = Number(group.id);
+                                if (!numId || numId <= 0 || numId > 1000000000000 || !Number.isInteger(numId)) {
+                                  console.warn('Bỏ qua cập nhật group với ID không hợp lệ:', group.id);
+                                  return;
+                                }
+                                
                                 // Gọi API cập nhật group title
                                 try {
                                   await updateQuestionGroup(group.id, { title: newTitle });
@@ -3300,6 +3366,7 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
         onClose={handleToggleModal}
         onSelectQuestionType={handleSelectQuestionType}
         onAddGroup={addQuestionGroup}
+        hasGroups={questionGroups.length > 0}
       />
 
       <DeleteConfirmModal

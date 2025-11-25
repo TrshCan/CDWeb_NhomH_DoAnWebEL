@@ -39,11 +39,13 @@ export default function QuestionSection({
   surveyType,
   onCorrectAnswerChange,
 }) {
-  const [items, setItems] = useState(questionItems);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const menuButtonRef = useRef(null);
+  
+  // Sử dụng trực tiếp questionItems - không cần state hoặc memo
+  const items = questionItems;
 
   const [groupTitle, setGroupTitle] = useState(
     initialGroupTitle || "Nhóm câu hỏi đầu tiên của tôi"
@@ -52,72 +54,33 @@ export default function QuestionSection({
 
   const titleRef = useRef(null);
   const menuRef = useRef(null);
-  const handlersRef = useRef({
-    onDuplicateGroup: onDuplicateGroup,
-    onDeleteGroup: onDeleteGroup,
-  });
-  const prevQuestionItemsRef = useRef(questionItems);
+  
+  // Sử dụng ref để lưu callbacks, tránh re-run useEffect không cần thiết
   const onGroupTitleChangeRef = useRef(onGroupTitleChange);
-
-  // Cập nhật handlers khi props thay đổi
+  const prevInitialTitleRef = useRef(initialGroupTitle);
+  
+  // Cập nhật ref khi callback thay đổi (không trigger re-render)
   useEffect(() => {
-    handlersRef.current = {
-      onDuplicateGroup: onDuplicateGroup,
-      onDeleteGroup: onDeleteGroup,
-    };
     onGroupTitleChangeRef.current = onGroupTitleChange;
-  }, [onDuplicateGroup, onDeleteGroup, onGroupTitleChange]);
+  }, [onGroupTitleChange]);
 
-  // Cập nhật local items khi props thay đổi
-  // So sánh nội dung thực tế để tránh infinite loop khi array reference thay đổi
+  // Sync initialGroupTitle vào groupTitle CHỈ khi initialGroupTitle thay đổi GIÁ TRỊ
+  // (không phải reference), và không phải do user đang edit
   useEffect(() => {
-    const prevItems = prevQuestionItemsRef.current;
-
-    // Kiểm tra nhanh: length khác nhau => cập nhật
-    if (!prevItems || prevItems.length !== questionItems.length) {
-      setItems(questionItems);
-      prevQuestionItemsRef.current = questionItems;
-      return;
-    }
-
-    // So sánh từng item để phát hiện thay đổi, bao gồm cả image
-    // Kiểm tra xem có item nào thay đổi không (id, text, image, options)
-    let hasChanges = false;
-
-    for (let i = 0; i < questionItems.length; i++) {
-      const newItem = questionItems[i];
-      const prevItem = prevItems[i];
-
-      if (!prevItem ||
-        newItem.id !== prevItem.id ||
-        newItem.text !== prevItem.text ||
-        newItem.helpText !== prevItem.helpText || // ✅ So sánh helpText
-        newItem.image !== prevItem.image || // ✅ Quan trọng: so sánh image
-        newItem.type !== prevItem.type ||
-        newItem.required !== prevItem.required ||
-        newItem.maxQuestions !== prevItem.maxQuestions || // ✅ So sánh maxQuestions
-        newItem.allowedFileTypes !== prevItem.allowedFileTypes || // ✅ So sánh allowedFileTypes
-        newItem.maxFileSizeKB !== prevItem.maxFileSizeKB || // ✅ So sánh maxFileSizeKB
-        newItem.numericOnly !== prevItem.numericOnly || // ✅ So sánh numericOnly
-        newItem.maxLength !== prevItem.maxLength || // ✅ So sánh maxLength
-        JSON.stringify(newItem.options) !== JSON.stringify(prevItem.options)) {
-        hasChanges = true;
-        break;
+    if (
+      initialGroupTitle &&
+      initialGroupTitle !== prevInitialTitleRef.current &&
+      !isEditingTitle
+    ) {
+      setGroupTitle(initialGroupTitle);
+      prevInitialTitleRef.current = initialGroupTitle;
+      
+      // Cập nhật DOM nếu cần
+      if (titleRef.current) {
+        titleRef.current.innerText = initialGroupTitle;
       }
     }
-
-    // Cập nhật nếu có thay đổi
-    if (hasChanges) {
-      setItems(questionItems);
-      prevQuestionItemsRef.current = questionItems;
-    }
-  }, [questionItems]);
-
-  useEffect(() => {
-    if (initialGroupTitle) {
-      setGroupTitle(initialGroupTitle);
-    }
-  }, [initialGroupTitle]);
+  }, [initialGroupTitle, isEditingTitle]);
 
   // Đóng menu khi click ra ngoài
   useEffect(() => {
@@ -141,27 +104,22 @@ export default function QuestionSection({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMenuOpen]);
 
-  // Đồng bộ tiêu đề ra ngoài nếu cần (chỉ khi groupTitle thay đổi)
-  // Sử dụng ref để tránh re-run khi callback function reference thay đổi
+  // Đồng bộ tiêu đề ra ngoài - CHỈ khi user thay đổi, KHÔNG khi props thay đổi
+  // Sử dụng ref để track xem đây có phải là thay đổi từ user không
+  const userChangedTitleRef = useRef(false);
+  
   useEffect(() => {
-    // Chỉ gọi callback nếu:
-    // 1. groupTitle khác với initialGroupTitle (có thay đổi thực sự)
-    // 2. groupId là số dương (không phải ID tạm)
+    // Chỉ gọi callback nếu user đã thay đổi title (không phải từ props)
     if (
+      userChangedTitleRef.current &&
       typeof onGroupTitleChangeRef.current === "function" &&
       groupTitle !== initialGroupTitle &&
       groupId > 0
     ) {
       onGroupTitleChangeRef.current(groupTitle);
+      userChangedTitleRef.current = false; // Reset flag
     }
   }, [groupTitle, initialGroupTitle, groupId]);
-
-  // Đảm bảo hiển thị text = groupTitle khi không ở chế độ edit
-  useEffect(() => {
-    if (titleRef.current && !isEditingTitle) {
-      titleRef.current.innerText = groupTitle;
-    }
-  }, [groupTitle, isEditingTitle]);
 
   // Đưa caret về cuối nội dung
   const moveCaretToEnd = (el) => {
@@ -177,23 +135,14 @@ export default function QuestionSection({
     }
   };
 
-  // Di chuyển câu hỏi (local); App có thể xử lý phía ngoài nếu cần
+  // Di chuyển câu hỏi - gọi callback từ App
   const handleMove = (index, direction) => {
     const movedId = items[index] ? items[index].id : null;
 
     // Gọi moveQuestionItem từ App với groupId
     if (typeof moveQuestionItem === "function" && groupId) {
       moveQuestionItem(index, direction);
-      return;
     }
-
-    setItems((prev) => {
-      const arr = [...prev];
-      const to = direction === "up" ? index - 1 : index + 1;
-      if (to < 0 || to >= arr.length) return prev;
-      [arr[index], arr[to]] = [arr[to], arr[index]];
-      return arr;
-    });
 
     if (movedId && typeof handleSetSection === "function") {
       handleSetSection(`question-${movedId}`);
@@ -231,10 +180,12 @@ export default function QuestionSection({
               const text = e.currentTarget.innerText
                 .replace(/\s+/g, " ")
                 .trim();
-              if (text) {
+              if (text && text !== groupTitle) {
+                // Đánh dấu là user đã thay đổi
+                userChangedTitleRef.current = true;
                 setGroupTitle(text);
                 e.currentTarget.innerText = text;
-              } else {
+              } else if (!text) {
                 // Nếu xoá hết, khôi phục lại tiêu đề cũ
                 e.currentTarget.innerText = groupTitle;
               }
@@ -254,7 +205,9 @@ export default function QuestionSection({
                 e.currentTarget.blur();
               }
             }}
-          />
+          >
+            {groupTitle}
+          </span>
         }
       >
         {/* Actions bên phải (menu 3 chấm) */}
