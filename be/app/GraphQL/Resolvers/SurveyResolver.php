@@ -244,7 +244,7 @@ class SurveyResolver
             $filters['creator_name'] = $filterInput['creator_name'];
         }
         
-        $paginator = $this->service->getAllSurveys($perPage, $filters);
+        $paginator = $this->service->getAllSurveys2($perPage, $filters);
         return $paginator->items(); // Trả về mảng Survey[]
     }
 
@@ -269,7 +269,7 @@ class SurveyResolver
             $input = $args['input'];
 
             // Gọi service để xử lý cập nhật
-            $updatedSurvey = $this->service->updateSurvey($id, $input);
+            $updatedSurvey = $this->service->updateSurvey2($id, $input);
 
             return $updatedSurvey;
         } catch (ValidationException $e) {

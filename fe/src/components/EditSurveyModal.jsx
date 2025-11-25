@@ -145,11 +145,6 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
         status: formData.status,
       };
 
-      // Include updated_at for optimistic locking
-      if (originalUpdatedAt) {
-        dataToSave.updated_at = originalUpdatedAt;
-      }
-
       // Convert datetime-local format to backend format (Y-m-d H:i:s)
       if (formData.start_at) {
         dataToSave.start_at = formData.start_at.replace('T', ' ') + ':00';
@@ -158,9 +153,9 @@ export default function EditSurveyModal({ isOpen, onClose, surveyId, onSave }) {
         dataToSave.end_at = formData.end_at.replace('T', ' ') + ':00';
       }
 
-      // Remove null/empty values to avoid validation errors (but preserve updated_at for optimistic locking)
+      // Remove null/empty values to avoid validation errors
       Object.keys(dataToSave).forEach(key => {
-        if (key !== 'updated_at' && (dataToSave[key] === null || dataToSave[key] === '')) {
+        if (dataToSave[key] === null || dataToSave[key] === '') {
           delete dataToSave[key];
         }
       });

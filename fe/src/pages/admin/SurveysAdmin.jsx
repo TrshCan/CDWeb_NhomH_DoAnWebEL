@@ -1229,10 +1229,8 @@ const SurveyFilter = () => {
         input.points = editForm.points || 0;
       }
 
-      // Gửi updated_at để optimistic locking
-      if (selectedSurvey.updatedAt) {
-        input.updated_at = selectedSurvey.updatedAt;
-      }
+      // Note: updated_at is not sent to backend as it's not in UpdateSurveyInput schema
+      // The backend will automatically update it
 
       const result = await graphqlRequest(`
         mutation UpdateSurvey($id: Int!, $input: UpdateSurveyInput!) {

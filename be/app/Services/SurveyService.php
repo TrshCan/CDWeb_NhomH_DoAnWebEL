@@ -780,8 +780,8 @@ class SurveyService
             // Lấy thông tin survey trước khi cập nhật
             $oldSurvey = $this->surveyRepository->findById($id);
             
-            // Cập nhật survey
-            $survey = $this->surveyRepository->update($id, $input);
+            // Cập nhật survey - pass the Survey model object, not the ID
+            $survey = $this->surveyRepository->update($oldSurvey, $input);
             
             // Tạo log chi tiết về những gì đã thay đổi
             $changes = [];

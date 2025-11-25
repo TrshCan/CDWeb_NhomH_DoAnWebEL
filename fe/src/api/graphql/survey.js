@@ -16,7 +16,7 @@ export async function getCurrentUserProfile(userId) {
 
   const response = await graphqlClient.post("", {
     query,
-    variables: { id: parseInt(userId) },
+    variables: { userId: parseInt(userId) },
   });
 
   if (response.data.errors) {
