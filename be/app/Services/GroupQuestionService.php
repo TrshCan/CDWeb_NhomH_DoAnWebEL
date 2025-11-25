@@ -187,6 +187,10 @@ class GroupQuestionService
                 $nextNumber = $currentNumber + 1;
             }
             
+            // Map để lưu ID cũ -> ID mới (cho cả question và option)
+            $questionIdMap = [];
+            $optionIdMap = [];
+            
             // Sao chép tất cả questions và options
             foreach ($originalGroup->questions as $index => $originalQuestion) {
                 $newQuestion = $originalQuestion->replicate();
@@ -196,7 +200,13 @@ class GroupQuestionService
                 $newQuestion->question_code = 'Q' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
                 $nextNumber++; // Tăng cho câu hỏi tiếp theo
                 
+                // Tạm thời xóa conditions, sẽ cập nhật sau
+                $newQuestion->conditions = null;
+                
                 $newQuestion->save();
+                
+                // Lưu mapping ID cũ -> mới
+                $questionIdMap[$originalQuestion->id] = $newQuestion->id;
 
                 // Sao chép options
                 foreach ($originalQuestion->options as $originalOption) {
@@ -204,6 +214,25 @@ class GroupQuestionService
                     $newOption->question_id = $newQuestion->id;
                     $newOption->option_text = $newOption->option_text ?? '';
                     $newOption->save();
+                    
+                    // Lưu mapping option ID cũ -> mới
+                    $optionIdMap[$originalOption->id] = $newOption->id;
+                }
+            }
+            
+            // Cập nhật conditions với ID mới
+            foreach ($originalGroup->questions as $originalQuestion) {
+                if (!empty($originalQuestion->conditions)) {
+                    $newQuestionId = $questionIdMap[$originalQuestion->id];
+                    $newConditions = $this->remapConditions(
+                        $originalQuestion->conditions, 
+                        $questionIdMap, 
+                        $optionIdMap
+                    );
+                    
+                    // Cập nhật conditions cho question mới
+                    \App\Models\SurveyQuestion::where('id', $newQuestionId)
+                        ->update(['conditions' => $newConditions]);
                 }
             }
 
@@ -223,5 +252,57 @@ class GroupQuestionService
             Log::error('Error duplicating group: ' . $e->getMessage());
             throw new \Exception('Không thể sao chép group: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Remap conditions với ID mới sau khi duplicate
+     * Format conditions: [{ field: 'question_id', value: 'option_id', operator: 'equals' }]
+     */
+    private function remapConditions($conditions, $questionIdMap, $optionIdMap)
+    {
+        if (empty($conditions)) {
+            return [];
+        }
+        
+        // Nếu conditions là string JSON, decode nó
+        if (is_string($conditions)) {
+            $conditions = json_decode($conditions, true);
+        }
+        
+        if (!is_array($conditions)) {
+            return [];
+        }
+        
+        $newConditions = [];
+        
+        foreach ($conditions as $condition) {
+            $newCondition = $condition;
+            
+            // Remap field (question_id)
+            if (isset($condition['field'])) {
+                $oldQuestionId = $condition['field'];
+                if (isset($questionIdMap[$oldQuestionId])) {
+                    $newCondition['field'] = (string) $questionIdMap[$oldQuestionId];
+                }
+            }
+            
+            // Remap value (option_id) - có thể là single value hoặc array
+            if (isset($condition['value'])) {
+                $oldValue = $condition['value'];
+                if (is_array($oldValue)) {
+                    $newCondition['value'] = array_map(function($optId) use ($optionIdMap) {
+                        return isset($optionIdMap[$optId]) ? (string) $optionIdMap[$optId] : $optId;
+                    }, $oldValue);
+                } else {
+                    if (isset($optionIdMap[$oldValue])) {
+                        $newCondition['value'] = (string) $optionIdMap[$oldValue];
+                    }
+                }
+            }
+            
+            $newConditions[] = $newCondition;
+        }
+        
+        return $newConditions;
     }
 }

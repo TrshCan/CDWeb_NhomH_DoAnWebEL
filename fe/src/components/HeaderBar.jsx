@@ -9,7 +9,7 @@ export default function HeaderBar({
   onShare,
   onAddQuestion,
   onPreview,
-  logoSrc = "/fe/img/logo.jpg",
+  logoSrc = "/fe/public/logo.jpg",
 }) {
   const fmt = (d) => {
     if (!d) return "--:--";
@@ -26,7 +26,7 @@ export default function HeaderBar({
         <div className="flex items-center min-w-0">
           {/* Nếu chưa có logo thật, tạm dùng placeholder box */}
           {logoSrc ? (
-            <img src="img/logo.jpg" alt="Logo" className="h-13 w-auto" />
+            <img src="/public/logo.jpg" alt="Logo" className="h-13 w-auto" />
           ) : (
             <div className="h-8 w-24 bg-gray-200 rounded-sm" />
           )}

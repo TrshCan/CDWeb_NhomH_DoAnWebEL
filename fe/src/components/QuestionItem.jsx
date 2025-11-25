@@ -786,12 +786,7 @@ export default function QuestionItem({
                   objectFit: "contain",
                   display: "block",
                 }}
-                onLoad={() => {
-                  console.log(
-                    "✅ Image loaded successfully for question:",
-                    question.id
-                  );
-                }}
+
                 onError={(e) => {
                   console.error(
                     "❌ Image error for question:",
