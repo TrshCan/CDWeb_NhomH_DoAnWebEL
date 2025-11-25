@@ -15,6 +15,26 @@ const types = ['', 'survey', 'quiz'];
 const statuses = ['', 'pending', 'active', 'paused', 'closed'];
 const objects = ['', 'public', 'students', 'lecturers'];
 
+const Tooltip = ({ children, content }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  return (
+    <div 
+      className="relative inline-block w-full"
+      onMouseEnter={() => setIsVisible(true)}
+      onMouseLeave={() => setIsVisible(false)}
+    >
+      {children}
+      {isVisible && content && (
+        <div className="absolute z-50 px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal break-words max-w-xs -top-2 left-0 transform -translate-y-full pointer-events-none">
+          {content}
+          <div className="absolute w-2 h-2 bg-gray-900 transform rotate-45 -bottom-1 left-4"></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' }) => {
   if (!isOpen) return null;
   
@@ -140,7 +160,10 @@ const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
   </div>
 );
 
-const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig, formErrors = {}, setFormErrors }) => (
+const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, objects, statusConfig, formErrors = {}, setFormErrors }) => {
+  const isQuiz = editForm.type === 'quiz';
+
+  return (
   <form id="editForm" onSubmit={onSubmit} className="space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
@@ -256,15 +279,23 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
         />
       </div>
       <div>
-        <label className="block text-left text-sm font-semibold mb-1.5">Điểm thưởng</label>
+        <label className="block text-left text-sm font-semibold mb-1.5 flex justify-between items-center">
+          <span>Điểm thưởng</span>
+          {!isQuiz && <span className="text-xs text-gray-500 italic">(chỉ áp dụng cho quiz)</span>}
+        </label>
         <input
           type="number"
           min="0"
-          value={editForm.points}
+          value={isQuiz ? editForm.points : ''}
           onChange={(e) => onChange.points(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-          required
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${!isQuiz ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'border-gray-300'}`}
+          required={isQuiz}
+          disabled={!isQuiz}
+          placeholder={isQuiz ? 'Nhập điểm thưởng' : 'Không áp dụng'}
         />
+        {!isQuiz && (
+          <p className="text-xs text-gray-500 mt-1">Điểm thưởng chỉ dành cho khảo sát loại quiz.</p>
+        )}
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Giới hạn thời gian (phút)</label>
@@ -300,34 +331,15 @@ const EditModalBody = ({ editForm, onSubmit, onChange, categories, types, status
           <p className="text-red-500 text-xs mt-1">{formErrors.object}</p>
         )}
       </div>
-      <div>
-        <label className="block text-left text-sm font-semibold mb-1.5">Trạng thái</label>
-        <select
-          value={editForm.status}
-          onChange={(e) => {
-            onChange.status(e.target.value);
-            // Clear error when user selects
-            if (formErrors?.status) {
-              setFormErrors(prev => ({ ...prev, status: undefined }));
-            }
-          }}
-          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.status ? 'border-red-500' : 'border-gray-300'}`}
-          required
-        >
-          <option value="">Chọn trạng thái</option>
-          {statuses.filter(s => s).map(s => (
-            <option key={s} value={s}>{statusConfig[s]?.label}</option>
-          ))}
-        </select>
-        {formErrors?.status && (
-          <p className="text-red-500 text-xs mt-1">{formErrors.status}</p>
-        )}
-      </div>
     </div>
   </form>
-);
+  );
+};
 
-const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses, objects, statusConfig, formErrors = {}, setFormErrors }) => (
+const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, objects, statusConfig, formErrors = {}, setFormErrors }) => {
+  const isQuiz = addForm.type === 'quiz';
+
+  return (
   <form id="addForm" onSubmit={onSubmit} className="space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
@@ -443,15 +455,23 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
         />
       </div>
       <div>
-        <label className="block text-left text-sm font-semibold mb-1.5">Điểm thưởng</label>
+        <label className="block text-left text-sm font-semibold mb-1.5 flex justify-between items-center">
+          <span>Điểm thưởng</span>
+          {!isQuiz && <span className="text-xs text-gray-500 italic">(chỉ áp dụng cho quiz)</span>}
+        </label>
         <input
           type="number"
           min="0"
-          value={addForm.points}
+          value={isQuiz ? addForm.points : ''}
           onChange={(e) => onChange.points(e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-          required
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${!isQuiz ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'border-gray-300'}`}
+          required={isQuiz}
+          disabled={!isQuiz}
+          placeholder={isQuiz ? 'Nhập điểm thưởng' : 'Không áp dụng'}
         />
+        {!isQuiz && (
+          <p className="text-xs text-gray-500 mt-1">Điểm thưởng chỉ dành cho khảo sát loại quiz.</p>
+        )}
       </div>
       <div>
         <label className="block text-left text-sm font-semibold mb-1.5">Giới hạn thời gian (phút)</label>
@@ -487,32 +507,10 @@ const AddModalBody = ({ addForm, onSubmit, onChange, categories, types, statuses
           <p className="text-red-500 text-xs mt-1">{formErrors.object}</p>
         )}
       </div>
-      <div>
-        <label className="block text-left text-sm font-semibold mb-1.5">Trạng thái</label>
-        <select
-          value={addForm.status}
-          onChange={(e) => {
-            onChange.status(e.target.value);
-            // Clear error when user selects
-            if (formErrors?.status) {
-              setFormErrors(prev => ({ ...prev, status: undefined }));
-            }
-          }}
-          className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none ${formErrors?.status ? 'border-red-500' : 'border-gray-300'}`}
-          required
-        >
-          <option value="">Chọn trạng thái</option>
-          {statuses.filter(s => s).map(s => (
-            <option key={s} value={s}>{statusConfig[s]?.label}</option>
-          ))}
-        </select>
-        {formErrors?.status && (
-          <p className="text-red-500 text-xs mt-1">{formErrors.status}</p>
-        )}
-      </div>
     </div>
   </form>
-);
+  );
+};
 
 const SurveyFilter = () => {
   const navigate = useNavigate();
@@ -538,10 +536,9 @@ const SurveyFilter = () => {
     description: '',
     category: '',
     type: 'survey',
-    status: 'pending',
     startAt: '',
     endAt: '',
-    points: 0,
+    points: '',
     object: 'public',
     timeLimit: ''
   });
@@ -551,10 +548,9 @@ const SurveyFilter = () => {
     description: '',
     category: '',
     type: '',
-    status: '',
     startAt: '',
     endAt: '',
-    points: 0,
+    points: '',
     object: 'public',
     timeLimit: ''
   });
@@ -565,22 +561,34 @@ const SurveyFilter = () => {
   const handleEditTitleChange = useCallback((value) => setEditForm(prev => ({ ...prev, title: value })), []);
   const handleEditDescriptionChange = useCallback((value) => setEditForm(prev => ({ ...prev, description: value })), []);
   const handleEditCategoryChange = useCallback((value) => setEditForm(prev => ({ ...prev, category: value })), []);
-  const handleEditTypeChange = useCallback((value) => setEditForm(prev => ({ ...prev, type: value })), []);
-  const handleEditStatusChange = useCallback((value) => setEditForm(prev => ({ ...prev, status: value })), []);
+  const handleEditTypeChange = useCallback((value) => setEditForm(prev => ({
+    ...prev,
+    type: value,
+    points: value === 'quiz' ? (prev.points === '' ? 0 : prev.points) : ''
+  })), []);
   const handleEditStartAtChange = useCallback((value) => setEditForm(prev => ({ ...prev, startAt: value })), []);
   const handleEditEndAtChange = useCallback((value) => setEditForm(prev => ({ ...prev, endAt: value })), []);
-  const handleEditPointsChange = useCallback((value) => setEditForm(prev => ({ ...prev, points: parseInt(value) || 0 })), []);
+  const handleEditPointsChange = useCallback((value) => setEditForm(prev => ({
+    ...prev,
+    points: value === '' ? '' : Math.max(0, parseInt(value, 10) || 0)
+  })), []);
   const handleEditObjectChange = useCallback((value) => setEditForm(prev => ({ ...prev, object: value })), []);
   const handleEditTimeLimitChange = useCallback((value) => setEditForm(prev => ({ ...prev, timeLimit: value === '' ? '' : Math.max(1, parseInt(value) || 1) })), []);
 
   const handleAddTitleChange = useCallback((value) => setAddForm(prev => ({ ...prev, title: value })), []);
   const handleAddDescriptionChange = useCallback((value) => setAddForm(prev => ({ ...prev, description: value })), []);
   const handleAddCategoryChange = useCallback((value) => setAddForm(prev => ({ ...prev, category: value })), []);
-  const handleAddTypeChange = useCallback((value) => setAddForm(prev => ({ ...prev, type: value })), []);
-  const handleAddStatusChange = useCallback((value) => setAddForm(prev => ({ ...prev, status: value })), []);
+  const handleAddTypeChange = useCallback((value) => setAddForm(prev => ({
+    ...prev,
+    type: value,
+    points: value === 'quiz' ? (prev.points === '' ? 0 : prev.points) : ''
+  })), []);
   const handleAddStartAtChange = useCallback((value) => setAddForm(prev => ({ ...prev, startAt: value })), []);
   const handleAddEndAtChange = useCallback((value) => setAddForm(prev => ({ ...prev, endAt: value })), []);
-  const handleAddPointsChange = useCallback((value) => setAddForm(prev => ({ ...prev, points: parseInt(value) || 0 })), []);
+  const handleAddPointsChange = useCallback((value) => setAddForm(prev => ({
+    ...prev,
+    points: value === '' ? '' : Math.max(0, parseInt(value, 10) || 0)
+  })), []);
   const handleAddObjectChange = useCallback((value) => setAddForm(prev => ({ ...prev, object: value })), []);
   const handleAddTimeLimitChange = useCallback((value) => setAddForm(prev => ({ ...prev, timeLimit: value === '' ? '' : Math.max(1, parseInt(value) || 1) })), []);
 
@@ -756,7 +764,7 @@ const SurveyFilter = () => {
         status: s.status,
         startAt: toDateTimeLocal(s.start_at),
         endAt: toDateTimeLocal(s.end_at),
-        points: s.points,
+        points: s.points ?? null,
         object: s.object,
         timeLimit: s.time_limit ?? '',
         creatorName: s.creator_name || (s.created_by ? `Người dùng #${s.created_by}` : 'Không xác định'),
@@ -843,10 +851,9 @@ const SurveyFilter = () => {
       description: survey.description || '',
       category: survey.category,
       type: survey.type,
-      status: survey.status,
       startAt: survey.startAt,
       endAt: survey.endAt,
-      points: survey.points || 0,
+      points: survey.type === 'quiz' ? (survey.points ?? 0) : '',
       object: survey.object || 'public',
       timeLimit: survey.timeLimit ?? ''
     });
@@ -945,10 +952,9 @@ const SurveyFilter = () => {
       description: '',
       category: '',
       type: 'survey',
-      status: 'pending',
       startAt: '',
       endAt: '',
-      points: 0,
+      points: '',
       object: 'public',
       timeLimit: ''
     });
@@ -990,7 +996,6 @@ const SurveyFilter = () => {
 
     // Validate select fields
     const validTypes = ['survey', 'quiz'];
-    const validStatuses = ['pending', 'active', 'paused', 'closed'];
     const validObjects = ['public', 'students', 'lecturers'];
     
     if (!addForm.category || addForm.category.trim() === '') {
@@ -1005,11 +1010,6 @@ const SurveyFilter = () => {
       return;
     }
     
-    if (!validStatuses.includes(addForm.status)) {
-      setFormErrors(prev => ({ ...prev, add: { ...prev.add, status: 'Trạng thái không hợp lệ.' } }));
-      pushToast('Trạng thái không hợp lệ', 'error');
-      return;
-    }
     
     if (!validObjects.includes(addForm.object)) {
       setFormErrors(prev => ({ ...prev, add: { ...prev.add, object: 'Đối tượng không hợp lệ.' } }));
@@ -1059,10 +1059,11 @@ const SurveyFilter = () => {
           description: addForm.description || '',
           categories_id: parseInt(categoryId),
           type: addForm.type || 'survey',
-          status: addForm.status || 'pending',
           start_at: toDBDateTime(addForm.startAt),
           end_at: toDBDateTime(addForm.endAt),
-          points: addForm.points || 0,
+          points: addForm.type === 'quiz'
+            ? (addForm.points === '' ? 0 : Number(addForm.points))
+            : null,
           object: addForm.object || 'public',
           created_by: userId,
           time_limit: addForm.timeLimit === '' ? null : parseInt(addForm.timeLimit)
@@ -1124,7 +1125,7 @@ const SurveyFilter = () => {
         status: created.status,
         startAt: toDateTimeLocal(created.start_at),
         endAt: toDateTimeLocal(created.end_at),
-        points: created.points,
+        points: created.points ?? null,
         object: created.object,
         timeLimit: created.time_limit ?? '',
         creatorName: created.creator_name || (created.created_by ? `Người dùng #${created.created_by}` : 'Không xác định')
@@ -1160,7 +1161,6 @@ const SurveyFilter = () => {
 
     // Validate select fields
     const validTypes = ['survey', 'quiz'];
-    const validStatuses = ['pending', 'active', 'paused', 'closed'];
     const validObjects = ['public', 'students', 'lecturers'];
     
     if (!editForm.category || editForm.category.trim() === '') {
@@ -1175,11 +1175,6 @@ const SurveyFilter = () => {
       return;
     }
     
-    if (!validStatuses.includes(editForm.status)) {
-      setFormErrors(prev => ({ ...prev, edit: { ...prev.edit, status: 'Trạng thái không hợp lệ.' } }));
-      pushToast('Trạng thái không hợp lệ', 'error');
-      return;
-    }
     
     if (!validObjects.includes(editForm.object)) {
       setFormErrors(prev => ({ ...prev, edit: { ...prev.edit, object: 'Đối tượng không hợp lệ.' } }));
@@ -1214,7 +1209,6 @@ const SurveyFilter = () => {
         description: editForm.description || '',
         categories_id: parseInt(categoryId),
         type: editForm.type || 'survey',
-        status: editForm.status || 'pending',
         object: editForm.object || 'public',
       };
 
@@ -1228,7 +1222,9 @@ const SurveyFilter = () => {
 
       // points: chỉ gửi nếu là quiz, tránh rule `prohibited` khi type = survey
       if ((editForm.type || 'survey') === 'quiz') {
-        input.points = editForm.points || 0;
+        input.points = editForm.points === '' ? 0 : Number(editForm.points);
+      } else {
+        input.points = null;
       }
 
       // Note: updated_at is not sent to backend as it's not in UpdateSurveyInput schema
@@ -1299,7 +1295,7 @@ const SurveyFilter = () => {
         status: updated.status,
         startAt: toDateTimeLocal(updated.start_at),
         endAt: toDateTimeLocal(updated.end_at),
-        points: updated.points,
+        points: updated.points ?? null,
         object: updated.object,
         timeLimit: updated.time_limit ?? '',
         creatorName: updated.creator_name || (updated.created_by ? `Người dùng #${updated.created_by}` : 'Không xác định'),
@@ -1798,55 +1794,81 @@ const SurveyFilter = () => {
               )}
             </div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-gray-50 via-blue-50 to-indigo-50 border-b-2 border-gray-200">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span>Tiêu đề</span>
-                    </div>
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Danh mục</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Loại</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Người tạo</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Điểm</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Đối tượng</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Thời gian</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Hành động</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {paginatedSurveys.map(survey => (
-                  <tr key={survey.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group">
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900">{survey.title}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{survey.category}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{survey.type === 'survey' ? 'Survey' : 'Quiz'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{survey.creatorName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 font-medium">{survey.points}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm ${statusConfig[survey.status]?.class} transform group-hover:scale-105 transition-transform duration-200`}>
-                        <span className="text-sm">{statusConfig[survey.status]?.icon}</span>
-                        {statusConfig[survey.status]?.label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">{formatTimeRange(survey.startAt, survey.endAt)}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex space-x-2">
-                        <button onClick={() => handleView(survey)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Xem"><ViewIcon /></button>
-                        <button onClick={() => handleEdit(survey)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Sửa"><EditIcon /></button>
-                        <button onClick={() => handleDuplicate(survey)} className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Sao chép"><DuplicateIcon /></button>
-                        <button onClick={() => handleDeleteConfirm(survey)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Xóa"><DeleteIcon /></button>
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed">
+                <thead className="bg-gradient-to-r from-gray-50 via-blue-50 to-indigo-50 border-b-2 border-gray-200">
+                  <tr>
+                    <th className="w-[20%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Tiêu đề</span>
                       </div>
-                    </td>
+                    </th>
+                    <th className="w-[10%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Danh mục</th>
+                    <th className="w-[7%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Loại</th>
+                    <th className="w-[12%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Người tạo</th>
+                    <th className="w-[6%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Điểm</th>
+                    <th className="w-[9%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Đối tượng</th>
+                    <th className="w-[11%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Trạng thái</th>
+                    <th className="w-[13%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Thời gian</th>
+                    <th className="w-[12%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Hành động</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {paginatedSurveys.map(survey => (
+                    <tr key={survey.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group">
+                      <td className="px-4 py-4 text-sm font-semibold text-gray-900">
+                        <div className="truncate" title={survey.title}>
+                          {survey.title}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600">
+                        <div className="truncate" title={survey.category}>
+                          {survey.category}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
+                        {survey.type === 'survey' ? 'Survey' : 'Quiz'}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600">
+                        <div className="truncate" title={survey.creatorName}>
+                          {survey.creatorName}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600 font-medium whitespace-nowrap">
+                        {survey.type === 'quiz' ? (survey.points ?? 0) : '—'}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600">
+                        <div className="truncate" title={survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}>
+                          {survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm ${statusConfig[survey.status]?.class} transform group-hover:scale-105 transition-transform duration-200`}>
+                          <span className="text-sm">{statusConfig[survey.status]?.icon}</span>
+                          <span className="hidden xl:inline">{statusConfig[survey.status]?.label}</span>
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
+                        <div className="truncate" title={formatTimeRange(survey.startAt, survey.endAt)}>
+                          {formatTimeRange(survey.startAt, survey.endAt)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex space-x-1">
+                          <button onClick={() => handleView(survey)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Xem"><ViewIcon /></button>
+                          <button onClick={() => handleEdit(survey)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Sửa"><EditIcon /></button>
+                          <button onClick={() => handleDuplicate(survey)} className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Sao chép"><DuplicateIcon /></button>
+                          <button onClick={() => handleDeleteConfirm(survey)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Xóa"><DeleteIcon /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
@@ -1911,7 +1933,6 @@ const SurveyFilter = () => {
               description: handleEditDescriptionChange,
               category: handleEditCategoryChange,
               type: handleEditTypeChange,
-              status: handleEditStatusChange,
               startAt: handleEditStartAtChange,
               endAt: handleEditEndAtChange,
               points: handleEditPointsChange,
@@ -1920,7 +1941,6 @@ const SurveyFilter = () => {
             }}
             categories={categories}
             types={types}
-            statuses={statuses}
             objects={objects}
             statusConfig={statusConfig}
             formErrors={formErrors.edit}
@@ -1937,7 +1957,6 @@ const SurveyFilter = () => {
               description: handleAddDescriptionChange,
               category: handleAddCategoryChange,
               type: handleAddTypeChange,
-              status: handleAddStatusChange,
               startAt: handleAddStartAtChange,
               endAt: handleAddEndAtChange,
               points: handleAddPointsChange,
@@ -1946,7 +1965,6 @@ const SurveyFilter = () => {
             }}
             categories={categories}
             types={types}
-            statuses={statuses}
             objects={objects}
             statusConfig={statusConfig}
             formErrors={formErrors.add}

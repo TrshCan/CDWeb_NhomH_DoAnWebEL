@@ -305,7 +305,7 @@ class SurveyService
         $data = array_merge([
             'type' => 'survey',
             'object' => 'public',
-            'points' => 0,
+            'points' => null,
             'status' => 'pending',
             'description' => '',
             'time_limit' => null,
@@ -354,8 +354,8 @@ class SurveyService
         if (isset($data['type']) && $data['type'] === 'quiz') {
             $rules['points'] = 'required|integer|min:0|max:100';
         } else {
-            // Nếu là survey → ép points = 0
-            $data['points'] = 0;
+            // Nếu là survey → ép points = null
+            $data['points'] = null;
         }
 
         $messages = [
@@ -616,25 +616,19 @@ class SurveyService
             }
         }
 
-        // Xử lý logic points
-        // Determine the current or new type
-        $effectiveType = $data['type'] ?? $survey->type;
-        
-        if ($effectiveType === 'quiz') {
-            // If it's a quiz, points are allowed
-            if (isset($data['type']) && $data['type'] === 'quiz') {
-                $pointsRule = 'required|integer|min:0|max:100';
-            } else {
-                $pointsRule = 'sometimes|integer|min:0|max:100';
-            }
+        // Xử lý logic points dựa trên loại khảo sát cuối cùng (sau khi cập nhật)
+        $targetType = $data['type'] ?? $survey->type;
+        $isSwitchingToQuiz = isset($data['type']) && $data['type'] === 'quiz';
+
+        if ($targetType === 'quiz') {
+            // Nếu đang chuyển sang quiz thì bắt buộc nhập points
+            $pointsRule = $isSwitchingToQuiz
+                ? 'required|integer|min:0|max:100'
+                : 'sometimes|integer|min:0|max:100';
         } else {
-            // If it's a survey, remove points field if present and set to 0
-            if (array_key_exists('points', $data)) {
-                unset($data['points']);
-            }
-            // Always set points to 0 for surveys
-            $data['points'] = 0;
-            $pointsRule = 'sometimes|integer|min:0|max:100'; // Allow but will be set to 0
+            // Loại survey luôn đặt điểm null để phân biệt với quiz
+            $data['points'] = null;
+            $pointsRule = 'nullable|integer|min:0|max:100';
         }
 
         $validator = Validator::make($data, [

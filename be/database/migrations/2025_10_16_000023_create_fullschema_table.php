@@ -183,7 +183,7 @@ return new class extends Migration {
             $table->timestamp('start_at')->nullable();
             $table->timestamp('end_at')->nullable();
             $table->integer('time_limit')->nullable();
-            $table->integer('points')->default(0);
+            $table->integer('points')->default(0)->nullable();
             $table->enum('object', ['public', 'students', 'lecturers'])->default('public');
             $table->enum('status', ['pending', 'active', 'paused', 'closed'])->default('pending'); // 🆕 Thêm dòng này
             $table->boolean('allow_review')->default(false);
