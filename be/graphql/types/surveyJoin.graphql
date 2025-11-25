@@ -6,6 +6,8 @@ type SurveyJoinQuestion {
   points: Float
   help_text: String
   max_length: Int
+  required: String
+  conditions: JSON
   options: [SurveyJoinOption!]
 }
 

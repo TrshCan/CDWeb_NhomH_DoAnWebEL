@@ -62,6 +62,8 @@ class SurveyJoinService
                     'points' => $question->points,
                     'help_text' => $question->help_text,
                     'max_length' => $question->max_length,
+                    'required' => $question->required ?? 'none',
+                    'conditions' => $question->conditions,
                     'options' => $question->options->map(fn($opt) => [
                         'id' => $opt->id,
                         'option_text' => $opt->option_text,

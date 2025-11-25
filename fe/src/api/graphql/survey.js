@@ -217,6 +217,8 @@ export async function getSurveyJoinDetail(surveyId, token) {
           points
           help_text
           max_length
+          required
+          conditions
           options {
             id
             option_text
