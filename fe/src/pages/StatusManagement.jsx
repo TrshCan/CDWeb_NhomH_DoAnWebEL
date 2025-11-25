@@ -2,6 +2,44 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { graphqlRequest } from "../api/graphql";
 
+const Tooltip = ({ children, content }) => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  if (!content) return <>{children}</>;
+
+  return (
+    <div 
+      className="relative inline-block w-full"
+      onMouseEnter={() => setIsVisible(true)}
+      onMouseLeave={() => setIsVisible(false)}
+    >
+      {children}
+      {isVisible && (
+        <div className="fixed z-[9999] pointer-events-none" style={{
+          left: '50%',
+          top: '20%',
+          transform: 'translateX(-50%)'
+        }}>
+          <div className="relative">
+            {/* Simple glow effect */}
+            <div className="absolute -inset-2 bg-blue-500/20 blur-lg rounded-lg"></div>
+            
+            {/* Main tooltip body */}
+            <div className="relative px-4 py-3 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xl border border-gray-700 max-w-sm">
+              <div className="relative z-10 leading-relaxed">
+                {content}
+              </div>
+              
+              {/* Subtle gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-blue-600/10 to-transparent rounded-lg pointer-events-none"></div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const statusConfig = {
   pending: { text: 'Chưa bắt đầu', color: 'gray', actions: ['activate'], icon: '⏳' },
   active: { text: 'Đang hoạt động', color: 'green', actions: ['pause', 'close'], icon: '🟢' },
@@ -718,13 +756,17 @@ const StatusManagement = () => {
                 <div className="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-blue-500 transition-colors duration-200"></div>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-semibold text-xs text-gray-900 truncate group-hover:text-blue-700 transition-colors duration-200" title={survey.name}>
-                  {survey.name}
-                </div>
-                {survey.description && (
-                  <div className="text-xs text-gray-500 truncate mt-0.5" title={survey.description}>
-                    {survey.description}
+                <Tooltip content={survey.name.length > 40 ? survey.name : null}>
+                  <div className="font-semibold text-xs text-gray-900 truncate group-hover:text-blue-700 transition-colors duration-200 cursor-help">
+                    {survey.name}
                   </div>
+                </Tooltip>
+                {survey.description && (
+                  <Tooltip content={survey.description.length > 50 ? survey.description : null}>
+                    <div className="text-xs text-gray-500 truncate mt-0.5 cursor-help">
+                      {survey.description}
+                    </div>
+                  </Tooltip>
                 )}
               </div>
             </div>
@@ -841,10 +883,10 @@ const StatusManagement = () => {
               <div className="flex-1 flex flex-col overflow-hidden mx-4">
                 <div className="flex-1 overflow-auto py-4">
                   <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                    <table className="w-full text-xs text-left text-gray-700">
+                    <table className="w-full text-xs text-left text-gray-700 table-fixed">
                       <thead className="bg-gray-50 text-gray-700 text-xs uppercase font-bold sticky top-0 z-10 border-b border-gray-200">
                         <tr>
-                          <th className="px-3 py-2 text-gray-700">
+                          <th className="px-3 py-2 text-gray-700" style={{ width: '45%' }}>
                             <div className="flex items-center gap-1">
                               <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -852,7 +894,7 @@ const StatusManagement = () => {
                               Tên khảo sát
                             </div>
                           </th>
-                          <th className="px-3 py-2 text-gray-700">
+                          <th className="px-3 py-2 text-gray-700" style={{ width: '20%' }}>
                             <div className="flex items-center gap-1">
                               <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -861,7 +903,7 @@ const StatusManagement = () => {
                             </div>
                           </th>
                           {(currentUserRole === 'admin' || surveysState.some(s => Number(s.created_by) === parseInt(localStorage.getItem('userId')))) && (
-                            <th className="px-3 py-2 text-gray-700">
+                            <th className="px-3 py-2 text-gray-700" style={{ width: '15%' }}>
                               <div className="flex items-center gap-1">
                                 <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -871,7 +913,7 @@ const StatusManagement = () => {
                               </div>
                             </th>
                           )}
-                          <th className="px-3 py-2 text-center text-gray-700">
+                          <th className="px-3 py-2 text-center text-gray-700" style={{ width: '20%' }}>
                             <div className="flex items-center justify-center gap-1">
                               <svg className="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />

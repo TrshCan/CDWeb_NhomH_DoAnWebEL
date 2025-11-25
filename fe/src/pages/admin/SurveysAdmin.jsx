@@ -17,18 +17,49 @@ const objects = ['', 'public', 'students', 'lecturers'];
 
 const Tooltip = ({ children, content }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  
+  if (!content) return <>{children}</>;
+  
+  const handleMouseEnter = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPosition({
+      x: rect.right + 10, // 10px bên phải element
+      y: rect.top + rect.height / 2 // Giữa chiều cao element
+    });
+    setIsVisible(true);
+  };
   
   return (
     <div 
       className="relative inline-block w-full"
-      onMouseEnter={() => setIsVisible(true)}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setIsVisible(false)}
     >
       {children}
-      {isVisible && content && (
-        <div className="absolute z-50 px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal break-words max-w-xs -top-2 left-0 transform -translate-y-full pointer-events-none">
-          {content}
-          <div className="absolute w-2 h-2 bg-gray-900 transform rotate-45 -bottom-1 left-4"></div>
+      {isVisible && (
+        <div 
+          className="fixed z-[9999] pointer-events-none"
+          style={{
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            transform: 'translateY(-50%)'
+          }}
+        >
+          <div className="relative">
+            {/* Simple glow effect */}
+            <div className="absolute -inset-2 bg-blue-500/20 blur-lg rounded-lg"></div>
+            
+            {/* Main tooltip body */}
+            <div className="relative px-4 py-3 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xl border border-gray-700 max-w-sm">
+              <div className="relative z-10 leading-relaxed">
+                {content}
+              </div>
+              
+              {/* Subtle gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-blue-600/10 to-transparent rounded-lg pointer-events-none"></div>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1820,12 +1851,14 @@ const SurveyFilter = () => {
                   {paginatedSurveys.map(survey => (
                     <tr key={survey.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group">
                       <td className="px-4 py-4 text-sm font-semibold text-gray-900">
-                        <div className="truncate" title={survey.title}>
-                          {survey.title}
-                        </div>
+                        <Tooltip content={survey.title.length > 30 ? survey.title : null}>
+                          <div className="truncate cursor-help">
+                            {survey.title}
+                          </div>
+                        </Tooltip>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        <div className="truncate" title={survey.category}>
+                        <div className="truncate">
                           {survey.category}
                         </div>
                       </td>
@@ -1833,15 +1866,17 @@ const SurveyFilter = () => {
                         {survey.type === 'survey' ? 'Survey' : 'Quiz'}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        <div className="truncate" title={survey.creatorName}>
-                          {survey.creatorName}
-                        </div>
+                        <Tooltip content={survey.creatorName.length > 15 ? survey.creatorName : null}>
+                          <div className="truncate cursor-help">
+                            {survey.creatorName}
+                          </div>
+                        </Tooltip>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600 font-medium whitespace-nowrap">
                         {survey.type === 'quiz' ? (survey.points ?? 0) : '—'}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        <div className="truncate" title={survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}>
+                        <div className="truncate">
                           {survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}
                         </div>
                       </td>
@@ -1852,9 +1887,11 @@ const SurveyFilter = () => {
                         </span>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
-                        <div className="truncate" title={formatTimeRange(survey.startAt, survey.endAt)}>
-                          {formatTimeRange(survey.startAt, survey.endAt)}
-                        </div>
+                        <Tooltip content={`Thời gian: ${formatTimeRange(survey.startAt, survey.endAt)}`}>
+                          <div className="truncate cursor-help">
+                            {formatTimeRange(survey.startAt, survey.endAt)}
+                          </div>
+                        </Tooltip>
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex space-x-1">
