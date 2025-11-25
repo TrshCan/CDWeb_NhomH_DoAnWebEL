@@ -71,6 +71,7 @@ export default function QuestionTypeModal({
   onClose,
   onSelectQuestionType,
   onAddGroup,
+  hasGroups = true,
 }) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -147,8 +148,16 @@ export default function QuestionTypeModal({
           </div>
 
           {/* Cột phải: Danh sách loại câu hỏi */}
-          <div className="flex-1 p-6 pt-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="flex-1 p-6 pt-8 relative">
+            {!hasGroups && (
+              <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center">
+                <div className="text-center p-6 bg-white rounded-lg shadow-lg border-2 border-violet-200">
+                  <p className="text-gray-700 font-medium mb-2">Chưa có nhóm câu hỏi</p>
+                  <p className="text-gray-500 text-sm">Vui lòng tạo nhóm câu hỏi trước khi thêm câu hỏi</p>
+                </div>
+              </div>
+            )}
+            <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 ${!hasGroups ? 'opacity-30 pointer-events-none' : ''}`}>
               {modalOptions.map((cat) => (
                 <div key={cat.title} className={cat.title === "Mảng" ? "mb-8" : ""}>
                   <div className="flex items-center mb-3">
@@ -163,6 +172,7 @@ export default function QuestionTypeModal({
                         <button
                           onClick={() => handleSelect(opt)}
                           className="block text-violet-600 hover:underline py-1 text-left text-[13px]"
+                          disabled={!hasGroups}
                         >
                           {opt}
                         </button>
