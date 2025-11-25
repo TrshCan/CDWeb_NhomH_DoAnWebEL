@@ -240,6 +240,13 @@ class SurveyRepository
     // 🆕 Cập nhật khảo sát
     public function update(Survey $survey, array $data): Survey
     {
+        // Convert DateTime objects to strings before update to avoid validation errors
+        foreach (['start_at', 'end_at', 'created_at', 'updated_at'] as $dateField) {
+            if (isset($data[$dateField]) && ($data[$dateField] instanceof \DateTime || $data[$dateField] instanceof \DateTimeInterface)) {
+                $data[$dateField] = $data[$dateField]->format('Y-m-d H:i:s');
+            }
+        }
+        
         $survey->update($data);
         return $survey->fresh(); // đảm bảo return bản ghi mới nhất
     }

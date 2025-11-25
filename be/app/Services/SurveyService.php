@@ -605,6 +605,13 @@ class SurveyService
             }
         }
 
+        // Convert DateTime objects to strings for validation
+        foreach (['start_at', 'end_at', 'created_at', 'updated_at'] as $dateField) {
+            if (isset($data[$dateField]) && ($data[$dateField] instanceof \DateTime || $data[$dateField] instanceof \DateTimeInterface)) {
+                $data[$dateField] = $data[$dateField]->format('Y-m-d H:i:s');
+            }
+        }
+
         // Xử lý logic points
         if (isset($data['type']) && $data['type'] === 'quiz') {
             $pointsRule = 'required|integer|min:0|max:100';
@@ -779,6 +786,14 @@ class SurveyService
         try {
             // Lấy thông tin survey trước khi cập nhật
             $oldSurvey = $this->surveyRepository->findById($id);
+            
+            // Convert DateTime objects to strings for validation
+            if (isset($input['start_at']) && ($input['start_at'] instanceof \DateTime || $input['start_at'] instanceof \DateTimeInterface)) {
+                $input['start_at'] = $input['start_at']->format('Y-m-d H:i:s');
+            }
+            if (isset($input['end_at']) && ($input['end_at'] instanceof \DateTime || $input['end_at'] instanceof \DateTimeInterface)) {
+                $input['end_at'] = $input['end_at']->format('Y-m-d H:i:s');
+            }
             
             // Cập nhật survey - pass the Survey model object, not the ID
             $survey = $this->surveyRepository->update($oldSurvey, $input);
