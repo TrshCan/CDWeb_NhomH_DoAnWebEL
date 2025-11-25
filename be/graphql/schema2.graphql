@@ -52,6 +52,7 @@ input UpdateSurveyInput {
     end_description: String
     categories_id: Int
     type: SurveyType
+    points: Int
     object: SurveyObject
     status: SurveyStatus
     start_at: DateTime

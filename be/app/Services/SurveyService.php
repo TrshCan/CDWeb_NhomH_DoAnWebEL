@@ -596,7 +596,11 @@ class SurveyService
         }
 
         if (isset($data['type']) && $data['type'] !== $survey->type) {
-            $hasResponses = DB::table('survey_responses')->where('survey_id', $id)->exists();
+            // Check if survey has any answers (responses) by checking survey_answers through survey_questions
+            $hasResponses = DB::table('survey_answers')
+                ->join('survey_questions', 'survey_questions.id', '=', 'survey_answers.question_id')
+                ->where('survey_questions.survey_id', $id)
+                ->exists();
             if ($hasResponses) {
                 $validator = Validator::make([], []);
                 throw new ValidationException($validator, response()->json([
