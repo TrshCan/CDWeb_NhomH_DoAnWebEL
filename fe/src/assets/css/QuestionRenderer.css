@@ -1,0 +1,133 @@
+/* Question Renderer Styles */
+.question-renderer {
+  width: 100%;
+}
+
+.question-image-wrapper {
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.question-image {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  display: block;
+}
+
+.option-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-right: 12px;
+}
+
+/* Rating Scale */
+.rating-scale {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.rating-option {
+  position: relative;
+  cursor: pointer;
+}
+
+.rating-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.rating-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #666;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.rating-option input[type="radio"]:checked + .rating-number {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+  transform: scale(1.1);
+}
+
+.rating-option:hover .rating-number {
+  border-color: #667eea;
+  transform: translateY(-2px);
+}
+
+/* Character Count */
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 0.5rem;
+}
+
+/* File Upload */
+.file-upload-wrapper {
+  margin-top: 1rem;
+}
+
+.file-input {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 2px dashed #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-input:hover {
+  border-color: #667eea;
+  background: #f5f7ff;
+}
+
+/* Matrix Question */
+.matrix-question {
+  margin-top: 1rem;
+}
+
+/* Help Text */
+.help-text {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 0.75rem;
+  font-style: italic;
+}
+
+/* Multiple Hint */
+.multiple-hint {
+  font-size: 0.9rem;
+  color: #667eea;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+/* No Options Message */
+.no-options {
+  color: #999;
+  font-style: italic;
+  padding: 1rem;
+  text-align: center;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
