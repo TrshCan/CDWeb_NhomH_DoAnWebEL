@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect  } from "react";
 import { graphqlRequest } from "../api/graphql";
 import { useNavigate } from "react-router-dom";
 
@@ -140,7 +140,12 @@ function LoginForm() {
       }, 500);
     }
   };
-
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      navigate("/", { replace: true });
+    }
+  }, []);
   return (
     <form className="w-full max-w-sm mx-auto p-8" onSubmit={handleSubmit}>
       <h2 className="text-3xl font-bold mb-8 text-center text-white">
