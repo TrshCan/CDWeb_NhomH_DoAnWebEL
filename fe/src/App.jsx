@@ -1,5 +1,6 @@
 // src/App.jsx
 import { Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import Register from "./pages/Register";
 import Login from "./pages/Login.jsx";
 import Feed from "./components/Feed.jsx";
@@ -36,7 +37,33 @@ import SurveyForm from "./components/SurveyForm";
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+      <Routes>
       {/* Layout chính */}
       <Route path="/" element={<MainLayout />}>
         <Route path="group" element={<Group />} />
@@ -132,5 +159,6 @@ export default function App() {
       <Route path="/admin/tab6" element={<Tab6 />} />
       <Route path="/admin/permissions" element={<PermissionManagement />} />
     </Routes>
+    </>
   );
 }

@@ -267,12 +267,12 @@ export default function SurveysCreated() {
   };
 
   const handleSaveEdit = async (surveyId, updatedSurvey) => {
+    // Modal already handles success/error toasts
+    // Just refresh the list silently
     try {
-      // Refresh the surveys list to get the latest data (silently)
       await refreshSurveysList(true);
     } catch (error) {
-      console.error("Error updating survey:", error);
-      // Don't re-throw since modal already handled the API call
+      console.error("Error refreshing surveys list:", error);
     }
   };
 
@@ -286,12 +286,12 @@ export default function SurveysCreated() {
   };
 
   const handleSaveCreate = async (newSurvey) => {
+    // Modal already handles success/error toasts
+    // Just refresh the list silently
     try {
-      // Refresh the surveys list to get the latest data (silently)
       await refreshSurveysList(true);
     } catch (error) {
       console.error("Error refreshing surveys list:", error);
-      // Don't show error toast as the modal already handled the creation
     }
   };
 
@@ -316,13 +316,13 @@ export default function SurveysCreated() {
         return; // Error already handled
       }
       
-      // Handle other errors
-      let errorMessage = '';
+      // Extract error message from GraphQL response
+      let errorMessage = 'Không thể tạo bản sao khảo sát';
       
       if (error.graphQLErrors && error.graphQLErrors.length > 0) {
         const firstError = error.graphQLErrors[0];
         
-        // Kiểm tra validation errors trước
+        // Check validation errors first
         if (firstError.extensions?.validation) {
           const validationErrors = firstError.extensions.validation;
           const validationMessages = Object.values(validationErrors)
@@ -334,19 +334,15 @@ export default function SurveysCreated() {
           }
         }
         
-        if (!errorMessage && firstError.message) {
+        // If no validation errors, use the error message
+        if (errorMessage === 'Không thể tạo bản sao khảo sát' && firstError.message) {
           errorMessage = firstError.message;
         }
-      }
-      
-      if (!errorMessage && error.message) {
+      } else if (error.message && error.message !== 'GraphQL error') {
         errorMessage = error.message;
       }
       
-      if (!errorMessage) {
-        errorMessage = 'Không thể tạo bản sao khảo sát';
-      }
-      
+      // Handle specific error messages
       if (errorMessage.includes('Đang xử lý yêu cầu')) {
         errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
       }
@@ -381,12 +377,13 @@ export default function SurveysCreated() {
         return; // Error already handled
       }
       
-      // Handle other errors
-      let errorMessage = '';
+      // Extract error message from GraphQL response
+      let errorMessage = 'Không thể xóa khảo sát';
       
       if (error.graphQLErrors && error.graphQLErrors.length > 0) {
         const firstError = error.graphQLErrors[0];
         
+        // Check validation errors first
         if (firstError.extensions?.validation) {
           const validationErrors = firstError.extensions.validation;
           const validationMessages = Object.values(validationErrors)
@@ -398,19 +395,15 @@ export default function SurveysCreated() {
           }
         }
         
-        if (!errorMessage && firstError.message) {
+        // If no validation errors, use the error message
+        if (errorMessage === 'Không thể xóa khảo sát' && firstError.message) {
           errorMessage = firstError.message;
         }
-      }
-      
-      if (!errorMessage && error.message) {
+      } else if (error.message && error.message !== 'GraphQL error') {
         errorMessage = error.message;
       }
       
-      if (!errorMessage) {
-        errorMessage = 'Không thể xóa khảo sát';
-      }
-      
+      // Handle specific error messages
       if (errorMessage.includes('Đang xử lý yêu cầu')) {
         errorMessage = 'Đang xử lý yêu cầu. Vui lòng đợi và thử lại sau vài giây.';
       } else if (errorMessage.includes('Khảo sát đã bị xóa trước đó') || errorMessage.includes('đã bị xóa')) {
