@@ -23,6 +23,7 @@ import DeleteConfirmModal from "./DeleteConfirmModal";
 import { Toaster, toast } from "react-hot-toast";
 import { addQuestion, deleteQuestion, deleteQuestions, updateQuestion, updateOption, addOption, deleteOption, duplicateQuestion } from "../api/questions";
 import { createQuestionGroup, updateQuestionGroup, deleteQuestionGroup, duplicateQuestionGroup } from "../api/groups";
+import { toEnglishType, toVietnameseType } from "../utils/questionTypeMapping";
 
 export default function SurveyForm({ surveyId: propSurveyId = null }) {
   const { surveyId: urlSurveyId } = useParams();
@@ -219,6 +220,9 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
 
         // Helper function để convert question từ backend sang frontend
         const convertBackendQuestion = (backendQuestion) => {
+            // ✅ Convert English type from backend to Vietnamese for display
+            const vietnameseType = toVietnameseType(backendQuestion.question_type || "single_choice");
+
             // Convert options từ backend format sang frontend format
             const convertedOptions = (backendQuestion.options || []).map((backendOption) => {
               // Đảm bảo ID luôn là số nguyên từ CSDL
@@ -229,7 +233,7 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
               };
 
               // Xử lý cho Ma trận (chọn điểm) - có is_subquestion
-              if (backendQuestion.question_type === "Ma trận (chọn điểm)") {
+              if (vietnameseType === "Ma trận (chọn điểm)") {
                 frontendOption.isSubquestion = backendOption.is_subquestion || false;
               }
 
@@ -246,8 +250,8 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
               id: parseInt(backendQuestion.id),
               text: backendQuestion.question_text || "",
               helpText: backendQuestion.help_text || "",
-              type: backendQuestion.question_type || "Danh sách (nút chọn)",
-              options: convertedOptions.length > 0 ? convertedOptions : createDefaultOptions(backendQuestion.question_type || "Danh sách (nút chọn)"),
+              type: vietnameseType, // ✅ Use Vietnamese type for display
+              options: convertedOptions.length > 0 ? convertedOptions : createDefaultOptions(vietnameseType),
             };
 
             // Thêm maxLength nếu có
@@ -600,6 +604,9 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
 
             // Helper function để convert backend question sang frontend format
             const convertBackendQuestion = (backendQuestion) => {
+              // ✅ Convert English type from backend to Vietnamese for display
+              const vietnameseType = toVietnameseType(backendQuestion.question_type || "single_choice");
+
               const convertedOptions = (backendQuestion.options || []).map((backendOption) => {
                 const optionId = backendOption.id ? parseInt(backendOption.id, 10) : null;
                 const frontendOption = {
@@ -607,7 +614,7 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
                   text: backendOption.option_text || "",
                 };
 
-                if (backendQuestion.question_type === "Ma trận (chọn điểm)") {
+                if (vietnameseType === "Ma trận (chọn điểm)") {
                   frontendOption.isSubquestion = backendOption.is_subquestion || false;
                 }
 
@@ -622,8 +629,8 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
                 id: parseInt(backendQuestion.id),
                 text: backendQuestion.question_text || "",
                 helpText: backendQuestion.help_text || "",
-                type: backendQuestion.question_type || "Danh sách (nút chọn)",
-                options: convertedOptions.length > 0 ? convertedOptions : createDefaultOptions(backendQuestion.question_type || "Danh sách (nút chọn)"),
+                type: vietnameseType, // ✅ Use Vietnamese type for display
+                options: convertedOptions.length > 0 ? convertedOptions : createDefaultOptions(vietnameseType),
               };
 
               if (backendQuestion.max_length) {
@@ -1624,6 +1631,9 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
     // ✅ Đảm bảo question_text không rỗng (backend yêu cầu String!)
     const questionText = frontendQuestion.text?.trim() || "Câu hỏi mới";
 
+    // ✅ Convert Vietnamese type to English for database
+    const questionType = toEnglishType(frontendQuestion.type || "Danh sách (nút chọn)");
+
     return {
       survey_id: String(surveyIdParam), // Đảm bảo là string
       group_id: groupIdParam ? String(groupIdParam) : null, // ✅ Thêm group_id
@@ -1632,7 +1642,7 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
         : undefined, // Không gửi nếu rỗng, để backend tự tạo
       question_text: questionText, // Backend yêu cầu String! (không null)
       image: questionSettingsData?.image || null,
-      question_type: frontendQuestion.type || "Danh sách (nút chọn)",
+      question_type: questionType, // ✅ Use English type
       required: questionSettingsData?.required || "soft",
       conditions: questionSettingsData?.conditions || null,
       default_scenario: questionSettingsData?.defaultScenario || 1,
@@ -2928,8 +2938,9 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
                           }));
 
                         // 3. Cập nhật question type trong CSDL
+                        // ✅ Convert Vietnamese type to English before saving
                         await updateQuestion(activeQuestionId, {
-                          question_type: questionNewType,
+                          question_type: toEnglishType(questionNewType),
                         });
 
                         // 4. Cập nhật UI với options mới có ID thật
