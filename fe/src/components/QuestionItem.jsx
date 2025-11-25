@@ -568,6 +568,9 @@ export default function QuestionItem({
     return question.type === "Ma trận (chọn điểm)";
   };
 
+  // State để hiển thị lỗi upload ảnh
+  const [imageUploadError, setImageUploadError] = useState(null);
+
   // ✅ Handler: Upload ảnh cho option
   const handleOptionImageUpload = (optionId) => {
     const input = document.createElement("input");
@@ -576,6 +579,14 @@ export default function QuestionItem({
     input.onchange = (e) => {
       const file = e.target.files?.[0];
       if (file) {
+        // Kiểm tra file có phải là ảnh không
+        if (!file.type.startsWith("image/")) {
+          toast.error("Chỉ được thêm ảnh!");
+          setImageUploadError(optionId);
+          setTimeout(() => setImageUploadError(null), 2000);
+          return;
+        }
+        setImageUploadError(null);
         const reader = new FileReader();
         reader.onload = (event) => {
           onOptionImageChange?.(question.id, optionId, event.target.result);
@@ -3107,11 +3118,16 @@ export default function QuestionItem({
                             isActive ? (
                               /* Khi active: Hiển thị ảnh nếu có, hoặc ô upload */
                               option.image ? (
-                                <div className="relative inline-block">
+                                <div 
+                                  className="relative"
+                                  style={{ 
+                                    display: "inline-block",
+                                  }}
+                                >
                                   <img
                                     src={option.image}
                                     alt="Option"
-                                    className="peer border-1 border-gray-900 rounded-sm cursor-pointer"
+                                    className="peer border border-gray-900 rounded-sm cursor-pointer"
                                     style={{
                                       height: "160px",
                                       width: "auto",
@@ -3132,28 +3148,37 @@ export default function QuestionItem({
                                         null
                                       );
                                     }}
-                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-all opacity-0 peer-hover:opacity-100"
+                                    style={{
+                                      position: "absolute",
+                                      top: "8px",
+                                      right: "8px",
+                                    }}
+                                    className="bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center shadow-md opacity-0 peer-hover:opacity-100 hover:opacity-100 transition-opacity"
                                     title="Xóa ảnh"
                                   >
                                     <svg
                                       xmlns="http://www.w3.org/2000/svg"
-                                      width="24"
-                                      height="24"
+                                      width="14"
+                                      height="14"
                                       viewBox="0 0 24 24"
                                       fill="none"
                                       stroke="white"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="square"
-                                      strokeLinejoin="miter"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
                                     >
-                                      <path d="M15.5355339 15.5355339L8.46446609 8.46446609M15.5355339 8.46446609L8.46446609 15.5355339" />
-                                      <path d="M4.92893219,19.0710678 C1.02368927,15.1658249 1.02368927,8.83417511 4.92893219,4.92893219 C8.83417511,1.02368927 15.1658249,1.02368927 19.0710678,4.92893219 C22.9763107,8.83417511 22.9763107,15.1658249 19.0710678,19.0710678 C15.1658249,22.9763107 8.83417511,22.9763107 4.92893219,19.0710678 Z" />
+                                      <line x1="18" y1="6" x2="6" y2="18" />
+                                      <line x1="6" y1="6" x2="18" y2="18" />
                                     </svg>
                                   </button>
                                 </div>
                               ) : (
                                 <div
-                                  className="border-2 border-dashed border-gray-700 rounded-md flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                                  className={`border-2 border-dashed rounded-md flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all ${
+                                    imageUploadError === option.id 
+                                      ? "border-red-500 bg-red-50 animate-pulse" 
+                                      : "border-gray-700"
+                                  }`}
                                   style={{
                                     width: "260px",
                                     height: "160px",
@@ -3171,14 +3196,14 @@ export default function QuestionItem({
                                     fill="none"
                                     stroke="currentColor"
                                     strokeWidth="2"
-                                    className="text-gray-400 mb-2"
+                                    className={`mb-2 ${imageUploadError === option.id ? "text-red-400" : "text-gray-400"}`}
                                   >
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                     <polyline points="17 8 12 3 7 8" />
                                     <line x1="12" y1="3" x2="12" y2="15" />
                                   </svg>
-                                  <span className="text-sm text-gray-500 italic">
-                                    Thả hình ảnh tại đây
+                                  <span className={`text-sm italic ${imageUploadError === option.id ? "text-red-500" : "text-gray-500"}`}>
+                                    {imageUploadError === option.id ? "Chỉ được thêm ảnh!" : "Thả hình ảnh tại đây"}
                                   </span>
                                 </div>
                               )
