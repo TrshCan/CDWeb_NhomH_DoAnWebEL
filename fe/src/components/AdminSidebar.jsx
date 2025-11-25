@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export default function AdminSidebar() {
+  const user = JSON.parse(localStorage.getItem("user"));
   const location = useLocation();
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -174,13 +175,10 @@ export default function AdminSidebar() {
       </nav>
 
       {/* Footer Actions */}
-      <div className="p-4 border-t border-slate-700 space-y-2">
-        <Link
-          to="/admin/profile"
-          className="flex items-center space-x-3 p-3 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-all duration-200"
-        >
+      <div className="p-4 border-t border-slate-700 ">
+     
           <svg
-            className="w-6 h-6 flex-shrink-0"
+            className="w-6 h-6 ml-3 flex-shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -192,8 +190,7 @@ export default function AdminSidebar() {
               d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
             />
           </svg>
-          {!isCollapsed && <span className="font-medium">Admin Profile</span>}
-        </Link>
+          {!isCollapsed && <span className="font-medium text-red-500"> Xin chào </span>}<span>{user.name}</span>
         <button
           onClick={handleLogout}
           className="w-full flex items-center space-x-3 p-3 rounded-lg text-slate-300 hover:bg-rose-600 hover:text-white transition-all duration-200"
