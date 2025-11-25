@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import PostCard from "../components/PostCard";
 import {
   getPostsByType,
@@ -270,8 +270,6 @@ export default function Feed() {
 
   return (
     <main className="w-full lg:w-2/3">
-      <Toaster position="top-right" />
-
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow p-2 mb-4 flex space-x-2">
         {(user

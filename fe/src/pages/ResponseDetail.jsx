@@ -8,6 +8,152 @@ import { exportResponseDetailCSV } from "../utils/exports/responseDetail/csv";
 import { exportResponseDetailExcel } from "../utils/exports/responseDetail/excel";
 import { exportResponseDetailPDF } from "../utils/exports/responseDetail/pdf";
 import { ensureSurveyOwnership } from "../utils/surveyOwnership";
+import { toVietnameseType } from "../utils/questionTypeMapping";
+
+const normalizeType = (type) => (type || "").toString().toLowerCase();
+
+const TEXT_BASED_TYPES = new Set(["text", "short_text", "long_text"]);
+const MULTIPLE_TEXT_TYPES = new Set(["multiple_short_text"]);
+const DATETIME_TYPES = new Set(["datetime"]);
+const FILE_UPLOAD_TYPES = new Set(["file_upload"]);
+const MATRIX_TYPES = new Set(["matrix_rating"]);
+const CHOICE_WITH_COMMENT_TYPES = new Set(["single_choice_text"]);
+
+const parseAnswerValue = (value) => {
+  if (!value || typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+};
+
+const formatAnswerText = (value) => {
+  if (value === null || value === undefined) {
+    return "No response provided.";
+  }
+  const stringified = String(value).trim();
+  return stringified.length > 0 ? stringified : "No response provided.";
+};
+
+const formatDateTimeValue = (value) => {
+  if (!value) {
+    return "No response provided.";
+  }
+  const isoCandidate = value.includes(" ") && !value.includes("T") ? value.replace(" ", "T") : value;
+  const parsed = new Date(isoCandidate);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString("vi-VN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+};
+
+const buildMultipleTextEntries = (rawValue) => {
+  const parsed = parseAnswerValue(rawValue);
+  if (!parsed) {
+    return [];
+  }
+
+  if (Array.isArray(parsed)) {
+    return parsed.map((item, idx) => {
+      if (typeof item === "string") {
+        return { label: `Trả lời ${idx + 1}`, value: item };
+      }
+      if (item && typeof item === "object") {
+        const label = item.label || item.key || item.title || `Trả lời ${idx + 1}`;
+        const value = item.value ?? item.answer ?? item.text ?? "";
+        return { label, value };
+      }
+      return { label: `Trả lời ${idx + 1}`, value: item };
+    });
+  }
+
+  if (typeof parsed === "object") {
+    return Object.entries(parsed).map(([key, value], idx) => ({
+      label: key || `Trả lời ${idx + 1}`,
+      value,
+    }));
+  }
+
+  return [];
+};
+
+const buildMatrixRows = (rawValue) => {
+  const parsed = parseAnswerValue(rawValue);
+  if (!parsed) {
+    return [];
+  }
+
+  if (Array.isArray(parsed)) {
+    return parsed.map((item, idx) => {
+      if (item && typeof item === "object") {
+        const label = item.label || item.row || item.question || `Hàng ${idx + 1}`;
+        const value = item.value ?? item.answer ?? item.selection ?? item.column ?? item.optionId ?? "";
+        return { label, value };
+      }
+      return { label: `Hàng ${idx + 1}`, value: item };
+    });
+  }
+
+  if (typeof parsed === "object") {
+    return Object.entries(parsed).map(([key, value], idx) => ({
+      label: key || `Hàng ${idx + 1}`,
+      value,
+    }));
+  }
+
+  return [];
+};
+
+const formatMatrixCellValue = (value, optionLookup) => {
+  if (value === null || value === undefined || value === "") {
+    return "N/A";
+  }
+
+  const lookupKey = typeof value === "object" && value !== null ? value.optionId ?? value.id ?? value.value : value;
+  if (lookupKey !== undefined && lookupKey !== null) {
+    const matched = optionLookup.get(String(lookupKey));
+    if (matched) {
+      return matched;
+    }
+  }
+
+  if (typeof value === "object") {
+    if (value.label) return value.label;
+    if (value.text) return value.text;
+    if (value.value) return value.value;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return "N/A";
+    }
+  }
+
+  return String(value);
+};
+
+const formatFileSize = (bytes) => {
+  if (typeof bytes !== "number" || Number.isNaN(bytes) || bytes <= 0) {
+    return null;
+  }
+  const thresholds = ["KB", "MB", "GB"];
+  let size = bytes;
+  let unitIndex = -1;
+
+  while (size >= 1024 && unitIndex < thresholds.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${size.toFixed(1)} ${unitIndex === -1 ? "B" : thresholds[unitIndex]}`;
+};
 
 export default function ResponseDetail() {
   const navigate = useNavigate();
@@ -260,6 +406,184 @@ export default function ResponseDetail() {
 
   const collapseAll = () => {
     setExpandedQuestions(new Set());
+  };
+
+  const renderOptionList = (question) => {
+    if (!question?.options || question.options.length === 0) {
+      return <div className="answer-text">No options available.</div>;
+    }
+
+    const hasCorrectAnswer = question.options.some((opt) => opt.isCorrect);
+
+    return (
+      <div className="answer-options">
+        {question.options.map((option) => {
+          const isSelected = Boolean(option.selected);
+          const isCorrect = Boolean(option.isCorrect);
+          const isCorrectAndSelected = isSelected && isCorrect;
+          const isWrong = isSelected && !isCorrect && hasCorrectAnswer;
+          const isSelectedNoCorrect = isSelected && !hasCorrectAnswer;
+
+          return (
+            <div
+              key={option.id}
+              className={`answer-option ${
+                isCorrectAndSelected ? "correct-selected" : ""
+              } ${isWrong ? "wrong-selected" : ""} ${isSelectedNoCorrect ? "selected-no-correct" : ""}`}
+            >
+              <span className="option-text">{option.text}</span>
+              {isCorrect && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  className="check-icon"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderFileUploadsAnswer = (answerText) => {
+    const files = parseAnswerValue(answerText);
+    if (Array.isArray(files) && files.length > 0) {
+      return (
+        <div className="file-answer-list">
+          {files.map((file, idx) => {
+            const fileName = file?.name || `File ${idx + 1}`;
+            const href = file?.url || file?.downloadUrl || file?.path || file?.data || null;
+            const sizeLabel = typeof file?.size === "number" ? formatFileSize(file.size) : null;
+
+            return (
+              <div key={`${fileName}-${idx}`} className="info-item">
+                <span className="info-label">{fileName}</span>
+                <span className="info-value">
+                  {href ? (
+                    <a href={href} download={fileName} target="_blank" rel="noopener noreferrer">
+                      Download
+                    </a>
+                  ) : (
+                    "Unavailable"
+                  )}
+                  {sizeLabel ? ` (${sizeLabel})` : ""}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (typeof answerText === "string" && answerText.trim() !== "") {
+      return <div className="answer-text">{answerText}</div>;
+    }
+
+    return <div className="answer-text">No files uploaded.</div>;
+  };
+
+  const renderMultipleShortTextAnswer = (question) => {
+    const entries = buildMultipleTextEntries(question.answerText);
+    if (entries.length === 0) {
+      return <div className="answer-text">{formatAnswerText(question.answerText)}</div>;
+    }
+
+    return (
+      <div className="multi-text-answer">
+        {entries.map((entry, idx) => (
+          <div key={`${entry.label}-${idx}`} className="info-item">
+            <span className="info-label">{entry.label}:</span>
+            <span className="info-value">{formatAnswerText(entry.value)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderMatrixAnswer = (question) => {
+    const rows = buildMatrixRows(question.answerText);
+    if (rows.length > 0) {
+      const optionLookup = new Map(
+        (question.options || []).map((opt) => [String(opt.id), opt.text])
+      );
+      return (
+        <div className="matrix-answer">
+          <table className="matrix-answer-table">
+            <thead>
+              <tr>
+                <th>Hạng mục</th>
+                <th>Đáp án</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, idx) => (
+                <tr key={`${row.label}-${idx}`}>
+                  <td>{row.label}</td>
+                  <td>{formatMatrixCellValue(row.value, optionLookup)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    if (question.options && question.options.length > 0) {
+      return renderOptionList(question);
+    }
+
+    return <div className="answer-text">{formatAnswerText(question.answerText)}</div>;
+  };
+
+  const renderAnswerContent = (question) => {
+    const normalizedType = normalizeType(question.type);
+
+    if (DATETIME_TYPES.has(normalizedType)) {
+      return <div className="answer-text">{formatDateTimeValue(question.answerText)}</div>;
+    }
+
+    if (TEXT_BASED_TYPES.has(normalizedType)) {
+      return <div className="answer-text">{formatAnswerText(question.answerText)}</div>;
+    }
+
+    if (MULTIPLE_TEXT_TYPES.has(normalizedType)) {
+      return renderMultipleShortTextAnswer(question);
+    }
+
+    if (FILE_UPLOAD_TYPES.has(normalizedType)) {
+      return renderFileUploadsAnswer(question.answerText);
+    }
+
+    if (CHOICE_WITH_COMMENT_TYPES.has(normalizedType)) {
+      return (
+        <>
+          {renderOptionList(question)}
+          {question.answerText ? (
+            <div className="answer-text">
+              <strong>Nhận xét:</strong> {formatAnswerText(question.answerText)}
+            </div>
+          ) : null}
+        </>
+      );
+    }
+
+    if (MATRIX_TYPES.has(normalizedType)) {
+      return renderMatrixAnswer(question);
+    }
+
+    if (question.options && question.options.length > 0) {
+      return renderOptionList(question);
+    }
+
+    return <div className="answer-text">{formatAnswerText(question.answerText)}</div>;
   };
 
   if (accessChecking || loading) {
@@ -517,85 +841,53 @@ export default function ResponseDetail() {
           </div>
 
           <div className="questions-list">
-            {currentQuestions.map((question) => (
-              <div
-                key={question.id}
-                className={`question-card ${expandedQuestions.has(question.id) ? "expanded" : ""}`}
-              >
+            {currentQuestions.map((question) => {
+              const typeLabel = toVietnameseType(question.type || "");
+              return (
                 <div
-                  className="question-header"
-                  onClick={() => toggleQuestion(question.id)}
+                  key={question.id}
+                  className={`question-card ${expandedQuestions.has(question.id) ? "expanded" : ""}`}
                 >
-                  <div className="question-header-content">
-                    <h3>{question.question}</h3>
-                  </div>
-                  <div className="question-header-right">
-                    {question.points > 0 && (
-                      <span className="question-points">
-                        {formatScore(question.score ?? 0)} / {formatScore(question.points)} pts
-                      </span>
-                    )}
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="chevron-icon"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="question-answer">
-                  {question.type === "text" ? (
-                    <div className="answer-text">
-                      {question.answerText || "No response provided."}
+                  <div
+                    className="question-header"
+                    onClick={() => toggleQuestion(question.id)}
+                  >
+                    <div className="question-header-content">
+                      <h3>
+                        {question.question}
+                        {typeLabel ? (
+                          <span className="question-type-label">
+                            {" ("}
+                            {typeLabel}
+                            {")"}
+                          </span>
+                        ) : null}
+                      </h3>
                     </div>
-                  ) : question.options && question.options.length > 0 ? (
-                    <div className="answer-options">
-                      {question.options.map((option) => {
-                        const isSelected = option.selected;
-                        const isCorrect = option.isCorrect;
-                        const hasCorrectAnswer = question.options.some(opt => opt.isCorrect);
-                        const isCorrectAndSelected = isSelected && isCorrect;
-                        const isWrong = isSelected && !isCorrect && hasCorrectAnswer;
-                        const isSelectedNoCorrect = isSelected && !hasCorrectAnswer;
-                        
-                        return (
-                          <div
-                            key={option.id}
-                            className={`answer-option ${
-                              isCorrectAndSelected ? "correct-selected" : ""
-                            } ${isWrong ? "wrong-selected" : ""} ${isSelectedNoCorrect ? "selected-no-correct" : ""}`}
-                          >
-                            <span className="option-text">{option.text}</span>
-                            {isCorrect && (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                                className="check-icon"
-                              >
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div className="question-header-right">
+                      {question.points > 0 && (
+                        <span className="question-points">
+                          {formatScore(question.score ?? 0)} / {formatScore(question.points)} pts
+                        </span>
+                      )}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="chevron-icon"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
                     </div>
-                  ) : (
-                    <div className="answer-text">No options available.</div>
-                  )}
+                  </div>
+                  <div className="question-answer">{renderAnswerContent(question)}</div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination */}
