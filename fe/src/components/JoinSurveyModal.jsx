@@ -8,14 +8,54 @@ export default function JoinSurveyModal({ isOpen, onClose }) {
   const navigate = useNavigate();
   const [surveyToken, setSurveyToken] = useState("");
   const [joiningSurvey, setJoiningSurvey] = useState(false);
+  const [tokenError, setTokenError] = useState("");
+
+  // Validate token format
+  const validateToken = (token) => {
+    const trimmed = token.trim();
+    
+    if (!trimmed) {
+      return "Vui lòng nhập mã token";
+    }
+    
+    if (trimmed.length < 4) {
+      return "Mã token phải có ít nhất 4 ký tự";
+    }
+    
+    if (trimmed.length > 100) {
+      return "Mã token không được vượt quá 100 ký tự";
+    }
+    
+    // Allow alphanumeric and common special characters
+    // Tokens are generated as random strings, so we allow most characters
+    if (!/^[a-zA-Z0-9\-_]+$/.test(trimmed)) {
+      return "Mã token chỉ được chứa chữ cái, số và các ký tự: - _";
+    }
+    
+    return "";
+  };
+
+  // Handle input change with validation
+  const handleTokenChange = (e) => {
+    const value = e.target.value;
+    setSurveyToken(value);
+    
+    // Clear error when user starts typing
+    if (tokenError) {
+      setTokenError("");
+    }
+  };
 
   // Handle survey token submission
   const handleJoinSurvey = async (e) => {
     e.preventDefault();
     const token = surveyToken.trim();
 
-    if (!token) {
-      toast.error("Please enter a survey token");
+    // Validate token
+    const validationError = validateToken(token);
+    if (validationError) {
+      setTokenError(validationError);
+      toast.error(validationError);
       return;
     }
 
@@ -69,6 +109,7 @@ export default function JoinSurveyModal({ isOpen, onClose }) {
 
   const handleClose = () => {
     setSurveyToken("");
+    setTokenError("");
     onClose();
   };
 
@@ -117,15 +158,45 @@ export default function JoinSurveyModal({ isOpen, onClose }) {
               type="text"
               id="surveyToken"
               value={surveyToken}
-              onChange={(e) => setSurveyToken(e.target.value)}
+              onChange={handleTokenChange}
+              onBlur={() => {
+                // Validate on blur
+                const error = validateToken(surveyToken);
+                setTokenError(error);
+              }}
               placeholder="e.g., ABC123"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                tokenError
+                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                  : "border-gray-300 focus:ring-cyan-500 focus:border-transparent"
+              }`}
               autoFocus
+              maxLength={100}
             />
-            <p className="mt-2 text-xs text-gray-500">
-              Enter the unique token provided by your instructor or survey
-              creator.
-            </p>
+            {tokenError && (
+              <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                {tokenError}
+              </p>
+            )}
+            {!tokenError && (
+              <p className="mt-2 text-xs text-gray-500">
+                Enter the unique token provided by your instructor or survey
+                creator.
+              </p>
+            )}
           </div>
 
           <div className="flex space-x-3">
@@ -138,9 +209,9 @@ export default function JoinSurveyModal({ isOpen, onClose }) {
             </button>
             <button
               type="submit"
-              disabled={joiningSurvey}
+              disabled={joiningSurvey || !!tokenError || !surveyToken.trim()}
               className={`flex-1 px-4 py-2.5 rounded-lg transition-all font-medium ${
-                joiningSurvey
+                joiningSurvey || !!tokenError || !surveyToken.trim()
                   ? "bg-cyan-400 cursor-not-allowed text-white"
                   : "bg-cyan-600 hover:bg-cyan-700 text-white"
               }`}

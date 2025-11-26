@@ -42,6 +42,25 @@ class SurveyShareService
      */
     public function getShareByToken(string $token)
     {
+        // Validate token format (defense in depth - also validated in resolver)
+        $token = trim($token);
+        
+        if (empty($token)) {
+            throw new \Exception('Vui lòng nhập mã token');
+        }
+        
+        if (strlen($token) < 4) {
+            throw new \Exception('Mã token phải có ít nhất 4 ký tự');
+        }
+        
+        if (strlen($token) > 100) {
+            throw new \Exception('Mã token không được vượt quá 100 ký tự');
+        }
+        
+        if (!preg_match('/^[a-zA-Z0-9\-_]+$/', $token)) {
+            throw new \Exception('Mã token chỉ được chứa chữ cái, số và các ký tự: - _');
+        }
+        
         try {
             $share = $this->shareRepository->findByToken($token);
             
