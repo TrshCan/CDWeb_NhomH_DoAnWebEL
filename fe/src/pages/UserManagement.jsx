@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from "react"
 import { useLocation, useNavigate } from "react-router-dom";
 import { updateProfile, getUserProfile } from "../api/graphql/user";
 
-const InputField = React.memo(({ id, label, type = "text", value, onChange, placeholder, error }) => {
+const InputField = React.memo(({ id, label, type = "text", value, onChange, onBlur, placeholder, error }) => {
     return (
         <div className="mb-6 text-left">
             <label htmlFor={id} className="block mb-2 text-sm font-medium text-white">
@@ -13,6 +13,7 @@ const InputField = React.memo(({ id, label, type = "text", value, onChange, plac
                 id={id}
                 value={value}
                 onChange={onChange}
+                onBlur={onBlur}
                 placeholder={placeholder}
                 className={`w-full p-3 rounded-lg bg-gray-700 text-white border ${error ? "border-red-500" : "border-gray-600"
                     } focus:ring-blue-500 focus:border-blue-500 transition duration-150`}
@@ -56,6 +57,22 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
     const [isPasswordChange, setIsPasswordChange] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const avatarFileRef = useRef(null); // Lưu file object để gửi lên server
+    
+    // Lưu giá trị ban đầu để reset khi blur
+    const initialValuesRef = useRef({
+        displayName: user?.displayName || "",
+        address: user?.bio || user?.address || "",
+    });
+
+    // Cập nhật giá trị ban đầu khi user object thay đổi
+    useEffect(() => {
+        if (user) {
+            initialValuesRef.current = {
+                displayName: user?.displayName || "",
+                address: user?.bio || user?.address || "",
+            };
+        }
+    }, [user?.displayName, user?.bio, user?.address]);
 
     // Fetch email nếu không có trong user object (fallback)
     useEffect(() => {
@@ -79,6 +96,13 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
         fetchUserEmail();
     }, [user?.id, user?.email]); // Chỉ chạy khi user.id hoặc user.email thay đổi
 
+    // Normalize name: trim và thay thế nhiều khoảng trắng liên tiếp bằng một khoảng trắng
+    const normalizeName = useCallback((name) => {
+        if (!name) return "";
+        return name.trim().replace(/\s+/g, " ");
+    }, []);
+    const normalizeAddress = normalizeName;
+
     // --- Handlers ---
     const handleChange = useCallback((e) => {
         const { id, value } = e.target;
@@ -86,10 +110,37 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
         if (id === "email") {
             return;
         }
-        setFormData((prev) => ({ ...prev, [id]: value }));
+        
+        // Xử lý đặc biệt cho displayName: ngăn nhiều khoảng trắng liên tiếp
+        if (id === "displayName" || id ==="address") {
+            let normalizedValue = value;
+            // Ngăn nhiều khoảng trắng liên tiếp
+            if (/\s{2,}/.test(value)) {
+                normalizedValue = value.replace(/\s+/g, " ");
+            }
+            setFormData((prev) => ({ ...prev, [id]: normalizedValue }));
+        } else {
+            setFormData((prev) => ({ ...prev, [id]: value }));
+        }
+        
         // Clear error ngay khi user bắt đầu gõ
         setErrors((prev) => (prev[id] ? { ...prev, [id]: undefined } : prev));
     }, []);
+
+    const handleBlur = useCallback((e) => {
+        const { id, value } = e.target;
+        if (id === "displayName" || id === "address") {
+            const normalized = normalizeName(value);
+            // Nếu sau khi normalize là rỗng, reset về giá trị ban đầu
+            if (!normalized || normalized.trim() === "") {
+                const originalValue = initialValuesRef.current[id];
+                setFormData((prev) => ({ ...prev, [id]: originalValue }));
+            } else if (normalized !== value) {
+                setFormData((prev) => ({ ...prev, [id]: normalized }));
+            }
+        }
+    }, [normalizeName]);
+    
 
     const handleAvatarUpload = useCallback((e) => {
         const file = e.target.files[0];
@@ -126,15 +177,21 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
         setMessage(null);
         setErrors({});
 
+        // Normalize name trước khi validation
+        const normalizedName = normalizeName(formData.displayName);
+
         // Validation
         const newErrors = {};
         
-        if (!formData.displayName || formData.displayName.trim() === "") {
+        if (!normalizedName || normalizedName === "") {
             newErrors.displayName = "Họ và tên không được để trống";
-        } else if (formData.displayName.trim().length < 10) {
+        } else if (normalizedName.length < 10) {
             newErrors.displayName = "Họ và tên phải từ 10 ký tự trở lên";
-        } else if (formData.displayName.trim().length > 50) {
+        } else if (normalizedName.length > 50) {
             newErrors.displayName = "Họ và tên không được quá 50 ký tự";
+        } else if (/\s{2,}/.test(formData.displayName)) {
+            // Kiểm tra nếu có nhiều khoảng trắng liên tiếp
+            newErrors.displayName = "Họ và tên không được có nhiều khoảng trắng liên tiếp";
         }
 
         // Email không cần validate vì không thể thay đổi
@@ -190,7 +247,7 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
             const emailToSend = formData.email.trim() || user?.email || "";
             
             const updatedUser = await updateProfile(
-                formData.displayName.trim(),
+                normalizedName,
                 emailToSend,
                 formData.address?.trim() || null,
                 password,
@@ -225,11 +282,19 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                 }
             }
             
+            // Cập nhật giá trị ban đầu sau khi submit thành công
+            const updatedDisplayName = updatedUser.name || normalizedName;
+            const updatedAddress = updatedUser.address || formData.address?.trim() || "";
+            initialValuesRef.current = {
+                displayName: updatedDisplayName,
+                address: updatedAddress,
+            };
+            
             onUpdateSuccess?.({
                 ...formData,
-                displayName: updatedUser.name,
+                displayName: updatedDisplayName,
                 email: updatedUser.email,
-                address: updatedUser.address || formData.address,
+                address: updatedAddress,
                 avatarUrl: finalAvatarUrl,
             });
 
@@ -354,7 +419,7 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
         } finally {
             setIsLoading(false);
         }
-    }, [formData, isPasswordChange, onUpdateSuccess]); // Dependencies
+    }, [formData, isPasswordChange, onUpdateSuccess, normalizeName, user?.email]); // Dependencies
 
     const handleCancelClick = useCallback(() => {
         if (onCancel) {
@@ -441,6 +506,7 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                         label="Họ và tên"
                         value={formData.displayName}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         placeholder="Nguyễn Văn A"
                         error={errors.displayName}
                     />
@@ -466,6 +532,7 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
                         type="text"
                         value={formData.address}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         placeholder="123 Đường ABC, Quận XYZ, TP. HCM"
                         error={errors.address}
                     />
@@ -560,3 +627,4 @@ function UserManagement({ onCancel, onUpdateSuccess }) {
 }
 
 export default React.memo(UserManagement);
+

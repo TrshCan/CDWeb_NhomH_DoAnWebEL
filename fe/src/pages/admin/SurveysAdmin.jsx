@@ -24,7 +24,7 @@ const Tooltip = ({ children, content }) => {
   const handleMouseEnter = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setPosition({
-      x: rect.right + 10, // 10px bên phải element
+      x: rect.right + 5, // 5px bên phải element
       y: rect.top + rect.height / 2 // Giữa chiều cao element
     });
     setIsVisible(true);
@@ -1858,9 +1858,11 @@ const SurveyFilter = () => {
                         </Tooltip>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        <div className="truncate">
-                          {survey.category}
-                        </div>
+                        <Tooltip content={survey.category.length > 15 ? survey.category : null}>
+                          <div className="truncate cursor-help">
+                            {survey.category}
+                          </div>
+                        </Tooltip>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
                         {survey.type === 'survey' ? 'Survey' : 'Quiz'}
