@@ -69,8 +69,23 @@ class DuplicateResolver
             // Re-throw validation exceptions as-is
             throw $e;
         } catch (Exception $e) {
-            // Lighthouse sẽ tự động trả về error trong GraphQL response
-            throw $e;
+            // Log lỗi chi tiết để debug
+            \Log::error('DuplicateResolver duplicateSurvey error', [
+                'survey_id' => $surveyId,
+                'user_id' => Auth::id(),
+                'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Đảm bảo message có ý nghĩa
+            $message = $e->getMessage();
+            if (empty($message) || $message === 'GraphQL error') {
+                $message = 'Không thể sao chép khảo sát. Vui lòng thử lại sau.';
+            }
+            
+            // Re-throw với message rõ ràng
+            throw new Exception($message, $e->getCode() ?: 500);
         }
     }
 

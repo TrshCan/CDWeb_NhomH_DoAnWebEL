@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { getUserProfile } from "../api/graphql/user";
 import { getSurveyShareByToken } from "../api/shares";
 import { issueSurveyJoinTicket } from "../utils/surveyJoinTicket";
@@ -86,13 +86,6 @@ export default function Sidebar() {
       requiresAuth: true,
     },
     {
-      label: "Join Survey",
-      icon: "M12 4v16m8-8H4",
-      path: "#",
-      requiresAuth: true,
-      isJoinSurvey: true,
-    },
-    {
       label: "Trạng thái khảo sát",
       icon: "M9 17v-2h6v2H9zm-4 4h14a1 1 0 001-1V4a1 1 0 00-1-1H5a1 1 0 00-1 1v16a1 1 0 001 1zM7 7h10v2H7V7z",
       path: "/statemanagement",
@@ -121,7 +114,7 @@ export default function Sidebar() {
   });
 
   // Handle navigation with auth check
-  const handleLinkClick = (e, path, requiresAuth, isSurveys = false, isJoinSurvey = false) => {
+  const handleLinkClick = (e, path, requiresAuth, isSurveys = false) => {
     if (requiresAuth && !isLoggedIn) {
       e.preventDefault();
       toast.error("Bruh, you gotta log in first", {
@@ -132,13 +125,6 @@ export default function Sidebar() {
         },
         icon: "Locked",
       });
-      return;
-    }
-
-    // Handle Join Survey modal
-    if (isJoinSurvey) {
-      e.preventDefault();
-      setShowJoinModal(true);
       return;
     }
 
@@ -230,8 +216,6 @@ export default function Sidebar() {
 
   return (
     <>
-      <Toaster position="top-center" reverseOrder={false} />
-
       <aside className="w-16 md:w-20 lg:w-64 bg-white rounded-r-lg shadow p-3 lg:p-4 flex flex-col space-y-2 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
         <nav className="flex flex-col space-y-2 flex-grow">
           {visibleLinks.map((item, index) => {
@@ -342,6 +326,26 @@ export default function Sidebar() {
                         </svg>
                         <span className="text-xs">Surveys I Did</span>
                       </Link>
+                      <button
+                        onClick={() => setShowJoinModal(true)}
+                        className="flex items-center space-x-2 p-1.5 rounded-lg transition-all duration-150 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 w-full text-left"
+                      >
+                        <svg
+                          className="w-4 h-4 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                        <span className="text-xs">Join Survey</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -350,35 +354,6 @@ export default function Sidebar() {
 
             // Regular link
             const isActive = location.pathname === item.path;
-            
-            // For Join Survey, use button instead of Link
-            if (item.isJoinSurvey) {
-              return (
-                <button
-                  key={index}
-                  onClick={(e) =>
-                    handleLinkClick(e, item.path, item.requiresAuth, false, true)
-                  }
-                  className="flex items-center space-x-2 p-2 rounded-lg cursor-pointer transition-all duration-150 text-cyan-600 hover:bg-cyan-50 w-full"
-                >
-                  <svg
-                    className="w-5 h-5 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d={item.icon}
-                    />
-                  </svg>
-                  <span className="hidden lg:inline text-sm">{item.label}</span>
-                </button>
-              );
-            }
             
             return (
               <Link
