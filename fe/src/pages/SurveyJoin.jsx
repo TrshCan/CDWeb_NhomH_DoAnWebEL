@@ -25,6 +25,7 @@ function SurveyJoin() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
+  const [error, setError] = useState(null);
   const joinTicketRef = useRef(isTicketValidForSurvey(surveyId, joinToken));
   const questionRefs = useRef([]);
 
@@ -35,19 +36,26 @@ function SurveyJoin() {
   useEffect(() => {
     const fetchSurvey = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await getSurveyJoinDetail(parseInt(surveyId, 10), joinToken);
         if (!data) {
-          toast.error("Survey not found");
-          setTimeout(() => navigate("/"), 1000);
+          setError({
+            title: "Survey Not Found",
+            message: "The survey you're looking for doesn't exist or has been removed.",
+            type: "not_found"
+          });
           return;
         }
 
        
         const accessedViaModal = !!joinTicketRef.current;
         if (!data.is_accessible_directly && !accessedViaModal) {
-          toast.error("Please start this survey via the Join Survey modal");
-          setTimeout(() => navigate("/"), 1000);
+          setError({
+            title: "Access Restricted",
+            message: "This survey cannot be accessed directly. Please start this survey via the Join Survey modal.",
+            type: "access_restricted"
+          });
           return;
         }
 
@@ -58,8 +66,11 @@ function SurveyJoin() {
 
         // Check if survey is closed
         if (data.status === 'closed') {
-          toast.error("This survey is closed and no longer accepting responses");
-          setTimeout(() => navigate("/"), 1000);
+          setError({
+            title: "Survey Closed",
+            message: "This survey is closed and no longer accepting responses.",
+            type: "closed"
+          });
           return;
         }
 
@@ -76,14 +87,20 @@ function SurveyJoin() {
               (surveyTarget === 'students' && userRole !== 'student') ||
               (surveyTarget === 'lecturers' && userRole !== 'lecturer')
             ) {
-              toast.error(`This survey is for ${surveyTarget} only`);
-              setTimeout(() => navigate("/"), 1000);
+              setError({
+                title: "Access Denied",
+                message: `This survey is only available for ${surveyTarget}. Your current role (${userRole}) does not have access.`,
+                type: "role_mismatch"
+              });
               return;
             }
           }
         } else {
-          toast.error("Please login before joining the survey");
-          setTimeout(() => navigate("/"), 1000);
+          setError({
+            title: "Authentication Required",
+            message: "You need to be logged in to join this survey. Please log in and try again.",
+            type: "not_authenticated"
+          });
           return;
         }
 
@@ -94,8 +111,22 @@ function SurveyJoin() {
         }
       } catch (err) {
         console.error("Failed to load survey:", err);
-        toast.error(err.message || "Failed to load survey");
-        setTimeout(() => navigate("/"), 1000);
+        const errorMessage = err.message || "An unexpected error occurred while loading the survey. Please try again later.";
+        const extMessage = err.extensions?.debugMessage || "";
+        // Check if user already completed the survey
+        if (errorMessage.includes("already completed") || errorMessage.includes("You already completed") || extMessage.includes("You already completed") || extMessage.includes("You already completed")) {
+          setError({
+            title: "Survey Already Completed",
+            message: "You already completed this survey. Each user can only submit once.",
+            type: "already_completed"
+          });
+        } else {
+          setError({
+            title: "Failed to Load Survey",
+            message: errorMessage,
+            type: "load_error"
+          });
+        }
       } finally {
         setLoading(false);
       }
@@ -103,8 +134,11 @@ function SurveyJoin() {
 
     if (!joinToken) {
       setLoading(false);
-      toast.error("Missing survey access token");
-      setTimeout(() => navigate("/"), 1000);
+      setError({
+        title: "Missing Access Token",
+        message: "The survey access token is missing from the URL. Please use the correct link to join the survey.",
+        type: "missing_token"
+      });
       return;
     }
 
@@ -163,11 +197,147 @@ function SurveyJoin() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const [validationErrors, setValidationErrors] = useState({});
+
   const handleAnswerChange = (questionId, answerData) => {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: answerData,
     }));
+    // Clear validation error when user answers
+    if (validationErrors[questionId]) {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[questionId];
+        return newErrors;
+      });
+    }
+  };
+
+  // Check if a question should be visible based on conditions
+  const isQuestionVisible = (question) => {
+    if (!question.conditions) {
+      return true;
+    }
+    
+    // Normalize conditions - có thể là array hoặc object
+    let conditionsList = Array.isArray(question.conditions) ? question.conditions : [question.conditions];
+    
+    if (conditionsList.length === 0) {
+      return true;
+    }
+
+    // Normalize ID để so sánh
+    const normalizeId = (id) => String(id);
+    
+    // Kiểm tra tất cả conditions (AND logic)
+    for (const condition of conditionsList) {
+      // Format: { field: '25', operator: 'equals', value: '71' }
+      // field = question_id, value = option_id
+      const conditionQuestionId = condition.field || condition.question_id || condition.questionId;
+      
+      if (!conditionQuestionId) {
+        continue;
+      }
+      
+      // Tìm answer
+      const answer = answers[conditionQuestionId] || answers[String(conditionQuestionId)] || answers[Number(conditionQuestionId)];
+      
+      if (!answer) return false;
+
+      const selectedOptionId = answer.selected_option_id;
+      
+      if (selectedOptionId === undefined || selectedOptionId === null) return false;
+      
+      // Lấy required option IDs từ condition
+      // value có thể là single value hoặc array
+      const requiredValue = condition.value || condition.option_ids || condition.option_id || [];
+      const requiredOptionIds = (Array.isArray(requiredValue) ? requiredValue : [requiredValue]).map(normalizeId);
+      
+      // Lấy selected option IDs
+      const selectedOptionIds = (Array.isArray(selectedOptionId) ? selectedOptionId : [selectedOptionId]).map(normalizeId);
+      
+      // Xử lý theo operator
+      const operator = condition.operator || 'equals';
+      let conditionMet = false;
+      
+      switch (operator) {
+        case 'equals':
+        case 'is':
+        case 'in':
+          // Kiểm tra có giao nhau không
+          conditionMet = selectedOptionIds.some((id) => requiredOptionIds.includes(id));
+          break;
+        case 'not_equals':
+        case 'is_not':
+        case 'not_in':
+          // Kiểm tra không có giao nhau
+          conditionMet = !selectedOptionIds.some((id) => requiredOptionIds.includes(id));
+          break;
+        case 'contains':
+          // Kiểm tra chứa tất cả
+          conditionMet = requiredOptionIds.every((id) => selectedOptionIds.includes(id));
+          break;
+        default:
+          conditionMet = selectedOptionIds.some((id) => requiredOptionIds.includes(id));
+      }
+      
+      if (!conditionMet) return false;
+    }
+
+    return true;
+  };
+
+  // Get visible questions
+  const visibleQuestions = surveyData?.questions?.filter(isQuestionVisible) || [];
+
+  // Check if answer is empty
+  const isAnswerEmpty = (questionId) => {
+    const answer = answers[questionId];
+    if (!answer) return true;
+    
+    if (answer.answer_text !== undefined) {
+      return !answer.answer_text || String(answer.answer_text).trim() === "";
+    }
+    
+    if (answer.selected_option_id !== undefined) {
+      if (Array.isArray(answer.selected_option_id)) {
+        return answer.selected_option_id.length === 0;
+      }
+      return answer.selected_option_id === null || answer.selected_option_id === undefined;
+    }
+    
+    return true;
+  };
+
+  // Validate required questions
+  const validateRequiredQuestions = () => {
+    const errors = {};
+    const warnings = [];
+
+    visibleQuestions.forEach((question) => {
+      if (isAnswerEmpty(question.id)) {
+        if (question.required === "hard") {
+          errors[question.id] = "Câu hỏi này bắt buộc phải trả lời";
+        } else if (question.required === "soft") {
+          warnings.push(question.id);
+        }
+      }
+    });
+
+    return { errors, warnings };
+  };
+
+  // Get required label
+  const getRequiredLabel = (required) => {
+    switch (required) {
+      case "hard":
+        return { text: "Bắt buộc", className: "required-hard" };
+      case "soft":
+        return { text: "Nên trả lời", className: "required-soft" };
+      default:
+        return null;
+    }
   };
 
   const handleAutoSubmit = async () => {
@@ -176,6 +346,31 @@ function SurveyJoin() {
   };
 
   const handleSubmitClick = () => {
+    const { errors, warnings } = validateRequiredQuestions();
+    
+    // Nếu có lỗi hard required
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      
+      // Scroll đến câu hỏi đầu tiên bị lỗi
+      const firstErrorQuestionId = Object.keys(errors)[0];
+      const questionIndex = visibleQuestions.findIndex(
+        (q) => String(q.id) === String(firstErrorQuestionId)
+      );
+      if (questionIndex !== -1) {
+        scrollToQuestion(questionIndex);
+      }
+      
+      toast.error(`Vui lòng trả lời ${Object.keys(errors).length} câu hỏi bắt buộc`);
+      return;
+    }
+    
+    // Nếu có warnings (soft required)
+    if (warnings.length > 0) {
+      const unansweredSoft = warnings.length;
+      toast.warning(`Bạn còn ${unansweredSoft} câu hỏi chưa trả lời (không bắt buộc)`);
+    }
+    
     setShowSubmitModal(true);
   };
 
@@ -227,27 +422,103 @@ function SurveyJoin() {
       );
 
       if (result.success) {
-        toast.success(result.message || "Survey submitted successfully!");
-        navigate("/");
+        const successMessage = result.message || "Survey submitted successfully!";
+        toast.success(successMessage, {
+          autoClose: 3000,
+          onClose: () => {
+            navigate("/");
+          }
+        });
+        // Fallback navigation in case toast onClose doesn't fire
+        setTimeout(() => {
+          navigate("/");
+        }, 3000);
       } else {
-        // Handle specific error cases
+        // Handle specific error cases - DO NOT redirect on errors
         const errorMessage = result.message || "Failed to submit survey";
         
         if (errorMessage.includes("not authenticated") || errorMessage.includes("Invalid or expired token")) {
-          toast.error("Please login before joining the survey");
-          navigate("/");
-        } else if (errorMessage.includes("Survey not found")) {
-          toast.error("Survey not found");
-          navigate("/");
-        } else if (errorMessage.includes("no questions") || errorMessage.includes("No valid answers")) {
-          toast.error(errorMessage);
+          toast.error("Please login before joining the survey", {
+            autoClose: 4000,
+          });
+          // Only redirect for auth errors after showing message
+          setTimeout(() => {
+            navigate("/");
+          }, 4000);
+        } else if (errorMessage.includes("Survey not found") || errorMessage.includes("deleted")) {
+          toast.error(errorMessage, {
+            autoClose: 4000,
+          });
+          setTimeout(() => {
+            navigate("/");
+          }, 4000);
+        } else if (errorMessage.includes("closed") || errorMessage.includes("no longer accepting")) {
+          toast.error(errorMessage, {
+            autoClose: 4000,
+          });
+          setTimeout(() => {
+            navigate("/");
+          }, 4000);
+        } else if (errorMessage.includes("already completed") || errorMessage.includes("You have already completed")) {
+          toast.error("You have already completed this survey. Each user can only submit once.", {
+            autoClose: 5000,
+          });
+          setTimeout(() => {
+            navigate("/");
+          }, 5000);
         } else {
-          toast.error(errorMessage);
+          // For other errors, show message but stay on page so user can see the error
+          toast.error(errorMessage, {
+            autoClose: 5000,
+          });
+          // Don't redirect - let user see the error and decide what to do
         }
       }
     } catch (err) {
       console.error("Failed to submit survey:", err);
-      toast.error("An unexpected error occurred. Please try again.");
+      
+      // Extract error message from various error types
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      
+      if (err.message) {
+        errorMessage = err.message;
+        extMessage = err.extensions?.debugMessage;
+      } else if (err.response?.data?.errors?.[0]?.message) {
+        errorMessage = err.response.data.errors[0].message;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      // Handle network errors
+      if (err.message?.includes("Network Error") || err.message?.includes("Failed to fetch")) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+      
+      // Show error notification with longer duration
+      toast.error(errorMessage, {
+        autoClose: 6000,
+        position: "top-center",
+      });
+      
+      // Only redirect for specific critical errors
+      if (
+        errorMessage.includes("not authenticated") ||
+        errorMessage.includes("Invalid or expired token") ||
+        errorMessage.includes("Survey not found") ||
+        errorMessage.includes("deleted") ||
+        errorMessage.includes("closed") ||
+        errorMessage.includes("no longer accepting") ||
+        errorMessage.includes("already completed") ||
+        errorMessage.includes("You already completed") ||
+        extMessage.includes("You already completed")
+      ) {
+        setTimeout(() => {
+          navigate("/");
+        }, 5000);
+      }
+      // For other errors (including network errors), stay on page so user can see the error and retry
     } finally {
       setSubmitting(false);
     }
@@ -264,22 +535,119 @@ function SurveyJoin() {
     );
   }
 
-  if (!surveyData) {
+  if (error) {
+    const getErrorIcon = () => {
+      switch (error.type) {
+        case "not_found":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          );
+        case "access_restricted":
+        case "role_mismatch":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          );
+        case "closed":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          );
+        case "not_authenticated":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="8.5" cy="7" r="4"/>
+              <line x1="20" y1="8" x2="20" y2="14"/>
+              <line x1="23" y1="11" x2="17" y2="11"/>
+            </svg>
+          );
+        case "missing_token":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          );
+        case "already_completed":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          );
+        default:
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          );
+      }
+    };
+
     return (
       <div className="survey-join-page">
         <div className="error-container">
-          <p>Survey not found</p>
-          <button onClick={() => navigate("/")} className="btn btn-primary">
-            Go Home
-          </button>
+          <div className="error-icon">
+            {getErrorIcon()}
+          </div>
+          <h2 className="error-title">{error.title}</h2>
+          <p className="error-message">{error.message}</p>
+          <div className="error-actions">
+            <button onClick={() => navigate("/")} className="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              Go Home
+            </button>
+            {(error.type === "not_authenticated" || error.type === "role_mismatch") && (
+              <button onClick={() => window.location.reload()} className="btn btn-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                Refresh
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
-  const answeredCount = Object.keys(answers).length;
-  const totalQuestions = surveyData.questions.length;
-  const progressPercentage = (answeredCount / totalQuestions) * 100;
+  if (!surveyData) {
+    return (
+      <div className="survey-join-page">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Loading survey...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const answeredCount = visibleQuestions.filter((q) => !isAnswerEmpty(q.id)).length;
+  const totalQuestions = visibleQuestions.length;
+  const progressPercentage = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+  
+  // Count required questions
+  const requiredHardCount = visibleQuestions.filter((q) => q.required === "hard").length;
+  const answeredRequiredCount = visibleQuestions.filter(
+    (q) => q.required === "hard" && !isAnswerEmpty(q.id)
+  ).length;
 
   const scrollToQuestion = (index) => {
     questionRefs.current[index]?.scrollIntoView({
@@ -434,18 +802,25 @@ function SurveyJoin() {
             </div>
 
             <div className="question-navigator">
-              <h3>Questions</h3>
+              <h3>Câu hỏi</h3>
+              {requiredHardCount > 0 && (
+                <p className="required-info">
+                  {answeredRequiredCount}/{requiredHardCount} câu bắt buộc
+                </p>
+              )}
               <div className="question-dots">
-                {surveyData.questions.map((question, index) => (
+                {visibleQuestions.map((question, index) => (
                   <button
                     key={question.id}
                     onClick={() => scrollToQuestion(index)}
                     className={`question-dot ${
-                      answers[question.id] ? "answered" : ""
-                    } ${currentQuestionIndex === index ? "active" : ""}`}
-                    title={`Question ${index + 1}${
-                      answers[question.id] ? " (Answered)" : ""
-                    }`}
+                      !isAnswerEmpty(question.id) ? "answered" : ""
+                    } ${currentQuestionIndex === index ? "active" : ""} ${
+                      question.required === "hard" ? "required" : ""
+                    } ${validationErrors[question.id] ? "error" : ""}`}
+                    title={`Câu ${index + 1}${
+                      !isAnswerEmpty(question.id) ? " (Đã trả lời)" : ""
+                    }${question.required === "hard" ? " - Bắt buộc" : ""}`}
                   >
                     {index + 1}
                   </button>
@@ -491,56 +866,79 @@ function SurveyJoin() {
           </div>
 
           <div className="questions-list">
-            {surveyData.questions.map((question, index) => (
-              <div
-                key={question.id}
-                ref={(el) => (questionRefs.current[index] = el)}
-                className={`question-card ${
-                  answers[question.id] ? "answered" : ""
-                }`}
-              >
-                <div className="question-header">
-                  <div className="question-badge">
-                    <span className="question-number">Q{index + 1}</span>
-                    {answers[question.id] && (
-                      <svg
-                        className="check-mark"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                      >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
+            {visibleQuestions.map((question, index) => {
+              const requiredLabel = getRequiredLabel(question.required);
+              const hasError = validationErrors[question.id];
+              
+              return (
+                <div
+                  key={question.id}
+                  ref={(el) => (questionRefs.current[index] = el)}
+                  className={`question-card ${
+                    !isAnswerEmpty(question.id) ? "answered" : ""
+                  } ${hasError ? "has-error" : ""}`}
+                >
+                  <div className="question-header">
+                    <div className="question-badge">
+                      <span className="question-number">Q{index + 1}</span>
+                      {!isAnswerEmpty(question.id) && (
+                        <svg
+                          className="check-mark"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="question-meta">
+                      {requiredLabel && (
+                        <span className={`required-badge ${requiredLabel.className}`}>
+                          {requiredLabel.text}
+                        </span>
+                      )}
+                      {question.points > 0 && (
+                        <span className="question-points">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                          >
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                          {question.points} pts
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {question.points > 0 && (
-                    <span className="question-points">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  <h3 className="question-text">{question.question_text}</h3>
+
+                  <QuestionRenderer
+                    question={question}
+                    answer={answers[question.id]}
+                    onAnswerChange={handleAnswerChange}
+                  />
+                  
+                  {hasError && (
+                    <div className="validation-error">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
                       </svg>
-                      {question.points} pts
-                    </span>
+                      <span>{hasError}</span>
+                    </div>
                   )}
                 </div>
-                <h3 className="question-text">{question.question_text}</h3>
-
-                <QuestionRenderer
-                  question={question}
-                  answer={answers[question.id]}
-                  onAnswerChange={handleAnswerChange}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="final-submit-section">
@@ -620,10 +1018,19 @@ function SurveyJoin() {
             </div>
             <div className="modal-body">
               <p>
-                You have answered {answeredCount} out of {totalQuestions}{" "}
-                questions.
+                Bạn đã trả lời {answeredCount} / {totalQuestions} câu hỏi.
               </p>
-              <p>Are you sure you want to submit your answers?</p>
+              {requiredHardCount > 0 && (
+                <p className="modal-required-info">
+                  Câu bắt buộc: {answeredRequiredCount}/{requiredHardCount}
+                </p>
+              )}
+              {totalQuestions - answeredCount > 0 && (
+                <p className="modal-warning">
+                  Còn {totalQuestions - answeredCount} câu chưa trả lời
+                </p>
+              )}
+              <p>Bạn có chắc chắn muốn nộp bài?</p>
             </div>
             <div className="modal-footer">
               <button

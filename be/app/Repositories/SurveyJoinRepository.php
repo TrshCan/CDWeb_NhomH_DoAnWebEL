@@ -13,7 +13,7 @@ class SurveyJoinRepository
 {
     public function getSurveyWithQuestionsAndOptions(int $surveyId): ?Survey
     {
-        return Survey::with(['questions.options'])->find($surveyId);
+        return Survey::with(['questions.options'])->withTrashed()->find($surveyId);
     }
 
     public function getUserByToken(string $token): ?User
@@ -41,5 +41,32 @@ class SurveyJoinRepository
     public function updateOrCreateResult(array $attributes, array $values): SurveyResult
     {
         return SurveyResult::updateOrCreate($attributes, $values);
+    }
+
+    /**
+     * Get the earliest answered_at timestamp for user's answers to questions in this survey
+     */
+    public function getEarliestAnswerTime(int $userId, array $questionIds): ?\Carbon\Carbon
+    {
+        $earliestAnswer = SurveyAnswer::where('user_id', $userId)
+            ->whereIn('question_id', $questionIds)
+            ->whereNotNull('answered_at')
+            ->orderBy('answered_at', 'asc')
+            ->first();
+
+        return $earliestAnswer ? $earliestAnswer->answered_at : null;
+    }
+
+    /**
+     * Check if user has already completed this survey
+     */
+    public function hasUserCompletedSurvey(int $userId, int $surveyId): bool
+    {
+        $result = SurveyResult::where('user_id', $userId)
+            ->where('survey_id', $surveyId)
+            ->where('status', 'completed')
+            ->first();
+
+        return $result !== null;
     }
 }

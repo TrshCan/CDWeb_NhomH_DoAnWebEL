@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { getUserProfile } from "../api/graphql/user";
-import { getSurveyShareByToken } from "../api/shares";
-import { issueSurveyJoinTicket } from "../utils/surveyJoinTicket";
+import JoinSurveyModal from "./JoinSurveyModal";
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -12,8 +11,6 @@ export default function Sidebar() {
   const [userRole, setUserRole] = useState(null);
   const [showSurveysExpanded, setShowSurveysExpanded] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const [surveyToken, setSurveyToken] = useState("");
-  const [joiningSurvey, setJoiningSurvey] = useState(false);
 
   // Check login status based on token
   const checkLoginStatus = async () => {
@@ -54,9 +51,9 @@ export default function Sidebar() {
     };
   }, [location]); // Re-check when route changes (optional but safe)
 
-  // Auto-expand Surveys if on a surveys route
+  // Auto-expand Surveys if on a surveys route or statemanagement
   useEffect(() => {
-    if (location.pathname.startsWith("/surveys")) {
+    if (location.pathname.startsWith("/surveys") || location.pathname === "/statemanagement") {
       setShowSurveysExpanded(true);
     }
   }, [location]);
@@ -86,19 +83,6 @@ export default function Sidebar() {
       requiresAuth: true,
     },
     {
-      label: "Join Survey",
-      icon: "M12 4v16m8-8H4",
-      path: "#",
-      requiresAuth: true,
-      isJoinSurvey: true,
-    },
-    {
-      label: "Trạng thái khảo sát",
-      icon: "M9 17v-2h6v2H9zm-4 4h14a1 1 0 001-1V4a1 1 0 00-1-1H5a1 1 0 00-1 1v16a1 1 0 001 1zM7 7h10v2H7V7z",
-      path: "/statemanagement",
-      requiresAuth: true,
-    },
-    {
       label: "Admin Dashboard",
       icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z",
       path: "/admin/dashboard",
@@ -121,7 +105,7 @@ export default function Sidebar() {
   });
 
   // Handle navigation with auth check
-  const handleLinkClick = (e, path, requiresAuth, isSurveys = false, isJoinSurvey = false) => {
+  const handleLinkClick = (e, path, requiresAuth, isSurveys = false) => {
     if (requiresAuth && !isLoggedIn) {
       e.preventDefault();
       toast.error("Bruh, you gotta log in first", {
@@ -135,13 +119,6 @@ export default function Sidebar() {
       return;
     }
 
-    // Handle Join Survey modal
-    if (isJoinSurvey) {
-      e.preventDefault();
-      setShowJoinModal(true);
-      return;
-    }
-
     // Handle Surveys expand/collapse
     if (isSurveys && isLoggedIn) {
       e.preventDefault();
@@ -150,61 +127,6 @@ export default function Sidebar() {
     }
 
     navigate(path);
-  };
-
-  // Handle survey token submission
-  const handleJoinSurvey = async (e) => {
-    e.preventDefault();
-    const token = surveyToken.trim();
-    
-    if (!token) {
-      toast.error("Please enter a survey token", {
-        style: {
-          background: "#1e293b",
-          color: "#fff",
-          borderRadius: "8px",
-        },
-      });
-      return;
-    }
-
-    try {
-      setJoiningSurvey(true);
-      const share = await getSurveyShareByToken(token);
-
-      if (!share?.survey_id) {
-        throw new Error("Invalid survey token");
-      }
-
-      toast.success(
-        share?.survey?.title
-          ? `Joining "${share.survey.title}"`
-          : "Survey token accepted",
-        {
-          style: {
-            background: "#1e293b",
-            color: "#fff",
-            borderRadius: "8px",
-          },
-        }
-      );
-
-      issueSurveyJoinTicket(share.survey_id, token);
-      setShowJoinModal(false);
-      setSurveyToken("");
-      navigate(`/surveys/${share.survey_id}/join?token=${token}`);
-    } catch (error) {
-      console.error("Failed to join survey:", error);
-      toast.error(error.message || "Invalid survey token", {
-        style: {
-          background: "#1e293b",
-          color: "#fff",
-          borderRadius: "8px",
-        },
-      });
-    } finally {
-      setJoiningSurvey(false);
-    }
   };
 
   // Handle logout
@@ -230,8 +152,6 @@ export default function Sidebar() {
 
   return (
     <>
-      <Toaster position="top-center" reverseOrder={false} />
-
       <aside className="w-16 md:w-20 lg:w-64 bg-white rounded-r-lg shadow p-3 lg:p-4 flex flex-col space-y-2 sticky top-0 h-screen overflow-y-auto custom-scrollbar">
         <nav className="flex flex-col space-y-2 flex-grow">
           {visibleLinks.map((item, index) => {
@@ -342,6 +262,53 @@ export default function Sidebar() {
                         </svg>
                         <span className="text-xs">Surveys I Did</span>
                       </Link>
+                      <button
+                        onClick={() => setShowJoinModal(true)}
+                        className="flex items-center space-x-2 p-1.5 rounded-lg transition-all duration-150 text-gray-600 hover:bg-cyan-50 hover:text-cyan-600 w-full text-left cursor-pointer"
+                      >
+                        <svg
+                          className="w-4 h-4 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                        <span className="text-xs">Join Survey</span>
+                      </button>
+                      {isLecturerOrAdmin && (
+                        <Link
+                          to="/statemanagement"
+                          onClick={() => setShowSurveysExpanded(true)}
+                          className={`flex items-center space-x-2 p-1.5 rounded-lg transition-all duration-150 cursor-pointer ${
+                            location.pathname === "/statemanagement"
+                              ? "bg-cyan-100 text-cyan-700 font-medium"
+                              : "text-gray-600 hover:bg-cyan-50 hover:text-cyan-600"
+                          }`}
+                        >
+                          <svg
+                            className="w-4 h-4 flex-shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                            />
+                          </svg>
+                          <span className="text-xs">Survey Status</span>
+                        </Link>
+                      )}
                     </div>
                   )}
                 </div>
@@ -350,35 +317,6 @@ export default function Sidebar() {
 
             // Regular link
             const isActive = location.pathname === item.path;
-            
-            // For Join Survey, use button instead of Link
-            if (item.isJoinSurvey) {
-              return (
-                <button
-                  key={index}
-                  onClick={(e) =>
-                    handleLinkClick(e, item.path, item.requiresAuth, false, true)
-                  }
-                  className="flex items-center space-x-2 p-2 rounded-lg cursor-pointer transition-all duration-150 text-cyan-600 hover:bg-cyan-50 w-full"
-                >
-                  <svg
-                    className="w-5 h-5 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d={item.icon}
-                    />
-                  </svg>
-                  <span className="hidden lg:inline text-sm">{item.label}</span>
-                </button>
-              );
-            }
             
             return (
               <Link
@@ -459,93 +397,10 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Join Survey Modal */}
-      {showJoinModal && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] px-4"
-          onClick={() => {
-            setShowJoinModal(false);
-            setSurveyToken("");
-          }}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-800">Join Survey</h3>
-              <button
-                onClick={() => {
-                  setShowJoinModal(false);
-                  setSurveyToken("");
-                }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleJoinSurvey}>
-              <div className="mb-4">
-                <label
-                  htmlFor="surveyToken"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Enter Survey Token
-                </label>
-                <input
-                  type="text"
-                  id="surveyToken"
-                  value={surveyToken}
-                  onChange={(e) => setSurveyToken(e.target.value)}
-                  placeholder="e.g., ABC123"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                  autoFocus
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  Enter the unique token provided by your instructor or survey creator.
-                </p>
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowJoinModal(false);
-                    setSurveyToken("");
-                  }}
-                  className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={joiningSurvey}
-                  className={`flex-1 px-4 py-2.5 rounded-lg transition-all font-medium ${
-                    joiningSurvey
-                      ? "bg-cyan-400 cursor-not-allowed text-white"
-                      : "bg-cyan-600 hover:bg-cyan-700 text-white"
-                  }`}
-                >
-                  {joiningSurvey ? "Joining..." : "Join Survey"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <JoinSurveyModal
+        isOpen={showJoinModal}
+        onClose={() => setShowJoinModal(false)}
+      />
     </>
   );
 }

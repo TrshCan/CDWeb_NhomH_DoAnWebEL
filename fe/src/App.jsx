@@ -1,6 +1,8 @@
 // src/App.jsx
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Register from "./pages/Register";
 import Login from "./pages/Login.jsx";
 import Feed from "./components/Feed.jsx";
@@ -34,6 +36,8 @@ import Search from "./components/SearchResult";
 import Group from "./components/Group";
 import GroupDetail from "./components/GroupDetail";
 import SurveyForm from "./components/SurveyForm";
+import SurveyPreview from "./pages/SurveyPreview";
+import SurveyTake from "./pages/SurveyTake";
 
 export default function App() {
   return (
@@ -62,6 +66,18 @@ export default function App() {
             },
           },
         }}
+      />
+      <ToastContainer
+        position="top-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
       />
       <Routes>
       {/* Layout chính */}
@@ -135,6 +151,24 @@ export default function App() {
         element={
           <ProtectedRoute>
             <SurveyForm />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/surveys/:surveyId/preview"
+        element={
+          <ProtectedRoute>
+            <SurveyPreview />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/surveys/:surveyId/take"
+        element={
+          <ProtectedRoute>
+            <SurveyTake />
           </ProtectedRoute>
         }
       />

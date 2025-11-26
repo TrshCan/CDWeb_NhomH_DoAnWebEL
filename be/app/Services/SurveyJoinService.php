@@ -24,10 +24,25 @@ class SurveyJoinService
         $this->shareRepository = $shareRepository;
     }
 
-    public function getSurveyDetail(int $surveyId, ?string $token = null): ?array
+    public function getSurveyDetail(int $surveyId, ?string $token = null, ?User $user = null): ?array
     {
         if (empty($token)) {
             throw new \Exception('Join token is required');
+        }
+        
+        // Validate token format
+        $token = trim($token);
+        
+        if (strlen($token) < 4) {
+            throw new \Exception('Mã token phải có ít nhất 4 ký tự');
+        }
+        
+        if (strlen($token) > 100) {
+            throw new \Exception('Mã token không được vượt quá 100 ký tự');
+        }
+        
+        if (!preg_match('/^[a-zA-Z0-9\-_]+$/', $token)) {
+            throw new \Exception('Mã token chỉ được chứa chữ cái, số và các ký tự: - _');
         }
 
         try {
@@ -44,6 +59,11 @@ class SurveyJoinService
 
         if (!$survey) return null;
 
+        // Check if user has already completed this survey
+        if ($user && $this->repository->hasUserCompletedSurvey($user->id, $surveyId)) {
+            throw new \Exception('You already completed this survey');
+        }
+
         return [
             'id' => $survey->id,
             'title' => $survey->title,
@@ -58,10 +78,16 @@ class SurveyJoinService
                     'id' => $question->id,
                     'question_text' => $question->question_text,
                     'question_type' => $question->question_type,
+                    'image' => $question->image,
                     'points' => $question->points,
+                    'help_text' => $question->help_text,
+                    'max_length' => $question->max_length,
+                    'required' => $question->required ?? 'none',
+                    'conditions' => $question->conditions,
                     'options' => $question->options->map(fn($opt) => [
                         'id' => $opt->id,
-                        'option_text' => $opt->option_text
+                        'option_text' => $opt->option_text,
+                        'image' => $opt->image
                     ])
                 ];
             })
@@ -77,7 +103,55 @@ class SurveyJoinService
             if (!$survey) {
                 throw new \Exception('Survey not found');
             }
+
+            // Check if survey is deleted (soft delete check)
+            if ($survey->trashed()) {
+                throw new \Exception('This survey has been deleted');
+            }
+
+            // Check if survey is closed
+            if ($survey->status === 'closed') {
+                throw new \Exception('This survey is closed and no longer accepting responses');
+            }
+
+            // Check if user role matches survey target (unless user is admin)
+            if ($user->role !== 'admin') {
+                $surveyTarget = $survey->object;
+                $userRole = $user->role;
+
+                if (
+                    ($surveyTarget === 'students' && $userRole !== 'student') ||
+                    ($surveyTarget === 'lecturers' && $userRole !== 'lecturer')
+                ) {
+                    throw new \Exception("This survey is only available for {$surveyTarget}. Your current role ({$userRole}) does not have access.");
+                }
+            }
+
+            // Check if user has already completed this survey
+            if ($this->repository->hasUserCompletedSurvey($user->id, $surveyId)) {
+                throw new \Exception('You have already completed this survey. Each user can only submit once.');
+            }
+
             $questions = $survey->questions->keyBy('id');
+            $questionIds = $questions->keys()->all();
+
+            // Check if survey was edited after user started answering
+            $earliestAnswerTime = $this->repository->getEarliestAnswerTime($user->id, $questionIds);
+            if ($earliestAnswerTime && $survey->updated_at && $survey->updated_at->gt($earliestAnswerTime)) {
+                throw new \Exception('This survey has been edited after you started answering. Please refresh the page and start over.');
+            }
+
+            // Check if survey was edited while user is doing the survey
+            // Compare survey's updated_at with current submission time
+            $submissionTime = now();
+            if ($survey->updated_at) {
+                // Check if survey was updated within the last 5 minutes before submission
+                // This indicates the survey was likely edited while the user was taking it
+                $fiveMinutesAgo = $submissionTime->copy()->subMinutes(5);
+                if ($survey->updated_at->isAfter($fiveMinutesAgo) && $survey->updated_at->lte($submissionTime)) {
+                    throw new \Exception('This survey was recently edited while you were taking it. Please refresh the page to get the latest version before submitting.');
+                }
+            }
 
             $answersByQuestion = collect($answersInput)
                 ->filter(fn($ans) => isset($ans['question_id']) && $questions->has($ans['question_id']))
@@ -87,7 +161,6 @@ class SurveyJoinService
                 throw new \Exception('No valid answers provided');
             }
 
-            $questionIds = $questions->keys()->all();
             $this->repository->deleteOldAnswers($user->id, $questionIds);
 
             $totalScore = 0;
