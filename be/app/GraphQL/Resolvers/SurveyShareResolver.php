@@ -27,7 +27,19 @@ class SurveyShareResolver
      */
     public function getShareByToken($rootValue, array $args)
     {
-        return $this->shareService->getShareByToken($args['token']);
+        try {
+            return $this->shareService->getShareByToken($args['token']);
+        } catch (\Exception $e) {
+            // Re-throw with proper GraphQL error format to ensure message is passed through
+            throw new \GraphQL\Error\Error(
+                $e->getMessage(),
+                null,
+                null,
+                [],
+                null,
+                $e
+            );
+        }
     }
 
     /**

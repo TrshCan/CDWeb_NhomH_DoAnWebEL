@@ -43,8 +43,37 @@ class SurveyShareService
     public function getShareByToken(string $token)
     {
         try {
-            return $this->shareRepository->findByToken($token);
+            $share = $this->shareRepository->findByToken($token);
+            
+            // Load survey with trashed to check if it's deleted
+            $survey = \App\Models\Survey::withTrashed()->find($share->survey_id);
+            
+            // Check if survey exists
+            if (!$survey) {
+                throw new \Exception('Khảo sát không tồn tại hoặc đã bị xóa');
+            }
+            
+            // Check if survey is soft-deleted
+            if ($survey->trashed()) {
+                throw new \Exception('Khảo sát đã bị xóa');
+            }
+            
+            // Check if survey is closed
+            if ($survey->status === 'closed') {
+                throw new \Exception('Khảo sát đã đóng và không còn nhận phản hồi');
+            }
+            
+            // Reload share with survey relationship for normal response
+            return $share->load('survey');
         } catch (ModelNotFoundException $e) {
+            throw new \Exception('Token không hợp lệ hoặc đã hết hạn');
+        } catch (\Exception $e) {
+            // Re-throw if it's already a meaningful error message
+            if (strpos($e->getMessage(), 'Khảo sát') !== false || 
+                strpos($e->getMessage(), 'Token') !== false) {
+                throw $e;
+            }
+            // Otherwise, wrap in generic error
             throw new \Exception('Token không hợp lệ hoặc đã hết hạn');
         }
     }
