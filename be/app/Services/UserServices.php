@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Password as PasswordBroker;
 use Illuminate\Auth\Events\PasswordReset;
 use Exception;
 use Illuminate\Auth\Events\Registered;
-
+use Illuminate\Support\Facades\Password;
 class UserServices
 {
     private UserRepository $userRepo;
@@ -248,19 +248,19 @@ class UserServices
 
             // Use Laravel's Password Broker to send reset link
             // This is the industry standard approach used by Laravel and most applications
-            $status = PasswordBroker::sendResetLink(['email' => $email]);
+            $status = Password::sendResetLink(['email' => $email]);
 
             // Handle response from Password Broker
-            if ($status === PasswordBroker::RESET_LINK_SENT) {
+            if ($status === Password::RESET_LINK_SENT) {
                 return 'Chúng tôi đã gửi link đặt lại mật khẩu qua email của bạn.';
             }
 
             // Handle error cases
-            if ($status === PasswordBroker::INVALID_USER) {
+            if ($status === Password::INVALID_USER) {
                 throw ValidationException::withMessages(['email' => 'Email không tồn tại trong hệ thống']);
             }
 
-            if ($status === PasswordBroker::RESET_THROTTLED) {
+            if ($status === Password::RESET_THROTTLED) {
                 throw ValidationException::withMessages(['email' => 'Vui lòng chờ trước khi yêu cầu lại']);
             }
 

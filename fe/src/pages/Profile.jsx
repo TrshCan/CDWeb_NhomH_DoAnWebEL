@@ -32,13 +32,13 @@ const AvatarModal = ({ avatarUrl, onClose }) => {
                     className="w-full h-auto max-h-[80vh] object-contain rounded-lg shadow-2xl"
                 />
             </div>
-            <button
+            {/* <button
                 onClick={onClose}
                 className="absolute top-4 right-4 text-white text-3xl font-bold p-2 rounded-full hover:bg-gray-700"
                 aria-label="Close"
             >
                 ×
-            </button>
+            </button> */}
         </div>
     );
 };
