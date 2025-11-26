@@ -28,6 +28,7 @@ export default function RawDataList() {
   const [accessChecking, setAccessChecking] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [surveyUpdatedAt, setSurveyUpdatedAt] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   
   const pieChartRef = useRef(null);
   const barChartRef = useRef(null);
@@ -382,17 +383,23 @@ export default function RawDataList() {
   };
 
   const handleDownload = async (format) => {
-    // Check if data is fresh before downloading
-    const canProceed = await checkDataFreshness();
-    if (!canProceed) {
-      return; // User chose to reload but it failed
-    }
+    if (isDownloading) return; // Prevent duplicate downloads
     
-    // Close modal after check
-    setShowDownloadModal(false);
+    setIsDownloading(true);
     
-    // Small delay to close modal before download
-    setTimeout(() => {
+    try {
+      // Check if data is fresh before downloading
+      const canProceed = await checkDataFreshness();
+      if (!canProceed) {
+        return; // User chose to reload but it failed
+      }
+      
+      // Close modal after check
+      setShowDownloadModal(false);
+      
+      // Small delay to close modal before download
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       switch (format.toLowerCase()) {
         case "csv":
           downloadCSV();
@@ -406,7 +413,10 @@ export default function RawDataList() {
         default:
           toast.error("Định dạng không hỗ trợ");
       }
-    }, 100);
+    } finally {
+      // Re-enable downloads after a short delay
+      setTimeout(() => setIsDownloading(false), 1000);
+    }
   };
 
   const handleViewDetail = (responseId) => {
@@ -875,6 +885,8 @@ export default function RawDataList() {
               <button
                 className="download-option download-option-excel"
                 onClick={() => handleDownload('excel')}
+                disabled={isDownloading}
+                style={{ opacity: isDownloading ? 0.6 : 1, cursor: isDownloading ? 'not-allowed' : 'pointer' }}
               >
                 <div className="download-option-icon">
                   <svg
@@ -893,7 +905,7 @@ export default function RawDataList() {
                 </div>
                 <div className="download-option-content">
                   <h4>Excel</h4>
-                  <p>Tải xuống dạng bảng tính (.xlsx)</p>
+                  <p>{isDownloading ? 'Đang tải xuống...' : 'Tải xuống dạng bảng tính (.xlsx)'}</p>
                 </div>
                 <div className="download-option-arrow">
                   <svg
@@ -913,6 +925,8 @@ export default function RawDataList() {
               <button
                 className="download-option download-option-pdf"
                 onClick={() => handleDownload('pdf')}
+                disabled={isDownloading}
+                style={{ opacity: isDownloading ? 0.6 : 1, cursor: isDownloading ? 'not-allowed' : 'pointer' }}
               >
                 <div className="download-option-icon">
                   <svg
@@ -933,7 +947,7 @@ export default function RawDataList() {
                 </div>
                 <div className="download-option-content">
                   <h4>PDF</h4>
-                  <p>Tải xuống báo cáo đầy đủ (.pdf)</p>
+                  <p>{isDownloading ? 'Đang tải xuống...' : 'Tải xuống báo cáo đầy đủ (.pdf)'}</p>
                 </div>
                 <div className="download-option-arrow">
                   <svg
@@ -953,6 +967,8 @@ export default function RawDataList() {
               <button
                 className="download-option download-option-csv"
                 onClick={() => handleDownload('csv')}
+                disabled={isDownloading}
+                style={{ opacity: isDownloading ? 0.6 : 1, cursor: isDownloading ? 'not-allowed' : 'pointer' }}
               >
                 <div className="download-option-icon">
                   <svg
@@ -972,7 +988,7 @@ export default function RawDataList() {
                 </div>
                 <div className="download-option-content">
                   <h4>CSV</h4>
-                  <p>Tải xuống dữ liệu thô (.csv)</p>
+                  <p>{isDownloading ? 'Đang tải xuống...' : 'Tải xuống dữ liệu thô (.csv)'}</p>
                 </div>
                 <div className="download-option-arrow">
                   <svg

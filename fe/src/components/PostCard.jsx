@@ -58,7 +58,7 @@ const LazyImage = ({ src, alt, className, onClick, onError }) => {
   );
 };
 
-function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = false, onReply = null, followingUserIds = [], onFollowUpdate = null }) {
+function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = false, onReply = null, followingUserIds = [], onFollowUpdate = null, isGroupDeleted = false }) {
   const navigate = useNavigate();
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -294,6 +294,11 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
                       className="w-full text-left px-3 py-2 hover:bg-gray-50"
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (isGroupDeleted) {
+                          toast.error("Cannot edit post: This group has been deleted");
+                          setMenuOpen(false);
+                          return;
+                        }
                         setIsEditing(true);
                         setMenuOpen(false);
                       }}
@@ -374,9 +379,13 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
           />
           <div className="mt-2 flex gap-2">
             <button
-              disabled={saving}
+              disabled={saving || isGroupDeleted}
               onClick={async (e) => {
                 e.stopPropagation();
+                if (isGroupDeleted) {
+                  toast.error("Cannot save post: This group has been deleted");
+                  return;
+                }
                 try {
                   setSaving(true);
                   const updated = await updatePost(post.id, editContent.trim());
@@ -384,13 +393,27 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
                   setIsEditing(false);
                 } catch (e) {
                   console.error(e);
-                  const errorMessage = e?.response?.data?.errors?.[0]?.message || e?.message || "Không thể cập nhật bài viết.";
+                  // Extract error message from various error formats
+                  let errorMessage = "Không thể cập nhật bài viết.";
+                  
+                  if (e?.message) {
+                    errorMessage = e.message;
+                  } else if (e?.response?.data?.errors?.[0]?.message) {
+                    errorMessage = e.response.data.errors[0].message;
+                  } else if (e?.response?.data?.errors?.[0]?.extensions?.validation) {
+                    const validationErrors = e.response.data.errors[0].extensions.validation;
+                    const firstError = Object.values(validationErrors)[0];
+                    errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                  } else if (e?.response?.data?.errors?.[0]) {
+                    errorMessage = e.response.data.errors[0].message || errorMessage;
+                  }
+                  
                   toast.error(errorMessage);
                 } finally {
                   setSaving(false);
                 }
               }}
-              className={`px-3 py-1 rounded text-white ${saving ? "bg-gray-400" : "bg-cyan-600 hover:bg-cyan-700"}`}
+              className={`px-3 py-1 rounded text-white ${saving || isGroupDeleted ? "bg-gray-400" : "bg-cyan-600 hover:bg-cyan-700"}`}
             >
               {saving ? "Saving..." : "Save"}
             </button>

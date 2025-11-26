@@ -46,6 +46,7 @@ export const getGroupsByUser = async (userId) => {
         code
         created_at
         created_by
+        deleted_at
         creator {
           id
           name
@@ -175,6 +176,7 @@ export const updateGroup = async (id, name, description) => {
         name
         description
         code
+        deleted_at
       }
     }
   `;
@@ -182,4 +184,27 @@ export const updateGroup = async (id, name, description) => {
   const response = await graphqlClient.post("", { query, variables });
   if (response.data.errors) throw new Error(response.data.errors[0]?.message || "GraphQL error");
   return response.data.data.updateGroup;
+};
+
+export const deleteGroup = async (id) => {
+  const query = `
+    mutation ($id: ID!) {
+      deleteGroup(id: $id)
+    }
+  `;
+  const variables = { id: id.toString() };
+  
+  try {
+    const response = await graphqlClient.post("", { query, variables });
+    
+    if (response.data.errors) {
+      console.error("GraphQL errors:", response.data.errors);
+      throw new Error(response.data.errors[0]?.message || "Failed to delete group");
+    }
+
+    return response.data.data.deleteGroup;
+  } catch (error) {
+    console.error("deleteGroup failed:", error);
+    throw error;
+  }
 };

@@ -1,10 +1,37 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import Sidebar from "../components/Sidebar";
 import WidgetSidebar from "../components/WidgetSidebar";
 import Group from "../components/Group";
 import "../assets/css/group-page.css";
 
 export default function GroupPage() {
+  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    // Check authentication
+    const checkAuthentication = () => {
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("userId");
+
+      if (!token || !userId) {
+        toast.error("Please log in to access this page");
+        navigate("/login", { replace: true });
+        setIsAuthenticated(false);
+        setIsChecking(false);
+        return;
+      }
+
+      setIsAuthenticated(true);
+      setIsChecking(false);
+    };
+
+    checkAuthentication();
+  }, [navigate]);
+
   useEffect(() => {
     // Add "group-page" class to body to override global background
     document.body.classList.add("group-page");
@@ -14,6 +41,22 @@ export default function GroupPage() {
       document.body.classList.remove("group-page");
     };
   }, []);
+
+  // Show loading state while checking authentication
+  if (isChecking) {
+    return (
+      <div className="font-sans">
+        <div className="flex min-h-screen items-center justify-center">
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render content if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="font-sans">

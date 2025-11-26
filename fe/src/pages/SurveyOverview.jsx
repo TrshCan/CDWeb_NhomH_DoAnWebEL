@@ -31,6 +31,7 @@ export default function SurveyOverview() {
   const [accessChecking, setAccessChecking] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [surveyUpdatedAt, setSurveyUpdatedAt] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Chart refs for question-specific charts
   const chartRefs = useRef({});
@@ -269,62 +270,70 @@ export default function SurveyOverview() {
   };
 
   const handleDownload = async (format) => {
-    // Check if data is fresh before downloading
-    const canProceed = await checkDataFreshness();
-    if (!canProceed) {
-      return; // User chose to reload but it failed
-    }
+    if (isDownloading) return; // Prevent duplicate downloads
     
-    // Close modal after check
-    setShowDownloadModal(false);
+    setIsDownloading(true);
     
-    setTimeout(() => {
-      try {
-        if (!overviewData || !overviewData.questions || overviewData.questions.length === 0) {
-          throw new Error('Không có dữ liệu tổng quan để xuất');
-        }
-        if (format === 'csv') {
-          exportSurveyOverviewCSV({ overviewData });
-          toast.success('Đã tải xuống CSV');
-        } else if (format === 'excel') {
-          exportSurveyOverviewExcel({ overviewData });
-          toast.success('Đã tải xuống Excel');
-        } else if (format === 'pdf') {
-          exportSurveyOverviewPDF({ overviewData });
-          toast.success('Đã tải xuống PDF');
-        } else {
-          toast.error('Định dạng không hỗ trợ');
-        }
-      } catch (e) {
-        console.error(e);
-        
-        // Extract error message from backend
-        let errorMessage = 'Không thể xuất dữ liệu';
-        
-        if (e.graphQLErrors && e.graphQLErrors.length > 0) {
-          const firstError = e.graphQLErrors[0];
-          
-          if (firstError.extensions?.validation) {
-            const validationErrors = firstError.extensions.validation;
-            const validationMessages = Object.values(validationErrors)
-              .flat()
-              .filter(msg => msg && msg.trim() !== '');
-            
-            if (validationMessages.length > 0) {
-              errorMessage = validationMessages.join(', ');
-            }
-          }
-          
-          if (errorMessage === 'Không thể xuất dữ liệu' && firstError.message) {
-            errorMessage = firstError.message;
-          }
-        } else if (e.message) {
-          errorMessage = e.message;
-        }
-        
-        toast.error(errorMessage);
+    try {
+      // Check if data is fresh before downloading
+      const canProceed = await checkDataFreshness();
+      if (!canProceed) {
+        return; // User chose to reload but it failed
       }
-    }, 100);
+      
+      // Close modal after check
+      setShowDownloadModal(false);
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (!overviewData || !overviewData.questions || overviewData.questions.length === 0) {
+        throw new Error('Không có dữ liệu tổng quan để xuất');
+      }
+      
+      if (format === 'csv') {
+        exportSurveyOverviewCSV({ overviewData });
+        toast.success('Đã tải xuống CSV');
+      } else if (format === 'excel') {
+        exportSurveyOverviewExcel({ overviewData });
+        toast.success('Đã tải xuống Excel');
+      } else if (format === 'pdf') {
+        exportSurveyOverviewPDF({ overviewData });
+        toast.success('Đã tải xuống PDF');
+      } else {
+        toast.error('Định dạng không hỗ trợ');
+      }
+    } catch (e) {
+      console.error(e);
+      
+      // Extract error message from backend
+      let errorMessage = 'Không thể xuất dữ liệu';
+      
+      if (e.graphQLErrors && e.graphQLErrors.length > 0) {
+        const firstError = e.graphQLErrors[0];
+        
+        if (firstError.extensions?.validation) {
+          const validationErrors = firstError.extensions.validation;
+          const validationMessages = Object.values(validationErrors)
+            .flat()
+            .filter(msg => msg && msg.trim() !== '');
+          
+          if (validationMessages.length > 0) {
+            errorMessage = validationMessages.join(', ');
+          }
+        }
+        
+        if (errorMessage === 'Không thể xuất dữ liệu' && firstError.message) {
+          errorMessage = firstError.message;
+        }
+      } else if (e.message) {
+        errorMessage = e.message;
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      // Re-enable downloads after a short delay
+      setTimeout(() => setIsDownloading(false), 1000);
+    }
   };
 
   const handleApplyFilter = () => {
@@ -673,6 +682,8 @@ export default function SurveyOverview() {
                 <button
                   className="download-option download-option-excel"
                   onClick={() => handleDownload('excel')}
+                  disabled={isDownloading}
+                  style={{ opacity: isDownloading ? 0.6 : 1, cursor: isDownloading ? 'not-allowed' : 'pointer' }}
                 >
                   <div className="download-option-icon">
                     <svg
@@ -691,7 +702,7 @@ export default function SurveyOverview() {
                   </div>
                   <div className="download-option-content">
                     <h4>Excel</h4>
-                    <p>Tải xuống dạng bảng tính (.xlsx)</p>
+                    <p>{isDownloading ? 'Đang tải xuống...' : 'Tải xuống dạng bảng tính (.xlsx)'}</p>
                   </div>
                   <div className="download-option-arrow">
                     <svg
@@ -711,6 +722,8 @@ export default function SurveyOverview() {
                 <button
                   className="download-option download-option-pdf"
                   onClick={() => handleDownload('pdf')}
+                  disabled={isDownloading}
+                  style={{ opacity: isDownloading ? 0.6 : 1, cursor: isDownloading ? 'not-allowed' : 'pointer' }}
                 >
                   <div className="download-option-icon">
                     <svg
@@ -731,7 +744,7 @@ export default function SurveyOverview() {
                   </div>
                   <div className="download-option-content">
                     <h4>PDF</h4>
-                    <p>Tải xuống báo cáo đầy đủ (.pdf)</p>
+                    <p>{isDownloading ? 'Đang tải xuống...' : 'Tải xuống báo cáo đầy đủ (.pdf)'}</p>
                   </div>
                   <div className="download-option-arrow">
                     <svg
@@ -751,6 +764,8 @@ export default function SurveyOverview() {
                 <button
                   className="download-option download-option-csv"
                   onClick={() => handleDownload('csv')}
+                  disabled={isDownloading}
+                  style={{ opacity: isDownloading ? 0.6 : 1, cursor: isDownloading ? 'not-allowed' : 'pointer' }}
                 >
                   <div className="download-option-icon">
                     <svg
@@ -770,7 +785,7 @@ export default function SurveyOverview() {
                   </div>
                   <div className="download-option-content">
                     <h4>CSV</h4>
-                    <p>Tải xuống dữ liệu thô (.csv)</p>
+                    <p>{isDownloading ? 'Đang tải xuống...' : 'Tải xuống dữ liệu thô (.csv)'}</p>
                   </div>
                   <div className="download-option-arrow">
                     <svg

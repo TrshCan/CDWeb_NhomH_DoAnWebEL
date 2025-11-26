@@ -18,7 +18,10 @@ class SearchRepository
 
     public function searchPosts(string $query): \Illuminate\Database\Eloquent\Collection
     {
-        return $this->post->where('content', 'LIKE', "%{$query}%")->get();
+        return $this->post
+            ->where('content', 'LIKE', "%{$query}%")
+            ->where('type', 'normal_post')
+            ->get();
     }
 
     public function searchUsers(string $query): \Illuminate\Database\Eloquent\Collection

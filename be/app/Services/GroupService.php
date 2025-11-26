@@ -223,8 +223,8 @@ class GroupService
     protected function validateGroupPayload(array $data, bool $isUpdate = false): array
     {
         $rules = [
-            'name' => ($isUpdate ? 'sometimes' : 'required') . '|string|min:3|max:150',
-            'description' => 'nullable|string|max:1000',
+            'name' => ($isUpdate ? 'sometimes' : 'required') . '|string|min:3|max:50',
+            'description' => 'nullable|string|max:100',
         ];
 
         $validator = Validator::make($data, $rules);

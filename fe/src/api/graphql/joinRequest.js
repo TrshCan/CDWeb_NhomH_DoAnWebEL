@@ -122,11 +122,33 @@ export const approveJoinRequest = async (id) => {
   try {
     const response = await graphqlClient.post("", { query, variables });
     if (response.data.errors) {
-      throw new Error(response.data.errors[0]?.message || "GraphQL error");
+      const error = response.data.errors[0];
+      // Extract validation error message if available
+      if (error.extensions?.validation) {
+        const validationErrors = error.extensions.validation;
+        const firstError = Object.values(validationErrors)[0];
+        const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+        throw new Error(errorMessage);
+      }
+      throw new Error(error.message || "GraphQL error");
     }
     return response.data.data.approveJoinRequest;
   } catch (e) {
     console.error("approveJoinRequest failed:", e);
+    // If error already has a message, re-throw it
+    if (e.message) {
+      throw e;
+    }
+    // Otherwise, extract from response if available
+    if (e?.response?.data?.errors?.[0]) {
+      const error = e.response.data.errors[0];
+      if (error.extensions?.validation) {
+        const validationErrors = error.extensions.validation;
+        const firstError = Object.values(validationErrors)[0];
+        throw new Error(Array.isArray(firstError) ? firstError[0] : firstError);
+      }
+      throw new Error(error.message || "Failed to approve join request");
+    }
     throw e;
   }
 };
