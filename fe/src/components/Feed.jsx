@@ -109,7 +109,6 @@ export default function Feed() {
   }, [user]);
 
   // ✅ Fetch posts
-  // ✅ Fetch posts
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
@@ -278,12 +277,13 @@ export default function Feed() {
         ).map((tab) => (
           <button
             key={tab}
-            className={`flex-1 py-2 rounded-lg ${
+            className={`flex-1 py-2 rounded-lg transition-all ${
               activeTab === tab
                 ? "bg-cyan-100 text-cyan-700 font-semibold"
                 : "text-cyan-600"
-            }`}
-            onClick={() => setActiveTab(tab)}
+            } ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-cyan-50"}`}
+            onClick={() => !loading && setActiveTab(tab)}
+            disabled={loading}
           >
             {tab === "announcement"
               ? "Announcement"

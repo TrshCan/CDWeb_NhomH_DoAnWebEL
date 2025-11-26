@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import PostCard from "./PostCard";
 import { getPostsByGroup, createPost } from "../api/graphql/post";
-import { getGroupsByUser, isUserMemberOfGroup, isUserGroupAdminOrModerator, updateGroup } from "../api/graphql/group";
+import { getGroupsByUser, isUserMemberOfGroup, isUserGroupAdminOrModerator, updateGroup, deleteGroup } from "../api/graphql/group";
 import { getPendingJoinRequestsByGroup, approveJoinRequest } from "../api/graphql/joinRequest";
 
 function timeAgo(createdAt) {
@@ -35,10 +35,14 @@ export default function GroupDetail() {
   const [settingsName, setSettingsName] = useState("");
   const [settingsDesc, setSettingsDesc] = useState("");
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [approvingRequestIds, setApprovingRequestIds] = useState(new Set());
   const [latestPostTime, setLatestPostTime] = useState(null);
   const [announcement, setAnnouncement] = useState(null); // { text, count, firstName }
   const [bannerVisible, setBannerVisible] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const announcementTimerRef = React.useRef(null);
   const postsTopRef = React.useRef(null);
 
@@ -67,6 +71,14 @@ export default function GroupDetail() {
 
   const userId = getUserIdFromStorage();
   const userName = getUserNameFromStorage();
+
+  // Helper function to check if group is soft-deleted
+  const isGroupDeleted = () => {
+    if (!groupInfo) return false;
+    // Check if deleted_at exists and is not null/undefined/empty string
+    const deletedAt = groupInfo.deleted_at;
+    return deletedAt !== null && deletedAt !== undefined && deletedAt !== '';
+  };
 
   useEffect(() => {
     const fetchGroupData = async () => {
@@ -121,6 +133,7 @@ export default function GroupDetail() {
             description: group.description,
             code: group.code,
             created_by: group.created_by,
+            deleted_at: group.deleted_at || null,
           });
         } else {
           // Fallback: group exists and user is member but not in their groups list
@@ -130,6 +143,7 @@ export default function GroupDetail() {
             description: "",
             code: "",
             created_by: undefined,
+            deleted_at: null,
           });
         }
 
@@ -289,6 +303,12 @@ export default function GroupDetail() {
       return;
     }
 
+    // Check if group is soft-deleted
+    if (isGroupDeleted()) {
+      toast.error("Cannot create post: This group has been deleted");
+      return;
+    }
+
     try {
       const input = {
         user_id: userId,
@@ -327,7 +347,24 @@ export default function GroupDetail() {
       setFiles([]);
     } catch (err) {
       console.error("Failed to create post:", err);
-      toast.error("Failed to create post.");
+      
+      // Extract error message from various error formats
+      let errorMessage = "Failed to create post.";
+      
+      if (err?.message) {
+        errorMessage = err.message;
+      } else if (err?.response?.data?.errors?.[0]?.message) {
+        errorMessage = err.response.data.errors[0].message;
+      } else if (err?.response?.data?.errors?.[0]?.extensions?.validation) {
+        // Handle Laravel validation errors
+        const validationErrors = err.response.data.errors[0].extensions.validation;
+        const firstError = Object.values(validationErrors)[0];
+        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+      } else if (err?.response?.data?.errors?.[0]) {
+        errorMessage = err.response.data.errors[0].message || errorMessage;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -440,6 +477,8 @@ export default function GroupDetail() {
         {canManage && (
           <button
             onClick={async () => {
+              if (settingsLoading) return;
+              setSettingsLoading(true);
               setSettingsName(groupInfo?.name || "");
               setSettingsDesc(groupInfo?.description || "");
               try {
@@ -447,8 +486,10 @@ export default function GroupDetail() {
                 setPendingRequests(reqs);
               } catch {}
               setShowSettings(true);
+              setSettingsLoading(false);
             }}
-            className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 p-2 rounded-full transition"
+            disabled={settingsLoading}
+            className={`text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 p-2 rounded-full transition ${settingsLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             title="Group settings"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -470,11 +511,22 @@ export default function GroupDetail() {
           </p>
         </div>
 
+        {isGroupDeleted() && (
+          <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-600">
+              This group has been deleted. You cannot create new posts.
+            </p>
+          </div>
+        )}
+
         <textarea
           id="groupPostInput"
-          className="w-full bg-gray-100 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900 resize-none"
+          disabled={isGroupDeleted()}
+          className={`w-full bg-gray-100 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900 resize-none ${
+            isGroupDeleted() ? 'opacity-50 cursor-not-allowed bg-gray-200' : ''
+          }`}
           rows="4"
-          placeholder="What's happening in this group?"
+          placeholder={isGroupDeleted() ? "This group has been deleted. Posting is disabled." : "What's happening in this group?"}
         ></textarea>
 
         {/* Media Preview */}
@@ -542,7 +594,7 @@ export default function GroupDetail() {
 
         <div className="mt-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <label className="cursor-pointer text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1">
+            <label className={`${isGroupDeleted() ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1`}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -563,6 +615,7 @@ export default function GroupDetail() {
                 type="file"
                 accept="image/jpeg,image/png,video/mp4"
                 multiple
+                disabled={isGroupDeleted()}
                 className="hidden"
                 onChange={handleFileChange}
               />
@@ -575,7 +628,8 @@ export default function GroupDetail() {
                   const mediaInput = document.getElementById("groupMediaInput");
                   if (mediaInput) mediaInput.value = "";
                 }}
-                className="text-sm text-red-500 hover:underline"
+                disabled={isGroupDeleted()}
+                className={`text-sm text-red-500 ${isGroupDeleted() ? 'opacity-50 cursor-not-allowed' : 'hover:underline'}`}
               >
                 Clear Media
               </button>
@@ -584,7 +638,12 @@ export default function GroupDetail() {
 
           <button
             onClick={addPost}
-            className="bg-cyan-600 text-white px-5 py-2 rounded-full hover:bg-cyan-700 active:scale-95 transition-all"
+            disabled={isGroupDeleted()}
+            className={`px-5 py-2 rounded-full transition-all ${
+              isGroupDeleted()
+                ? 'bg-gray-400 text-white cursor-not-allowed'
+                : 'bg-cyan-600 text-white hover:bg-cyan-700 active:scale-95'
+            }`}
           >
             Post
           </button>
@@ -626,54 +685,203 @@ export default function GroupDetail() {
                   <p className="text-sm text-gray-500">No pending requests.</p>
                 ) : (
                   <div className="space-y-2 max-h-56 overflow-auto pr-1">
-                    {pendingRequests.map((r) => (
-                      <div key={r.id} className="flex items-center justify-between border rounded-md p-2">
-                        <div className="text-sm text-gray-700">
-                          <span className="font-medium">{r.user?.name || `User ${r.user?.id}`}</span>
-                          <span className="text-gray-500"> wants to join</span>
+                    {pendingRequests.map((r) => {
+                      const isApproving = approvingRequestIds.has(r.id);
+                      return (
+                        <div key={r.id} className="flex items-center justify-between border rounded-md p-2">
+                          <div className="text-sm text-gray-700">
+                            <span className="font-medium">{r.user?.name || `User ${r.user?.id}`}</span>
+                            <span className="text-gray-500"> wants to join</span>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              // Check authentication
+                              if (!userId) {
+                                toast.error("Please log in to approve join requests");
+                                return;
+                              }
+
+                              try {
+                                setApprovingRequestIds((prev) => new Set(prev).add(r.id));
+                                
+                                // Check if group is soft-deleted by fetching fresh data
+                                const userGroups = await getGroupsByUser(userId);
+                                const freshGroup = userGroups.find((g) => String(g.id) === String(groupId));
+                                
+                                if (!freshGroup || freshGroup.deleted_at) {
+                                  toast.error("The group is deleted");
+                                  // Update local state
+                                  setGroupInfo((prev) => ({
+                                    ...prev,
+                                    deleted_at: freshGroup?.deleted_at || new Date().toISOString()
+                                  }));
+                                  return;
+                                }
+
+                                // Check authorization
+                                const hasPermission = await isUserGroupAdminOrModerator(userId, groupId);
+                                if (!hasPermission) {
+                                  toast.error("Only group admins and moderators can approve join requests");
+                                  return;
+                                }
+
+                                // Approve the request
+                                await approveJoinRequest(r.id);
+                                setPendingRequests((prev) => prev.filter((x) => x.id !== r.id));
+                                toast.success("Request approved");
+                              } catch (e) {
+                                // Extract error message
+                                let errorMessage = "Failed to approve request";
+                                
+                                if (e?.message) {
+                                  errorMessage = e.message;
+                                } else if (e?.response?.data?.errors?.[0]?.message) {
+                                  errorMessage = e.response.data.errors[0].message;
+                                } else if (e?.response?.data?.errors?.[0]?.extensions?.validation) {
+                                  const validationErrors = e.response.data.errors[0].extensions.validation;
+                                  const firstError = Object.values(validationErrors)[0];
+                                  errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                                }
+                                
+                                // Check if error indicates deleted group
+                                if (errorMessage.toLowerCase().includes('deleted') || 
+                                    errorMessage.toLowerCase().includes('not found')) {
+                                  toast.error("The group is deleted");
+                                } else {
+                                  toast.error(errorMessage);
+                                }
+                              } finally {
+                                setApprovingRequestIds((prev) => {
+                                  const newSet = new Set(prev);
+                                  newSet.delete(r.id);
+                                  return newSet;
+                                });
+                              }
+                            }}
+                            disabled={isApproving}
+                            className={`px-3 py-1 rounded text-sm text-white ${
+                              isApproving
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-cyan-600 hover:bg-cyan-700"
+                            }`}
+                          >
+                            {isApproving ? "Approving..." : "Approve"}
+                          </button>
                         </div>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await approveJoinRequest(r.id);
-                              setPendingRequests((prev) => prev.filter((x) => x.id !== r.id));
-                              toast.success("Request approved");
-                            } catch (e) {
-                              toast.error(e.message || "Failed to approve request");
-                            }
-                          }}
-                          className="bg-cyan-600 text-white px-3 py-1 rounded hover:bg-cyan-700 text-sm"
-                        >
-                          Approve
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setShowSettings(false)} className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300">Close</button>
+            <div className="mt-5 flex justify-between items-center">
               <button
-                disabled={settingsSaving}
-                onClick={async () => {
-                  try {
-                    setSettingsSaving(true);
-                    const updated = await updateGroup(groupId, settingsName.trim() || null, settingsDesc.trim() || null);
-                    setGroupInfo((g) => ({ ...g, name: updated.name, description: updated.description }));
-                    toast.success("Group updated");
-                    setShowSettings(false);
-                  } catch (e) {
-                    toast.error(e.message || "Failed to update group");
-                  } finally {
-                    setSettingsSaving(false);
+                onClick={() => {
+                  // Check if group is already soft-deleted
+                  if (isGroupDeleted()) {
+                    toast.error("This group has already been deleted");
+                    return;
                   }
+                  setShowDeleteConfirm(true);
                 }}
-                className={`px-4 py-2 rounded-md text-white ${settingsSaving ? "bg-gray-400" : "bg-cyan-600 hover:bg-cyan-700"}`}
+                disabled={settingsSaving}
+                className={`px-4 py-2 rounded-md text-white transition ${
+                  settingsSaving
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
               >
-                {settingsSaving ? "Saving..." : "Save"}
+                Delete Group
               </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowSettings(false)}
+                  disabled={settingsSaving}
+                  className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Close
+                </button>
+                <button
+                  disabled={settingsSaving}
+                  onClick={async () => {
+                    // Check authentication
+                    if (!userId) {
+                      toast.error("Please log in to update the group");
+                      return;
+                    }
+
+                    // Validate input
+                    if (!settingsName.trim()) {
+                      toast.error("Group name is required");
+                      return;
+                    }
+
+                    try {
+                      setSettingsSaving(true);
+                      
+                      // Check if group is soft-deleted by trying to fetch fresh data
+                      const userGroups = await getGroupsByUser(userId);
+                      const freshGroup = userGroups.find((g) => String(g.id) === String(groupId));
+                      
+                      if (!freshGroup || freshGroup.deleted_at) {
+                        toast.error("The group is deleted");
+                        // Update local state
+                        setGroupInfo((prev) => ({
+                          ...prev,
+                          deleted_at: freshGroup?.deleted_at || new Date().toISOString()
+                        }));
+                        return;
+                      }
+
+                      // Check authorization
+                      const hasPermission = await isUserGroupAdminOrModerator(userId, groupId);
+                      if (!hasPermission) {
+                        toast.error("Only group admins and moderators can update the group");
+                        return;
+                      }
+
+                      // Perform update
+                      const updated = await updateGroup(groupId, settingsName.trim() || null, settingsDesc.trim() || null);
+                      
+                      setGroupInfo((g) => ({ 
+                        ...g, 
+                        name: updated.name, 
+                        description: updated.description,
+                        deleted_at: updated.deleted_at || null
+                      }));
+                      toast.success("Group updated");
+                      setShowSettings(false);
+                    } catch (e) {
+                      // Extract and display error message
+                      let errorMessage = "Failed to update group";
+                      
+                      if (e?.message) {
+                        errorMessage = e.message;
+                      } else if (e?.response?.data?.errors?.[0]?.message) {
+                        errorMessage = e.response.data.errors[0].message;
+                      }
+                      
+                      // Check if error indicates deleted group
+                      if (errorMessage.toLowerCase().includes('deleted') || 
+                          errorMessage.toLowerCase().includes('not found')) {
+                        toast.error("The group is deleted");
+                      } else {
+                        toast.error(errorMessage);
+                      }
+                    } finally {
+                      setSettingsSaving(false);
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    settingsSaving
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-cyan-600 hover:bg-cyan-700"
+                  }`}
+                >
+                  {settingsSaving ? "Saving..." : "Save"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -686,9 +894,128 @@ export default function GroupDetail() {
         ) : posts.length === 0 ? (
           <p className="text-gray-500 text-center">No posts yet. Be the first to post!</p>
         ) : (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
+          posts.map((post) => (
+            <PostCard 
+              key={post.id} 
+              post={post} 
+              isGroupDeleted={isGroupDeleted()}
+            />
+          ))
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-96 max-w-[90vw]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-red-600">Delete Group</h3>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="text-gray-500 hover:text-gray-700"
+                disabled={deleteLoading}
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete <span className="font-semibold">{groupInfo?.name}</span>? 
+              This action cannot be undone. All posts and members will be removed from this group.
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteLoading}
+                className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  // Check authentication
+                  if (!userId) {
+                    toast.error("Please log in to delete the group");
+                    setShowDeleteConfirm(false);
+                    return;
+                  }
+
+                  try {
+                    setDeleteLoading(true);
+                    
+                    // Check if group is already soft-deleted by fetching fresh data
+                    const userGroups = await getGroupsByUser(userId);
+                    const freshGroup = userGroups.find((g) => String(g.id) === String(groupId));
+                    
+                    if (!freshGroup || freshGroup.deleted_at) {
+                      toast.error("The group is deleted");
+                      // Update local state
+                      setGroupInfo((prev) => ({
+                        ...prev,
+                        deleted_at: freshGroup?.deleted_at || new Date().toISOString()
+                      }));
+                      setShowDeleteConfirm(false);
+                      return;
+                    }
+
+                    // Check authorization
+                    const hasPermission = await isUserGroupAdminOrModerator(userId, groupId);
+                    if (!hasPermission) {
+                      toast.error("Only group admins and moderators can delete the group");
+                      setShowDeleteConfirm(false);
+                      return;
+                    }
+
+                    // Perform deletion
+                    await deleteGroup(groupId);
+                    toast.success("Group deleted successfully");
+                    setShowDeleteConfirm(false);
+                    setShowSettings(false);
+                    // Redirect to groups page after a short delay
+                    setTimeout(() => {
+                      navigate("/group");
+                    }, 1000);
+                  } catch (e) {
+                    // Extract error message
+                    let errorMessage = "Failed to delete group";
+                    
+                    if (e?.message) {
+                      errorMessage = e.message;
+                    } else if (e?.response?.data?.errors?.[0]?.message) {
+                      errorMessage = e.response.data.errors[0].message;
+                    } else if (e?.response?.data?.errors?.[0]?.extensions?.validation) {
+                      const validationErrors = e.response.data.errors[0].extensions.validation;
+                      const firstError = Object.values(validationErrors)[0];
+                      errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                    }
+                    
+                    // Check if error indicates deleted group
+                    if (errorMessage.toLowerCase().includes('deleted') || 
+                        errorMessage.toLowerCase().includes('not found')) {
+                      toast.error("The group is deleted");
+                    } else {
+                      toast.error(errorMessage);
+                    }
+                    
+                    setShowDeleteConfirm(false);
+                  } finally {
+                    setDeleteLoading(false);
+                  }
+                }}
+                disabled={deleteLoading}
+                className={`px-4 py-2 rounded-md text-white ${
+                  deleteLoading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                {deleteLoading ? "Deleting..." : "Delete Group"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

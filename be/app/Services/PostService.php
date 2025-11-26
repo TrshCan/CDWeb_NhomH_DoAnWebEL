@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Repositories\PostRepository;
+use App\Models\Group;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
@@ -76,6 +77,24 @@ class PostService
             throw ValidationException::withMessages([
                 'content' => 'Please provide text content or at least one media file.',
             ]);
+        }
+
+        // ✅ Check if group is soft-deleted (if post is for a group)
+        if (!empty($input['group_id'])) {
+            $group = Group::withTrashed()->find($input['group_id']);
+            
+            if (!$group) {
+                throw ValidationException::withMessages([
+                    'group_id' => 'The specified group does not exist.',
+                ]);
+            }
+            
+            // Check if group is soft-deleted
+            if ($group->trashed() || $group->deleted_at !== null) {
+                throw ValidationException::withMessages([
+                    'group_id' => 'Cannot create post: This group has been deleted.',
+                ]);
+            }
         }
 
         // ✅ Filter out null/empty files first
@@ -168,6 +187,18 @@ class PostService
             throw ValidationException::withMessages([
                 'content' => 'Content cannot be empty unless you provide media.',
             ]);
+        }
+
+        // ✅ Check if post belongs to a soft-deleted group
+        $post = $this->repository->find($data['id']);
+        if ($post && $post->group_id) {
+            $group = Group::withTrashed()->find($post->group_id);
+            
+            if ($group && ($group->trashed() || $group->deleted_at !== null)) {
+                throw ValidationException::withMessages([
+                    'group_id' => 'Cannot update post: This group has been deleted.',
+                ]);
+            }
         }
 
         return $this->repository->update($data['id'], $data);

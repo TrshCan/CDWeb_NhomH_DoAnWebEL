@@ -6,6 +6,7 @@ type Group {
   created_by: Int
   created_at: DateTime
   updated_at: DateTime
+  deleted_at: DateTime
   creator: User
   members: [User!] @field(resolver: "App\\GraphQL\\Resolvers\\GroupResolver@members")
 }
