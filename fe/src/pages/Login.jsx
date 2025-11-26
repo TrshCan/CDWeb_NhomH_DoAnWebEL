@@ -86,19 +86,20 @@ function LoginForm() {
     e.preventDefault();
     setIsLoading(true);
     setMessage("");
-
+  
     try {
       const variables = {
         email: formData.email,
         password: formData.password,
       };
-
+  
       const response = await graphqlRequest(LOGIN_USER, variables);
-      console.log("Full response:", response); // log để debug
-
+      console.log("Full response:", response);
+  
+      // === Thành công ===
       if (response.data && response.data.loginUser) {
-        // Mutation thành công
         const { token, user } = response.data.loginUser;
+  
         setMessage(`Đăng nhập thành công: ${user.name}`);
         setFormData({
           name: "",
@@ -106,33 +107,50 @@ function LoginForm() {
           password: "",
           remember: false,
         });
-
-        // Lưu token, user ID và thông tin role vào localStorage để dùng cho request sau này
+  
+        // Lưu localStorage
         localStorage.setItem("token", token);
         localStorage.setItem("userId", user.id.toString());
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("userRole", user.role || "");
-
-        // Dispatch event để cập nhật sidebar
+  
         window.dispatchEvent(new Event("tokenChanged"));
-
-        // Chuyển hướng dựa trên role (admin -> trang admin, user -> trang chính) sau 1 giây
+  
         setTimeout(() => {
           const isAdmin =
-            typeof user.role === "string" && user.role.toLowerCase() === "admin";
+            typeof user.role === "string" &&
+            user.role.toLowerCase() === "admin";
+  
           navigate(isAdmin ? "/admin/dashboard" : "/");
         }, 1000);
-      } else if (response.errors) {
-        // Mutation bị lỗi
-        console.error("GraphQL errors:", response.errors);
-        const errorMessage = response.errors[0].message;
-        setMessage(errorMessage);
-      } else {
-        // Network error hoặc response không mong muốn
-        setMessage("Có lỗi xảy ra, vui lòng thử lại");
+  
+        return;
       }
-    } catch (err) {
-      console.error(err);
+  
+      // === Backend trả errors ===
+      if (response.errors && response.errors.length > 0) {
+        const err = response.errors[0];
+  
+        // Nếu là lỗi ValidationException của Laravel
+        if (err.extensions && err.extensions.validation) {
+          const validation = err.extensions.validation;
+  
+          const firstField = Object.keys(validation)[0];
+          const firstMessage = validation[firstField][0];
+  
+          setMessage(firstMessage);
+        } else {
+          setMessage(err.message || "Có lỗi xảy ra");
+        }
+  
+        return;
+      }
+  
+      // === Response lỗi không xác định ===
+      setMessage("Có lỗi xảy ra, vui lòng thử lại");
+  
+    } catch (error) {
+      console.error(error);
       setMessage("Network hoặc server error");
     } finally {
       setTimeout(() => {
@@ -140,6 +158,7 @@ function LoginForm() {
       }, 500);
     }
   };
+  
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
