@@ -22,7 +22,15 @@ class SurveyJoinResolver
     {
         $surveyId = $args['surveyId'];
         $token = $args['token'] ?? null;
-        return $this->service->getSurveyDetail($surveyId, $token);
+        
+        // Try to get user from token if available
+        $user = null;
+        $bearerToken = request()->bearerToken();
+        if ($bearerToken) {
+            $user = User::where('remember_token', $bearerToken)->first();
+        }
+        
+        return $this->service->getSurveyDetail($surveyId, $token, $user);
     }
 
     public function submitSurveyAnswers($rootValue, array $args)

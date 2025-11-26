@@ -273,10 +273,20 @@ export async function submitSurveyAnswers(surveyId, answers) {
 
   if (response.data.errors) {
     console.error("[API][submitSurveyAnswers] GraphQL errors", response.data.errors);
-    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+    const errorMessage = response.data.errors[0]?.message || "GraphQL error";
+    throw new Error(errorMessage);
   }
 
-  return response.data.data.submitSurveyAnswers;
+  // Check if data exists and has the expected structure
+  if (!response.data.data || !response.data.data.submitSurveyAnswers) {
+    console.error("[API][submitSurveyAnswers] Invalid response structure", response.data);
+    throw new Error("Invalid response from server. Please try again.");
+  }
+
+  const result = response.data.data.submitSurveyAnswers;
+  
+  // Return result regardless of success status - let frontend handle it
+  return result;
 }
 
 // Get survey details for editing

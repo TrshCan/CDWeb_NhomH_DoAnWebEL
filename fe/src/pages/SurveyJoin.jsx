@@ -111,11 +111,22 @@ function SurveyJoin() {
         }
       } catch (err) {
         console.error("Failed to load survey:", err);
-        setError({
-          title: "Failed to Load Survey",
-          message: err.message || "An unexpected error occurred while loading the survey. Please try again later.",
-          type: "load_error"
-        });
+        const errorMessage = err.message || "An unexpected error occurred while loading the survey. Please try again later.";
+        const extMessage = err.extensions?.debugMessage || "";
+        // Check if user already completed the survey
+        if (errorMessage.includes("already completed") || errorMessage.includes("You already completed") || extMessage.includes("You already completed") || extMessage.includes("You already completed")) {
+          setError({
+            title: "Survey Already Completed",
+            message: "You already completed this survey. Each user can only submit once.",
+            type: "already_completed"
+          });
+        } else {
+          setError({
+            title: "Failed to Load Survey",
+            message: errorMessage,
+            type: "load_error"
+          });
+        }
       } finally {
         setLoading(false);
       }
@@ -411,27 +422,103 @@ function SurveyJoin() {
       );
 
       if (result.success) {
-        toast.success(result.message || "Survey submitted successfully!");
-        navigate("/");
+        const successMessage = result.message || "Survey submitted successfully!";
+        toast.success(successMessage, {
+          autoClose: 3000,
+          onClose: () => {
+            navigate("/");
+          }
+        });
+        // Fallback navigation in case toast onClose doesn't fire
+        setTimeout(() => {
+          navigate("/");
+        }, 3000);
       } else {
-        // Handle specific error cases
+        // Handle specific error cases - DO NOT redirect on errors
         const errorMessage = result.message || "Failed to submit survey";
         
         if (errorMessage.includes("not authenticated") || errorMessage.includes("Invalid or expired token")) {
-          toast.error("Please login before joining the survey");
-          navigate("/");
-        } else if (errorMessage.includes("Survey not found")) {
-          toast.error("Survey not found");
-          navigate("/");
-        } else if (errorMessage.includes("no questions") || errorMessage.includes("No valid answers")) {
-          toast.error(errorMessage);
+          toast.error("Please login before joining the survey", {
+            autoClose: 4000,
+          });
+          // Only redirect for auth errors after showing message
+          setTimeout(() => {
+            navigate("/");
+          }, 4000);
+        } else if (errorMessage.includes("Survey not found") || errorMessage.includes("deleted")) {
+          toast.error(errorMessage, {
+            autoClose: 4000,
+          });
+          setTimeout(() => {
+            navigate("/");
+          }, 4000);
+        } else if (errorMessage.includes("closed") || errorMessage.includes("no longer accepting")) {
+          toast.error(errorMessage, {
+            autoClose: 4000,
+          });
+          setTimeout(() => {
+            navigate("/");
+          }, 4000);
+        } else if (errorMessage.includes("already completed") || errorMessage.includes("You have already completed")) {
+          toast.error("You have already completed this survey. Each user can only submit once.", {
+            autoClose: 5000,
+          });
+          setTimeout(() => {
+            navigate("/");
+          }, 5000);
         } else {
-          toast.error(errorMessage);
+          // For other errors, show message but stay on page so user can see the error
+          toast.error(errorMessage, {
+            autoClose: 5000,
+          });
+          // Don't redirect - let user see the error and decide what to do
         }
       }
     } catch (err) {
       console.error("Failed to submit survey:", err);
-      toast.error("An unexpected error occurred. Please try again.");
+      
+      // Extract error message from various error types
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      
+      if (err.message) {
+        errorMessage = err.message;
+        extMessage = err.extensions?.debugMessage;
+      } else if (err.response?.data?.errors?.[0]?.message) {
+        errorMessage = err.response.data.errors[0].message;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      // Handle network errors
+      if (err.message?.includes("Network Error") || err.message?.includes("Failed to fetch")) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+      
+      // Show error notification with longer duration
+      toast.error(errorMessage, {
+        autoClose: 6000,
+        position: "top-center",
+      });
+      
+      // Only redirect for specific critical errors
+      if (
+        errorMessage.includes("not authenticated") ||
+        errorMessage.includes("Invalid or expired token") ||
+        errorMessage.includes("Survey not found") ||
+        errorMessage.includes("deleted") ||
+        errorMessage.includes("closed") ||
+        errorMessage.includes("no longer accepting") ||
+        errorMessage.includes("already completed") ||
+        errorMessage.includes("You already completed") ||
+        extMessage.includes("You already completed")
+      ) {
+        setTimeout(() => {
+          navigate("/");
+        }, 5000);
+      }
+      // For other errors (including network errors), stay on page so user can see the error and retry
     } finally {
       setSubmitting(false);
     }
@@ -489,6 +576,13 @@ function SurveyJoin() {
             <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          );
+        case "already_completed":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
           );
         default:

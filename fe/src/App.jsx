@@ -1,6 +1,8 @@
 // src/App.jsx
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Register from "./pages/Register";
 import Login from "./pages/Login.jsx";
 import Feed from "./components/Feed.jsx";
@@ -64,6 +66,18 @@ export default function App() {
             },
           },
         }}
+      />
+      <ToastContainer
+        position="top-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
       />
       <Routes>
       {/* Layout chính */}
