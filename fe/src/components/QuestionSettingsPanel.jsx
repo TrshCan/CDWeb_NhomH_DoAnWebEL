@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { toast } from "react-hot-toast";
 import { ChevronDownIcon, PlusIcon } from "../icons";
 import QuestionTypeSelectModal from "./QuestionTypeSelectModal";
 import ConditionDesigner from "./ConditionDesigner";
@@ -65,6 +66,7 @@ export default function QuestionSettingsPanel({
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [showConditionDesigner, setShowConditionDesigner] = useState(false);
   const [maxLengthError, setMaxLengthError] = useState("");
+  const [imageUploadError, setImageUploadError] = useState(false);
   const typeButtonRef = useRef(null);
 
   const {
@@ -94,7 +96,15 @@ export default function QuestionSettingsPanel({
   const handleImageDrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer?.files[0] || e.target?.files[0];
-    if (file && file.type.startsWith("image/")) {
+    if (file) {
+      // Kiểm tra file có phải là ảnh không
+      if (!file.type.startsWith("image/")) {
+        toast.error("Chỉ được thêm ảnh!");
+        setImageUploadError(true);
+        setTimeout(() => setImageUploadError(false), 2000);
+        return;
+      }
+      setImageUploadError(false);
       const reader = new FileReader();
       reader.onload = (event) => {
         onChange?.({ ...value, image: event.target.result });
@@ -441,10 +451,14 @@ export default function QuestionSettingsPanel({
               onClick={handleImageClick}
               onDrop={handleImageDrop}
               onDragOver={(e) => e.preventDefault()}
-              className="w-full border-2 border-dashed border-gray-300 rounded-sm p-8 text-center cursor-pointer hover:border-violet-500 transition-colors"
+              className={`w-full border-2 border-dashed rounded-sm p-8 text-center cursor-pointer transition-all ${
+                imageUploadError 
+                  ? "border-red-500 bg-red-50 animate-pulse" 
+                  : "border-gray-300 hover:border-violet-500"
+              }`}
             >
               {image ? (
-                <div className="relative w-full">
+                <div className="relative w-full group">
                   <img
                     src={image}
                     alt="Question"
@@ -460,21 +474,21 @@ export default function QuestionSettingsPanel({
                       e.stopPropagation();
                       onChange?.({ ...value, image: null });
                     }}
-                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center transition-colors"
+                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 rounded-full w-6 h-6 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
+                      width="14"
+                      height="14"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="white"
-                      strokeWidth="1.5"
-                      strokeLinecap="square"
-                      strokeLinejoin="miter"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
-                      <path d="M15.5355339 15.5355339L8.46446609 8.46446609M15.5355339 8.46446609L8.46446609 15.5355339" />
-                      <path d="M4.92893219,19.0710678 C1.02368927,15.1658249 1.02368927,8.83417511 4.92893219,4.92893219 C8.83417511,1.02368927 15.1658249,1.02368927 19.0710678,4.92893219 C22.9763107,8.83417511 22.9763107,15.1658249 19.0710678,19.0710678 C15.1658249,22.9763107 8.83417511,22.9763107 4.92893219,19.0710678 Z" />
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
                   </button>
                 </div>
@@ -482,7 +496,7 @@ export default function QuestionSettingsPanel({
                 <>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-12 w-12 mx-auto text-gray-400 mb-2"
+                    className={`h-12 w-12 mx-auto mb-2 ${imageUploadError ? "text-red-400" : "text-gray-400"}`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -494,7 +508,9 @@ export default function QuestionSettingsPanel({
                       d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                     />
                   </svg>
-                  <p className="text-sm text-gray-600">Thả hình ảnh tại đây</p>
+                  <p className={`text-sm ${imageUploadError ? "text-red-500" : "text-gray-600"}`}>
+                    {imageUploadError ? "Chỉ được thêm ảnh!" : "Thả hình ảnh tại đây"}
+                  </p>
                 </>
               )}
             </div>

@@ -58,10 +58,16 @@ class SurveyJoinService
                     'id' => $question->id,
                     'question_text' => $question->question_text,
                     'question_type' => $question->question_type,
+                    'image' => $question->image,
                     'points' => $question->points,
+                    'help_text' => $question->help_text,
+                    'max_length' => $question->max_length,
+                    'required' => $question->required ?? 'none',
+                    'conditions' => $question->conditions,
                     'options' => $question->options->map(fn($opt) => [
                         'id' => $opt->id,
-                        'option_text' => $opt->option_text
+                        'option_text' => $opt->option_text,
+                        'image' => $opt->image
                     ])
                 ];
             })

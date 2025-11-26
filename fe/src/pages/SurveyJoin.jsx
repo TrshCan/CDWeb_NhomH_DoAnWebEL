@@ -163,11 +163,147 @@ function SurveyJoin() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const [validationErrors, setValidationErrors] = useState({});
+
   const handleAnswerChange = (questionId, answerData) => {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: answerData,
     }));
+    // Clear validation error when user answers
+    if (validationErrors[questionId]) {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[questionId];
+        return newErrors;
+      });
+    }
+  };
+
+  // Check if a question should be visible based on conditions
+  const isQuestionVisible = (question) => {
+    if (!question.conditions) {
+      return true;
+    }
+    
+    // Normalize conditions - có thể là array hoặc object
+    let conditionsList = Array.isArray(question.conditions) ? question.conditions : [question.conditions];
+    
+    if (conditionsList.length === 0) {
+      return true;
+    }
+
+    // Normalize ID để so sánh
+    const normalizeId = (id) => String(id);
+    
+    // Kiểm tra tất cả conditions (AND logic)
+    for (const condition of conditionsList) {
+      // Format: { field: '25', operator: 'equals', value: '71' }
+      // field = question_id, value = option_id
+      const conditionQuestionId = condition.field || condition.question_id || condition.questionId;
+      
+      if (!conditionQuestionId) {
+        continue;
+      }
+      
+      // Tìm answer
+      const answer = answers[conditionQuestionId] || answers[String(conditionQuestionId)] || answers[Number(conditionQuestionId)];
+      
+      if (!answer) return false;
+
+      const selectedOptionId = answer.selected_option_id;
+      
+      if (selectedOptionId === undefined || selectedOptionId === null) return false;
+      
+      // Lấy required option IDs từ condition
+      // value có thể là single value hoặc array
+      const requiredValue = condition.value || condition.option_ids || condition.option_id || [];
+      const requiredOptionIds = (Array.isArray(requiredValue) ? requiredValue : [requiredValue]).map(normalizeId);
+      
+      // Lấy selected option IDs
+      const selectedOptionIds = (Array.isArray(selectedOptionId) ? selectedOptionId : [selectedOptionId]).map(normalizeId);
+      
+      // Xử lý theo operator
+      const operator = condition.operator || 'equals';
+      let conditionMet = false;
+      
+      switch (operator) {
+        case 'equals':
+        case 'is':
+        case 'in':
+          // Kiểm tra có giao nhau không
+          conditionMet = selectedOptionIds.some((id) => requiredOptionIds.includes(id));
+          break;
+        case 'not_equals':
+        case 'is_not':
+        case 'not_in':
+          // Kiểm tra không có giao nhau
+          conditionMet = !selectedOptionIds.some((id) => requiredOptionIds.includes(id));
+          break;
+        case 'contains':
+          // Kiểm tra chứa tất cả
+          conditionMet = requiredOptionIds.every((id) => selectedOptionIds.includes(id));
+          break;
+        default:
+          conditionMet = selectedOptionIds.some((id) => requiredOptionIds.includes(id));
+      }
+      
+      if (!conditionMet) return false;
+    }
+
+    return true;
+  };
+
+  // Get visible questions
+  const visibleQuestions = surveyData?.questions?.filter(isQuestionVisible) || [];
+
+  // Check if answer is empty
+  const isAnswerEmpty = (questionId) => {
+    const answer = answers[questionId];
+    if (!answer) return true;
+    
+    if (answer.answer_text !== undefined) {
+      return !answer.answer_text || String(answer.answer_text).trim() === "";
+    }
+    
+    if (answer.selected_option_id !== undefined) {
+      if (Array.isArray(answer.selected_option_id)) {
+        return answer.selected_option_id.length === 0;
+      }
+      return answer.selected_option_id === null || answer.selected_option_id === undefined;
+    }
+    
+    return true;
+  };
+
+  // Validate required questions
+  const validateRequiredQuestions = () => {
+    const errors = {};
+    const warnings = [];
+
+    visibleQuestions.forEach((question) => {
+      if (isAnswerEmpty(question.id)) {
+        if (question.required === "hard") {
+          errors[question.id] = "Câu hỏi này bắt buộc phải trả lời";
+        } else if (question.required === "soft") {
+          warnings.push(question.id);
+        }
+      }
+    });
+
+    return { errors, warnings };
+  };
+
+  // Get required label
+  const getRequiredLabel = (required) => {
+    switch (required) {
+      case "hard":
+        return { text: "Bắt buộc", className: "required-hard" };
+      case "soft":
+        return { text: "Nên trả lời", className: "required-soft" };
+      default:
+        return null;
+    }
   };
 
   const handleAutoSubmit = async () => {
@@ -176,6 +312,31 @@ function SurveyJoin() {
   };
 
   const handleSubmitClick = () => {
+    const { errors, warnings } = validateRequiredQuestions();
+    
+    // Nếu có lỗi hard required
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      
+      // Scroll đến câu hỏi đầu tiên bị lỗi
+      const firstErrorQuestionId = Object.keys(errors)[0];
+      const questionIndex = visibleQuestions.findIndex(
+        (q) => String(q.id) === String(firstErrorQuestionId)
+      );
+      if (questionIndex !== -1) {
+        scrollToQuestion(questionIndex);
+      }
+      
+      toast.error(`Vui lòng trả lời ${Object.keys(errors).length} câu hỏi bắt buộc`);
+      return;
+    }
+    
+    // Nếu có warnings (soft required)
+    if (warnings.length > 0) {
+      const unansweredSoft = warnings.length;
+      toast.warning(`Bạn còn ${unansweredSoft} câu hỏi chưa trả lời (không bắt buộc)`);
+    }
+    
     setShowSubmitModal(true);
   };
 
@@ -277,9 +438,15 @@ function SurveyJoin() {
     );
   }
 
-  const answeredCount = Object.keys(answers).length;
-  const totalQuestions = surveyData.questions.length;
-  const progressPercentage = (answeredCount / totalQuestions) * 100;
+  const answeredCount = visibleQuestions.filter((q) => !isAnswerEmpty(q.id)).length;
+  const totalQuestions = visibleQuestions.length;
+  const progressPercentage = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+  
+  // Count required questions
+  const requiredHardCount = visibleQuestions.filter((q) => q.required === "hard").length;
+  const answeredRequiredCount = visibleQuestions.filter(
+    (q) => q.required === "hard" && !isAnswerEmpty(q.id)
+  ).length;
 
   const scrollToQuestion = (index) => {
     questionRefs.current[index]?.scrollIntoView({
@@ -434,18 +601,25 @@ function SurveyJoin() {
             </div>
 
             <div className="question-navigator">
-              <h3>Questions</h3>
+              <h3>Câu hỏi</h3>
+              {requiredHardCount > 0 && (
+                <p className="required-info">
+                  {answeredRequiredCount}/{requiredHardCount} câu bắt buộc
+                </p>
+              )}
               <div className="question-dots">
-                {surveyData.questions.map((question, index) => (
+                {visibleQuestions.map((question, index) => (
                   <button
                     key={question.id}
                     onClick={() => scrollToQuestion(index)}
                     className={`question-dot ${
-                      answers[question.id] ? "answered" : ""
-                    } ${currentQuestionIndex === index ? "active" : ""}`}
-                    title={`Question ${index + 1}${
-                      answers[question.id] ? " (Answered)" : ""
-                    }`}
+                      !isAnswerEmpty(question.id) ? "answered" : ""
+                    } ${currentQuestionIndex === index ? "active" : ""} ${
+                      question.required === "hard" ? "required" : ""
+                    } ${validationErrors[question.id] ? "error" : ""}`}
+                    title={`Câu ${index + 1}${
+                      !isAnswerEmpty(question.id) ? " (Đã trả lời)" : ""
+                    }${question.required === "hard" ? " - Bắt buộc" : ""}`}
                   >
                     {index + 1}
                   </button>
@@ -491,56 +665,79 @@ function SurveyJoin() {
           </div>
 
           <div className="questions-list">
-            {surveyData.questions.map((question, index) => (
-              <div
-                key={question.id}
-                ref={(el) => (questionRefs.current[index] = el)}
-                className={`question-card ${
-                  answers[question.id] ? "answered" : ""
-                }`}
-              >
-                <div className="question-header">
-                  <div className="question-badge">
-                    <span className="question-number">Q{index + 1}</span>
-                    {answers[question.id] && (
-                      <svg
-                        className="check-mark"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                      >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
+            {visibleQuestions.map((question, index) => {
+              const requiredLabel = getRequiredLabel(question.required);
+              const hasError = validationErrors[question.id];
+              
+              return (
+                <div
+                  key={question.id}
+                  ref={(el) => (questionRefs.current[index] = el)}
+                  className={`question-card ${
+                    !isAnswerEmpty(question.id) ? "answered" : ""
+                  } ${hasError ? "has-error" : ""}`}
+                >
+                  <div className="question-header">
+                    <div className="question-badge">
+                      <span className="question-number">Q{index + 1}</span>
+                      {!isAnswerEmpty(question.id) && (
+                        <svg
+                          className="check-mark"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="question-meta">
+                      {requiredLabel && (
+                        <span className={`required-badge ${requiredLabel.className}`}>
+                          {requiredLabel.text}
+                        </span>
+                      )}
+                      {question.points > 0 && (
+                        <span className="question-points">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                          >
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                          {question.points} pts
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {question.points > 0 && (
-                    <span className="question-points">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  <h3 className="question-text">{question.question_text}</h3>
+
+                  <QuestionRenderer
+                    question={question}
+                    answer={answers[question.id]}
+                    onAnswerChange={handleAnswerChange}
+                  />
+                  
+                  {hasError && (
+                    <div className="validation-error">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
                       </svg>
-                      {question.points} pts
-                    </span>
+                      <span>{hasError}</span>
+                    </div>
                   )}
                 </div>
-                <h3 className="question-text">{question.question_text}</h3>
-
-                <QuestionRenderer
-                  question={question}
-                  answer={answers[question.id]}
-                  onAnswerChange={handleAnswerChange}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="final-submit-section">
@@ -620,10 +817,19 @@ function SurveyJoin() {
             </div>
             <div className="modal-body">
               <p>
-                You have answered {answeredCount} out of {totalQuestions}{" "}
-                questions.
+                Bạn đã trả lời {answeredCount} / {totalQuestions} câu hỏi.
               </p>
-              <p>Are you sure you want to submit your answers?</p>
+              {requiredHardCount > 0 && (
+                <p className="modal-required-info">
+                  Câu bắt buộc: {answeredRequiredCount}/{requiredHardCount}
+                </p>
+              )}
+              {totalQuestions - answeredCount > 0 && (
+                <p className="modal-warning">
+                  Còn {totalQuestions - answeredCount} câu chưa trả lời
+                </p>
+              )}
+              <p>Bạn có chắc chắn muốn nộp bài?</p>
             </div>
             <div className="modal-footer">
               <button

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, startTransition } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import WelcomeSection from "./WelcomeSection";
 import QuestionSection from "./QuestionSection";
 import AddSection from "./AddSection";
@@ -27,6 +27,7 @@ import { toEnglishType, toVietnameseType } from "../utils/questionTypeMapping";
 
 export default function SurveyForm({ surveyId: propSurveyId = null }) {
   const { surveyId: urlSurveyId } = useParams();
+  const navigate = useNavigate();
   const surveyId = urlSurveyId || propSurveyId;
   
   const [activeSection, setActiveSection] = useState(null);
@@ -2803,8 +2804,15 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
           onActivate={() => toast.success("Đã kích hoạt")}
           onPreview={() => {
             if (surveyId) {
-              // TODO: Sẽ được merge với trang TakeSurvey sau
-              toast.info("Chức năng xem trước sẽ được cập nhật sau");
+              // Mở trang preview trong tab mới với data survey
+              const previewUrl = `/surveys/${surveyId}/preview`;
+              const previewWindow = window.open(previewUrl, '_blank');
+              
+              // Truyền data qua sessionStorage vì window.open không hỗ trợ state
+              sessionStorage.setItem(`survey-preview-${surveyId}`, JSON.stringify({
+                title: generalSettings?.title || "Untitled survey",
+                questions: allQuestions,
+              }));
             } else {
               toast.error("Vui lòng lưu khảo sát trước khi xem trước");
             }

@@ -100,6 +100,7 @@ class SurveyShareRepository
                 'survey_id' => $surveyId,
                 'share_type' => 'public',
                 'share_token' => SurveyShare::generateToken(),
+                'status' => 'pending',
                 'created_by' => $userId,
             ]);
         }

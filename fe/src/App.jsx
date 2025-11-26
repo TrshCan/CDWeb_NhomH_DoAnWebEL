@@ -34,6 +34,8 @@ import Search from "./components/SearchResult";
 import Group from "./components/Group";
 import GroupDetail from "./components/GroupDetail";
 import SurveyForm from "./components/SurveyForm";
+import SurveyPreview from "./pages/SurveyPreview";
+import SurveyTake from "./pages/SurveyTake";
 
 export default function App() {
   return (
@@ -135,6 +137,24 @@ export default function App() {
         element={
           <ProtectedRoute>
             <SurveyForm />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/surveys/:surveyId/preview"
+        element={
+          <ProtectedRoute>
+            <SurveyPreview />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/surveys/:surveyId/take"
+        element={
+          <ProtectedRoute>
+            <SurveyTake />
           </ProtectedRoute>
         }
       />
