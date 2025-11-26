@@ -155,9 +155,14 @@ class DuplicateService
     private function duplicateQuestions(\App\Models\Survey $original, \App\Models\Survey $duplicated): void
     {
         try {
-            // Lấy questions từ database trực tiếp
+            // 1. Sao chép question groups trước (nếu có)
+            $groupMapping = $this->duplicateQuestionGroups($original, $duplicated);
+
+            // 2. Lấy questions từ database trực tiếp, sắp xếp theo position
             $questions = DB::table('survey_questions')
                 ->where('survey_id', $original->id)
+                ->orderBy('position', 'asc')
+                ->orderBy('id', 'asc')
                 ->get();
 
             foreach ($questions as $originalQuestion) {
@@ -170,36 +175,52 @@ class DuplicateService
                     continue;
                 }
 
-                // Tạo question mới
+                // Map group_id nếu có
+                $newGroupId = null;
+                if ($originalQuestion->group_id && isset($groupMapping[$originalQuestion->group_id])) {
+                    $newGroupId = $groupMapping[$originalQuestion->group_id];
+                }
+
+                // Tạo question mới với tất cả các trường
                 $newQuestionId = DB::table('survey_questions')->insertGetId([
                     'survey_id' => $duplicated->id,
+                    'group_id' => $newGroupId,
+                    'position' => $originalQuestion->position ?? 1,
+                    'question_code' => $originalQuestion->question_code,
                     'question_text' => $questionText,
+                    'image' => $originalQuestion->image,
                     'question_type' => $originalQuestion->question_type ?? 'text',
+                    'required' => $originalQuestion->required ?? 'none',
+                    'conditions' => $originalQuestion->conditions ? 
+                        (is_string($originalQuestion->conditions) ? $originalQuestion->conditions : json_encode($originalQuestion->conditions)) 
+                        : null,
+                    'default_scenario' => $originalQuestion->default_scenario,
+                    'max_length' => $originalQuestion->max_length,
+                    'numeric_only' => $originalQuestion->numeric_only ?? false,
+                    'max_questions' => $originalQuestion->max_questions,
+                    'allowed_file_types' => $originalQuestion->allowed_file_types,
+                    'max_file_size_kb' => $originalQuestion->max_file_size_kb,
+                    'help_text' => $originalQuestion->help_text,
                     'points' => $originalQuestion->points ?? 0,
                 ]);
 
-                // Sao chép options chỉ khi question_type không phải là 'text'
-                if (($originalQuestion->question_type ?? 'text') !== 'text') {
-                    $options = DB::table('survey_options')
-                        ->where('question_id', $originalQuestion->id)
-                        ->get();
+                // 3. Sao chép tất cả options (không phân biệt question_type)
+                $options = DB::table('survey_options')
+                    ->where('question_id', $originalQuestion->id)
+                    ->orderBy('position', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->get();
 
-                    foreach ($options as $originalOption) {
-                        $optionText = $originalOption->option_text ?? '';
-                        if (empty(trim($optionText))) {
-                            \Log::warning('Skipping option with empty text', [
-                                'option_id' => $originalOption->id,
-                                'question_id' => $originalQuestion->id
-                            ]);
-                            continue;
-                        }
-
-                        DB::table('survey_options')->insert([
-                            'question_id' => $newQuestionId,
-                            'option_text' => $optionText,
-                            'is_correct' => $originalOption->is_correct ?? false,
-                        ]);
-                    }
+                foreach ($options as $originalOption) {
+                    // option_text có thể null, nhưng vẫn sao chép option
+                    DB::table('survey_options')->insert([
+                        'question_id' => $newQuestionId,
+                        'option_text' => $originalOption->option_text,
+                        'image' => $originalOption->image,
+                        'is_subquestion' => $originalOption->is_subquestion ?? false,
+                        'position' => $originalOption->position,
+                        'is_correct' => $originalOption->is_correct ?? false,
+                    ]);
                 }
             }
         } catch (Exception $e) {
@@ -212,6 +233,38 @@ class DuplicateService
             ]);
             throw new Exception("Không thể sao chép câu hỏi và lựa chọn: " . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Sao chép question groups và trả về mapping từ group_id cũ sang group_id mới
+     * 
+     * @param \App\Models\Survey $original Survey gốc
+     * @param \App\Models\Survey $duplicated Survey đã được sao chép
+     * @return array Mapping [old_group_id => new_group_id]
+     */
+    private function duplicateQuestionGroups(\App\Models\Survey $original, \App\Models\Survey $duplicated): array
+    {
+        $groupMapping = [];
+
+        // Lấy tất cả question groups của survey gốc
+        $originalGroups = DB::table('question_groups')
+            ->where('survey_id', $original->id)
+            ->orderBy('position', 'asc')
+            ->get();
+
+        foreach ($originalGroups as $originalGroup) {
+            $newGroupId = DB::table('question_groups')->insertGetId([
+                'survey_id' => $duplicated->id,
+                'title' => $originalGroup->title ?? 'Nhóm câu hỏi',
+                'position' => $originalGroup->position ?? 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $groupMapping[$originalGroup->id] = $newGroupId;
+        }
+
+        return $groupMapping;
     }
 
     /**
