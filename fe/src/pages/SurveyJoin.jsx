@@ -25,6 +25,7 @@ function SurveyJoin() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
+  const [error, setError] = useState(null);
   const joinTicketRef = useRef(isTicketValidForSurvey(surveyId, joinToken));
   const questionRefs = useRef([]);
 
@@ -35,19 +36,26 @@ function SurveyJoin() {
   useEffect(() => {
     const fetchSurvey = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await getSurveyJoinDetail(parseInt(surveyId, 10), joinToken);
         if (!data) {
-          toast.error("Survey not found");
-          setTimeout(() => navigate("/"), 1000);
+          setError({
+            title: "Survey Not Found",
+            message: "The survey you're looking for doesn't exist or has been removed.",
+            type: "not_found"
+          });
           return;
         }
 
        
         const accessedViaModal = !!joinTicketRef.current;
         if (!data.is_accessible_directly && !accessedViaModal) {
-          toast.error("Please start this survey via the Join Survey modal");
-          setTimeout(() => navigate("/"), 1000);
+          setError({
+            title: "Access Restricted",
+            message: "This survey cannot be accessed directly. Please start this survey via the Join Survey modal.",
+            type: "access_restricted"
+          });
           return;
         }
 
@@ -58,8 +66,11 @@ function SurveyJoin() {
 
         // Check if survey is closed
         if (data.status === 'closed') {
-          toast.error("This survey is closed and no longer accepting responses");
-          setTimeout(() => navigate("/"), 1000);
+          setError({
+            title: "Survey Closed",
+            message: "This survey is closed and no longer accepting responses.",
+            type: "closed"
+          });
           return;
         }
 
@@ -76,14 +87,20 @@ function SurveyJoin() {
               (surveyTarget === 'students' && userRole !== 'student') ||
               (surveyTarget === 'lecturers' && userRole !== 'lecturer')
             ) {
-              toast.error(`This survey is for ${surveyTarget} only`);
-              setTimeout(() => navigate("/"), 1000);
+              setError({
+                title: "Access Denied",
+                message: `This survey is only available for ${surveyTarget}. Your current role (${userRole}) does not have access.`,
+                type: "role_mismatch"
+              });
               return;
             }
           }
         } else {
-          toast.error("Please login before joining the survey");
-          setTimeout(() => navigate("/"), 1000);
+          setError({
+            title: "Authentication Required",
+            message: "You need to be logged in to join this survey. Please log in and try again.",
+            type: "not_authenticated"
+          });
           return;
         }
 
@@ -94,8 +111,11 @@ function SurveyJoin() {
         }
       } catch (err) {
         console.error("Failed to load survey:", err);
-        toast.error(err.message || "Failed to load survey");
-        setTimeout(() => navigate("/"), 1000);
+        setError({
+          title: "Failed to Load Survey",
+          message: err.message || "An unexpected error occurred while loading the survey. Please try again later.",
+          type: "load_error"
+        });
       } finally {
         setLoading(false);
       }
@@ -103,8 +123,11 @@ function SurveyJoin() {
 
     if (!joinToken) {
       setLoading(false);
-      toast.error("Missing survey access token");
-      setTimeout(() => navigate("/"), 1000);
+      setError({
+        title: "Missing Access Token",
+        message: "The survey access token is missing from the URL. Please use the correct link to join the survey.",
+        type: "missing_token"
+      });
       return;
     }
 
@@ -425,14 +448,98 @@ function SurveyJoin() {
     );
   }
 
-  if (!surveyData) {
+  if (error) {
+    const getErrorIcon = () => {
+      switch (error.type) {
+        case "not_found":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          );
+        case "access_restricted":
+        case "role_mismatch":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          );
+        case "closed":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          );
+        case "not_authenticated":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="8.5" cy="7" r="4"/>
+              <line x1="20" y1="8" x2="20" y2="14"/>
+              <line x1="23" y1="11" x2="17" y2="11"/>
+            </svg>
+          );
+        case "missing_token":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          );
+        default:
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          );
+      }
+    };
+
     return (
       <div className="survey-join-page">
         <div className="error-container">
-          <p>Survey not found</p>
-          <button onClick={() => navigate("/")} className="btn btn-primary">
-            Go Home
-          </button>
+          <div className="error-icon">
+            {getErrorIcon()}
+          </div>
+          <h2 className="error-title">{error.title}</h2>
+          <p className="error-message">{error.message}</p>
+          <div className="error-actions">
+            <button onClick={() => navigate("/")} className="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              Go Home
+            </button>
+            {(error.type === "not_authenticated" || error.type === "role_mismatch") && (
+              <button onClick={() => window.location.reload()} className="btn btn-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                Refresh
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!surveyData) {
+    return (
+      <div className="survey-join-page">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Loading survey...</p>
         </div>
       </div>
     );
