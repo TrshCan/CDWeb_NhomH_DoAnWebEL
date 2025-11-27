@@ -229,16 +229,78 @@ export async function getSurveyJoinDetail(surveyId, token) {
     }
   `;
 
-  const response = await graphqlClient.post("", {
-    query,
-    variables: { surveyId: parseInt(surveyId, 10), token },
-  });
+  try {
+    console.log("[API][getSurveyJoinDetail] Request:", {
+      surveyId: parseInt(surveyId, 10),
+      token: token ? `${token.substring(0, 4)}...` : null,
+      tokenLength: token?.length
+    });
 
-  if (response.data.errors) {
-    throw new Error(response.data.errors[0]?.message || "GraphQL error");
+    const response = await graphqlClient.post("", {
+      query,
+      variables: { surveyId: parseInt(surveyId, 10), token },
+    });
+
+    console.log("[API][getSurveyJoinDetail] Response:", {
+      hasData: !!response.data?.data,
+      hasErrors: !!response.data?.errors,
+      errors: response.data?.errors,
+      status: response.status
+    });
+
+    // Check for GraphQL errors in response
+    if (response.data.errors) {
+      const error = response.data.errors[0];
+      const errorMessage = error?.message || "GraphQL error";
+      const errorObj = new Error(errorMessage);
+      
+      // Preserve extensions for better error handling
+      if (error?.extensions) {
+        errorObj.extensions = error.extensions;
+      }
+      
+      throw errorObj;
+    }
+
+    // Check if data exists
+    if (!response.data.data || !response.data.data.surveyJoinDetail) {
+      throw new Error("Survey not found or invalid response from server");
+    }
+
+    return response.data.data.surveyJoinDetail;
+  } catch (err) {
+    // Handle axios errors (network errors, HTTP errors)
+    if (err.response) {
+      // HTTP error response (4xx, 5xx)
+      const status = err.response.status;
+      const responseData = err.response.data;
+      
+      // Check if it's a GraphQL error structure
+      if (responseData?.errors && Array.isArray(responseData.errors)) {
+        const graphQLError = responseData.errors[0];
+        const errorMessage = graphQLError?.message || `HTTP ${status} Error`;
+        const errorObj = new Error(errorMessage);
+        
+        if (graphQLError?.extensions) {
+          errorObj.extensions = graphQLError.extensions;
+        }
+        
+        throw errorObj;
+      }
+      
+      // Handle non-GraphQL HTTP errors
+      const errorMessage = responseData?.message || 
+                          responseData?.error || 
+                          `Server error (${status})`;
+      throw new Error(errorMessage);
+    } else if (err.request) {
+      // Request was made but no response received (network error)
+      throw new Error("Network error. Please check your connection and try again.");
+    } else {
+      // Something else happened (re-throw the original error)
+      throw err;
+    }
   }
-
-  return response.data.data.surveyJoinDetail;
 }
 
 // Submit survey answers

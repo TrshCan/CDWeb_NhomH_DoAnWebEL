@@ -336,20 +336,41 @@ export const updatePost = async (id, content) => {
     return response.data.data.updatePost;
   } catch (e) {
     console.error("updatePost failed:", e);
-    // If error already has a message, re-throw it
-    if (e.message) {
+    
+    // If error already has a message (from above), re-throw it
+    if (e.message && e.message !== "GraphQL error") {
       throw e;
     }
+    
     // Otherwise, extract from response if available
     if (e?.response?.data?.errors?.[0]) {
       const error = e.response.data.errors[0];
+      
+      // Check for validation errors first
       if (error.extensions?.validation) {
         const validationErrors = error.extensions.validation;
         const firstError = Object.values(validationErrors)[0];
-        throw new Error(Array.isArray(firstError) ? firstError[0] : firstError);
+        const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+        throw new Error(errorMessage);
       }
+      
+      // Fall back to error message
       throw new Error(error.message || "Failed to update post");
     }
+    
+    // If it's an axios error with response data
+    if (e?.response?.data) {
+      if (e.response.data.errors?.[0]) {
+        const error = e.response.data.errors[0];
+        if (error.extensions?.validation) {
+          const validationErrors = error.extensions.validation;
+          const firstError = Object.values(validationErrors)[0];
+          throw new Error(Array.isArray(firstError) ? firstError[0] : firstError);
+        }
+        throw new Error(error.message || "Failed to update post");
+      }
+    }
+    
     throw e;
   }
 };
