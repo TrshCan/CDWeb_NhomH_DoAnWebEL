@@ -187,16 +187,17 @@ const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange, navigate
           </div>
         </div>
 
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-center gap-4 mt-6">
           <button 
-            onClick={() => navigate(`/admin/surveys/${selectedSurvey.id}/questions`)}
-            className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-amber-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+            onClick={() => navigate(`/surveys/${selectedSurvey.id}/take`)}
+            className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 256 256">
-              <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Xem chi tiết câu hỏi
+            Xem câu hỏi
           </button>
+         
         </div>
       </>
     )}
