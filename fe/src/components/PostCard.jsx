@@ -70,6 +70,7 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
   const [likesCount, setLikesCount] = useState(post.likes?.length || 0);
   const [commentsCount, setCommentsCount] = useState(post.children?.length || 0);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
 
   const currentUserId = (() => {
     try {
@@ -500,7 +501,11 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
               toast.error("Vui lòng đăng nhập để thích bài viết");
               return;
             }
+            if (isLiking) {
+              return; // Prevent multiple clicks
+            }
             try {
+              setIsLiking(true);
               const newLikedState = await toggleLike(post.id, currentUserId);
               setIsLiked(newLikedState);
               setLikesCount(prev => newLikedState ? prev + 1 : Math.max(0, prev - 1));
@@ -515,22 +520,29 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
               } else {
                 toast.error(errorMessage || "Không thể thích bài viết. Vui lòng thử lại.");
               }
+            } finally {
+              setIsLiking(false);
             }
           }}
-          className={`flex items-center gap-1 hover:text-cyan-600 transition-colors ${isLiked ? "text-cyan-600" : ""}`}
+          disabled={isLiking}
+          className={`flex items-center gap-1 hover:text-cyan-600 transition-colors ${isLiked ? "text-cyan-600" : ""} ${isLiking ? "opacity-50 cursor-not-allowed" : ""}`}
         >
-          <svg 
-            className={`w-5 h-5 ${isLiked ? "fill-current" : "fill-none"}`} 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-            />
-          </svg>
+          {isLiking ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
+          ) : (
+            <svg 
+              className={`w-5 h-5 ${isLiked ? "fill-current" : "fill-none"}`} 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+              />
+            </svg>
+          )}
           {likesCount > 0 && <span className="text-sm">{likesCount}</span>}
         </button>
 

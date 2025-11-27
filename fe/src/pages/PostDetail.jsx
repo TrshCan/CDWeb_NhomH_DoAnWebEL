@@ -29,6 +29,7 @@ export default function PostDetail() {
   const [user, setUser] = useState(null);
   const [files, setFiles] = useState([]);
   const [replyingTo, setReplyingTo] = useState(null); // { id, user }
+  const [isCommenting, setIsCommenting] = useState(false); // Loading state for comment submission
 
   useEffect(() => {
     const checkLoginStatus = async () => {
@@ -103,6 +104,11 @@ export default function PostDetail() {
       return;
     }
 
+    // Prevent spam: check if already submitting
+    if (isCommenting) {
+      return;
+    }
+
     const text = commentText.trim();
     if (!text && files.length === 0) {
       toast.error("Please enter a comment or add media");
@@ -110,6 +116,7 @@ export default function PostDetail() {
     }
 
     try {
+      setIsCommenting(true); // Set loading state
       const targetPostId = replyToId || post.id;
       console.log("Creating comment with:", { postId: targetPostId, userId: user.id, text, filesCount: files.length });
       const newComment = await createComment(targetPostId, user.id, text || "", files);
@@ -157,6 +164,8 @@ export default function PostDetail() {
       } else {
         toast.error(errorMessage || "Không thể đăng bình luận. Vui lòng thử lại.");
       }
+    } finally {
+      setIsCommenting(false); // Reset loading state
     }
   };
 
@@ -282,7 +291,8 @@ export default function PostDetail() {
           <textarea
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
-            className="w-full bg-gray-100 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900 resize-none"
+            disabled={isCommenting}
+            className="w-full bg-gray-100 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-gray-900 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
             rows="3"
             placeholder={replyingTo ? `Reply to @${replyingTo.user}...` : "Write a comment..."}
           ></textarea>
@@ -315,7 +325,7 @@ export default function PostDetail() {
 
           <div className="mt-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <label className="cursor-pointer text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1 text-sm">
+              <label className={`font-medium flex items-center gap-1 text-sm ${isCommenting ? 'cursor-not-allowed opacity-50' : 'cursor-pointer text-cyan-600 hover:text-cyan-700'}`}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -338,6 +348,7 @@ export default function PostDetail() {
                   multiple
                   className="hidden"
                   onChange={handleFileChange}
+                  disabled={isCommenting}
                 />
               </label>
 
@@ -356,9 +367,17 @@ export default function PostDetail() {
 
             <button
               onClick={() => handleComment(replyingTo?.id)}
-              className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 active:scale-95 transition-all text-sm"
+              disabled={isCommenting}
+              className="bg-cyan-600 text-white px-4 py-2 rounded-full hover:bg-cyan-700 active:scale-95 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-cyan-600 flex items-center gap-2"
             >
-              {replyingTo ? "Reply" : "Comment"}
+              {isCommenting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>{replyingTo ? "Replying..." : "Commenting..."}</span>
+                </>
+              ) : (
+                <span>{replyingTo ? "Reply" : "Comment"}</span>
+              )}
             </button>
           </div>
         </div>
