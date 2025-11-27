@@ -111,6 +111,8 @@ export default function WelcomeSection({
               value={welcomeTitle}
               onChange={(e) => onWelcomeTitleChange?.(e.target.value)}
               onBlur={(e) => onWelcomeTitleBlur?.(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
             />
 
             <textarea
@@ -120,6 +122,8 @@ export default function WelcomeSection({
               value={welcomeDescription}
               onChange={(e) => onWelcomeDescriptionChange?.(e.target.value)}
               onBlur={(e) => onWelcomeDescriptionBlur?.(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
             ></textarea>
 
             {showXQuestions && (

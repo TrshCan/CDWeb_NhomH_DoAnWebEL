@@ -2874,6 +2874,37 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
         <SidebarRail active={openPanel} onOpen={handleOpenPanel} />
         {renderLeftPanel()}
 
+        {/* Nút quay lại - ở giữa màn hình, sát bên trái, ban đầu chỉ hiện một nửa bên trái */}
+        <div className="fixed left-0 top-1/2 -translate-y-1/2 z-[100] flex items-center justify-start overflow-hidden" style={{ height: '45px' }}>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="absolute left-0 flex items-center justify-center transition-all duration-300 ease-in-out
+                       bg-violet-600 text-white rounded-r-full shadow-lg
+                       hover:bg-violet-700
+                       -translate-x-[50px] hover:translate-x-0
+                       group"
+            style={{ width: '80px', height: '45px' }}
+            aria-label="Quay lại"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-6 h-6 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            <span className="absolute left-full ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap text-sm font-medium bg-violet-600 px-2 py-1 rounded shadow-lg z-10">
+              Quay lại
+            </span>
+          </button>
+        </div>
+
         {rightPanel === "welcome" && !isModalOpen && (
           <div className="fixed top-[60px] right-0 h-[calc(100vh-60px)] w-[300px] z-40 bg-white border-l border-gray-300">
             <WelcomeSettingsPanel
