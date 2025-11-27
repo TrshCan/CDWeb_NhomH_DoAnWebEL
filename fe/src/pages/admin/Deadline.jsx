@@ -276,7 +276,9 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
         newErrors.deadline_date = "Ngày giờ hết hạn phải lớn hơn thời điểm hiện tại.";
       }
     }
-    if (formData.details && formData.details.length > 1000) {
+    if (!formData.details.trim()) {
+      newErrors.details = "Chi tiết không được để trống.";
+    } else if (formData.details.length > 1000) {
       newErrors.details = "Chi tiết không được vượt quá 1000 ký tự.";
     }
     setErrors(newErrors);
@@ -435,11 +437,11 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
               onChange={(e) => {
                 const value = e.target.value;
                 setFormData({ ...formData, details: value });
-                // Real-time validation for length
+                // Real-time validation
                 if (value.length > 1000) {
                   setErrors({ ...errors, details: "Chi tiết không được vượt quá 1000 ký tự." });
-                } else if (errors.details && errors.details.includes("1000")) {
-                  // Clear length error if within limit
+                } else if (errors.details && (errors.details.includes("1000") || errors.details.includes("trống"))) {
+                  // Clear length or required error if within limit and not empty
                   const newErrors = { ...errors };
                   delete newErrors.details;
                   setErrors(newErrors);

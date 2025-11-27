@@ -2,7 +2,7 @@ type Event {
   id: ID!
   title: String!
   event_date: String!
-  location: String
+  location: String!
   created_by: Int!
   created_at: String
   updated_at: String
@@ -12,7 +12,7 @@ type Event {
 input EventInput {
   title: String!
   event_date: String!
-  location: String
+  location: String!
   updated_at: String
 }
 
