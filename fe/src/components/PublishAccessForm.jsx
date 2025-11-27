@@ -184,7 +184,7 @@ export default function PublishAccessForm({ value, onChange }) {
               <button
                 type="button"
                 aria-label="Open date picker"
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-100"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-100 top-[-20px] left-200"
                 onClick={() => openPicker(startRef)}
               >
                 <CalendarIcon />
@@ -208,7 +208,7 @@ export default function PublishAccessForm({ value, onChange }) {
               <button
                 type="button"
                 aria-label="Open date picker"
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-100"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-100 top-[-20px] left-200"
                 onClick={() => openPicker(endRef)}
               >
                 <CalendarIcon />

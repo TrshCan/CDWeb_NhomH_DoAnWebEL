@@ -11,6 +11,7 @@ export default function GeneralSettingsForm({ value, onChange }) {
   });
   const [errors, setErrors] = useState({});
   const committedRef = useRef({});
+  const toastShownRef = useRef({}); // ✅ Tránh spam toast
 
   useEffect(() => {
     if (value) {
@@ -67,11 +68,22 @@ export default function GeneralSettingsForm({ value, onChange }) {
 
   const update = (key, val) => {
     if (key === "title") {
-      if (val.length > 256) {
-        toast.error("Không được nhập quá 256 ký tự.", {
-          style: { background: "#dc2626", color: "#fff" },
-        });
-        return;
+      if (val.length >= 256) {
+        // Cắt bớt nếu vượt quá 256 ký tự
+        val = val.slice(0, 256);
+        
+        // Chỉ hiển thị toast 1 lần trong 3 giây
+        if (!toastShownRef.current[key]) {
+          toast.error("Chỉ cho phép nhập tối đa 256 ký tự", {
+            duration: 3000,
+            id: `max-length-${key}`,
+          });
+          toastShownRef.current[key] = true;
+          
+          setTimeout(() => {
+            toastShownRef.current[key] = false;
+          }, 3000);
+        }
       }
     }
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -125,6 +137,7 @@ export default function GeneralSettingsForm({ value, onChange }) {
             onChange={(e) => update("title", e.target.value)}
             onBlur={() => blurPush("title")}
             placeholder="Nhập tên khảo sát..."
+            maxLength={256}
           />
           {errors.title && (
             <p className="text-sm text-red-600 mt-2">{errors.title}</p>

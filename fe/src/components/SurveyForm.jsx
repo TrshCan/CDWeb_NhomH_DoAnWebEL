@@ -3241,6 +3241,8 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
                                   ...q,
                                   // Merge questionSettings vào question object
                                   required: questionSettings[q.id]?.required || q.required || "soft",
+                                  maxLength: questionSettings[q.id]?.maxLength || q.maxLength,
+                                  numericOnly: questionSettings[q.id]?.numericOnly || q.numericOnly || false,
                                 }))
                               }
                               globalStartIndex={globalStartIndex}
