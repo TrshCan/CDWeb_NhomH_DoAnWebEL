@@ -35,11 +35,13 @@ class EventService
             // Sanitize và validate title
             $data['title'] = ValidationHelper::sanitizeTitle($data['title'] ?? '');
 
-            // Sanitize location
-            if (isset($data['location']) && !empty($data['location'])) {
+            // Sanitize location - now required
+            if (isset($data['location'])) {
                 $data['location'] = ValidationHelper::sanitizeText($data['location'], 255);
-            } else {
-                $data['location'] = null;
+                // Check if location is empty after sanitization
+                if (empty(trim($data['location']))) {
+                    throw new \Exception("Địa điểm không được để trống.");
+                }
             }
 
             // Normalize và validate event_date format
@@ -63,7 +65,7 @@ class EventService
             $validator = Validator::make($data, [
                 'title' => 'required|string|max:255',
                 'event_date' => ['required', 'date', 'date_format:Y-m-d H:i:s', 'after:now'],
-                'location' => 'nullable|string|max:255',
+                'location' => 'required|string|max:255',
             ], [
                 'title.required' => 'Tiêu đề không được để trống.',
                 'title.max' => 'Tiêu đề không được vượt quá 255 ký tự.',
@@ -71,6 +73,7 @@ class EventService
                 'event_date.date' => 'Ngày giờ sự kiện không hợp lệ.',
                 'event_date.date_format' => 'Định dạng ngày giờ không hợp lệ. Định dạng yêu cầu: YYYY-MM-DD HH:mm:ss.',
                 'event_date.after' => 'Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.',
+                'location.required' => 'Địa điểm không được để trống.',
                 'location.max' => 'Địa điểm không được vượt quá 255 ký tự.',
             ]);
 
@@ -167,12 +170,12 @@ class EventService
                 $data['title'] = ValidationHelper::sanitizeTitle($data['title']);
             }
 
-            // Sanitize location nếu có
+            // Sanitize location nếu có - now required
             if (isset($data['location'])) {
-                if (!empty($data['location'])) {
-                    $data['location'] = ValidationHelper::sanitizeText($data['location'], 255);
-                } else {
-                    $data['location'] = null;
+                $data['location'] = ValidationHelper::sanitizeText($data['location'], 255);
+                // Check if location is empty after sanitization
+                if (empty(trim($data['location']))) {
+                    throw new \Exception("Địa điểm không được để trống.");
                 }
             }
 
@@ -197,13 +200,14 @@ class EventService
             $validator = Validator::make($data, [
                 'title' => 'sometimes|required|string|max:255',
                 'event_date' => 'sometimes|required|date_format:Y-m-d H:i:s|after:now',
-                'location' => 'nullable|string|max:255',
+                'location' => 'sometimes|required|string|max:255',
             ], [
                 'title.required' => 'Tiêu đề không được để trống.',
                 'title.max' => 'Tiêu đề không được vượt quá 255 ký tự.',
                 'event_date.required' => 'Ngày giờ sự kiện không được để trống.',
                 'event_date.date_format' => 'Định dạng ngày giờ không hợp lệ. Định dạng yêu cầu: YYYY-MM-DD HH:mm:ss.',
                 'event_date.after' => 'Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.',
+                'location.required' => 'Địa điểm không được để trống.',
                 'location.max' => 'Địa điểm không được vượt quá 255 ký tự.',
             ]);
 

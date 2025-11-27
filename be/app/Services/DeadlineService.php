@@ -37,11 +37,13 @@ class DeadlineService
             // Sanitize và validate title
             $data['title'] = ValidationHelper::sanitizeTitle($data['title'] ?? '');
 
-            // Sanitize details
-            if (isset($data['details']) && !empty($data['details'])) {
-                $data['details'] = ValidationHelper::sanitizeDetails($data['details'], 255);
-            } else {
-                $data['details'] = null;
+            // Sanitize details - now required
+            if (isset($data['details'])) {
+                $data['details'] = ValidationHelper::sanitizeDetails($data['details'], 1000);
+                // Check if details is empty after sanitization
+                if (empty(trim($data['details']))) {
+                    throw new Exception("Chi tiết không được để trống.");
+                }
             }
 
             // Normalize và validate deadline_date format
@@ -65,14 +67,15 @@ class DeadlineService
             $validator = Validator::make($data, [
                 'title' => 'required|string|max:255',
                 'deadline_date' => ['required', 'date', 'date_format:Y-m-d H:i:s', 'after:now'],
-                'details' => 'nullable|string|max:255',
+                'details' => 'required|string|max:1000',
             ], [
                 'title.required' => 'Tên deadline không được để trống.',
                 'title.max' => 'Tên deadline không được vượt quá 255 ký tự.',
                 'deadline_date.required' => 'Ngày giờ kết thúc không được để trống.',
                 'deadline_date.date_format' => 'Ngày giờ kết thúc không hợp lệ. Định dạng: YYYY-MM-DD HH:mm:ss.',
                 'deadline_date.after' => 'Ngày giờ kết thúc phải sau thời điểm hiện tại.',
-                'details.max' => 'Ghi chú không được vượt quá 255 ký tự.',
+                'details.required' => 'Chi tiết không được để trống.',
+                'details.max' => 'Chi tiết không được vượt quá 1000 ký tự.',
             ]);
 
             if ($validator->fails()) {
@@ -178,12 +181,12 @@ class DeadlineService
                 $data['title'] = ValidationHelper::sanitizeTitle($data['title']);
             }
 
-            // Sanitize details nếu có
+            // Sanitize details nếu có - now required
             if (isset($data['details'])) {
-                if (!empty($data['details'])) {
-                    $data['details'] = ValidationHelper::sanitizeDetails($data['details'], 255);
-                } else {
-                    $data['details'] = null;
+                $data['details'] = ValidationHelper::sanitizeDetails($data['details'], 1000);
+                // Check if details is empty after sanitization
+                if (empty(trim($data['details']))) {
+                    throw new Exception("Chi tiết không được để trống.");
                 }
             }
 
@@ -208,14 +211,15 @@ class DeadlineService
             $validator = Validator::make($data, [
                 'title' => 'sometimes|required|string|max:255',
                 'deadline_date' => 'sometimes|required|date_format:Y-m-d H:i:s|after:now',
-                'details' => 'nullable|string|max:255',
+                'details' => 'sometimes|required|string|max:1000',
             ], [
                 'title.required' => 'Tên deadline không được để trống.',
                 'title.max' => 'Tên deadline không được vượt quá 255 ký tự.',
                 'deadline_date.required' => 'Ngày giờ kết thúc không được để trống.',
                 'deadline_date.date_format' => 'Ngày giờ kết thúc không hợp lệ. Định dạng: YYYY-MM-DD HH:mm:ss.',
                 'deadline_date.after' => 'Ngày giờ kết thúc phải sau thời điểm hiện tại.',
-                'details.max' => 'Ghi chú không được vượt quá 255 ký tự.',
+                'details.required' => 'Chi tiết không được để trống.',
+                'details.max' => 'Chi tiết không được vượt quá 1000 ký tự.',
             ]);
 
             if ($validator->fails()) {
