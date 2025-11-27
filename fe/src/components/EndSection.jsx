@@ -82,6 +82,8 @@ export default function EndSection({
               value={endTitle}
               onChange={(e) => onEndTitleChange?.(e.target.value)}
               onBlur={(e) => onEndTitleBlur?.(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
             />
 
             <textarea
@@ -91,6 +93,8 @@ export default function EndSection({
               value={endDescription}
               onChange={(e) => onEndDescriptionChange?.(e.target.value)}
               onBlur={(e) => onEndDescriptionBlur?.(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
             ></textarea>
 
             <button className="bg-emerald-500 text-white font-bold py-2 px-4 rounded-md hover:bg-emerald-600 transition-colors">
