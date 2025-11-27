@@ -92,14 +92,26 @@ class PermissionService
             ]);
         }
 
-        // Lấy quyền cá nhân (user_permissions)
+        // Lấy quyền từ role của user
+        $rolePermissions = [];
+        if ($user->role) {
+            $rolePermissions = RoleDefaultPermission::where('role', $user->role)
+                ->pluck('permission_id')
+                ->toArray();
+        }
+
+        // Lấy quyền cá nhân (user_permissions) - ghi đè quyền role
         $userPermissions = UserPermission::where('user_id', $userId)
             ->pluck('permission_id')
             ->toArray();
 
+        // Merge và loại bỏ trùng lặp: quyền cá nhân có ưu tiên
+        // Nếu user có quyền riêng, dùng quyền riêng; nếu không, dùng quyền từ role
+        $allPermissions = array_unique(array_merge($rolePermissions, $userPermissions));
+
         return [
             'user_id' => $userId,
-            'permission_ids' => $userPermissions,
+            'permission_ids' => $allPermissions,
         ];
     }
 
@@ -253,7 +265,15 @@ class PermissionService
             return true;
         }
 
-        // Kiểm tra quyền từ role
+        // Nếu user đã có quyền được cấu hình riêng (có bất kỳ quyền nào trong user_permissions),
+        // thì chỉ kiểm tra user_permissions, không kiểm tra role nữa
+        // Điều này cho phép admin cấm quyền từ role bằng cách không lưu vào user_permissions
+        $hasAnyUserPermission = UserPermission::where('user_id', $user->id)->exists();
+        if ($hasAnyUserPermission) {
+            return false; // User đã được cấu hình riêng, nhưng không có quyền này
+        }
+
+        // Kiểm tra quyền từ role (chỉ khi user chưa được cấu hình riêng)
         if ($user->role) {
             $rolePermission = RoleDefaultPermission::where('role', $user->role)
                 ->where('permission_id', $permission->id)

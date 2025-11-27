@@ -82,7 +82,11 @@ export default function PermissionManagement() {
     try {
       setLoading(true);
       const data = await getRolePermissions(role);
-      setSelectedPermissions(data.permission_ids || []);
+      // Đảm bảo tất cả permission_ids đều là integers
+      const permissionIds = (data.permission_ids || [])
+        .map(id => parseInt(id, 10))
+        .filter(id => !isNaN(id));
+      setSelectedPermissions(permissionIds);
     } catch (error) {
       showMessage('error', error.message || 'Không thể tải quyền của role');
       setSelectedPermissions([]);
@@ -96,7 +100,11 @@ export default function PermissionManagement() {
     try {
       setLoading(true);
       const data = await getUserPermissions(userId);
-      setSelectedPermissions(data.permission_ids || []);
+      // Đảm bảo tất cả permission_ids đều là integers
+      const permissionIds = (data.permission_ids || [])
+        .map(id => parseInt(id, 10))
+        .filter(id => !isNaN(id));
+      setSelectedPermissions(permissionIds);
     } catch (error) {
       showMessage('error', error.message || 'Không thể tải quyền của user');
       setSelectedPermissions([]);
@@ -178,7 +186,10 @@ export default function PermissionManagement() {
 
   // Kiểm tra permission đã được chọn
   const isPermissionSelected = (permissionId) => {
-    return selectedPermissions.includes(permissionId);
+    // Đảm bảo cả hai đều là integers khi so sánh
+    const id = parseInt(permissionId, 10);
+    if (isNaN(id)) return false;
+    return selectedPermissions.some(selectedId => parseInt(selectedId, 10) === id);
   };
 
   return (
