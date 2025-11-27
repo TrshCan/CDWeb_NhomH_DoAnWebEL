@@ -17,9 +17,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import Survey from "./pages/SurveyFilter.jsx";
 import StateManagement from "./pages/StatusManagement.jsx";
 import Tab1 from "./pages/admin/StatusManagementAdmin.jsx";
-import Tab2 from "./pages/admin/Tab2.jsx";
-import Tab3 from "./pages/admin/Event.jsx";
-import Tab4 from "./pages/admin/Deadline.jsx";
+import Event from "./pages/admin/Event.jsx";
+import Deadline from "./pages/admin/Deadline.jsx";
 import Tab5 from "./pages/admin/SurveysAdmin.jsx";
 import CategoryAdmin from "./pages/admin/CategoryAdmin.jsx";
 import PermissionManagement from "./pages/admin/PermissionManagement.jsx";
@@ -186,9 +185,9 @@ export default function App() {
       <Route path="/admin/users" element={<AdminUserManagement />} />
       <Route path="/admin/badges" element={<AdminBadgeManagement />} />
       <Route path="/admin/tab1" element={<Tab1 />} />
-      <Route path="/admin/tab2" element={<Tab2 />} />
-      <Route path="/admin/tab3" element={<Tab3 />} />
-      <Route path="/admin/tab4" element={<Tab4 />} />
+     
+      <Route path="/admin/Event" element={<Event />} />
+      <Route path="/admin/Deadline" element={<Deadline />} />
       <Route path="/admin/tab5" element={<Tab5 />} />
       <Route path="/admin/tab6" element={<CategoryAdmin />} />
       <Route path="/admin/permissions" element={<PermissionManagement />} />
