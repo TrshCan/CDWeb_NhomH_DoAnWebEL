@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { graphqlRequest } from '../api/graphql';
+import { graphqlRequest } from '../api/graphqls';
 
 const statusConfig = {
   pending: { label: 'Chưa bắt đầu', class: 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border-blue-300', icon: '⏳' },
