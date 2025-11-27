@@ -591,6 +591,27 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
         );
       }
 
+      // ✅ Xử lý khi có thứ tự options được thay đổi từ tab khác
+      if (type === 'OPTIONS_REORDERED') {
+        const { questionId, options } = data;
+        const questionIdStr = String(questionId);
+
+        // Cập nhật thứ tự options cho question tương ứng
+        setQuestionGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            questions: group.questions.map((q) => {
+              if (String(q.id) !== questionIdStr) return q;
+
+              return {
+                ...q,
+                options: options,
+              };
+            }),
+          }))
+        );
+      }
+
       // Xử lý khi có câu hỏi mới được thêm từ tab khác
       if (type === 'QUESTION_ADDED' || type === 'GROUP_ADDED') {
         // Reload survey để lấy dữ liệu mới nhất
@@ -1004,6 +1025,10 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
       ) {
         const bgElement = clickedElement.closest(".bg-gray-100");
         if (bgElement || clickedElement.classList.contains("bg-gray-100")) {
+          // ✅ Trigger blur trên element đang focus để lưu dữ liệu trước khi bỏ chọn
+          if (document.activeElement && document.activeElement.tagName !== 'BODY') {
+            document.activeElement.blur();
+          }
           setActiveSection(null);
           setRightPanel(null);
           setActiveQuestionId(null);
@@ -1455,15 +1480,32 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
       try {
         // Cập nhật position cho tất cả options theo thứ tự mới
         const updatePromises = movedOptions.map((opt, index) => {
-          // Chỉ cập nhật nếu option đã có ID từ CSDL (ID là số và > 1000)
-          if (opt.id && typeof opt.id === 'number' && opt.id > 1000 && Number.isInteger(opt.id)) {
-            return updateOption(opt.id, { position: index + 1 });
+          // Chỉ cập nhật nếu option đã có ID từ CSDL (ID là số nguyên dương, không phải ID tạm âm)
+          const optId = typeof opt.id === 'string' ? parseInt(opt.id, 10) : opt.id;
+          if (optId && typeof optId === 'number' && optId > 0 && Number.isInteger(optId)) {
+            return updateOption(optId, { position: index + 1 });
           }
           return Promise.resolve();
         });
 
         await Promise.all(updatePromises);
         setSavedAt(new Date());
+        
+        // ✅ Broadcast để đồng bộ thứ tự option với các tab khác
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.postMessage({
+            type: 'OPTIONS_REORDERED',
+            data: {
+              questionId: String(questionId),
+              options: movedOptions.map((opt) => ({
+                id: opt.id,
+                text: opt.text,
+                isSubquestion: opt.isSubquestion || false,
+                image: opt.image || null,
+              })),
+            },
+          });
+        }
       } catch {
         toast.error("Không thể cập nhật thứ tự option");
 
@@ -1507,6 +1549,11 @@ export default function SurveyForm({ surveyId: propSurveyId = null }) {
   };
 
   const handleSetSection = (sectionId) => {
+    // ✅ Trigger blur trên element đang focus để lưu dữ liệu trước khi thay đổi section
+    if (document.activeElement && document.activeElement.tagName !== 'BODY') {
+      document.activeElement.blur();
+    }
+    
     setActiveSection(sectionId);
     if (sectionId === "welcome") {
       setRightPanel("welcome");
