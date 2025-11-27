@@ -888,6 +888,11 @@ const SurveyFilter = () => {
     navigate(`/admin/surveys/${survey.id}/questions`);
   };
 
+  const handleAddQuestions = (survey) => {
+    // Navigate to survey form to add questions
+    navigate(`/admin/surveys/${survey.id}/edit`);
+  };
+
   const handleEdit = (survey) => {
     setSelectedSurvey({
       ...survey,
@@ -1439,6 +1444,12 @@ const SurveyFilter = () => {
     </svg>
   );
 
+  const AddQuestionIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm40-68H136V116a8,8,0,0,0-16,0v32H88a8,8,0,0,0,0,16h32v32a8,8,0,0,0,16,0V164h32a8,8,0,0,0,0-16Z" />
+    </svg>
+  );
+
   const EditIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
       <path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68L147.31,64l24-24L216,84.68Z" />
@@ -1865,10 +1876,10 @@ const SurveyFilter = () => {
             </div>
           ) : (
             <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 scrollbar-thumb-rounded-full">
-              <table className="w-full min-w-[1500px]">
+              <table className="w-full min-w-[1600px]">
                 <thead className="bg-gradient-to-r from-gray-50 via-blue-50 to-indigo-50 border-b-2 border-gray-200">
                   <tr>
-                    <th className="w-[18%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <th className="w-[16%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                       <div className="flex items-center gap-2">
                         <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1876,14 +1887,14 @@ const SurveyFilter = () => {
                         <span>Tiêu đề</span>
                       </div>
                     </th>
-                    <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Danh mục</th>
+                    <th className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Danh mục</th>
                     <th className="w-[6%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Loại</th>
-                    <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Người tạo</th>
+                    <th className="w-[9%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Người tạo</th>
                     <th className="w-[5%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Điểm</th>
                     <th className="w-[8%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Đối tượng</th>
                     <th className="w-[10%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Trạng thái</th>
-                    <th className="w-[13%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Thời gian</th>
-                    <th className="w-[20%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Hành động</th>
+                    <th className="w-[12%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Thời gian</th>
+                    <th className="w-[22%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Hành động</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
@@ -1947,12 +1958,13 @@ const SurveyFilter = () => {
                           >
                             <ViewIcon />
                           </button>
+                        
                           <button 
-                            onClick={() => handleViewQuestions(survey)} 
-                            className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200 transform hover:scale-110 flex-shrink-0 border border-transparent hover:border-orange-200" 
-                            title="Xem câu hỏi"
+                            onClick={() => handleAddQuestions(survey)} 
+                            className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200 transform hover:scale-110 flex-shrink-0 border border-transparent hover:border-green-200" 
+                            title="Thêm câu hỏi"
                           >
-                            <QuestionsIcon />
+                            <AddQuestionIcon />
                           </button>
                           <button 
                             onClick={() => handleEdit(survey)} 

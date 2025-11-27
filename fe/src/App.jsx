@@ -192,6 +192,23 @@ export default function App() {
       <Route path="/admin/tab5" element={<Tab5 />} />
       <Route path="/admin/tab6" element={<Tab6 />} />
       <Route path="/admin/permissions" element={<PermissionManagement />} />
+      <Route path="/admin/surveys" element={<Tab5 />} />
+      <Route
+        path="/admin/surveys/:surveyId/edit"
+        element={
+          <ProtectedRoute>
+            <SurveyForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/surveys/:surveyId/questions"
+        element={
+          <ProtectedRoute>
+            <SurveyForm />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
     </>
   );
