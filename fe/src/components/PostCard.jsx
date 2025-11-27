@@ -71,6 +71,8 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
   const [commentsCount, setCommentsCount] = useState(post.children?.length || 0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const currentUserId = (() => {
     try {
@@ -308,23 +310,10 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
                     </button>
                     <button
                       className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50"
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
-                        try {
-                          await deletePost(post.id);
-                          toast.success("Đã xóa bài viết!");
-                          if (onDeleted) onDeleted(post.id); else setHidden(true);
-                        } catch (e) {
-                          console.error(e);
-                          const errorMessage = e?.response?.data?.errors?.[0]?.message || e?.message || "Không thể xóa bài viết.";
-                          
-                          // Kiểm tra nếu là lỗi permission
-                          if (errorMessage.includes('không có quyền') || errorMessage.includes('permission') || errorMessage.includes('quyền')) {
-                            toast.error(errorMessage);
-                          } else {
-                            toast.error(errorMessage || "Không thể xóa bài viết. Vui lòng thử lại.");
-                          }
-                        }
+                        setShowDeleteConfirm(true);
+                        setMenuOpen(false);
                       }}
                     >
                       Delete
@@ -392,23 +381,43 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
                   const updated = await updatePost(post.id, editContent.trim());
                   post.content = updated.content;
                   setIsEditing(false);
+                  toast.success("Post updated successfully");
                 } catch (e) {
-                  console.error(e);
+                  console.error("Failed to update post:", e);
                   // Extract error message from various error formats
                   let errorMessage = "Không thể cập nhật bài viết.";
                   
+                  // Check direct message first (most common after our API function processing)
                   if (e?.message) {
                     errorMessage = e.message;
-                  } else if (e?.response?.data?.errors?.[0]?.message) {
-                    errorMessage = e.response.data.errors[0].message;
-                  } else if (e?.response?.data?.errors?.[0]?.extensions?.validation) {
-                    const validationErrors = e.response.data.errors[0].extensions.validation;
-                    const firstError = Object.values(validationErrors)[0];
-                    errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
-                  } else if (e?.response?.data?.errors?.[0]) {
-                    errorMessage = e.response.data.errors[0].message || errorMessage;
+                  } 
+                  // Check response errors
+                  else if (e?.response?.data?.errors?.[0]) {
+                    const error = e.response.data.errors[0];
+                    
+                    // Check for validation errors first
+                    if (error.extensions?.validation) {
+                      const validationErrors = error.extensions.validation;
+                      const firstError = Object.values(validationErrors)[0];
+                      errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                    } 
+                    // Fall back to error message
+                    else if (error.message) {
+                      errorMessage = error.message;
+                    }
+                  }
+                  // Check for generic server errors
+                  else if (e?.response?.status === 500) {
+                    errorMessage = "Server error occurred. The post may belong to a deleted group.";
                   }
                   
+                  // Check if error indicates deleted group
+                  if (errorMessage.toLowerCase().includes('deleted') || 
+                      errorMessage.toLowerCase().includes('group')) {
+                    errorMessage = "Cannot update post: This group has been deleted";
+                  }
+                  
+                  // Display the error message
                   toast.error(errorMessage);
                 } finally {
                   setSaving(false);
@@ -638,6 +647,80 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
           </svg>
         </button>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="bg-white rounded-lg shadow-lg p-6 w-96 max-w-[90vw]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-red-600">Delete Post</h3>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteConfirm(false);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+                disabled={isDeleting}
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete this post? This action cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteConfirm(false);
+                }}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    setIsDeleting(true);
+                    await deletePost(post.id);
+                    toast.success("Đã xóa bài viết!");
+                    setShowDeleteConfirm(false);
+                    if (onDeleted) onDeleted(post.id); 
+                    else setHidden(true);
+                  } catch (err) {
+                    console.error(err);
+                    const errorMessage = err?.response?.data?.errors?.[0]?.message || err?.message || "Không thể xóa bài viết.";
+                    
+                    // Kiểm tra nếu là lỗi permission
+                    if (errorMessage.includes('không có quyền') || errorMessage.includes('permission') || errorMessage.includes('quyền')) {
+                      toast.error(errorMessage);
+                    } else {
+                      toast.error(errorMessage || "Không thể xóa bài viết. Vui lòng thử lại.");
+                    }
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
+                disabled={isDeleting}
+                className={`px-4 py-2 rounded-md text-white ${
+                  isDeleting
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                {isDeleting ? "Deleting..." : "Delete Post"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

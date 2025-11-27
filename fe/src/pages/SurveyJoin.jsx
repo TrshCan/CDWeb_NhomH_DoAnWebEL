@@ -38,6 +38,13 @@ function SurveyJoin() {
       setLoading(true);
       setError(null);
       try {
+        console.log("[SurveyJoin] Fetching survey:", {
+          surveyId: parseInt(surveyId, 10),
+          joinToken: joinToken ? `${joinToken.substring(0, 4)}...` : null,
+          tokenLength: joinToken?.length,
+          hasToken: !!joinToken
+        });
+        
         const data = await getSurveyJoinDetail(parseInt(surveyId, 10), joinToken);
         if (!data) {
           setError({
@@ -111,10 +118,29 @@ function SurveyJoin() {
         }
       } catch (err) {
         console.error("Failed to load survey:", err);
-        const errorMessage = err.message || "An unexpected error occurred while loading the survey. Please try again later.";
-        const extMessage = err.extensions?.debugMessage || "";
+        console.error("Error details:", {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+          extensions: err.extensions
+        });
+        
+        // Extract error message from various sources
+        let errorMessage = err.message || "An unexpected error occurred while loading the survey. Please try again later.";
+        let extMessage = err.extensions?.debugMessage || "";
+        
+        // Try to get error from response data
+        if (err.response?.data?.errors?.[0]?.message) {
+          errorMessage = err.response.data.errors[0].message;
+          extMessage = err.response.data.errors[0]?.extensions?.debugMessage || "";
+        } else if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        }
+        
         // Check if user already completed the survey
-        if (errorMessage.includes("already completed") || errorMessage.includes("You already completed") || extMessage.includes("You already completed") || extMessage.includes("You already completed")) {
+        if (errorMessage.includes("already completed") || 
+            errorMessage.includes("You already completed") || 
+            (extMessage && extMessage.includes("You already completed"))) {
           setError({
             title: "Survey Already Completed",
             message: "You already completed this survey. Each user can only submit once.",
@@ -479,12 +505,14 @@ function SurveyJoin() {
       
       // Extract error message from various error types
       let errorMessage = "An unexpected error occurred. Please try again.";
+      let extMessage = "";
       
       if (err.message) {
         errorMessage = err.message;
-        extMessage = err.extensions?.debugMessage;
+        extMessage = err.extensions?.debugMessage || "";
       } else if (err.response?.data?.errors?.[0]?.message) {
         errorMessage = err.response.data.errors[0].message;
+        extMessage = err.response.data.errors[0]?.extensions?.debugMessage || "";
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (typeof err === 'string') {
@@ -512,7 +540,7 @@ function SurveyJoin() {
         errorMessage.includes("no longer accepting") ||
         errorMessage.includes("already completed") ||
         errorMessage.includes("You already completed") ||
-        extMessage.includes("You already completed")
+        (extMessage && extMessage.includes("You already completed"))
       ) {
         setTimeout(() => {
           navigate("/");

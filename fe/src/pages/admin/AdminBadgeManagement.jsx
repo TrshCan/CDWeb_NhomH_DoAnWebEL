@@ -256,14 +256,16 @@ export default function AdminBadgeManagement() {
         }
     };
 
-    const handleDeleteConfirm = async () => {
-        if (!selectedBadge || actionLoading.delete === selectedBadge.id) return;
+    const handleDeleteConfirm = async (e) => {
+        e.preventDefault();
+        if (!selectedBadge) return;
 
         setActionLoading((prev) => ({ ...prev, delete: selectedBadge.id }));
         try {
             await deleteAdminBadge(selectedBadge.id);
             toast.success("Xóa Badge thành công");
             setShowDeleteModal(false);
+            setSelectedBadge(null);
             fetchBadges();
         } catch (error) {
             toast.error(error.message || "Không thể xóa Badge");
