@@ -106,7 +106,7 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'max-w-3xl' })
   );
 };
 
-const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
+const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange, navigate }) => (
   <div className="space-y-4">
     {selectedSurvey && (
       <>
@@ -185,6 +185,18 @@ const ViewModalBody = ({ selectedSurvey, statusConfig, formatTimeRange }) => (
               <div className="mt-1 text-xs font-medium text-gray-900">{statusConfig[selectedSurvey.status]?.label}</div>
             </div>
           </div>
+        </div>
+
+        <div className="flex justify-center mt-6">
+          <button 
+            onClick={() => navigate(`/admin/surveys/${selectedSurvey.id}/questions`)}
+            className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-amber-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 256 256">
+              <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z" />
+            </svg>
+            Xem chi tiết câu hỏi
+          </button>
         </div>
       </>
     )}
@@ -871,6 +883,11 @@ const SurveyFilter = () => {
 
   const handleView = (survey) => { setSelectedSurvey(survey); setShowViewModal(true); };
 
+  const handleViewQuestions = (survey) => {
+    // Navigate to questions page for this survey
+    navigate(`/admin/surveys/${survey.id}/questions`);
+  };
+
   const handleEdit = (survey) => {
     setSelectedSurvey({
       ...survey,
@@ -1412,7 +1429,13 @@ const SurveyFilter = () => {
   // ICONS
   const ViewIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-      <path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.48c.35.79,8.82,19.58,27.65,38.41C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.35c18.83-18.83,27.3-37.62,27.65-38.41A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231,128,133.33,133.33,0,0,1,207.93,158.75C185.67,180.81,158.78,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z" />
+      <path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.48c.35.79,8.82,19.58,27.65,38.41C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.35c18.83-18.83,27.3-37.62,27.65-38.41A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128A133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231,128A133.33,133.33,0,0,1,207.93,158.75C185.67,180.81,158.78,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z" />
+    </svg>
+  );
+
+  const QuestionsIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+      <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z" />
     </svg>
   );
 
@@ -1593,8 +1616,8 @@ const SurveyFilter = () => {
         ))}
       </div>
       <AdminSidebar />
-      <div className="flex-1 bg-gray-50 p-8">
-        <div className="max-w-7xl mx-auto">
+      <div className="flex-1 bg-gray-50 p-3 lg:p-6">
+        <div className="w-full mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
             <button 
@@ -1791,6 +1814,22 @@ const SurveyFilter = () => {
 
         {/* Bảng */}
         <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-100 overflow-hidden">
+          <style jsx>{`
+            .scrollbar-thin::-webkit-scrollbar {
+              height: 8px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-track {
+              background: #f1f5f9;
+              border-radius: 4px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb {
+              background: #cbd5e1;
+              border-radius: 4px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+              background: #94a3b8;
+            }
+          `}</style>
           {loading ? (
             <div className="p-16 text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 mb-4">
@@ -1825,11 +1864,11 @@ const SurveyFilter = () => {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full table-fixed">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 scrollbar-thumb-rounded-full">
+              <table className="w-full min-w-[1500px]">
                 <thead className="bg-gradient-to-r from-gray-50 via-blue-50 to-indigo-50 border-b-2 border-gray-200">
                   <tr>
-                    <th className="w-[20%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <th className="w-[18%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                       <div className="flex items-center gap-2">
                         <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1837,70 +1876,105 @@ const SurveyFilter = () => {
                         <span>Tiêu đề</span>
                       </div>
                     </th>
-                    <th className="w-[10%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Danh mục</th>
-                    <th className="w-[7%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Loại</th>
-                    <th className="w-[12%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Người tạo</th>
-                    <th className="w-[6%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Điểm</th>
-                    <th className="w-[9%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Đối tượng</th>
-                    <th className="w-[11%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Trạng thái</th>
-                    <th className="w-[13%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Thời gian</th>
-                    <th className="w-[12%] px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Hành động</th>
+                    <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Danh mục</th>
+                    <th className="w-[6%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Loại</th>
+                    <th className="w-[10%] px-3 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Người tạo</th>
+                    <th className="w-[5%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Điểm</th>
+                    <th className="w-[8%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Đối tượng</th>
+                    <th className="w-[10%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Trạng thái</th>
+                    <th className="w-[13%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Thời gian</th>
+                    <th className="w-[20%] px-3 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Hành động</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {paginatedSurveys.map(survey => (
                     <tr key={survey.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group">
-                      <td className="px-4 py-4 text-sm font-semibold text-gray-900">
-                        <Tooltip content={survey.title.length > 30 ? survey.title : null}>
+                      <td className="px-3 py-4 text-sm font-semibold text-gray-900">
+                        <Tooltip content={survey.title.length > 25 ? survey.title : null}>
                           <div className="truncate cursor-help">
                             {survey.title}
                           </div>
                         </Tooltip>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-600">
-                        <Tooltip content={survey.category.length > 15 ? survey.category : null}>
-                          <div className="truncate cursor-help">
+                      <td className="px-3 py-4 text-sm text-gray-600">
+                        <Tooltip content={survey.category.length > 12 ? survey.category : null}>
+                          <div className="truncate cursor-help text-sm">
                             {survey.category}
                           </div>
                         </Tooltip>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
-                        {survey.type === 'survey' ? 'Survey' : 'Quiz'}
+                      <td className="px-3 py-4 text-sm text-gray-600 whitespace-nowrap text-center">
+                        <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300">
+                          {survey.type === 'survey' ? 'Survey' : 'Quiz'}
+                        </span>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-600">
-                        <Tooltip content={survey.creatorName.length > 15 ? survey.creatorName : null}>
-                          <div className="truncate cursor-help">
+                      <td className="px-3 py-4 text-sm text-gray-600">
+                        <Tooltip content={survey.creatorName.length > 12 ? survey.creatorName : null}>
+                          <div className="truncate cursor-help text-sm">
                             {survey.creatorName}
                           </div>
                         </Tooltip>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-600 font-medium whitespace-nowrap">
-                        {survey.type === 'quiz' ? (survey.points ?? 0) : '—'}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-gray-600">
-                        <div className="truncate">
-                          {survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border-2 shadow-sm ${statusConfig[survey.status]?.class} transform group-hover:scale-105 transition-transform duration-200`}>
-                          <span className="text-sm">{statusConfig[survey.status]?.icon}</span>
-                          <span className="hidden xl:inline">{statusConfig[survey.status]?.label}</span>
+                      <td className="px-3 py-4 text-sm text-gray-600 font-medium whitespace-nowrap text-center">
+                        <span className="inline-flex items-center justify-center w-8 h-8 text-xs font-bold rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 border border-blue-300">
+                          {survey.type === 'quiz' ? (survey.points ?? 0) : '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
+                      <td className="px-3 py-4 text-sm text-gray-600 text-center">
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border border-green-300">
+                          {survey.object === 'public' ? 'Công khai' : survey.object === 'students' ? 'Sinh viên' : 'Giảng viên'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border shadow-sm ${statusConfig[survey.status]?.class} transform group-hover:scale-105 transition-transform duration-200`}>
+                          <span className="text-sm">{statusConfig[survey.status]?.icon}</span>
+                          <span className="hidden lg:inline text-xs">{statusConfig[survey.status]?.label}</span>
+                        </span>
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-600 whitespace-nowrap text-center">
                         <Tooltip content={`Thời gian: ${formatTimeRange(survey.startAt, survey.endAt)}`}>
-                          <div className="truncate cursor-help">
+                          <div className="truncate cursor-help text-xs font-medium">
                             {formatTimeRange(survey.startAt, survey.endAt)}
                           </div>
                         </Tooltip>
                       </td>
-                      <td className="px-4 py-4">
-                        <div className="flex space-x-1">
-                          <button onClick={() => handleView(survey)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Xem"><ViewIcon /></button>
-                          <button onClick={() => handleEdit(survey)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Sửa"><EditIcon /></button>
-                          <button onClick={() => handleDuplicate(survey)} className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Sao chép"><DuplicateIcon /></button>
-                          <button onClick={() => handleDeleteConfirm(survey)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 transform hover:scale-110" title="Xóa"><DeleteIcon /></button>
+                      <td className="px-3 py-4">
+                        <div className="flex flex-wrap gap-1.5 justify-center items-center">
+                          <button 
+                            onClick={() => handleView(survey)} 
+                            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 transform hover:scale-110 flex-shrink-0 border border-transparent hover:border-blue-200" 
+                            title="Xem chi tiết"
+                          >
+                            <ViewIcon />
+                          </button>
+                          <button 
+                            onClick={() => handleViewQuestions(survey)} 
+                            className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200 transform hover:scale-110 flex-shrink-0 border border-transparent hover:border-orange-200" 
+                            title="Xem câu hỏi"
+                          >
+                            <QuestionsIcon />
+                          </button>
+                          <button 
+                            onClick={() => handleEdit(survey)} 
+                            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 transform hover:scale-110 flex-shrink-0 border border-transparent hover:border-indigo-200" 
+                            title="Sửa"
+                          >
+                            <EditIcon />
+                          </button>
+                          <button 
+                            onClick={() => handleDuplicate(survey)} 
+                            className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200 transform hover:scale-110 flex-shrink-0 border border-transparent hover:border-purple-200" 
+                            title="Sao chép"
+                          >
+                            <DuplicateIcon />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteConfirm(survey)} 
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 transform hover:scale-110 flex-shrink-0 border border-transparent hover:border-red-200" 
+                            title="Xóa"
+                          >
+                            <DeleteIcon />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1960,7 +2034,7 @@ const SurveyFilter = () => {
 
         {/* MODALS */}
         <Modal key="view-modal" isOpen={showViewModal} onClose={closeViewModal} title="Xem chi tiết" size="max-w-5xl" footer={viewFooter}>
-          <ViewModalBody selectedSurvey={selectedSurvey} statusConfig={statusConfig} formatTimeRange={formatTimeRange} />
+          <ViewModalBody selectedSurvey={selectedSurvey} statusConfig={statusConfig} formatTimeRange={formatTimeRange} navigate={navigate} />
         </Modal>
 
         <Modal key="edit-modal" isOpen={showEditModal} onClose={() => { closeEditModal(); setFormErrors(prev => ({ ...prev, edit: {} })); }} title="Chỉnh sửa khảo sát" size="max-w-6xl" footer={editFooter}>
