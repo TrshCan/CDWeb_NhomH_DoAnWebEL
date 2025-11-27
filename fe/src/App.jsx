@@ -21,7 +21,7 @@ import Tab2 from "./pages/admin/Tab2.jsx";
 import Tab3 from "./pages/admin/Event.jsx";
 import Tab4 from "./pages/admin/Deadline.jsx";
 import Tab5 from "./pages/admin/SurveysAdmin.jsx";
-import Tab6 from "./pages/admin/Tab6.jsx";
+import Tab6 from "./pages/admin/CategoryAdmin.jsx";
 import PermissionManagement from "./pages/admin/PermissionManagement.jsx";
 import AdminUserManagement from "./pages/admin/AdminUserManagement.jsx";
 import AdminBadgeManagement from "./pages/admin/AdminBadgeManagement.jsx";

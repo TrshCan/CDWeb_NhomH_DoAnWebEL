@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { graphqlRequest } from "../../api/graphql";
+import { graphqlRequest } from "../../api/graphqls";
 import AdminSidebar from "../../components/AdminSidebar";
 
 

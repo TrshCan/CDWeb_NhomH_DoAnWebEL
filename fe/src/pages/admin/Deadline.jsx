@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { graphqlRequest } from "../../api/graphql";
+import { graphqlRequest } from "../../api/graphqls";
 import AdminSidebar from "../../components/AdminSidebar";
 
 // --- SVG Icons ---

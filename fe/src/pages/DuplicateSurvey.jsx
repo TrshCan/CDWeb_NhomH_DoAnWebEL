@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { graphqlRequest } from '../api/graphql';
+import { graphqlRequest } from '../../api/graphqls';
 
 // Map status từ backend sang frontend
 const mapStatusToFrontend = (status) => {
