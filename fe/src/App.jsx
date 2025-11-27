@@ -21,7 +21,7 @@ import Tab2 from "./pages/admin/Tab2.jsx";
 import Tab3 from "./pages/admin/Event.jsx";
 import Tab4 from "./pages/admin/Deadline.jsx";
 import Tab5 from "./pages/admin/SurveysAdmin.jsx";
-import Tab6 from "./pages/admin/CategoryAdmin.jsx";
+import CategoryAdmin from "./pages/admin/CategoryAdmin.jsx";
 import PermissionManagement from "./pages/admin/PermissionManagement.jsx";
 import AdminUserManagement from "./pages/admin/AdminUserManagement.jsx";
 import AdminBadgeManagement from "./pages/admin/AdminBadgeManagement.jsx";
@@ -190,7 +190,7 @@ export default function App() {
       <Route path="/admin/tab3" element={<Tab3 />} />
       <Route path="/admin/tab4" element={<Tab4 />} />
       <Route path="/admin/tab5" element={<Tab5 />} />
-      <Route path="/admin/tab6" element={<Tab6 />} />
+      <Route path="/admin/tab6" element={<CategoryAdmin />} />
       <Route path="/admin/permissions" element={<PermissionManagement />} />
       <Route path="/admin/surveys" element={<Tab5 />} />
       <Route

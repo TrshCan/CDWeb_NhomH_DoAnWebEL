@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AdminSidebar from "../../components/AdminSidebar";
 import { graphqlRequest } from "../../api/graphql";
 
@@ -101,6 +101,7 @@ export default function Category() {
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState({ message: "", type: "success", visible: false });
+  const broadcastChannelRef = useRef(null);
 
   const showToast = (msg, type = "success") => {
     setToast({ message: msg, type, visible: true });
@@ -112,6 +113,75 @@ export default function Category() {
     fetchCategories();
   }, []);
 
+  // ✅ Đồng bộ giữa các tab khi có thay đổi category
+  useEffect(() => {
+    // Tạo BroadcastChannel để đồng bộ giữa các tab
+    const channel = new BroadcastChannel('category-sync');
+    broadcastChannelRef.current = channel;
+
+    // Lắng nghe thay đổi từ tab khác
+    channel.onmessage = (event) => {
+      const { type, data } = event.data;
+      console.log('[Category Sync] Received:', type, data);
+
+      if (type === 'CATEGORY_CREATED' || type === 'CATEGORY_UPDATED' || type === 'CATEGORY_DELETED') {
+        // Tự động reload danh sách khi có thay đổi từ tab khác
+        fetchCategories();
+        
+        // Hiển thị thông báo
+        if (type === 'CATEGORY_CREATED') {
+          showToast('Danh mục mới đã được thêm từ tab khác', 'success');
+        } else if (type === 'CATEGORY_UPDATED') {
+          showToast('Danh mục đã được cập nhật từ tab khác', 'success');
+          // Nếu đang chỉnh sửa category bị cập nhật, đóng modal và reset form
+          if (editingCategory && data.id === editingCategory.id) {
+            setShowModal(false);
+            setEditingCategory(null);
+            setFormData({ name: '' });
+            setFormErrors({});
+          }
+        } else if (type === 'CATEGORY_DELETED') {
+          showToast('Danh mục đã được xóa từ tab khác', 'success');
+          // Nếu đang chỉnh sửa category bị xóa, đóng modal và reset form
+          if (editingCategory && data.id === editingCategory.id) {
+            setShowModal(false);
+            setEditingCategory(null);
+            setFormData({ name: '' });
+            setFormErrors({});
+            showToast('Danh mục bạn đang chỉnh sửa đã bị xóa từ tab khác', 'error');
+          }
+          // Nếu đang xác nhận xóa category bị xóa, đóng modal xóa
+          if (deleteId && data.id === parseInt(deleteId)) {
+            setShowDelete(false);
+            setDeleteId(null);
+          }
+        }
+
+        // Đóng modal nếu đang mở (tránh conflict)
+        // Sử dụng setTimeout để tránh conflict với state updates
+        setTimeout(() => {
+          setShowModal(false);
+          setShowDelete(false);
+        }, 100);
+      }
+    };
+
+    // Cleanup khi component unmount
+    return () => {
+      if (channel) {
+        channel.close();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Gửi thông báo đến các tab khác
+  const broadcastChange = (type, data = {}) => {
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.postMessage({ type, data });
+    }
+  };
+
   const fetchCategories = async () => {
     setLoading(true);
     try {
@@ -119,7 +189,8 @@ export default function Category() {
       
       if (result.errors) {
         console.error('GraphQL Errors:', result.errors);
-        showToast('Lỗi tải danh mục', 'error');
+        const errorMsg = result.errors[0]?.message || 'Lỗi tải danh mục';
+        showToast(`Lỗi tải danh mục: ${errorMsg}`, 'error');
         setLoading(false);
         return;
       }
@@ -131,7 +202,8 @@ export default function Category() {
       setLoading(false);
     } catch (err) {
       console.error('Lỗi tải danh mục:', err);
-      showToast('Không thể tải danh sách danh mục', 'error');
+      const errorMsg = err.message || 'Không thể kết nối đến server';
+      showToast(`Lỗi tải danh mục: ${errorMsg}`, 'error');
       setLoading(false);
     }
   };
@@ -153,8 +225,17 @@ export default function Category() {
   };
 
   const saveCategory = async () => {
+    // Validate form data
     const errors = {};
-    if (!formData.name.trim()) errors.name = "Tên danh mục không được để trống";
+    const trimmedName = formData.name.trim();
+    
+    if (!trimmedName) {
+      errors.name = "Tên danh mục không được để trống";
+    } else if (trimmedName.length > 255) {
+      errors.name = "Tên danh mục không được vượt quá 255 ký tự";
+    } else if (trimmedName.length < 2) {
+      errors.name = "Tên danh mục phải có ít nhất 2 ký tự";
+    }
     
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -163,51 +244,126 @@ export default function Category() {
 
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setFormErrors({});
 
     try {
       if (editingCategory) {
         // Update existing category
         const result = await graphqlRequest(UPDATE_CATEGORY, {
           id: parseInt(editingCategory.id),
-          input: { name: formData.name }
+          input: { name: trimmedName }
         });
 
         if (result.errors) {
           console.error('GraphQL Errors:', result.errors);
-          showToast(result.errors[0]?.message || 'Lỗi cập nhật danh mục', 'error');
+          const error = result.errors[0];
+          
+          // Xử lý lỗi validation chi tiết
+          if (error.extensions?.validation) {
+            const validationErrors = error.extensions.validation;
+            const fieldErrors = {};
+            
+            if (validationErrors.name) {
+              fieldErrors.name = Array.isArray(validationErrors.name) 
+                ? validationErrors.name[0] 
+                : validationErrors.name;
+            }
+            
+            if (Object.keys(fieldErrors).length > 0) {
+              setFormErrors(fieldErrors);
+              showToast('Vui lòng kiểm tra lại thông tin nhập vào', 'error');
+            } else {
+              showToast(error.message || 'Lỗi cập nhật danh mục', 'error');
+            }
+          } else {
+            // Kiểm tra các loại lỗi cụ thể
+            const errorMsg = error.message || 'Lỗi cập nhật danh mục';
+            
+            if (errorMsg.includes('đã tồn tại') || errorMsg.includes('trùng')) {
+              setFormErrors({ name: 'Tên danh mục này đã tồn tại' });
+              showToast('Tên danh mục này đã tồn tại. Vui lòng chọn tên khác.', 'error');
+            } else if (errorMsg.includes('không tìm thấy') || errorMsg.includes('not found')) {
+              showToast('Danh mục không tồn tại hoặc đã bị xóa. Vui lòng tải lại trang.', 'error');
+              fetchCategories();
+            } else {
+              showToast(`Lỗi cập nhật: ${errorMsg}`, 'error');
+            }
+          }
+          
           setIsSubmitting(false);
           return;
         }
 
         showToast('Cập nhật danh mục thành công', 'success');
-      } else {
-        // Create new category - get max ID and add 1
-        const maxId = categories.length > 0 
-          ? Math.max(...categories.map(c => parseInt(c.id))) 
-          : 0;
         
+        // Gửi thông báo đến các tab khác
+        broadcastChange('CATEGORY_UPDATED', { id: editingCategory.id, name: trimmedName });
+      } else {
+        // Create new category - backend sẽ tự động tính ID
         const result = await graphqlRequest(CREATE_CATEGORY, {
           input: { 
-            id: maxId + 1,
-            name: formData.name 
+            name: trimmedName 
           }
         });
 
         if (result.errors) {
           console.error('GraphQL Errors:', result.errors);
-          showToast(result.errors[0]?.message || 'Lỗi tạo danh mục', 'error');
+          const error = result.errors[0];
+          
+          // Xử lý lỗi validation chi tiết
+          if (error.extensions?.validation) {
+            const validationErrors = error.extensions.validation;
+            const fieldErrors = {};
+            
+            if (validationErrors.name) {
+              fieldErrors.name = Array.isArray(validationErrors.name) 
+                ? validationErrors.name[0] 
+                : validationErrors.name;
+            }
+            if (validationErrors.id) {
+              // Hiển thị lỗi ID như một thông báo toast thay vì field error
+              const idError = Array.isArray(validationErrors.id) 
+                ? validationErrors.id[0] 
+                : validationErrors.id;
+              showToast(`Lỗi ID: ${idError}`, 'error');
+              fetchCategories(); // Reload để lấy ID mới
+            }
+            
+            if (Object.keys(fieldErrors).length > 0) {
+              setFormErrors(fieldErrors);
+              // Hiển thị lỗi cụ thể thay vì thông báo chung
+              const errorMessages = Object.values(fieldErrors).join(', ');
+              showToast(errorMessages, 'error');
+            }
+            
+            setIsSubmitting(false);
+          } else if (errorMsg.includes('không thể kết nối') || errorMsg.includes('network')) {
+            showToast('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.', 'error');
+          } else {
+            showToast(`Lỗi tạo: ${errorMsg}`, 'error');
+          }
+          
           setIsSubmitting(false);
           return;
         }
 
         showToast('Tạo danh mục thành công', 'success');
+        
+        // Gửi thông báo đến các tab khác
+        broadcastChange('CATEGORY_CREATED', { id: result.data?.createCategory?.id, name: trimmedName });
       }
       
       fetchCategories();
       setShowModal(false);
     } catch (err) {
       console.error('Lỗi lưu danh mục:', err);
-      showToast('Lỗi lưu danh mục: ' + (err.message || 'Không xác định'), 'error');
+      const errorMsg = err.message || 'Không xác định';
+      
+      if (errorMsg.includes('network') || errorMsg.includes('ECONNREFUSED') || errorMsg.includes('timeout')) {
+        showToast('Lỗi kết nối: Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại.', 'error');
+      } else {
+        showToast(`Lỗi lưu danh mục: ${errorMsg}`, 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -231,25 +387,42 @@ export default function Category() {
 
       if (result.errors) {
         console.error('GraphQL Errors:', result.errors);
-        const errorMessage = result.errors[0]?.message || 'Lỗi xóa danh mục';
+        const error = result.errors[0];
+        const errorMessage = error.message || 'Lỗi xóa danh mục';
         
-        // Check if error is about referenced category
-        if (errorMessage.includes('đang được sử dụng') || errorMessage.includes('referenced')) {
-          showToast('Không thể xóa danh mục này vì đang được sử dụng bởi các khảo sát khác.', 'error');
+        // Kiểm tra các loại lỗi cụ thể
+        if (errorMessage.includes('đang được sử dụng') || errorMessage.includes('referenced') || errorMessage.includes('surveys')) {
+          showToast('Không thể xóa danh mục này vì đang được sử dụng bởi các khảo sát khác. Vui lòng xóa hoặc thay đổi danh mục của các khảo sát trước.', 'error');
+        } else if (errorMessage.includes('không tìm thấy') || errorMessage.includes('not found')) {
+          showToast('Danh mục không tồn tại hoặc đã bị xóa. Vui lòng tải lại trang.', 'error');
+          fetchCategories();
+        } else if (errorMessage.includes('không thể kết nối') || errorMessage.includes('network')) {
+          showToast('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.', 'error');
         } else {
-          showToast(errorMessage, 'error');
+          showToast(`Lỗi xóa: ${errorMessage}`, 'error');
         }
+        
         setIsSubmitting(false);
         setShowDelete(false);
         return;
       }
 
       showToast('Xóa danh mục thành công', 'success');
+      
+      // Gửi thông báo đến các tab khác
+      broadcastChange('CATEGORY_DELETED', { id: deleteId });
+      
       fetchCategories();
       setShowDelete(false);
     } catch (err) {
       console.error('Lỗi xóa danh mục:', err);
-      showToast('Lỗi xóa danh mục: ' + (err.message || 'Không xác định'), 'error');
+      const errorMsg = err.message || 'Không xác định';
+      
+      if (errorMsg.includes('network') || errorMsg.includes('ECONNREFUSED') || errorMsg.includes('timeout')) {
+        showToast('Lỗi kết nối: Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại.', 'error');
+      } else {
+        showToast(`Lỗi xóa danh mục: ${errorMsg}`, 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -417,9 +590,15 @@ export default function Category() {
                     type="text"
                     value={formData.name}
                     maxLength={255}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      // Xóa lỗi khi người dùng bắt đầu nhập
+                      if (formErrors.name) {
+                        setFormErrors({ ...formErrors, name: '' });
+                      }
+                    }}
                     className={`border-2 ${formErrors.name ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"} rounded-xl w-full p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 shadow-sm hover:shadow-md`}
-                    placeholder="Nhập tên danh mục"
+                    placeholder="Nhập tên danh mục (tối thiểu 2 ký tự, tối đa 255 ký tự)"
                   />
                   <div className="flex justify-between items-center mt-1">
                     {formErrors.name && <p className="text-red-500 text-xs">{formErrors.name}</p>}

@@ -41,8 +41,12 @@ class CategoryService
     {
         // Bước 1: Kiểm tra hợp lệ dữ liệu đầu vào
         $v = Validator::make($input, [
-            'id'   => ['required', 'integer', 'min:1', 'max:32767'], // SMALLINT UNSIGNED ~ 0..65535
-            'name' => ['nullable', 'string', 'max:255'], // name không bắt buộc, tối đa 255 ký tự
+            'id'   => ['nullable', 'integer', 'min:1', 'max:32767'], // ID có thể không truyền, sẽ tự động tính
+            'name' => ['required', 'string', 'min:2', 'max:255'], // name bắt buộc, tối thiểu 2 ký tự, tối đa 255 ký tự
+        ], [
+            'name.required' => 'Tên danh mục không được để trống.',
+            'name.min' => 'Tên danh mục phải có ít nhất 2 ký tự.',
+            'name.max' => 'Tên danh mục không được vượt quá 255 ký tự.',
         ]);
 
         // Nếu dữ liệu sai → ném lỗi ValidationException
@@ -50,21 +54,25 @@ class CategoryService
             throw new ValidationException($v);
         }
 
-        // Bước 2: Kiểm tra trùng name (nếu name được nhập)
-        if (!empty($input['name']) && $this->repo->existsByName($input['name'])) {
+        // Bước 2: Kiểm tra trùng name
+        if ($this->repo->existsByName($input['name'])) {
             throw ValidationException::withMessages([
-                'name' => 'Category name đã tồn tại.',
+                'name' => 'Tên danh mục này đã tồn tại.',
             ]);
         }
 
-        // Bước 3: Gọi repository để thêm vào DB
+        // Bước 3: Tự động tính ID nếu không được truyền hoặc ID đã tồn tại
+        if (empty($input['id'])) {
+            $input['id'] = $this->repo->getNextId();
+        }
+
+        // Bước 4: Gọi repository để thêm vào DB
         try {
             return $this->repo->create($input);
         } catch (QueryException $e) {
-            // Trường hợp lỗi DB (VD: trùng ID)
-            throw ValidationException::withMessages([
-                'id' => 'Không thể tạo category (có thể trùng ID hoặc lỗi DB).',
-            ]);
+            // Trường hợp lỗi DB (VD: trùng ID) - thử lại với ID mới
+            $input['id'] = $this->repo->getNextId();
+            return $this->repo->create($input);
         }
     }
 
