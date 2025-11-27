@@ -16,8 +16,8 @@ type Category {
 }
 
 input CreateCategoryInput {
-    id: Int!
-    name: String
+    id: Int
+    name: String!
 }
 
 input UpdateCategoryInput {

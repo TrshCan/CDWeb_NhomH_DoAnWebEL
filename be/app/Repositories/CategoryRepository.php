@@ -130,4 +130,17 @@ class CategoryRepository
         // Kiểm tra bảng surveys, nếu có categories_id khớp => đang được sử dụng
         return DB::table('surveys')->where('categories_id', $id)->exists();
     }
+
+    /**
+     * Lấy ID tiếp theo cho Category mới.
+     * Tính toán dựa trên max ID hiện có (bao gồm cả soft deleted).
+     * 
+     * @return int ID tiếp theo
+     */
+    public function getNextId(): int
+    {
+        // Lấy max ID từ tất cả categories (bao gồm cả soft deleted)
+        $maxId = Category::withTrashed()->max('id');
+        return ($maxId ?? 0) + 1;
+    }
 }

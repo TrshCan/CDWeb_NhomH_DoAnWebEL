@@ -299,14 +299,9 @@ export default function Category() {
         // Gửi thông báo đến các tab khác
         broadcastChange('CATEGORY_UPDATED', { id: editingCategory.id, name: trimmedName });
       } else {
-        // Create new category - get max ID and add 1
-        const maxId = categories.length > 0 
-          ? Math.max(...categories.map(c => parseInt(c.id))) 
-          : 0;
-        
+        // Create new category - backend sẽ tự động tính ID
         const result = await graphqlRequest(CREATE_CATEGORY, {
           input: { 
-            id: maxId + 1,
             name: trimmedName 
           }
         });
@@ -326,36 +321,26 @@ export default function Category() {
                 : validationErrors.name;
             }
             if (validationErrors.id) {
-              fieldErrors.id = Array.isArray(validationErrors.id) 
+              // Hiển thị lỗi ID như một thông báo toast thay vì field error
+              const idError = Array.isArray(validationErrors.id) 
                 ? validationErrors.id[0] 
                 : validationErrors.id;
+              showToast(`Lỗi ID: ${idError}`, 'error');
+              fetchCategories(); // Reload để lấy ID mới
             }
             
             if (Object.keys(fieldErrors).length > 0) {
               setFormErrors(fieldErrors);
-              showToast('Vui lòng kiểm tra lại thông tin nhập vào', 'error');
-            } else {
-              showToast(error.message || 'Lỗi tạo danh mục', 'error');
+              // Hiển thị lỗi cụ thể thay vì thông báo chung
+              const errorMessages = Object.values(fieldErrors).join(', ');
+              showToast(errorMessages, 'error');
             }
-          } else {
-            // Kiểm tra các loại lỗi cụ thể
-            const errorMsg = error.message || 'Lỗi tạo danh mục';
             
-            if (errorMsg.includes('đã tồn tại') || errorMsg.includes('trùng')) {
-              if (errorMsg.includes('name')) {
-                setFormErrors({ name: 'Tên danh mục này đã tồn tại' });
-                showToast('Tên danh mục này đã tồn tại. Vui lòng chọn tên khác.', 'error');
-              } else if (errorMsg.includes('id') || errorMsg.includes('ID')) {
-                showToast('ID danh mục đã tồn tại. Vui lòng tải lại trang để lấy ID mới.', 'error');
-                fetchCategories();
-              } else {
-                showToast(`Lỗi tạo: ${errorMsg}`, 'error');
-              }
-            } else if (errorMsg.includes('không thể kết nối') || errorMsg.includes('network')) {
-              showToast('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.', 'error');
-            } else {
-              showToast(`Lỗi tạo: ${errorMsg}`, 'error');
-            }
+            setIsSubmitting(false);
+          } else if (errorMsg.includes('không thể kết nối') || errorMsg.includes('network')) {
+            showToast('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.', 'error');
+          } else {
+            showToast(`Lỗi tạo: ${errorMsg}`, 'error');
           }
           
           setIsSubmitting(false);
