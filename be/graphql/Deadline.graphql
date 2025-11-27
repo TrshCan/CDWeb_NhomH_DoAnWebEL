@@ -2,7 +2,7 @@ type Deadline {
   id: ID!
   title: String!
   deadline_date: String!
-  details: String
+  details: String!
   created_by: Int!
   created_at: String
   updated_at: String
@@ -12,7 +12,7 @@ type Deadline {
 input DeadlineInput {
   title: String!
   deadline_date: String!
-  details: String
+  details: String!
   updated_at: String
 }
 

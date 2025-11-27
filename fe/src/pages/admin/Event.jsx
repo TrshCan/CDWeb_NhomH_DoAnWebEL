@@ -296,9 +296,11 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
         newErrors.event_date = "Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.";
       }
     }
-    if (formData.location && formData.location.length > 255) {
+    if (!formData.location.trim()) {
+      newErrors.location = "Địa điểm không được để trống.";
+    } else if (formData.location.length > 255) {
       newErrors.location = "Địa điểm không được vượt quá 255 ký tự.";
-    } else if (formData.location && !/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/.test(formData.location)) {
+    } else if (!/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/.test(formData.location)) {
       newErrors.location = "Địa điểm chứa ký tự không hợp lệ.";
     }
     setErrors(newErrors);
@@ -458,11 +460,11 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
               onChange={(e) => {
                 const value = e.target.value;
                 setFormData({ ...formData, location: value });
-                // Real-time validation for length
+                // Real-time validation
                 if (value.length > 255) {
                   setErrors({ ...errors, location: "Địa điểm không được vượt quá 255 ký tự." });
-                } else if (errors.location && errors.location.includes("255")) {
-                  // Clear length error if within limit
+                } else if (errors.location && (errors.location.includes("255") || errors.location.includes("trống"))) {
+                  // Clear length or required error if within limit and not empty
                   const newErrors = { ...errors };
                   delete newErrors.location;
                   setErrors(newErrors);
