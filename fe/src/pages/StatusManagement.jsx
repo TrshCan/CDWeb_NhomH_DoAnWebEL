@@ -317,8 +317,11 @@ const StatusManagement = () => {
     const userId = parseInt(localStorage.getItem('userId'));
     const isOwner = Number(survey.created_by) === userId;
     
-    // Admin hoặc chủ sở hữu có quyền quản lý
-    if (currentUserRole === 'admin' || isOwner) {
+    // Admin, Lecturer hoặc chủ sở hữu có quyền quản lý
+    const isAdmin = currentUserRole === 'admin';
+    const isLecturer = currentUserRole === 'lecturer';
+    
+    if (isAdmin || isLecturer || isOwner) {
       actions = [...statusInfo.actions];
       if (effectiveStatusKey !== 'pending') actions.push('view_results');
     } else {
@@ -597,7 +600,7 @@ const StatusManagement = () => {
     const status = getEffectiveStatus(selectedSurvey);
     let contentHtml = '';
 
-    if (currentUserRole === 'admin') {
+    if (currentUserRole === 'admin' || currentUserRole === 'lecturer') {
       if (status === 'active' || status === 'paused') {
         contentHtml = (
           <>
@@ -644,7 +647,7 @@ const StatusManagement = () => {
       const statusInfo = statusConfig[effectiveStatusKey];
       const availableActions = getAvailableActions(survey);
       const isOwner = Number(survey.created_by) === userId;
-      const canManage = currentUserRole === 'admin' || isOwner;
+      const canManage = currentUserRole === 'admin' || currentUserRole === 'lecturer' || isOwner;
       let reviewPermissionHtml = null;
 
       if (canManage) {
@@ -902,7 +905,7 @@ const StatusManagement = () => {
                               Trạng thái
                             </div>
                           </th>
-                          {(currentUserRole === 'admin' || surveysState.some(s => Number(s.created_by) === parseInt(localStorage.getItem('userId')))) && (
+                          {(currentUserRole === 'admin' || currentUserRole === 'lecturer' || surveysState.some(s => Number(s.created_by) === parseInt(localStorage.getItem('userId')))) && (
                             <th className="px-3 py-2 text-gray-700" style={{ width: '15%' }}>
                               <div className="flex items-center gap-1">
                                 <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

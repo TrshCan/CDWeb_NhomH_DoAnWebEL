@@ -24,10 +24,14 @@ class StateManagementResolver
                 throw new Exception('Bạn chưa đăng nhập.', 401);
             }
             
-            // Kiểm tra quyền: Admin hoặc chủ sở hữu khảo sát
+            // Kiểm tra quyền: Admin, Lecturer hoặc chủ sở hữu khảo sát
             $survey = \App\Models\Survey::findOrFail($args['id']);
-            if ($user->role !== 'admin' && $survey->created_by !== $user->id) {
-                throw new Exception('Bạn không có quyền thay đổi trạng thái khảo sát này.', 403);
+            $isAdmin = $user->role === 'admin';
+            $isLecturer = $user->role === 'lecturer';
+            $isOwner = $survey->created_by === $user->id;
+            
+            if (!$isAdmin && !$isLecturer && !$isOwner) {
+                throw new Exception('Bạn không có quyền thay đổi trạng thái khảo sát này. Chỉ Admin, Giảng viên hoặc chủ sở hữu khảo sát mới có quyền này.', 403);
             }
             
             return $this->service->changeStatus($args['id'], $args['status']);
@@ -56,10 +60,14 @@ class StateManagementResolver
                 throw new Exception('Bạn chưa đăng nhập.', 401);
             }
             
-            // Kiểm tra quyền: Admin hoặc chủ sở hữu khảo sát
+            // Kiểm tra quyền: Admin, Lecturer hoặc chủ sở hữu khảo sát
             $survey = \App\Models\Survey::findOrFail($args['id']);
-            if ($user->role !== 'admin' && $survey->created_by !== $user->id) {
-                throw new Exception('Bạn không có quyền thay đổi quyền xem lại của khảo sát này.', 403);
+            $isAdmin = $user->role === 'admin';
+            $isLecturer = $user->role === 'lecturer';
+            $isOwner = $survey->created_by === $user->id;
+            
+            if (!$isAdmin && !$isLecturer && !$isOwner) {
+                throw new Exception('Bạn không có quyền thay đổi quyền xem lại của khảo sát này. Chỉ Admin, Giảng viên hoặc chủ sở hữu khảo sát mới có quyền này.', 403);
             }
             
             return $this->service->toggleReviewPermission($args['id'], $args['allowReview']);
@@ -92,7 +100,7 @@ class StateManagementResolver
 
             $query = \App\Models\Survey::whereNull('deleted_at');
             
-            // Nếu không phải admin, chỉ lấy khảo sát của mình
+            // Admin thấy tất cả, Lecturer và User khác chỉ thấy khảo sát của mình
             if ($user->role !== 'admin') {
                 $query->where('created_by', $user->id);
             }

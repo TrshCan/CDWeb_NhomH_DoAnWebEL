@@ -277,7 +277,8 @@ const StatusManagementAdmin = () => {
     const effectiveStatusKey = getEffectiveStatus(survey);
     const statusInfo = statusConfig[effectiveStatusKey];
     let actions = [];
-    if (currentUserRole === 'admin') {
+    // Admin và Lecturer có quyền quản lý đầy đủ
+    if (currentUserRole === 'admin' || currentUserRole === 'lecturer') {
       actions = [...statusInfo.actions];
       if (effectiveStatusKey !== 'pending') actions.push('view_results');
     } else {
@@ -555,7 +556,7 @@ const StatusManagementAdmin = () => {
     const status = getEffectiveStatus(selectedSurvey);
     let contentHtml = '';
 
-    if (currentUserRole === 'admin') {
+    if (currentUserRole === 'admin' || currentUserRole === 'lecturer') {
       if (status === 'active' || status === 'paused') {
         contentHtml = (
           <>
@@ -601,7 +602,7 @@ const StatusManagementAdmin = () => {
       const availableActions = getAvailableActions(survey);
       let reviewPermissionHtml = null;
 
-      if (currentUserRole === 'admin') {
+      if (currentUserRole === 'admin' || currentUserRole === 'lecturer') {
         const isToggleProcessing = isProcessing(`toggle-review-${survey.id}`);
         reviewPermissionHtml = (
           <td className="px-6 py-5">
@@ -619,7 +620,7 @@ const StatusManagementAdmin = () => {
           </td>
         );
       } else {
-        reviewPermissionHtml = <td className={currentUserRole === 'admin' ? 'px-6 py-5' : 'hidden'}></td>;
+        reviewPermissionHtml = <td className={(currentUserRole === 'admin' || currentUserRole === 'lecturer') ? 'px-6 py-5' : 'hidden'}></td>;
       }
 
       const isDropdownOpen = openDropdownId === survey.id;
@@ -854,7 +855,7 @@ const StatusManagementAdmin = () => {
                               Trạng thái
                             </div>
                           </th>
-                          {currentUserRole === 'admin' && (
+                          {(currentUserRole === 'admin' || currentUserRole === 'lecturer') && (
                             <th className="px-6 py-5 text-gray-700 tracking-wider">
                               <div className="flex items-center gap-2">
                                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
