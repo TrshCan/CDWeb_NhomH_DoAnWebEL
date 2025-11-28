@@ -70,6 +70,7 @@ class SurveyJoinService
             'description' => $survey->description,
             'status' => $survey->status,
             'object' => $survey->object,
+            'start_at' => $survey->start_at,
             'time_limit' => $survey->time_limit,
             'total_points' => $survey->questions->sum('points'),
             'is_accessible_directly' => true,

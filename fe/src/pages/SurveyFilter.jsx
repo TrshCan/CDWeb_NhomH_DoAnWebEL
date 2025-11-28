@@ -1221,9 +1221,16 @@ const SurveyFilter = () => {
         input.end_at = toDBDateTime(editForm.endAt);
       }
 
-      // points: chỉ gửi nếu là quiz, tránh rule `prohibited` khi type = survey
-      if ((editForm.type || 'survey') === 'quiz') {
+      // points: xử lý dựa trên loại khảo sát
+      // Nếu là quiz: gửi points (bắt buộc)
+      // Nếu là survey: luôn gửi points = null để đảm bảo backend xóa điểm (đặc biệt khi chuyển từ quiz sang survey)
+      const targetType = editForm.type || 'survey';
+      if (targetType === 'quiz') {
         input.points = editForm.points || 0;
+      } else {
+        // Luôn gửi points = null khi type là survey để đảm bảo backend xóa điểm
+        // Điều này đặc biệt quan trọng khi chuyển từ quiz sang survey
+        input.points = null;
       }
 
       // Gửi updated_at để optimistic locking

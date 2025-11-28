@@ -206,6 +206,7 @@ export async function getSurveyJoinDetail(surveyId, token) {
         description
         status
         object
+        start_at
         time_limit
         total_points
         is_accessible_directly
