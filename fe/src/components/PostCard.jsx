@@ -411,9 +411,10 @@ function PostCard({ post, onDeleted, onLikeUpdate, disableCommentNavigate = fals
                     errorMessage = "Server error occurred. The post may belong to a deleted group.";
                   }
                   
-                  // Check if error indicates deleted group
-                  if (errorMessage.toLowerCase().includes('deleted') || 
-                      errorMessage.toLowerCase().includes('group')) {
+                  // Check if error indicates deleted group (but not if it's about the post itself)
+                  if (errorMessage.toLowerCase().includes('group') && 
+                      errorMessage.toLowerCase().includes('deleted') &&
+                      !errorMessage.toLowerCase().includes('this post has been deleted')) {
                     errorMessage = "Cannot update post: This group has been deleted";
                   }
                   

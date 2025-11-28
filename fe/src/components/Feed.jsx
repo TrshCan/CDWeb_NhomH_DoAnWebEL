@@ -33,6 +33,8 @@ export default function Feed() {
   const [files, setFiles] = useState([]);
   const [user, setUser] = useState(null);
   const loadMoreRef = useRef(null);
+  const [isPosting, setIsPosting] = useState(false);
+  const [postCooldown, setPostCooldown] = useState(0);
 
   // TODO: Replace with actual logged-in user's following list from your auth/user context
   const [followingUserIds, setFollowingUserIds] = useState([]); // Array of user IDs that the logged-in user follows
@@ -207,6 +209,16 @@ export default function Feed() {
     setFiles((prev) => [...prev, ...selected]);
   };
 
+  // Cooldown timer effect
+  useEffect(() => {
+    if (postCooldown > 0) {
+      const timer = setTimeout(() => {
+        setPostCooldown(postCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [postCooldown]);
+
   // ✅ Create new post using logged-in user info
   const addPost = async () => {
     const token = localStorage.getItem("token");
@@ -215,8 +227,23 @@ export default function Feed() {
       return;
     }
 
+    if (isPosting) {
+      toast.error("Please wait, posting...");
+      return;
+    }
+
+    if (postCooldown > 0) {
+      toast.error(`Please wait ${postCooldown} seconds before posting again.`);
+      return;
+    }
+
     const text = document.getElementById("postInput").value.trim();
-    if (!text && files.length === 0) return;
+    if (!text && files.length === 0) {
+      toast.error("Please write something or add media.");
+      return;
+    }
+
+    setIsPosting(true);
 
     try {
       const input = {
@@ -254,6 +281,9 @@ export default function Feed() {
       document.getElementById("postInput").value = "";
       document.getElementById("mediaInput").value = "";
       setFiles([]);
+
+      // Set 30 second cooldown after successful post
+      setPostCooldown(30);
     } catch (err) {
       console.error("Failed to create post:", err);
       const errorMessage = err?.response?.data?.errors?.[0]?.message || err?.message || "Failed to create post.";
@@ -264,6 +294,8 @@ export default function Feed() {
       } else {
         toast.error(errorMessage || "Không thể tạo bài viết. Vui lòng thử lại.");
       }
+    } finally {
+      setIsPosting(false);
     }
   };
 
@@ -414,9 +446,18 @@ export default function Feed() {
 
             <button
               onClick={addPost}
-              className="bg-cyan-600 text-white px-5 py-2 rounded-full hover:bg-cyan-700 active:scale-95 transition-all"
+              disabled={isPosting || postCooldown > 0}
+              className={`px-5 py-2 rounded-full transition-all ${
+                isPosting || postCooldown > 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-cyan-600 hover:bg-cyan-700 active:scale-95"
+              } text-white`}
             >
-              Post
+              {isPosting
+                ? "Posting..."
+                : postCooldown > 0
+                ? `Wait ${postCooldown}s`
+                : "Post"}
             </button>
           </div>
         </div>
