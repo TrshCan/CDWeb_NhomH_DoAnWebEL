@@ -45,26 +45,34 @@ class EventService
             }
 
             // Normalize và validate event_date format
+            $minimumDateTime = null;
             if (isset($data['event_date'])) {
                 try {
-                    $date = \Carbon\Carbon::parse($data['event_date']);
+                    // Parse the date and ensure it's in the correct timezone
+                    $date = \Carbon\Carbon::parse($data['event_date'], 'Asia/Ho_Chi_Minh');
                     $data['event_date'] = $date->format('Y-m-d H:i:s');
                     
-                    // Kiểm tra event_date phải lớn hơn thời điểm hiện tại
-                    if ($date->lte(\Carbon\Carbon::now())) {
-                        throw new \Exception("Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.");
-                    }
+                    // Create minimum time (2 minutes from now) in the same timezone
+                    $minimumTime = \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->addMinutes(2);
+                    $minimumDateTime = $minimumTime->format('Y-m-d H:i:s');
+                    
+
+                    
+                    // Single validation check - only use Laravel validator
                 } catch (\Exception $e) {
                     if (strpos($e->getMessage(), 'Ngày giờ diễn ra sự kiện') !== false) {
                         throw $e;
                     }
                     throw new \Exception("Định dạng ngày tháng không hợp lệ. Định dạng yêu cầu: YYYY-MM-DD HH:mm:ss.");
                 }
+            } else {
+                // If no event_date provided, create minimum time for validation
+                $minimumDateTime = \Carbon\Carbon::now('Asia/Ho_Chi_Minh')->addMinutes(2)->format('Y-m-d H:i:s');
             }
-
+            
             $validator = Validator::make($data, [
                 'title' => 'required|string|max:255',
-                'event_date' => ['required', 'date', 'date_format:Y-m-d H:i:s', 'after:now'],
+                'event_date' => ['required', 'date', 'date_format:Y-m-d H:i:s', 'after:' . $minimumDateTime],
                 'location' => 'required|string|max:255',
             ], [
                 'title.required' => 'Tiêu đề không được để trống.',
@@ -72,7 +80,7 @@ class EventService
                 'event_date.required' => 'Ngày giờ sự kiện không được để trống.',
                 'event_date.date' => 'Ngày giờ sự kiện không hợp lệ.',
                 'event_date.date_format' => 'Định dạng ngày giờ không hợp lệ. Định dạng yêu cầu: YYYY-MM-DD HH:mm:ss.',
-                'event_date.after' => 'Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.',
+                'event_date.after' => 'Ngày giờ diễn ra sự kiện phải ít nhất 2 phút sau thời điểm hiện tại.',
                 'location.required' => 'Địa điểm không được để trống.',
                 'location.max' => 'Địa điểm không được vượt quá 255 ký tự.',
             ]);

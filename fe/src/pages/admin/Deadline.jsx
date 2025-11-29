@@ -269,11 +269,24 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
       newErrors.deadline_date =
         "Ngày giờ hết hạn không hợp lệ. Định dạng hợp lệ: DD/MM/YYYY HH:mm.";
     } else {
-      // Kiểm tra deadline_date phải lớn hơn thời điểm hiện tại
+      // Kiểm tra deadline_date phải ít nhất 2 phút sau thời điểm hiện tại (cho phép tạo deadline trong ngày)
       const deadlineDate = new Date(formData.deadline_date);
-      const now = new Date();
-      if (deadlineDate <= now) {
-        newErrors.deadline_date = "Ngày giờ hết hạn phải lớn hơn thời điểm hiện tại.";
+      const minimumTime = new Date();
+      minimumTime.setMinutes(minimumTime.getMinutes() + 2); // Add 2 minutes buffer
+      
+      if (modalData.type === "add") {
+        // For new deadlines, require at least 2 minutes in the future
+        if (deadlineDate < minimumTime) {
+          newErrors.deadline_date = "Ngày giờ hết hạn phải ít nhất 2 phút sau thời điểm hiện tại.";
+        }
+      } else if (modalData.type === "edit" && modalData.deadline) {
+        // For editing, only validate future date if the date is actually being changed
+        const originalDeadlineDate = new Date(modalData.deadline.deadline_date);
+        const isDateChanged = Math.abs(deadlineDate.getTime() - originalDeadlineDate.getTime()) > 60000; // Allow 1 minute tolerance for formatting differences
+        
+        if (isDateChanged && deadlineDate < minimumTime) {
+          newErrors.deadline_date = "Ngày giờ hết hạn phải ít nhất 2 phút sau thời điểm hiện tại.";
+        }
       }
     }
     if (!formData.details.trim()) {
@@ -301,10 +314,13 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
       setIsSubmitting(true);
       try {
         // Convert deadline_date to backend-compatible format (e.g., YYYY-MM-DD HH:mm:ss)
-        const formattedDeadlineDate = new Date(formData.deadline_date)
-          .toISOString()
-          .replace("T", " ")
-          .slice(0, 19);
+        // Keep the local time instead of converting to UTC
+        const deadlineDate = new Date(formData.deadline_date);
+        const formattedDeadlineDate = deadlineDate.getFullYear() + '-' +
+          String(deadlineDate.getMonth() + 1).padStart(2, '0') + '-' +
+          String(deadlineDate.getDate()).padStart(2, '0') + ' ' +
+          String(deadlineDate.getHours()).padStart(2, '0') + ':' +
+          String(deadlineDate.getMinutes()).padStart(2, '0') + ':00';
         await handleSave({ ...formData, deadline_date: formattedDeadlineDate }, setErrors, setGeneralError);
       } catch (error) {
         // Error is handled in handleSave
@@ -414,7 +430,11 @@ const DeadlineModal = ({ modalData, closeModal, handleSave }) => {
                   setErrors({ ...errors, deadline_date: "" });
                 }
               }}
-              min={new Date().toISOString().slice(0, 16)}
+              min={(() => {
+                const minTime = new Date();
+                minTime.setMinutes(minTime.getMinutes() + 2); // Add 2 minutes buffer
+                return minTime.toISOString().slice(0, 16);
+              })()}
               className={`border-2 ${
                 errors.deadline_date ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
               } rounded-xl w-full p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 shadow-sm hover:shadow-md`}

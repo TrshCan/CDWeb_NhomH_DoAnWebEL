@@ -52,9 +52,10 @@ class DeadlineService
                     $date = Carbon::parse($data['deadline_date']);
                     $data['deadline_date'] = $date->format('Y-m-d H:i:s');
                     
-                    // Check if deadline is in the future
-                    if ($date->lte(Carbon::now())) {
-                        throw new Exception("Ngày giờ kết thúc phải sau thời điểm hiện tại.");
+                    // Kiểm tra deadline_date phải ít nhất 2 phút sau thời điểm hiện tại (cho phép tạo deadline trong ngày)
+                    $minimumTime = Carbon::now('Asia/Ho_Chi_Minh')->addMinutes(2);
+                    if ($date->lt($minimumTime)) {
+                        throw new Exception("Ngày giờ kết thúc phải ít nhất 2 phút sau thời điểm hiện tại.");
                     }
                 } catch (\Exception $e) {
                     if (strpos($e->getMessage(), 'Ngày giờ kết thúc') !== false) {
@@ -64,16 +65,19 @@ class DeadlineService
                 }
             }
 
+            // Create a custom validation rule that allows deadlines at least 2 minutes in the future
+            $minimumDateTime = Carbon::now('Asia/Ho_Chi_Minh')->addMinutes(2)->format('Y-m-d H:i:s');
+            
             $validator = Validator::make($data, [
                 'title' => 'required|string|max:255',
-                'deadline_date' => ['required', 'date', 'date_format:Y-m-d H:i:s', 'after:now'],
+                'deadline_date' => ['required', 'date', 'date_format:Y-m-d H:i:s', 'after:' . $minimumDateTime],
                 'details' => 'required|string|max:1000',
             ], [
                 'title.required' => 'Tên deadline không được để trống.',
                 'title.max' => 'Tên deadline không được vượt quá 255 ký tự.',
                 'deadline_date.required' => 'Ngày giờ kết thúc không được để trống.',
                 'deadline_date.date_format' => 'Ngày giờ kết thúc không hợp lệ. Định dạng: YYYY-MM-DD HH:mm:ss.',
-                'deadline_date.after' => 'Ngày giờ kết thúc phải sau thời điểm hiện tại.',
+                'deadline_date.after' => 'Ngày giờ kết thúc phải ít nhất 2 phút sau thời điểm hiện tại.',
                 'details.required' => 'Chi tiết không được để trống.',
                 'details.max' => 'Chi tiết không được vượt quá 1000 ký tự.',
             ]);

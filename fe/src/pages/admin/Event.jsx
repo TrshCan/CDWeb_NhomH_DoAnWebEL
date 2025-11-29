@@ -289,11 +289,24 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
       newErrors.event_date =
         "Ngày giờ diễn ra không hợp lệ. Định dạng hợp lệ: DD/MM/YYYY HH:mm.";
     } else {
-      // Kiểm tra event_date phải lớn hơn thời điểm hiện tại
+      // Kiểm tra event_date phải ít nhất 2 phút sau thời điểm hiện tại (cho phép tạo event trong ngày)
       const eventDate = new Date(formData.event_date);
-      const now = new Date();
-      if (eventDate <= now) {
-        newErrors.event_date = "Ngày giờ diễn ra sự kiện phải lớn hơn thời điểm hiện tại.";
+      const minimumTime = new Date();
+      minimumTime.setMinutes(minimumTime.getMinutes() + 2); // Add 2 minutes buffer
+      
+      if (modalData.type === "add") {
+        // For new events, require at least 2 minutes in the future
+        if (eventDate < minimumTime) {
+          newErrors.event_date = "Ngày giờ diễn ra sự kiện phải ít nhất 2 phút sau thời điểm hiện tại.";
+        }
+      } else if (modalData.type === "edit" && modalData.event) {
+        // For editing, only validate future date if the date is actually being changed
+        const originalEventDate = new Date(modalData.event.event_date);
+        const isDateChanged = Math.abs(eventDate.getTime() - originalEventDate.getTime()) > 60000; // Allow 1 minute tolerance for formatting differences
+        
+        if (isDateChanged && eventDate < minimumTime) {
+          newErrors.event_date = "Ngày giờ diễn ra sự kiện phải ít nhất 2 phút sau thời điểm hiện tại.";
+        }
       }
     }
     if (!formData.location.trim()) {
@@ -323,10 +336,13 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
       setIsSubmitting(true);
       try {
         // Convert event_date to backend-compatible format (e.g., YYYY-MM-DD HH:mm:ss)
-        const formattedEventDate = new Date(formData.event_date)
-          .toISOString()
-          .replace("T", " ")
-          .slice(0, 19);
+        // Keep the local time instead of converting to UTC
+        const eventDate = new Date(formData.event_date);
+        const formattedEventDate = eventDate.getFullYear() + '-' +
+          String(eventDate.getMonth() + 1).padStart(2, '0') + '-' +
+          String(eventDate.getDate()).padStart(2, '0') + ' ' +
+          String(eventDate.getHours()).padStart(2, '0') + ':' +
+          String(eventDate.getMinutes()).padStart(2, '0') + ':00';
         await handleSave({ ...formData, event_date: formattedEventDate }, setErrors, setGeneralError);
       } catch (error) {
         // Error is handled in handleSave
@@ -436,7 +452,11 @@ const EventModal = ({ modalData, closeModal, handleSave }) => {
                   setErrors({ ...errors, event_date: "" });
                 }
               }}
-              min={new Date().toISOString().slice(0, 16)}
+              min={(() => {
+                const minTime = new Date();
+                minTime.setMinutes(minTime.getMinutes() + 2); // Add 2 minutes buffer
+                return minTime.toISOString().slice(0, 16);
+              })()}
               className={`border-2 ${
                 errors.event_date ? "border-red-500 bg-red-50" : "border-gray-300 bg-white hover:border-gray-400"
               } rounded-xl w-full p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 shadow-sm hover:shadow-md`}
