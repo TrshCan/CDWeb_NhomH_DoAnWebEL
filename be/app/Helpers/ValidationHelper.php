@@ -124,7 +124,8 @@ class ValidationHelper
         $details = self::sanitizeText($details, $maxLength);
         
         // Validate regex pattern
-        if (!preg_match('/^[a-zA-Z0-9\sÀ-ỹ.,-]*$/u', $details)) {
+        if (!preg_match('/^[a-zA-Z0-9\sÀ-ỹ.,\-_:\/?#\[\]@!$&\'()*+,;=%]*$/u'
+, $details)) {
             throw new \Exception("Nội dung chứa ký tự không hợp lệ.");
         }
 
@@ -183,4 +184,3 @@ class ValidationHelper
         return $text !== strip_tags($text);
     }
 }
-
