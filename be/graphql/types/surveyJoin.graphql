@@ -23,6 +23,7 @@ type SurveyJoinDetail {
   description: String
   status: String
   object: String
+  start_at: DateTime
   time_limit: Int
   total_points: Float
   is_accessible_directly: Boolean

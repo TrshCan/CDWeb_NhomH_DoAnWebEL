@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\PostRepository;
 use App\Models\Group;
+use App\Models\Post;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
@@ -163,7 +164,7 @@ class PostService
         $data['content'] = isset($data['content']) ? trim($data['content']) : null;
 
         $validator = Validator::make($data, [
-            'id' => 'required|exists:posts,id',
+            'id' => 'required|integer',
             'type' => 'nullable|string|max:50',
             'content' => 'nullable|string|max:2000',
             'media_url' => 'nullable|string',
@@ -189,9 +190,22 @@ class PostService
             ]);
         }
 
+        // ✅ Check if post exists and if it's soft-deleted
+        $post = Post::withTrashed()->find($data['id']);
+        if (!$post) {
+            throw ValidationException::withMessages([
+                'id' => 'Post not found.',
+            ]);
+        }
+        
+        if ($post->trashed() || $post->deleted_at !== null) {
+            throw ValidationException::withMessages([
+                'id' => 'Cannot update post: This post has been deleted.',
+            ]);
+        }
+
         // ✅ Check if post belongs to a soft-deleted group
-        $post = $this->repository->find($data['id']);
-        if ($post && $post->group_id) {
+        if ($post->group_id) {
             $group = Group::withTrashed()->find($post->group_id);
             
             if ($group && ($group->trashed() || $group->deleted_at !== null)) {

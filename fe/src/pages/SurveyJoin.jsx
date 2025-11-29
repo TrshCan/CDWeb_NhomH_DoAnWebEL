@@ -81,6 +81,29 @@ function SurveyJoin() {
           return;
         }
 
+        // Check if survey has started
+        if (data.start_at) {
+          const startTime = new Date(data.start_at);
+          const currentTime = new Date();
+          
+          if (startTime > currentTime) {
+            const formattedStartTime = startTime.toLocaleString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+            
+            setError({
+              title: "Survey Not Started",
+              message: `This survey has not started yet. It will be available on ${formattedStartTime}.`,
+              type: "not_started"
+            });
+            return;
+          }
+        }
+
         // Get current user from localStorage
         const user = JSON.parse(localStorage.getItem('user'));
         
@@ -132,27 +155,45 @@ function SurveyJoin() {
         // Try to get error from response data
         if (err.response?.data?.errors?.[0]?.message) {
           errorMessage = err.response.data.errors[0].message;
-          extMessage = err.response.data.errors[0]?.extensions?.debugMessage || "";
+          extMessage = err.response.data.errors[0]?.extensions?.debugMessage || extMessage;
         } else if (err.response?.data?.message) {
           errorMessage = err.response.data.message;
         }
         
+        // Use debugMessage if available and more descriptive
+        const finalMessage = extMessage || errorMessage;
+        
+        // Check for invalid or expired token
+        if (finalMessage.includes("Invalid or expired join token") || 
+            finalMessage.includes("Invalid or expired token") ||
+            finalMessage.includes("invalid token") ||
+            finalMessage.includes("expired token")) {
+          setError({
+            title: "Invalid Access Token",
+            message: "The survey access token is invalid or has expired. Please use a valid link to join the survey.",
+            type: "invalid_token"
+          });
+          return;
+        }
+        
         // Check if user already completed the survey
-        if (errorMessage.includes("already completed") || 
-            errorMessage.includes("You already completed") || 
-            (extMessage && extMessage.includes("You already completed"))) {
+        if (finalMessage.includes("already completed") || 
+            finalMessage.includes("You already completed") || 
+            errorMessage.includes("already completed")) {
           setError({
             title: "Survey Already Completed",
             message: "You already completed this survey. Each user can only submit once.",
             type: "already_completed"
           });
-        } else {
-          setError({
-            title: "Failed to Load Survey",
-            message: errorMessage,
-            type: "load_error"
-          });
+          return;
         }
+        
+        // For other errors, show the debugMessage if available, otherwise show the error message
+        setError({
+          title: "Failed to Load Survey",
+          message: finalMessage,
+          type: "load_error"
+        });
       } finally {
         setLoading(false);
       }
@@ -590,6 +631,13 @@ function SurveyJoin() {
               <line x1="9" y1="9" x2="15" y2="15"/>
             </svg>
           );
+        case "not_started":
+          return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          );
         case "not_authenticated":
           return (
             <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -600,6 +648,7 @@ function SurveyJoin() {
             </svg>
           );
         case "missing_token":
+        case "invalid_token":
           return (
             <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>

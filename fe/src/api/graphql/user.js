@@ -559,13 +559,45 @@ export const toggleFollow = async (followerId, followedId) => {
         });
 
         if (response.data.errors) {
-            console.error("GraphQL errors:", response.data.errors);
-            throw new Error(response.data.errors[0].message);
+            const error = response.data.errors[0];
+            // Extract validation error message if available
+            if (error.extensions?.validation) {
+                const validationErrors = error.extensions.validation;
+                const firstError = Object.values(validationErrors)[0];
+                const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                throw new Error(errorMessage);
+            }
+            // Fall back to error message or debugMessage
+            const errorMessage = error.message || error.extensions?.debugMessage || "Failed to toggle follow";
+            throw new Error(errorMessage);
         }
 
         return response.data.data.toggleFollow;
     } catch (error) {
         console.error("Failed to toggle follow:", error);
+        
+        // If error already has a message (from above), re-throw it
+        if (error.message && error.message !== "GraphQL error") {
+            throw error;
+        }
+        
+        // Otherwise, extract from response if available
+        if (error?.response?.data?.errors?.[0]) {
+            const err = error.response.data.errors[0];
+            
+            // Check for validation errors first
+            if (err.extensions?.validation) {
+                const validationErrors = err.extensions.validation;
+                const firstError = Object.values(validationErrors)[0];
+                const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+                throw new Error(errorMessage);
+            }
+            
+            // Fall back to error message or debugMessage
+            const errorMessage = err.message || err.extensions?.debugMessage || "Failed to toggle follow";
+            throw new Error(errorMessage);
+        }
+        
         throw error;
     }
 };

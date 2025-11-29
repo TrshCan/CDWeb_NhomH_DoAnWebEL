@@ -390,15 +390,39 @@ class UserServices
     {
         // Prevent users from following themselves
         if ($followerId === $followedId) {
-            throw new \Exception('You cannot follow yourself');
+            throw ValidationException::withMessages([
+                'follower_id' => 'You cannot follow yourself',
+            ]);
         }
 
-        // Check if both users exist
-        $follower = $this->userRepo->findById($followerId);
-        $followed = $this->userRepo->findById($followedId);
+        // Check if both users exist (including soft-deleted)
+        $follower = User::withTrashed()->find($followerId);
+        $followed = User::withTrashed()->find($followedId);
 
-        if (!$follower || !$followed) {
-            throw new \Exception('User not found');
+        if (!$follower) {
+            throw ValidationException::withMessages([
+                'follower_id' => 'Follower user not found',
+            ]);
+        }
+
+        if (!$followed) {
+            throw ValidationException::withMessages([
+                'followed_id' => 'User not found',
+            ]);
+        }
+
+        // Check if follower is soft-deleted
+        if ($follower->trashed() || $follower->deleted_at !== null) {
+            throw ValidationException::withMessages([
+                'follower_id' => 'Your account has been deleted. You cannot follow users.',
+            ]);
+        }
+
+        // Check if followed user is soft-deleted
+        if ($followed->trashed() || $followed->deleted_at !== null) {
+            throw ValidationException::withMessages([
+                'followed_id' => 'Cannot follow user: This user has been deleted.',
+            ]);
         }
 
         // Check if follow relationship already exists

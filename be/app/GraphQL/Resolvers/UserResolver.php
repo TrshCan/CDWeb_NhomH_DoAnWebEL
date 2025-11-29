@@ -3,6 +3,7 @@ namespace App\GraphQL\Resolvers;
 use App\Services\UserServices;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
+use Illuminate\Validation\ValidationException;
 
 class UserResolver
 {
@@ -76,7 +77,22 @@ class UserResolver
     // Resolver for toggle follow/unfollow
     public function toggleFollow($_, array $args)
     {
-        return $this->userService->toggleFollow($args['follower_id'], $args['followed_id']);
+        try {
+            return $this->userService->toggleFollow($args['follower_id'], $args['followed_id']);
+        } catch (ValidationException $e) {
+            // Re-throw validation exceptions as-is (GraphQL will handle them properly)
+            throw $e;
+        } catch (\Exception $e) {
+            // For other exceptions, wrap in ValidationException to ensure message is exposed
+            Log::error('UserResolver toggleFollow error:', [
+                'message' => $e->getMessage(),
+                'follower_id' => $args['follower_id'] ?? null,
+                'followed_id' => $args['followed_id'] ?? null,
+            ]);
+            throw ValidationException::withMessages([
+                'followed_id' => $e->getMessage() ?: 'Failed to toggle follow status',
+            ]);
+        }
     }
     // Resolver for following
     public function following(User $user)

@@ -16,6 +16,9 @@ class PostRepository
     public function all()
     {
         return $this->model->with(['user', 'group', 'likes', 'shares', 'children'])
+            ->whereHas('user', function ($query) {
+                $query->whereNull('deleted_at');
+            })
             ->latest()
             ->get();
     }
@@ -44,6 +47,9 @@ class PostRepository
     {
         return Post::where('user_id', $userId)
             ->with(['user', 'group', 'likes.user', 'shares', 'children.user', 'children.likes.user', 'parent.user', 'media'])
+            ->whereHas('user', function ($query) {
+                $query->whereNull('deleted_at');
+            })
             ->latest()
             ->get();
     }
@@ -53,6 +59,9 @@ class PostRepository
         return Post::with(['user', 'likes.user', 'media'])
             ->where('type', $type)
             ->whereNull('parent_id')
+            ->whereHas('user', function ($query) {
+                $query->whereNull('deleted_at');
+            })
             ->latest()
             ->get();
     }
@@ -63,6 +72,9 @@ class PostRepository
         return Post::where('group_id', $groupId)
             ->with(['user', 'likes.user', 'shares', 'children.user', 'children.likes.user', 'media'])
             ->whereNull('parent_id')
+            ->whereHas('user', function ($query) {
+                $query->whereNull('deleted_at');
+            })
             ->latest()
             ->get();
     }
@@ -72,6 +84,9 @@ class PostRepository
         return Post::where('user_id', $userId)
             ->whereNotNull('parent_id')
             ->with(['user', 'parent.user', 'likes.user', 'media'])
+            ->whereHas('user', function ($query) {
+                $query->whereNull('deleted_at');
+            })
             ->latest()
             ->get();
     }
@@ -82,6 +97,9 @@ class PostRepository
             $query->where('user_id', $userId);
         })
             ->with(['user', 'likes.user', 'media', 'parent.user'])
+            ->whereHas('user', function ($query) {
+                $query->whereNull('deleted_at');
+            })
             ->latest()
             ->get();
     }
@@ -125,6 +143,9 @@ class PostRepository
         return Post::with(['user', 'likes.user', 'media'])
             ->whereIn('user_id', $followingIds)
             ->whereNull('parent_id')        // only root posts
+            ->whereHas('user', function ($query) {
+                $query->whereNull('deleted_at');
+            })
             ->latest()
             ->get();
     }
